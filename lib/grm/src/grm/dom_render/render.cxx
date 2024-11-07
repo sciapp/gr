@@ -128,18 +128,33 @@ static std::set<std::string> parent_types = {
 };
 
 static std::set<std::string> drawable_types = {
-    "axes_3d",       "cell_array",
-    "draw_arc",      "draw_graphics",
-    "draw_image",    "draw_rect",
-    "fill_arc",      "fill_area",
-    "fill_rect",     "grid",
-    "grid_3d",       "isosurface_render",
-    "layout_grid",   "layout_grid_element",
-    "legend",        "nonuniform_cell_array",
-    "panzoom",       "polyline",
-    "polyline_3d",   "polymarker",
-    "polymarker_3d", "text",
-    "tick",          "titles_3d",
+    "angle_line",
+    "arc_grid_line",
+    "axes_3d",
+    "cell_array",
+    "draw_arc",
+    "draw_graphics",
+    "draw_image",
+    "draw_rect",
+    "fill_arc",
+    "fill_area",
+    "fill_rect",
+    "grid_3d",
+    "grid_line",
+    "isosurface_render",
+    "layout_grid",
+    "layout_grid_element",
+    "legend",
+    "nonuniform_cell_array",
+    "nonuniform_polar_cell_array",
+    "polar_cell_array",
+    "polyline",
+    "polyline_3d",
+    "polymarker",
+    "polymarker_3d",
+    "text",
+    "tick",
+    "titles_3d",
 };
 
 static std::set<std::string> drawable_kinds = {
@@ -230,7 +245,7 @@ static IdPool<int> id_pool;
 static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
-static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
+static std::map<int, std::weak_ptr<GRM::Element>> bounding_map;
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
 static string_map_entry_t kind_to_fmt[] = {
@@ -3086,14 +3101,16 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
 
 void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
 {
-  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
+  if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || bounding_map[id].expired())
     {
-      bounding_map[id]->setAttribute("_bbox_id", id);
-      bounding_map[id]->setAttribute("_bbox_x_min", x_min);
-      bounding_map[id]->setAttribute("_bbox_x_max", x_max);
-      bounding_map[id]->setAttribute("_bbox_y_min", y_min);
-      bounding_map[id]->setAttribute("_bbox_y_max", y_max);
+      return;
     }
+  auto element = bounding_map[id].lock();
+  element->setAttribute("_bbox_id", id);
+  element->setAttribute("_bbox_x_min", x_min);
+  element->setAttribute("_bbox_x_max", x_max);
+  element->setAttribute("_bbox_y_min", y_min);
+  element->setAttribute("_bbox_y_max", y_max);
 }
 
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
@@ -13171,7 +13188,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
             }
           // special case for marginal_heatmap_kind line - when new indices != -1 are received the 2 lines should be
           // displayed
-          sub_group = side_region->querySelectors("series_stairs[_child_id=0]");
+          sub_group = side_region->querySelectors("series_stairs[_child_id=\"" + std::to_string(child_id) + "\"]");
           auto side_plot_region = side_region->querySelectors("side_plot_region");
           if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
               (sub_group == nullptr && static_cast<int>(element->getAttribute("_update_required"))))
@@ -16210,12 +16227,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 
-  if (bounding_boxes && !isDrawable(element))
-    {
-      gr_setbboxcallback(id_pool.next(), &receiverFunction);
-      bounding_map[id_pool.current()] = element;
-    }
-
   processElement(element, context);
   if (element->hasChildNodes() && parent_types.count(element->localName()))
     {
@@ -16225,7 +16236,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
           renderHelper(child, context);
         }
     }
-  if (bounding_boxes && !isDrawable(element)) gr_cancelbboxcallback();
 
   custom_color_index_manager.restorestate();
   z_index_manager.restorestate();
@@ -16305,8 +16315,17 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 
       if (bounding_boxes)
         {
-          gr_setbboxcallback(id_pool.next(), &receiverFunction);
-          bounding_map[id_pool.current()] = element;
+          int bbox_id;
+          if (element->hasAttribute("_bbox_id"))
+            {
+              bbox_id = std::abs(static_cast<int>(element->getAttribute("_bbox_id")));
+            }
+          else
+            {
+              bbox_id = id_pool.next();
+            }
+          gr_setbboxcallback(bbox_id, &receiverFunction);
+          bounding_map[bbox_id] = element;
         }
 
       custom_color_index_manager.selectcontext(drawable->getGrContextId());
@@ -16663,11 +16682,13 @@ void GRM::Render::render()
       renderHelper(root, this->context);
       renderZQueue(this->context);
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
-      if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0) missingBboxCalculator(root, this->context);
       if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
-      // needed when series_line is changed to series_scatter for example
       if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
         {
+          missingBboxCalculator(root, this->context);
+          /* Needed when series_line is changed to series_scatter for example
+           * TODO: The `missingBboxCalculator` call before should already be sufficient to determine all missing
+           * bounding boxes, so rework this routine and remove the loop below. */
           for (const auto &child : global_render->querySelectorsAll("[_bbox_id]"))
             {
               if (static_cast<int>(child->getAttribute("_bbox_id")) >= 0) continue;
@@ -20524,6 +20545,8 @@ void cleanupElement(GRM::Element &element)
 {
   if (element.hasAttribute("_bbox_id"))
     {
-      id_pool.release(std::abs(static_cast<int>(element.getAttribute("_bbox_id"))));
+      auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
+      id_pool.release(bbox_id);
+      bounding_map.erase(bbox_id);
     }
 }

@@ -378,6 +378,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "marginal_heatmap_plot",
                                                        "legend",
                                                        "axis"};
+  auto render = grm_get_render();
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -402,6 +403,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   if (element->hasAttribute("y_shift" + post_fix))
     old_y_shift = static_cast<double>(element->getAttribute("y_shift" + post_fix));
 
+  render->setAutoUpdate(true);
   if (xshift != 0)
     {
       if (post_fix == "_wc")
@@ -439,9 +441,10 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
           element->setAttribute("y_shift" + post_fix, old_y_shift + (double)yshift / max_width_height);
         }
     }
+  render->setAutoUpdate(false);
 }
 
-int grm_input(const grm_args_t *input_args)
+int grm_input_(const grm_args_t *input_args)
 {
   /*
    * reset_ranges:
@@ -510,6 +513,8 @@ int grm_input(const grm_args_t *input_args)
 
           if (strcmp(key, "r") == 0)
             {
+              auto render = grm_get_render();
+              render->setAutoUpdate(true);
               if (subplot_element != nullptr)
                 {
                   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
@@ -533,6 +538,7 @@ int grm_input(const grm_args_t *input_args)
                   logger((stderr, "Reset all subplot coordinate ranges\n"));
                   grm_set_attribute_on_all_subplots("reset_ranges", 1);
                 }
+              render->setAutoUpdate(false);
             }
 
           return 1;
@@ -784,6 +790,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, zoom, zoom);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
 
               return 1;
@@ -814,6 +821,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
               return 1;
             }
@@ -879,10 +887,8 @@ int grm_input(const grm_args_t *input_args)
                       tilt -= yshift * 0.2;
                       tilt = grm_min(180, grm_max(0, tilt));
 
-                      grm_get_render()->setAutoUpdate(false);
                       central_region->setAttribute("space_3d_phi", rotation);
                       central_region->setAttribute("space_3d_theta", tilt);
-                      grm_get_render()->setAutoUpdate(true);
                     }
                 }
               else
@@ -893,6 +899,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
               return 1;
             }
@@ -984,11 +991,51 @@ int grm_input(const grm_args_t *input_args)
       auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
       subplot_element->append(panzoom_element);
       subplot_element->setAttribute("panzoom", true);
+      GRM::Render::processLimits(subplot_element);
 
       return 1;
     }
 
   return 0;
+}
+
+int grm_input(const grm_args_t *input_args)
+{
+  /*
+   * reset_ranges:
+   * - `x`, `y`: mouse cursor position
+   * - `key`: Pressed key (as string)
+   * zoom:
+   * - `x`, `y`: start point
+   * - `angle_delta`: mouse wheel rotation angle in eighths of a degree, can be replaced by factor (double type)
+   * - `factor`: zoom factor, can be replaced by angle_delta (double type)
+   * box zoom:
+   * - `x1`, `y1`, `x2`, `y2`: coordinates of a box selection, (x1, y1) is the fixed corner
+   * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
+   * pan:
+   * - `x`, `y`: start point
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * movable_xform:
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * - `disable_movable_trans`: disable movable transformation
+   * - `movable_state`: the status from grm_get_hover_mode
+   * - `clear_locked_state`: clear movable_obj_ref pointer
+   *
+   * All coordinates are expected to be given as workstation coordinates (integer type)
+   */
+
+  /* `input` modifies the tree but doesn't want to trigger a redraw, so we disable it here.
+   * This was only tested with `grplot`, perhaps it needs to be adjusted for other setups. */
+  auto render = grm_get_render();
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
+
+  auto return_value = grm_input_(input_args);
+
+  render->setAutoUpdate(auto_update);
+
+  return return_value;
 }
 
 int grm_is3d(const int x, const int y)
@@ -1236,7 +1283,7 @@ error_cleanup:
   return nullptr;
 }
 
-err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
 {
   double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
@@ -1742,6 +1789,20 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
   gr_restorestate();
   return ERROR_NONE;
+}
+
+err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+{
+  auto render = grm_get_render();
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
+
+  auto error = get_tooltips_(mouse_x, mouse_y, tooltip_callback);
+
+  render->setAutoUpdate(auto_update);
+
+  return error;
 }
 
 int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
