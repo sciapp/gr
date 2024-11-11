@@ -241,11 +241,29 @@ static int plot_scatter_markertypes[] = {
 static int *previous_scatter_marker_type = plot_scatter_markertypes;
 static int *previous_line_marker_type = plot_scatter_markertypes;
 
-static IdPool<int> id_pool;
+static IdPool<int> &id_pool()
+{
+  /*
+   * Use a static pointer to heap memory instead of a static object (`static IdPool<int> id_pool`) to guarantee that
+   * - the object is constructed on first use
+   * - the object will remain alive as long as the program runs
+   * The second point is most important since various other global `Element` objects will call `IdPool::release` in
+   * their destructors, so it must be ensured that id_pool is alive until the last `Element` object is destructed.
+   */
+  static auto id_pool_ = new IdPool<int>;
+  return *id_pool_;
+}
+
+std::map<int, std::weak_ptr<GRM::Element>> &bounding_map()
+{
+  /* See the `id_pool` function above for a detailed explanation why this routine is needed. */
+  static auto bounding_map_ = new std::map<int, std::weak_ptr<GRM::Element>>;
+  return *bounding_map_;
+}
+
 static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
-static std::map<int, std::weak_ptr<GRM::Element>> bounding_map;
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
 static string_map_entry_t kind_to_fmt[] = {
@@ -653,7 +671,7 @@ static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
         }
       else
         {
-          element->setAttribute("_bbox_id", -id_pool.next());
+          element->setAttribute("_bbox_id", -id_pool().next());
         }
       element->removeAttribute("_bbox_x_min");
       element->removeAttribute("_bbox_x_max");
@@ -668,7 +686,7 @@ static bool removeBoundingBoxId(GRM::Element &element)
     {
       auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
       element.removeAttribute("_bbox_id");
-      id_pool.release(bbox_id);
+      id_pool().release(bbox_id);
       return true;
     }
   return false;
@@ -685,7 +703,7 @@ static bool applyBoundingBoxId(GRM::Element &new_element, GRM::Element &old_elem
     }
   else
     {
-      new_element.setAttribute("_bbox_id", id_pool.next() * (only_reserve_id ? -1 : 1));
+      new_element.setAttribute("_bbox_id", id_pool().next() * (only_reserve_id ? -1 : 1));
       return false;
     }
 }
@@ -3101,11 +3119,11 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
 
 void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
 {
-  if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || bounding_map[id].expired())
+  if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || bounding_map()[id].expired())
     {
       return;
     }
-  auto element = bounding_map[id].lock();
+  auto element = bounding_map()[id].lock();
   element->setAttribute("_bbox_id", id);
   element->setAttribute("_bbox_x_min", x_min);
   element->setAttribute("_bbox_x_max", x_max);
@@ -16286,7 +16304,7 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
             }
           else
             {
-              element->setAttribute("_bbox_id", id_pool.next());
+              element->setAttribute("_bbox_id", id_pool().next());
             }
           element->setAttribute("_bbox_x_min", elem_bbox_xmin);
           element->setAttribute("_bbox_x_max", elem_bbox_xmax);
@@ -16322,10 +16340,10 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
             }
           else
             {
-              bbox_id = id_pool.next();
+              bbox_id = id_pool().next();
             }
           gr_setbboxcallback(bbox_id, &receiverFunction);
-          bounding_map[bbox_id] = element;
+          bounding_map()[bbox_id] = element;
         }
 
       custom_color_index_manager.selectcontext(drawable->getGrContextId());
@@ -20546,7 +20564,7 @@ void cleanupElement(GRM::Element &element)
   if (element.hasAttribute("_bbox_id"))
     {
       auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
-      id_pool.release(bbox_id);
-      bounding_map.erase(bbox_id);
+      id_pool().release(bbox_id);
+      bounding_map().erase(bbox_id);
     }
 }
