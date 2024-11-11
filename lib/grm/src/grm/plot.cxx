@@ -6267,6 +6267,18 @@ public:
 private:
   std::unordered_set<std::string> context_keys_to_discard_;
 };
+
+/*!
+ * \brief Discard attributes based on attribute name and graphics tree element.
+ *
+ * \param[in] attribute_name The attribute name to check.
+ * \param[in] element The element the currently processed attribute belongs to.
+ * \return `true` if the attribute should be kept, `false` otherwise.
+ */
+static bool discard_attribute_filter(const std::string &attribute_name, const GRM::Element &element)
+{
+  return !starts_with(attribute_name, "_bbox");
+}
 } // namespace internal
 
 void grm_dump_graphics_tree(FILE *f)
@@ -6280,7 +6292,8 @@ void grm_dump_graphics_tree(FILE *f)
                                        GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
                 [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                    std::optional<std::string> &new_attribute_name) -> bool {
-                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name) &&
+                         internal::discard_attribute_filter(attribute_name, element);
                 })
               .c_str());
   dump_context_as_xml_comment(f, &restore_backup_attribute_filter.context_keys_to_discard());
@@ -6306,7 +6319,8 @@ char *grm_dump_graphics_tree_str(void)
       toXML(global_root, GRM::SerializerOptions{"", GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
             [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                std::optional<std::string> &new_attribute_name) -> bool {
-              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name) &&
+                     internal::discard_attribute_filter(attribute_name, element);
             });
   char *context_cstr = dump_context_as_xml_comment_str(&restore_backup_attribute_filter.context_keys_to_discard());
   char *graphics_tree_with_context_cstr =
