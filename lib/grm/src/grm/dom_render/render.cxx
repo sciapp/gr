@@ -264,6 +264,7 @@ std::map<int, std::weak_ptr<GRM::Element>> &bounding_map()
 static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
+static bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
 static string_map_entry_t kind_to_fmt[] = {
@@ -663,21 +664,20 @@ static void transformCoordinatesVector(std::vector<double> &coords, double v_min
 
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!bounding_boxes) return;
+
+  if (element->hasAttribute("_bbox_id"))
     {
-      if (element->hasAttribute("_bbox_id"))
-        {
-          element->setAttribute("_bbox_id", -std::abs(static_cast<int>(element->getAttribute("_bbox_id"))));
-        }
-      else
-        {
-          element->setAttribute("_bbox_id", -id_pool().next());
-        }
-      element->removeAttribute("_bbox_x_min");
-      element->removeAttribute("_bbox_x_max");
-      element->removeAttribute("_bbox_y_min");
-      element->removeAttribute("_bbox_y_max");
+      element->setAttribute("_bbox_id", -std::abs(static_cast<int>(element->getAttribute("_bbox_id"))));
     }
+  else
+    {
+      element->setAttribute("_bbox_id", -id_pool().next());
+    }
+  element->removeAttribute("_bbox_x_min");
+  element->removeAttribute("_bbox_x_max");
+  element->removeAttribute("_bbox_y_min");
+  element->removeAttribute("_bbox_y_max");
 }
 
 static bool removeBoundingBoxId(GRM::Element &element)
@@ -701,11 +701,12 @@ static bool applyBoundingBoxId(GRM::Element &new_element, GRM::Element &old_elem
       old_element.removeAttribute("_bbox_id");
       return true;
     }
-  else
+  else if (bounding_boxes)
     {
       new_element.setAttribute("_bbox_id", id_pool().next() * (only_reserve_id ? -1 : 1));
-      return false;
     }
+
+  return false;
 }
 
 static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element> &element)
@@ -16243,8 +16244,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
   z_index_manager.savestate();
   custom_color_index_manager.savestate();
 
-  bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
-
   processElement(element, context);
   if (element->hasChildNodes() && parent_types.count(element->localName()))
     {
@@ -16322,7 +16321,6 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 {
   z_queue_is_being_rendered = true;
-  bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 
   gr_savestate();
   for (; !z_queue.empty(); z_queue.pop())
@@ -16701,7 +16699,7 @@ void GRM::Render::render()
       renderZQueue(this->context);
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
       if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
-      if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+      if (bounding_boxes)
         {
           missingBboxCalculator(root, this->context);
           /* Needed when series_line is changed to series_scatter for example
