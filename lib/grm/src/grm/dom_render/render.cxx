@@ -16327,7 +16327,15 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
     {
       const auto &drawable = z_queue.top();
       auto element = drawable->getElement();
+
       if (!element->parentElement()) continue;
+      if (str_equals_any(element->localName(), "tick", "text", "grid_line"))
+        {
+          auto coordinate_system = element->parentElement()->parentElement()->parentElement();
+          if (coordinate_system != nullptr && coordinate_system->localName() == "coordinate_system" &&
+              coordinate_system->hasAttribute("hide") && static_cast<int>(coordinate_system->getAttribute("hide")))
+            continue;
+        }
 
       if (bounding_boxes)
         {
