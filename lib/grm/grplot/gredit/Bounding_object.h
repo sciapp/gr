@@ -35,7 +35,7 @@ protected:
 private:
   int id;
   double xmin, xmax, ymin, ymax;
-  std::shared_ptr<GRM::Element> ref;
+  std::weak_ptr<GRM::Element> ref;
 };
 
 
