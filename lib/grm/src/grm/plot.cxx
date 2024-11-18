@@ -188,8 +188,8 @@ grid_t *global_grid = nullptr;
 static std::shared_ptr<GRM::Render> global_render;
 static std::shared_ptr<GRM::Element> global_root;
 static std::shared_ptr<GRM::Element> edit_figure;
-static std::shared_ptr<GRM::Element> current_dom_element;
-static std::shared_ptr<GRM::Element> current_central_region_element;
+static std::weak_ptr<GRM::Element> current_dom_element;
+static std::weak_ptr<GRM::Element> current_central_region_element;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1118,7 +1118,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   const char *kind;
   double alpha;
   err_t error = ERROR_NONE;
-  auto group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   logger((stderr, "Pre subplot processing\n"));
 
@@ -1394,7 +1394,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
 
-  auto group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   if (grm_args_contains(subplot_args, "_original_x_lim"))
     {
@@ -1557,8 +1557,7 @@ err_t plot_line(grm_args_t *subplot_args)
   int marker_type;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   while (*current_series != nullptr)
     {
@@ -1665,8 +1664,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
@@ -1737,8 +1735,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
   err_t error;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   while (*current_series != nullptr)
     {
@@ -1826,8 +1823,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -1879,8 +1875,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
 err_t plot_stem(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
 
@@ -1940,8 +1935,7 @@ err_t plot_histogram(grm_args_t *subplot_args)
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
 
@@ -2059,8 +2053,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   unsigned int i;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   /* Push attributes on the subplot level to the tree */
   auto context = global_render->getContext();
@@ -2328,8 +2321,7 @@ err_t plot_contour(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -2399,8 +2391,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -2468,8 +2459,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -2524,8 +2514,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
@@ -2617,8 +2606,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   std::shared_ptr<GRM::Element> plot_parent;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   if (group->parentElement()->localName() == "plot")
     {
@@ -2720,7 +2708,7 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   double *x, *y, *plot;
   unsigned int num_bins_x, num_bins_y, n;
 
-  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
   auto subGroup = global_render->querySelectors("marginal_heatmap_plot");
   if (subGroup == nullptr)
     {
@@ -2791,8 +2779,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -2850,8 +2837,7 @@ err_t plot_surface(grm_args_t *subplot_args)
   int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
   double xmin, xmax, ymin, ymax;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
@@ -2928,8 +2914,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -2989,8 +2974,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
   unsigned int x_length, y_length, z_length, c_length, i, c_index;
   double *x, *y, *z, *c;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3061,8 +3045,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
   unsigned int c_data_length, i, j, k;
   unsigned int *shape;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
@@ -3113,8 +3096,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   unsigned int *shape;
   double c_min, c_max, isovalue;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
 
@@ -3161,8 +3143,7 @@ err_t plot_volume(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -3240,8 +3221,7 @@ err_t plot_polar_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -3299,8 +3279,7 @@ err_t plot_polar_scatter(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -3430,8 +3409,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   grm_args_t **series;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
   group->append(series_group);
 
@@ -3524,8 +3502,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   const int *color_indices = nullptr;
   const double *color_rgb_values = nullptr;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
@@ -3582,8 +3559,7 @@ err_t plot_trisurface(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3635,8 +3611,7 @@ err_t plot_tricontour(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int i;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3703,8 +3678,7 @@ err_t plot_shade(grm_args_t *subplot_args)
   unsigned int x_length, y_length;
   double x_min, x_max, y_min, y_max;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_shader);
   auto subGroup = global_render->createSeries("shade");
@@ -3789,17 +3763,19 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   std::shared_ptr<GRM::Element> group;
   std::string type = "2d";
 
-  if (!current_central_region_element ||
-      current_central_region_element->getElementsByTagName("coordinate_system").empty())
+  auto current_central_region_element_locked = current_central_region_element.lock();
+
+  if (!current_central_region_element_locked ||
+      current_central_region_element_locked->getElementsByTagName("coordinate_system").empty())
     {
       group = global_render->createElement("coordinate_system");
-      if (!current_central_region_element)
+      if (!current_central_region_element_locked)
         {
           getCentralRegion()->append(group);
         }
       else
         {
-          current_central_region_element->append(group);
+          current_central_region_element_locked->append(group);
         }
     }
   else
@@ -3833,7 +3809,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
       auto side_region = global_render->createElement("side_region");
-      current_central_region_element->parentElement()->append(side_region);
+      current_central_region_element_locked->parentElement()->append(side_region);
       side_region->setAttribute("text_content", title);
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
@@ -3847,10 +3823,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       else
         {
-          if (!current_central_region_element->parentElement()->querySelectors("side_region[location=\"bottom\"]"))
+          if (!current_central_region_element_locked->parentElement()->querySelectors(
+                  "side_region[location=\"bottom\"]"))
             {
               auto side_region = global_render->createElement("side_region");
-              current_central_region_element->parentElement()->append(side_region);
+              current_central_region_element_locked->parentElement()->append(side_region);
               side_region->setAttribute("text_content", x_label);
               side_region->setAttribute("location", "bottom");
             }
@@ -3864,10 +3841,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       else
         {
-          if (!current_central_region_element->parentElement()->querySelectors("side_region[location=\"left\"]"))
+          if (!current_central_region_element_locked->parentElement()->querySelectors("side_region[location=\"left\"]"))
             {
               auto side_region = global_render->createElement("side_region");
-              current_central_region_element->parentElement()->append(side_region);
+              current_central_region_element_locked->parentElement()->append(side_region);
               side_region->setAttribute("text_content", y_label);
               side_region->setAttribute("location", "left");
             }
@@ -4252,7 +4229,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   const char *norm, *title;
   std::shared_ptr<GRM::Element> group, subGroup;
 
-  group = (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   if (global_render->getElementsByTagName("coordinate_system").empty())
     {
@@ -4289,7 +4266,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (grm_args_values(args, "title", "s", &title))
     {
       auto side_region = global_render->createElement("side_region");
-      current_central_region_element->parentElement()->append(side_region);
+      group->parentElement()->append(side_region);
       side_region->setAttribute("text_content", title);
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
@@ -4305,7 +4282,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int location;
 
-  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
@@ -4349,7 +4326,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   unsigned int num_labels;
   grm_args_t *series;
 
-  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
@@ -4371,7 +4348,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   int flip;
   unsigned int i;
 
-  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   auto side_region = global_render->createElement("side_region");
   group->append(side_region);
@@ -4470,9 +4447,8 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
   unsigned int upwards_length, downwards_length, i;
   int color_upwards_cap, color_downwards_cap, color_error_bar;
 
-  std::shared_ptr<GRM::Element> group = (current_central_region_element)
-                                            ? current_central_region_element->lastChildElement()
-                                            : getCentralRegion()->lastChildElement();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock()->lastChildElement()
+                                                           : getCentralRegion()->lastChildElement();
 
   arg_ptr = args_at(series_args, "error");
   if (!arg_ptr)
@@ -4747,12 +4723,12 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   grm_args_t **series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
-  std::shared_ptr<GRM::Element> series_group = (current_central_region_element)
-                                                   ? current_central_region_element->lastChildElement()
-                                                   : getCentralRegion()->lastChildElement();
+  auto plot_group = edit_figure->lastChildElement();
+  auto series_group = (!current_central_region_element.expired())
+                          ? current_central_region_element.lock()->lastChildElement()
+                          : getCentralRegion()->lastChildElement();
 
-  std::shared_ptr<GRM::Context> context = global_render->getContext();
+  auto context = global_render->getContext();
 
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
@@ -5848,17 +5824,21 @@ public:
 protected:
   static void merge_elements_(GRM::Element &element, GRM::Element &element_to_be_merged)
   {
+    const std::unordered_set<std::string> element_merge_whitelist{"xs:complexType"};
     for (auto &merge_child : element_to_be_merged.children())
       {
         auto found_child = false;
-        for (const auto &child : element.children())
+        if (element_merge_whitelist.find(merge_child->localName()) != element_merge_whitelist.end())
           {
-            if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
-                merge_child->hasChildNodes())
+            for (const auto &child : element.children())
               {
-                merge_elements_(*child, *merge_child);
-                found_child = true;
-                break;
+                if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
+                    merge_child->hasChildNodes())
+                  {
+                    merge_elements_(*child, *merge_child);
+                    found_child = true;
+                    break;
+                  }
               }
           }
         if (!found_child)
@@ -6263,6 +6243,18 @@ public:
 private:
   std::unordered_set<std::string> context_keys_to_discard_;
 };
+
+/*!
+ * \brief Discard attributes based on attribute name and graphics tree element.
+ *
+ * \param[in] attribute_name The attribute name to check.
+ * \param[in] element The element the currently processed attribute belongs to.
+ * \return `true` if the attribute should be kept, `false` otherwise.
+ */
+static bool discard_attribute_filter(const std::string &attribute_name, const GRM::Element &element)
+{
+  return !starts_with(attribute_name, "_bbox");
+}
 } // namespace internal
 
 void grm_dump_graphics_tree(FILE *f)
@@ -6276,7 +6268,8 @@ void grm_dump_graphics_tree(FILE *f)
                                        GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
                 [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                    std::optional<std::string> &new_attribute_name) -> bool {
-                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name) &&
+                         internal::discard_attribute_filter(attribute_name, element);
                 })
               .c_str());
   dump_context_as_xml_comment(f, &restore_backup_attribute_filter.context_keys_to_discard());
@@ -6302,7 +6295,8 @@ char *grm_dump_graphics_tree_str(void)
       toXML(global_root, GRM::SerializerOptions{"", GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
             [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                std::optional<std::string> &new_attribute_name) -> bool {
-              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name) &&
+                     internal::discard_attribute_filter(attribute_name, element);
             });
   char *context_cstr = dump_context_as_xml_comment_str(&restore_backup_attribute_filter.context_keys_to_discard());
   char *graphics_tree_with_context_cstr =
@@ -6373,7 +6367,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
   int grplot = 0;
 
-  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
+  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
   if (strcmp(kind, "hist") == 0)
     {
@@ -6516,8 +6510,8 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
           global_root->append(edit_figure);
           edit_figure->setAttribute("_figure_id", "figure" + std::to_string(figure_id));
         }
-      current_dom_element = nullptr;
-      current_central_region_element = nullptr;
+      current_dom_element.reset();
+      current_central_region_element.reset();
     }
 
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
@@ -6645,7 +6639,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
                   else
                     {
                       current_dom_element = edit_figure->firstChildElement();
-                      for (const auto &child : current_dom_element->children())
+                      for (const auto &child : current_dom_element.lock()->children())
                         {
                           if (child->localName() == "central_region")
                             {
@@ -6759,7 +6753,6 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
-
 
 int grm_validate(void)
 {

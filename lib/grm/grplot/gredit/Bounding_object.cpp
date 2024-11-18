@@ -3,7 +3,7 @@
 // getter for ref
 std::shared_ptr<GRM::Element> Bounding_object::get_ref() const
 {
-  return ref;
+  return ref.lock();
 }
 
 bool Bounding_object::contains_point(int x, int y) const
