@@ -5083,6 +5083,11 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
   clearOldChildren(&del, element);
   getPlotParent(plot_parent);
 
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
+
   if (axis_elem->hasAttribute("location")) location = static_cast<std::string>(axis_elem->getAttribute("location"));
   axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
   if (plot_parent->hasAttribute("x_log")) x_log = static_cast<int>(plot_parent->getAttribute("x_log"));
