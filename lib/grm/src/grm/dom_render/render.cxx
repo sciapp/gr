@@ -5973,6 +5973,11 @@ static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const st
   double tick_size;
   std::string x_org_pos = PLOT_DEFAULT_ORG_POS, y_org_pos = PLOT_DEFAULT_ORG_POS, z_org_pos = PLOT_DEFAULT_ORG_POS;
 
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
+
   if (element->hasAttribute("x_org_pos")) x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
   if (element->hasAttribute("y_org_pos")) y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
   if (element->hasAttribute("z_org_pos")) z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
@@ -6026,6 +6031,11 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   auto colors = static_cast<int>(element->getAttribute("color_ind"));
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
+
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
 
   if (!getLimitsForColorbar(element, c_min, c_max) && !getLimitsForColorbar(plot_parent, c_min, c_max))
     throw NotFoundError("Missing limits\n");
@@ -8411,6 +8421,11 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
           break;
         }
     }
+
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
 
   window[0] = static_cast<double>(central_region->getAttribute("window_x_min"));
   window[1] = static_cast<double>(central_region->getAttribute("window_x_max"));
