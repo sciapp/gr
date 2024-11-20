@@ -838,7 +838,7 @@ static void create_patterns(void)
       gks_inq_pattern_array(pattern, parray);
       for (j = 0, k = 1; j < 16; j += 2)
         {
-          snprintf(bitmap[i] + j, 17, "%02x", parray[k]);
+          snprintf(bitmap[i] + j, 17 - j, "%02x", parray[k]);
           if (++k > *parray) k = 1;
         }
       bitmap[i][16] = '\0';
