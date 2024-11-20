@@ -56,7 +56,33 @@ ubuntu-cmake-self-contained-debug:
   - make -C 3rdparty default extras
   - mkdir build
   - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON -DCMAKE_CXX_FLAGS="-D_GLIBCXX_ASSERTIONS"
+  # Harden the debug build with recommended flags from
+  # <https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html#tldr-what-compiler-options-should-i-use>
+  - HARDENING_C_FLAGS="
+      -U_FORTIFY_SOURCE
+      -D_FORTIFY_SOURCE=3
+      -Wformat
+      -Wformat=2
+      -Werror=format-security
+      -Wimplicit-fallthrough
+      -Wl,--as-needed
+      -Wl,--no-copy-dt-needed-entries
+      -Wl,-z,nodlopen
+      -Wl,-z,noexecstack
+      -Wl,-z,now
+      -Wl,-z,relro
+      -Wtrampolines
+      -fstack-clash-protection
+      -fstack-protector-strong
+    "
+  - $CMAKE_CMD
+      ..
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+      -DGR_BUILD_DEMOS=ON
+      -DCMAKE_C_FLAGS="${HARDENING_C_FLAGS} -Werror=implicit -Werror=incompatible-pointer-types -Werror=int-conversion"
+      -DCMAKE_CXX_FLAGS="${HARDENING_C_FLAGS} -D_GLIBCXX_ASSERTIONS"
   - make
   - make install
   - cd ..
