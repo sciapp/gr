@@ -48,7 +48,7 @@ darwin-self-contained-iff1600:
       codesign -f -s - ${APP}/Contents/Frameworks/*.framework;
       codesign -f -s - ${APP}/Contents/Frameworks/Qt*.framework/Qt*;
       codesign -f -s - ${APP}/Contents/plugins/platforms/libqcocoa.dylib;
-    done;
+    done
   - cd ../../
   - mv artifacts artifacts-darwin-iff1600
   tags:
@@ -100,11 +100,11 @@ darwin-self-contained:
         done
       done
       for APP in gksqt.app grplot.app; do
-        codesign -f -s - ${APP};
-        codesign -f -s - ${APP}/Contents/Frameworks/*.framework;
-        codesign -f -s - ${APP}/Contents/Frameworks/Qt*.framework/Qt*;
-        codesign -f -s - ${APP}/Contents/plugins/platforms/libqcocoa.dylib;
-      done;
+        codesign -f -s - ${APP}
+        codesign -f -s - ${APP}/Contents/Frameworks/*.framework
+        codesign -f -s - ${APP}/Contents/Frameworks/Qt*.framework/Qt*
+        codesign -f -s - ${APP}/Contents/plugins/platforms/libqcocoa.dylib
+      done
       cd ../../
     }
   - |-
