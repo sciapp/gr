@@ -70,6 +70,33 @@ void test()
 
     assert(id_pool.next() == 3);
   }
+
+  {
+    IdPool<int> id_pool;
+
+    for (int i = 0; i <= 100; ++i)
+      {
+        assert(id_pool.next() == i);
+      }
+    for (auto &id : std::vector<int>{21, 57, 64, 79, 80, 96, 98})
+      {
+        id_pool.release(id);
+      }
+    std::stringstream ss;
+    id_pool.print(ss, true);
+    assert(ss.str() == "Used id ranges: 0-20, 22-56, 58-63, 65-78, 81-95, 97, 99-100\n");
+    ss.str("");
+    id_pool.print(ss);
+    assert(ss.str() ==
+           "Used id ranges:\n    0 -  20\n   22 -  56\n   58 -  63\n   65 -  78\n   81 -  95\n   97\n   99 - 100\n");
+    ss.str("");
+    id_pool.reset();
+    id_pool.print(ss, true);
+    assert(ss.str() == "Used id ranges:\n");
+    ss.str("");
+    id_pool.print(ss);
+    assert(ss.str() == "Used id ranges:\n");
+  }
 }
 
 DEFINE_TEST_MAIN

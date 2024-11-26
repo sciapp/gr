@@ -16744,6 +16744,7 @@ void GRM::Render::render()
           std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
                                                           GRM::SerializerOptions::InternalAttributesFormat::Plain})
                     << "\n";
+          if (bounding_boxes) id_pool().print(std::cerr, true);
         }
       redraw_ws = false;
       // reset marker types

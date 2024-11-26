@@ -4,6 +4,7 @@
 
 #include "utilcpp_int.hxx"
 #include <cmath>
+#include <iomanip>
 #include <algorithm>
 #include <string_view>
 
@@ -337,6 +338,47 @@ template <typename T> T IdPool<T>::next()
     }
   current_id_ = next_id;
   return next_id;
+}
+
+template <typename T> void IdPool<T>::print(std::ostream &os, bool compact) const
+{
+  os << "Used id ranges:";
+  if (used_id_ranges_.empty())
+    {
+      os << std::endl;
+      return;
+    }
+  if (compact)
+    {
+      os << " ";
+      for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
+        {
+          if (it != std::begin(used_id_ranges_))
+            {
+              os << ", ";
+            }
+          os << it->first;
+          if (it->first != it->second)
+            {
+              os << "-" << it->second;
+            }
+        }
+      os << std::endl;
+    }
+  else
+    {
+      os << std::endl;
+      auto field_width = std::to_string(used_id_ranges_.back().second).length();
+      for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
+        {
+          os << "  " << std::setw(field_width) << it->first;
+          if (it->first != it->second)
+            {
+              os << " - " << std::setw(field_width) << it->second;
+            }
+          os << std::endl;
+        }
+    }
 }
 
 template <typename T> void IdPool<T>::release(T id)
