@@ -5,13 +5,14 @@
 
 #include <grm/util.h>
 #include <cassert>
+#include <complex>
+#include <iostream>
 #include <list>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <complex>
 
 
 /* ######################### internal interface ##################################################################### */
@@ -53,8 +54,15 @@ public:
   IdPool(T start_id = 0);
   T current();
   T next();
+  void print(std::ostream &os = std::cout, bool compact = false) const;
   void release(T id);
   void reset();
+
+  friend std::ostream &operator<<(std::ostream &os, const IdPool<T> &id_pool)
+  {
+    id_pool.print(os);
+    return os;
+  }
 
 private:
   const T start_id_;
