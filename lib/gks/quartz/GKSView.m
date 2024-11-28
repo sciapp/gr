@@ -322,7 +322,6 @@ static void seg_xform_rel(double *x, double *y) {}
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
-        case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
         case 211: /* set clip region */
@@ -339,6 +338,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 28:  /* set character expansion factor */
         case 29:  /* set character spacing */
         case 31:  /* set character height */
+        case 109: /* set nominal size */
         case 200: /* set text slant */
         case 203: /* set transparency */
         case 206: /* set border width */
@@ -392,7 +392,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
           p->width = [self bounds].size.width;
           p->height = [self bounds].size.height;
-          if (gkss->resize_behaviour == GKS_K_RESIZE)
+          if (gkss->nominal_size > 0)
             {
               p->nominal_size = min(p->width, p->height) / 500.0;
             }
@@ -592,7 +592,7 @@ static void seg_xform_rel(double *x, double *y) {}
           break;
 
         case 109:
-          gkss->resize_behaviour = i_arr[0];
+          gkss->nominal_size = f_arr_1[0];
           break;
 
         case 200:
@@ -1113,7 +1113,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
       p->width = width;
       p->height = height;
-      if (gkss->resize_behaviour == GKS_K_RESIZE)
+      if (gkss->nominal_size > 0)
         {
           p->nominal_size = min(p->width, p->height) / 500.0;
         }
@@ -1477,7 +1477,7 @@ static void draw_pattern(int index, int coli, CGPathRef shape, CGContextRef cont
 {
   double scale;
 
-  if (gkss->resize_behaviour == GKS_K_RESIZE)
+  if (gkss->nominal_size > 0)
     {
       scale = 0.125 * (int)(p->c + p->a) / 125;
     }

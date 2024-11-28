@@ -542,7 +542,7 @@ void gks_init_gks(void)
       s->clip_region = GKS_K_REGION_RECTANGLE;
       s->clip_start_angle = 0;
       s->clip_end_angle = 360;
-      s->resize_behaviour = GKS_K_RESIZE;
+      s->nominal_size = 0;
       s->aspect_ratio = 1;
 
       s->callback = NULL;
@@ -4587,23 +4587,22 @@ void gks_inq_clip_sector(int *errind, double *start_angle, double *end_angle)
   *end_angle = s->clip_end_angle;
 }
 
-void gks_set_resize_behaviour(int flag)
+void gks_set_nominal_size(double factor)
 {
   if (state >= GKS_K_GKOP)
     {
-      s->resize_behaviour = flag;
-      i_arr[0] = flag;
+      s->nominal_size = f_arr_1[0] = factor;
 
       /* call the device driver link routine */
-      gks_ddlk(SET_RESIZE_BEHAVIOUR, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+      gks_ddlk(SET_NOMINAL_SIZE, 0, 0, 0, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
     }
   else
     {
-      gks_report_error(SET_RESIZE_BEHAVIOUR, 8);
+      gks_report_error(SET_NOMINAL_SIZE, 8);
     }
 }
 
-void gks_inq_resize_behaviour(int *flag)
+void gks_inq_nominal_size(double *factor)
 {
-  *flag = s->resize_behaviour;
+  *factor = s->nominal_size;
 }
