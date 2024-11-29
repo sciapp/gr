@@ -778,7 +778,11 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
-  if (gkss->resize_behaviour == GKS_K_RESIZE)
+  if (gkss->nominal_size > 0)
+    {
+      p->nominal_size = 558 / 500.0 * gkss->nominal_size;
+    }
+  else
     {
       p->nominal_size = min(p->width, p->height) / 500.0;
     }

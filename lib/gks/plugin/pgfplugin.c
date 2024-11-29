@@ -1687,7 +1687,11 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
           p->width = p->viewport[1] * WIDTH / MWIDTH;
           p->height = p->viewport[3] * HEIGHT / MHEIGHT;
-          if (gkss->resize_behaviour == GKS_K_RESIZE)
+          if (gkss->nominal_size > 0)
+            {
+              p->nominal_size = gkss->nominal_size;
+            }
+          else
             {
               p->nominal_size = min(p->width, p->height) / 500.0;
             }
