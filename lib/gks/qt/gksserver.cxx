@@ -15,10 +15,11 @@
 
 #include "gksserver.h"
 
+#define DEFAULT_PORT 8410
 
 const int GKSConnection::window_shift = 30;
 unsigned int GKSConnection::index = 0;
-const unsigned int GKSServer::port = 8410;
+unsigned int GKSServer::port = DEFAULT_PORT;
 
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 3, 0)
@@ -254,11 +255,17 @@ void GKSConnection::newWidget()
 
 GKSServer::GKSServer(QObject *parent) : QTcpServer(parent)
 {
-  QString gks_display = QProcessEnvironment::systemEnvironment().value("GKS_DISPLAY");
   QHostAddress host_address = QHostAddress::LocalHost;
+  port = DEFAULT_PORT;
+  QString gks_display = QProcessEnvironment::systemEnvironment().value("GKS_DISPLAY");
   if (!gks_display.isEmpty())
     {
-      host_address = QHostAddress(gks_display);
+      QStringList str = gks_display.split(':');
+      if (str.size() > 1)
+        {
+          host_address.setAddress(str[0].size() > 0 ? str[0] : "127.0.0.1");
+          port = str[1].size() > 0 ? str[1].toInt() : DEFAULT_PORT;
+        }
     }
   connect(this, SIGNAL(newConnection()), this, SLOT(connectSocket()));
   if (!listen(host_address, port))

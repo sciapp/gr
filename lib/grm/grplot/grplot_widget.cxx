@@ -38,7 +38,6 @@ static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
 static bool disable_movable_xform = false;
-static std::shared_ptr<GRM::Element> global_root;
 static bool ctrl_key_mode = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
@@ -118,6 +117,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "norm",
       "orientation",
       "projection_type",
+      "ref_x_axis_location",
+      "ref_y_axis_location",
       "resample_method",
       "scientific_format",
       "size_x_type",
@@ -353,19 +354,19 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(scatter3Act);
           type->addAction(scatterAct);
         }
-      else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
+      else if ((strcmp(kind, "histogram") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
                 strcmp(kind, "stem") == 0) &&
                !error)
         {
-          histAct = new QAction(tr("&Hist"), this);
-          connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
+          histogramAct = new QAction(tr("&Histogram"), this);
+          connect(histogramAct, &QAction::triggered, this, &GRPlotWidget::histogram);
           barplotAct = new QAction(tr("&Barplot"), this);
           connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
           stairsAct = new QAction(tr("&Stairs"), this);
           connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
           stemAct = new QAction(tr("&Stem"), this);
           connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
-          type->addAction(histAct);
+          type->addAction(histogramAct);
           type->addAction(barplotAct);
           type->addAction(stairsAct);
           type->addAction(stemAct);
@@ -473,7 +474,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           context_menu->addMenu(add_context_data);
         }
     }
-  global_root = grm_get_document_root();
 }
 
 GRPlotWidget::~GRPlotWidget()
@@ -494,8 +494,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                             QWidget **lineEdit)
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
-      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list,
-      context_attr_list;
+      x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
+      text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list;
   auto size_unit_vec = getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -531,6 +531,18 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   for (auto &i : location_vec)
     {
       location_list.push_back(i.c_str());
+    }
+  auto x_axis_location_vec = getXAxisLocations();
+  x_axis_location_list.reserve((int)x_axis_location_vec.size());
+  for (auto &i : x_axis_location_vec)
+    {
+      x_axis_location_list.push_back(i.c_str());
+    }
+  auto y_axis_location_vec = getYAxisLocations();
+  y_axis_location_list.reserve((int)y_axis_location_vec.size());
+  for (auto &i : y_axis_location_vec)
+    {
+      y_axis_location_list.push_back(i.c_str());
     }
   auto marker_type_vec = getMarkerTypes();
   marker_type_list.reserve((int)marker_type_vec.size());
@@ -661,6 +673,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"norm", norm_list},
       {"plot_type", plot_type_list},
       {"projection_type", projection_type_list},
+      {"ref_x_axis_location", x_axis_location_list},
+      {"ref_y_axis_location", y_axis_location_list},
       {"resample_method", resample_method_list},
       {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
@@ -722,7 +736,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                    "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
       QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
-      QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
+      QStringList barplot_group = {"barplot", "histogram", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter", "quiver"};
       std::string kind;
@@ -769,7 +783,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
   else if (cur_attr_name == "location" &&
-           (cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
+           (cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name != "axis")
     {
       for (const auto &elem : side_region_location_list)
         {
@@ -780,13 +795,27 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
   else if (cur_attr_name == "location" &&
-           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
+           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name != "axis")
     {
       for (const auto &elem : location_list)
         {
           ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
         }
       auto *completer = new QCompleter(location_list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "location" &&
+           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name == "axis")
+    {
+      auto axis_type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+      for (const auto &elem : (axis_type == "x" ? x_axis_location_list : y_axis_location_list))
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter((axis_type == "x" ? x_axis_location_list : y_axis_location_list), this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
@@ -830,9 +859,25 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
            !(current_selection->get_ref()->localName() == "side_region" ||
              current_selection->get_ref()->localName() == "side_plot_region" ||
              current_selection->get_ref()->localName() == "text_region") &&
+           current_selection->get_ref()->localName() != "axis" &&
            current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "location" &&
+           !(current_selection->get_ref()->localName() == "side_region" ||
+             current_selection->get_ref()->localName() == "side_plot_region" ||
+             current_selection->get_ref()->localName() == "text_region") &&
+           current_selection->get_ref()->localName() == "axis" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      auto type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+      if (type == "x")
+        current_text =
+            xAxisLocationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+      else
+        current_text =
+            yAxisLocationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
   else if (cur_attr_name == "clip_region" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
@@ -918,9 +963,17 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, projectionTypeStringToInt(value));
         }
-      else if (label == "location")
+      else if (label == "location" && element->localName() != "axis")
         {
           element->setAttribute(label, locationStringToInt(value));
+        }
+      else if (label == "location" && element->localName() == "axis")
+        {
+          auto type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+          if (type == "x")
+            element->setAttribute(label, xAxisLocationStringToInt(value));
+          else
+            element->setAttribute(label, yAxisLocationStringToInt(value));
         }
       else if (label == "clip_region")
         {
@@ -986,7 +1039,7 @@ void GRPlotWidget::draw()
     {
       static char file[50];
 
-      if (global_root == nullptr) global_root = grm_get_document_root();
+      auto global_root = grm_get_document_root();
       auto plot_elem = global_root->querySelectors("plot");
       auto kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
@@ -1188,7 +1241,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                 }
               label.setDefaultStyleSheet(QString::fromStdString(tooltipStyle));
               label.setHtml(QString::fromStdString(info));
-              if (global_root == nullptr) global_root = grm_get_document_root();
+              auto global_root = grm_get_document_root();
               auto plot_elem = global_root->querySelectors("plot");
               kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
               if (kind == "heatmap" || kind == "marginal_heatmap")
@@ -1445,7 +1498,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           int x, y;
           getMousePos(event, &x, &y);
           collectTooltips();
-          if (global_root == nullptr) global_root = grm_get_document_root();
+          auto global_root = grm_get_document_root();
           auto plot_elem = global_root->querySelectors("plot");
           if (plot_elem)
             {
@@ -1635,7 +1688,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   auto figure = global_root->querySelectors("[active=1]");
   if (figure != nullptr)
     {
@@ -1773,7 +1826,7 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 void GRPlotWidget::heatmap()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1790,7 +1843,7 @@ void GRPlotWidget::heatmap()
 void GRPlotWidget::marginalheatmapall()
 {
   algo->menuAction()->setVisible(true);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_heatmap", "series_surface",  "series_wireframe",
                                                  "series_contour", "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1812,7 +1865,7 @@ void GRPlotWidget::marginalheatmapall()
 void GRPlotWidget::marginalheatmapline()
 {
   algo->menuAction()->setVisible(true);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_heatmap", "series_surface",  "series_wireframe",
                                                  "series_contour", "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1833,7 +1886,7 @@ void GRPlotWidget::marginalheatmapline()
 
 void GRPlotWidget::line()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_scatter"))
     {
       elem->setAttribute("kind", "line");
@@ -1849,7 +1902,7 @@ void GRPlotWidget::line()
 
 void GRPlotWidget::sumalgorithm()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "sum");
@@ -1859,7 +1912,7 @@ void GRPlotWidget::sumalgorithm()
 
 void GRPlotWidget::maxalgorithm()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "max");
@@ -1869,7 +1922,7 @@ void GRPlotWidget::maxalgorithm()
 
 void GRPlotWidget::volume()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_isosurface"))
     {
       elem->setAttribute("kind", "volume");
@@ -1878,7 +1931,7 @@ void GRPlotWidget::volume()
 }
 void GRPlotWidget::isosurface()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_volume"))
     {
       elem->setAttribute("kind", "isosurface");
@@ -1889,7 +1942,7 @@ void GRPlotWidget::isosurface()
 void GRPlotWidget::surface()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_heatmap",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1905,7 +1958,7 @@ void GRPlotWidget::surface()
 void GRPlotWidget::wireframe()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_heatmap",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1922,7 +1975,7 @@ void GRPlotWidget::wireframe()
 void GRPlotWidget::contour()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_heatmap",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1939,7 +1992,7 @@ void GRPlotWidget::contour()
 void GRPlotWidget::imshow()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_heatmap"};
   for (const auto &name : valid_series_names)
@@ -1955,7 +2008,7 @@ void GRPlotWidget::imshow()
 
 void GRPlotWidget::plot3()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
@@ -1972,7 +2025,7 @@ void GRPlotWidget::plot3()
 void GRPlotWidget::contourf()
 {
   algo->menuAction()->setVisible(false);
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface", "series_wireframe",
                                                  "series_contour",        "series_heatmap", "series_imshow"};
   for (const auto &name : valid_series_names)
@@ -1988,7 +2041,7 @@ void GRPlotWidget::contourf()
 
 void GRPlotWidget::trisurf()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_plot3",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
@@ -2004,7 +2057,7 @@ void GRPlotWidget::trisurf()
 
 void GRPlotWidget::tricont()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_plot3", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
@@ -2020,7 +2073,7 @@ void GRPlotWidget::tricont()
 
 void GRPlotWidget::scatter3()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_plot3", "series_tricontour", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
@@ -2044,21 +2097,21 @@ void GRPlotWidget::scatter()
   redraw();
 }
 
-void GRPlotWidget::hist()
+void GRPlotWidget::histogram()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
-          series_elem->setAttribute("kind", "hist");
+          series_elem->setAttribute("kind", "histogram");
         }
     }
 
   // to get the same bars then before all bars have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_hist"))
+  for (const auto &elem : global_root->querySelectorsAll("series_histogram"))
     {
       elem->setAttribute("_update_required", true);
     }
@@ -2067,8 +2120,8 @@ void GRPlotWidget::hist()
 
 void GRPlotWidget::barplot()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_hist", "series_stem", "series_stairs"};
+  auto global_root = grm_get_document_root();
+  std::vector<std::string> valid_series_names = {"series_histogram", "series_stem", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2089,8 +2142,8 @@ void GRPlotWidget::barplot()
 
 void GRPlotWidget::stairs()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_hist"};
+  auto global_root = grm_get_document_root();
+  std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_histogram"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2110,8 +2163,8 @@ void GRPlotWidget::stairs()
 
 void GRPlotWidget::stem()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_barplot", "series_hist", "series_stairs"};
+  auto global_root = grm_get_document_root();
+  std::vector<std::string> valid_series_names = {"series_barplot", "series_histogram", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2125,7 +2178,7 @@ void GRPlotWidget::stem()
 
 void GRPlotWidget::shade()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_hexbin"))
     {
       elem->setAttribute("kind", "shade");
@@ -2135,7 +2188,7 @@ void GRPlotWidget::shade()
 
 void GRPlotWidget::hexbin()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_shade"))
     {
       elem->setAttribute("kind", "hexbin");
@@ -2145,7 +2198,7 @@ void GRPlotWidget::hexbin()
 
 void GRPlotWidget::polar_line()
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   for (const auto &elem : global_root->querySelectorsAll("series_polar_scatter"))
     {
       elem->setAttribute("kind", "polar_line");
@@ -2203,7 +2256,7 @@ void GRPlotWidget::moveEvent(QMoveEvent *event)
 
 void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
 {
-  if (global_root == nullptr) global_root = grm_get_document_root();
+  auto global_root = grm_get_document_root();
   double xmin, xmax, ymin, ymax;
   int id;
 
@@ -2359,7 +2412,6 @@ void GRPlotWidget::load_file_slot()
           return;
         }
       grm_load_graphics_tree(file);
-      global_root = grm_get_document_root();
       redraw();
       if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
 #else
@@ -2708,13 +2760,14 @@ void GRPlotWidget::processTestCommandsFile()
                   element_name += words[k].toUtf8().constData();
                   if (k < n - 3) element_name += " ";
                 }
-              if (global_root == nullptr) global_root = grm_get_document_root();
+              auto global_root = grm_get_document_root();
               auto series_elements = global_root->querySelectorsAll(element_name);
               for (const auto &elem : series_elements)
                 {
                   elem->setAttribute(words[n - 2].toUtf8().constData(), words[n - 1].toUtf8().constData());
                 }
               auto value = words[n - 1].toUtf8().constData();
+              if (strcmp(value, "hist") == 0) value = "histogram";
 
               if (strcmp(value, "line") == 0)
                 {
@@ -2725,7 +2778,7 @@ void GRPlotWidget::processTestCommandsFile()
                       elem->setAttribute("_update_required", true);
                     }
                 }
-              if (strcmp(value, "barplot") == 0 || strcmp(value, "hist") == 0 || strcmp(value, "stairs") == 0)
+              if (strcmp(value, "barplot") == 0 || strcmp(value, "histogram") == 0 || strcmp(value, "stairs") == 0)
                 {
                   // to get the same barplots then before all lines have to exist during render call so that the
                   // linespec work properly
@@ -2919,7 +2972,6 @@ void GRPlotWidget::processTestCommandsFile()
               if (file)
                 {
                   grm_load_graphics_tree(file);
-                  global_root = grm_get_document_root();
                   tooltips.clear();
                   redraw();
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);

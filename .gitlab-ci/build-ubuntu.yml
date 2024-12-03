@@ -60,15 +60,18 @@ ubuntu-cmake-self-contained-debug:
   - make
   - make install
   - cd ..
+  - install ./build/libGRM_int.so ./install/lib/
   - mv install artifacts-ubuntu2004-cmake
   - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
   - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
+  - mv build/grm_test_internal_api ./
   artifacts:
     expire_in: 1 week
     paths:
     - artifacts-ubuntu2004-cmake/
     - grm_snoop
     - libc_rand.so
+    - grm_test_internal_api/
 
 ubuntu-system-dependencies:
   stage: build

@@ -368,7 +368,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   std::vector<std::string> ndc_transformation_elems = {"figure",
                                                        "plot",
                                                        "colorbar",
-                                                       "labels_group",
+                                                       "label",
                                                        "titles_3d",
                                                        "text",
                                                        "layout_grid_element",
@@ -378,6 +378,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "marginal_heatmap_plot",
                                                        "legend",
                                                        "axis"};
+  auto render = grm_get_render();
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -402,6 +403,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   if (element->hasAttribute("y_shift" + post_fix))
     old_y_shift = static_cast<double>(element->getAttribute("y_shift" + post_fix));
 
+  render->setAutoUpdate(true);
   if (xshift != 0)
     {
       if (post_fix == "_wc")
@@ -439,9 +441,10 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
           element->setAttribute("y_shift" + post_fix, old_y_shift + (double)yshift / max_width_height);
         }
     }
+  render->setAutoUpdate(false);
 }
 
-int grm_input(const grm_args_t *input_args)
+int grm_input_(const grm_args_t *input_args)
 {
   /*
    * reset_ranges:
@@ -510,17 +513,19 @@ int grm_input(const grm_args_t *input_args)
 
           if (strcmp(key, "r") == 0)
             {
+              auto render = grm_get_render();
+              render->setAutoUpdate(true);
               if (subplot_element != nullptr)
                 {
                   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
-                  if (coordinate_system->hasAttribute("plot_type") &&
+                  if (coordinate_system != nullptr && coordinate_system->hasAttribute("plot_type") &&
                       (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" ||
                        static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar"))
                     {
                       logger((stderr, "Reset single subplot coordinate ranges\n"));
                       subplot_element->setAttribute("reset_ranges", 1);
                     }
-                  if (coordinate_system->hasAttribute("plot_type") &&
+                  if (coordinate_system != nullptr && coordinate_system->hasAttribute("plot_type") &&
                       static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "3d")
                     {
                       logger((stderr, "Reset single subplot coordinate rotation\n"));
@@ -533,6 +538,7 @@ int grm_input(const grm_args_t *input_args)
                   logger((stderr, "Reset all subplot coordinate ranges\n"));
                   grm_set_attribute_on_all_subplots("reset_ranges", 1);
                 }
+              render->setAutoUpdate(false);
             }
 
           return 1;
@@ -718,7 +724,7 @@ int grm_input(const grm_args_t *input_args)
                       for (auto &child : side_region->children())
                         {
                           std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (child_kind == "hist")
+                          if (child_kind == "histogram")
                             {
                               // reset bar colors
                               // bar level
@@ -773,7 +779,8 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                  if (coordinate_system != nullptr &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
                       !(subplot_element->hasAttribute("polar_with_pan") &&
                         static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
@@ -783,6 +790,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, zoom, zoom);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
 
               return 1;
@@ -804,7 +812,8 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                  if (coordinate_system != nullptr &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
                       !(subplot_element->hasAttribute("polar_with_pan") &&
                         static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
@@ -812,6 +821,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
               return 1;
             }
@@ -851,7 +861,8 @@ int grm_input(const grm_args_t *input_args)
           else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
                    grm_args_values(input_args, "y_shift", "i", &yshift) &&
                    !grm_args_values(input_args, "movable_state", "i", &movable_status) &&
-                   (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
+                   (coordinate_system != nullptr &&
+                        static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
                     (subplot_element->hasAttribute("polar_with_pan") &&
                      static_cast<int>(subplot_element->getAttribute("polar_with_pan")))))
             {
@@ -874,19 +885,10 @@ int grm_input(const grm_args_t *input_args)
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
+                      tilt = grm_min(180, grm_max(0, tilt));
 
-                      if (tilt > 180)
-                        {
-                          tilt = 180;
-                        }
-                      else if (tilt < 0)
-                        {
-                          tilt = 0;
-                        }
-                      grm_get_render()->setAutoUpdate(false);
                       central_region->setAttribute("space_3d_phi", rotation);
                       central_region->setAttribute("space_3d_theta", tilt);
-                      grm_get_render()->setAutoUpdate(true);
                     }
                 }
               else
@@ -897,6 +899,7 @@ int grm_input(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  GRM::Render::processLimits(subplot_element);
                 }
               return 1;
             }
@@ -988,11 +991,51 @@ int grm_input(const grm_args_t *input_args)
       auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
       subplot_element->append(panzoom_element);
       subplot_element->setAttribute("panzoom", true);
+      GRM::Render::processLimits(subplot_element);
 
       return 1;
     }
 
   return 0;
+}
+
+int grm_input(const grm_args_t *input_args)
+{
+  /*
+   * reset_ranges:
+   * - `x`, `y`: mouse cursor position
+   * - `key`: Pressed key (as string)
+   * zoom:
+   * - `x`, `y`: start point
+   * - `angle_delta`: mouse wheel rotation angle in eighths of a degree, can be replaced by factor (double type)
+   * - `factor`: zoom factor, can be replaced by angle_delta (double type)
+   * box zoom:
+   * - `x1`, `y1`, `x2`, `y2`: coordinates of a box selection, (x1, y1) is the fixed corner
+   * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
+   * pan:
+   * - `x`, `y`: start point
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * movable_xform:
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * - `disable_movable_trans`: disable movable transformation
+   * - `movable_state`: the status from grm_get_hover_mode
+   * - `clear_locked_state`: clear movable_obj_ref pointer
+   *
+   * All coordinates are expected to be given as workstation coordinates (integer type)
+   */
+
+  /* `input` modifies the tree but doesn't want to trigger a redraw, so we disable it here.
+   * This was only tested with `grplot`, perhaps it needs to be adjusted for other setups. */
+  auto render = grm_get_render();
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
+
+  auto return_value = grm_input_(input_args);
+
+  render->setAutoUpdate(auto_update);
+
+  return return_value;
 }
 
 int grm_is3d(const int x, const int y)
@@ -1240,17 +1283,15 @@ error_cleanup:
   return nullptr;
 }
 
-err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
 {
   double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
   std::vector<std::string> labels;
   unsigned int num_labels = 0;
-  std::string kind;
+  std::string kind, orientation = PLOT_DEFAULT_ORIENTATION;
   unsigned int x_length, y_length, z_length, series_i = 0, i;
-  std::string orientation;
-  int is_vertical = 0;
 
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   return_error_if(info == nullptr, ERROR_MALLOC);
@@ -1269,15 +1310,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
 
-  if (subplot_element != nullptr)
-    {
-      kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
-      if (subplot_element->hasAttribute("orientation"))
-        {
-          orientation = static_cast<std::string>(subplot_element->getAttribute("orientation"));
-          is_vertical = orientation == "vertical";
-        }
-    }
+  if (subplot_element != nullptr) kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
   if (subplot_element == nullptr ||
       !str_equals_any(kind, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour", "imshow",
                       "contourf", "pie", "hexbin", "shade", "quiver"))
@@ -1290,6 +1323,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   gr_savestate();
   auto central_region = subplot_element->querySelectors("central_region");
+  if (central_region->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
   GRM::Render::processWindow(central_region);
   if (central_region->hasAttribute("viewport_x_min"))
     {
@@ -1310,7 +1345,6 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   gr_ndctowc(&x, &y);
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
-  auto coordinate_system = subplot_element->querySelectors("coordinate_system");
   auto left_side_region = subplot_element->querySelectors("side_region[location=\"left\"]");
   auto bottom_side_region = subplot_element->querySelectors("side_region[location=\"bottom\"]");
   struct
@@ -1483,21 +1517,16 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
             }
 
-          std::vector<double> x_series_vec;
-          std::vector<double> y_series_vec;
+          std::vector<double> x_series_vec, y_series_vec, z_series_vec;
 
-          if (is_vertical)
+          if (str_equals_any(kind, "heatmap", "hexbin", "quiver", "shade") && orientation == "vertical")
             {
-              x_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-              y_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+              auto tmp = x_key;
+              x_key = y_key;
+              y_key = tmp;
             }
-          else
-            {
-              x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
-              y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-            }
-          std::vector<double> z_series_vec;
-
+          x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+          y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
           if (str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
             {
               z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
@@ -1508,23 +1537,45 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
             {
               for (i = 0; i < x_series_vec.size(); i++)
                 {
-                  if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max)
-                    {
-                      continue;
-                    }
                   x_px = x_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) !=
+                          "x")
+                    {
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_x_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      x_px = (x_px - b) / a;
+                    }
+                  if (x_px < x_range_min || x_px > x_range_max) continue;
+
                   y_px = y_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) !=
+                          "y")
+                    {
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_y_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      y_px = (y_px - b) / a;
+                    }
+                  if (y_px < y_range_min || y_px > y_range_max) continue;
+
                   gr_wctondc(&x_px, &y_px);
-                  x_px = (x_px * max_width_height);
-                  y_px = (height - y_px * max_width_height);
-                  diff = fabs(x_px - mouse_x);
+                  x_px = x_px * max_width_height;
+                  y_px = y_px * max_width_height;
+                  diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
                   if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                     {
                       mindiff = diff;
                       info->x = x_series_vec[i];
                       info->y = y_series_vec[i];
                       info->x_px = (int)x_px;
-                      info->y_px = (int)y_px;
+                      info->y_px = height - (int)y_px;
                       if (num_labels > series_i)
                         {
                           static std::vector<std::string> line_label = labels;
@@ -1666,6 +1717,13 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 {
                   info->xlabel = (char *)"u";
                   info->ylabel = (char *)"v";
+                  if (orientation == "vertical")
+                    {
+                      auto tmp = y_series_idx;
+                      y_series_idx = x_series_idx;
+                      x_series_idx = tmp;
+                      x_length = y_length;
+                    }
                   info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                   info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                 }
@@ -1683,6 +1741,13 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               else
                 {
+                  if (kind == "heatmap" && orientation == "vertical")
+                    {
+                      auto tmp = y_series_idx;
+                      y_series_idx = x_series_idx;
+                      x_series_idx = tmp;
+                      x_length = y_length;
+                    }
                   num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
                             ? NAN
                             : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
@@ -1724,6 +1789,20 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
   gr_restorestate();
   return ERROR_NONE;
+}
+
+err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+{
+  auto render = grm_get_render();
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
+
+  auto error = get_tooltips_(mouse_x, mouse_y, tooltip_callback);
+
+  render->setAutoUpdate(auto_update);
+
+  return error;
 }
 
 int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)

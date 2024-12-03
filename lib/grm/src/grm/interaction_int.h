@@ -39,6 +39,7 @@ DECLARE_LIST_TYPE(tooltip, grm_tooltip_info_t *)
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
 err_t get_tooltips(const int mouse_x, const int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *));
+int grm_input_(const grm_args_t *input_args);
 
 
 /* ========================= methods ================================================================================ */

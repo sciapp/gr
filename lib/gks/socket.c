@@ -47,7 +47,7 @@
 #define MAXPATHLEN 1024
 #endif
 
-#define PORT "8410"
+#define DEFAULT_PORT "8410"
 
 typedef struct
 {
@@ -124,7 +124,6 @@ static void *gksqt_thread(void *arg)
       if (saOrigQuit.sa_handler != SIG_IGN) sigaction(SIGQUIT, &saDefault, NULL);
 
       sigprocmask(SIG_SETMASK, &origMask, NULL);
-
       execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
 
       _exit(127);
@@ -176,10 +175,9 @@ static int start(void *cmd)
   return 0;
 }
 
-static int connect_socket(int quiet)
+static int connect_socket(char *server, char *servname, int quiet)
 {
   int rc, s;
-  char *server;
   struct addrinfo hints, *res = NULL;
   int opt;
 
@@ -194,20 +192,14 @@ static int connect_socket(int quiet)
     }
 #endif
 
-  server = (char *)gks_getenv("GKS_CONID");
-  if (!server) server = (char *)gks_getenv("GKSconid");
-  if (server)
-    if (!*server) server = NULL;
-  if (!server) server = "localhost";
-
   memset(&hints, 0x00, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
-  if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+  if ((rc = getaddrinfo(server, servname, &hints, &res)) != 0)
     {
       hints.ai_family = AF_INET6;
-      if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+      if ((rc = getaddrinfo(server, servname, &hints, &res)) != 0)
         {
           if (!quiet)
             {
@@ -244,10 +236,11 @@ static int connect_socket(int quiet)
 
 static int open_socket(int wstype)
 {
+  char *env, *display = NULL, *server = NULL, *servname = NULL;
 #ifdef _WIN32
   wchar_t command[CMD_LINE_LEN], w_env[MAXPATHLEN];
 #else
-  const char *command = NULL, *env;
+  const char *command = NULL;
   char *cmd = NULL;
 #endif
   size_t retry_count, max_retry_count = 20;
@@ -261,6 +254,27 @@ static int open_socket(int wstype)
   int max_sleep_time_ms = 300;
   size_t n_initial_times = sizeof(initial_sleep_time_ms) / sizeof(initial_sleep_time_ms[0]);
   max_retry_count += n_initial_times;
+
+  env = (char *)getenv("GKS_DISPLAY");
+  if (!env) env = (char *)getenv("GKS_CONID");
+  if (!env) env = (char *)getenv("GKSconid");
+
+  if (env != NULL)
+    {
+      display = (char *)strdup(env);
+
+      if (strchr(display, ':') != display)
+        {
+          server = strtok(display, ":");
+          servname = strtok(NULL, ":");
+        }
+      else
+        servname = strtok(display, ":");
+    }
+
+  if (server == NULL) server = "127.0.0.1";
+
+  if (servname == NULL) servname = DEFAULT_PORT;
 
   if (wstype >= 411 && wstype <= 413)
     {
@@ -305,7 +319,7 @@ static int open_socket(int wstype)
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
-      if ((s = connect_socket(retry_count != max_retry_count)) == -1)
+      if ((s = connect_socket(server, servname, retry_count != max_retry_count)) == -1)
         {
           if (command != NULL && retry_count == 1)
             {
@@ -335,6 +349,7 @@ static int open_socket(int wstype)
 
   is_running = (retry_count <= max_retry_count);
 
+  if (display != NULL) free(display);
 #ifndef _WIN32
   if (cmd != NULL) free(cmd);
 #endif

@@ -778,7 +778,11 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
-  if (gkss->resize_behaviour == GKS_K_RESIZE)
+  if (gkss->nominal_size > 0)
+    {
+      p->nominal_size = 558 / 500.0 * gkss->nominal_size;
+    }
+  else
     {
       p->nominal_size = min(p->width, p->height) / 500.0;
     }
@@ -838,7 +842,7 @@ static void create_patterns(void)
       gks_inq_pattern_array(pattern, parray);
       for (j = 0, k = 1; j < 16; j += 2)
         {
-          snprintf(bitmap[i] + j, 17, "%02x", parray[k]);
+          snprintf(bitmap[i] + j, 17 - j, "%02x", parray[k]);
           if (++k > *parray) k = 1;
         }
       bitmap[i][16] = '\0';

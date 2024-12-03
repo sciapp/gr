@@ -12,6 +12,7 @@ set(EXECUTABLE_SOURCES
     get_compatible_format.c
     datatype/string_array_map.c
     escape_minus.cxx
+    id_pool.cxx
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})

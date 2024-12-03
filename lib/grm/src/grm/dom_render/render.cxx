@@ -83,7 +83,6 @@ static std::set<std::string> parent_types = {
     "integral",
     "integral_group",
     "label",
-    "labels_group",
     "layout_grid",
     "layout_grid_element",
     "legend",
@@ -98,7 +97,7 @@ static std::set<std::string> parent_types = {
     "series_contourf",
     "series_heatmap",
     "series_hexbin",
-    "series_hist",
+    "series_histogram",
     "series_imshow",
     "series_isosurface",
     "series_line",
@@ -129,18 +128,33 @@ static std::set<std::string> parent_types = {
 };
 
 static std::set<std::string> drawable_types = {
-    "axes_3d",       "cell_array",
-    "draw_arc",      "draw_graphics",
-    "draw_image",    "draw_rect",
-    "fill_arc",      "fill_area",
-    "fill_rect",     "grid",
-    "grid_3d",       "isosurface_render",
-    "layout_grid",   "layout_grid_element",
-    "legend",        "nonuniform_cell_array",
-    "panzoom",       "polyline",
-    "polyline_3d",   "polymarker",
-    "polymarker_3d", "text",
-    "tick",          "titles_3d",
+    "angle_line",
+    "arc_grid_line",
+    "axes_3d",
+    "cell_array",
+    "draw_arc",
+    "draw_graphics",
+    "draw_image",
+    "draw_rect",
+    "fill_arc",
+    "fill_area",
+    "fill_rect",
+    "grid_3d",
+    "grid_line",
+    "isosurface_render",
+    "layout_grid",
+    "layout_grid_element",
+    "legend",
+    "nonuniform_cell_array",
+    "nonuniform_polar_cell_array",
+    "polar_cell_array",
+    "polyline",
+    "polyline_3d",
+    "polymarker",
+    "polymarker_3d",
+    "text",
+    "tick",
+    "titles_3d",
 };
 
 static std::set<std::string> drawable_kinds = {
@@ -207,6 +221,9 @@ static std::set<std::string> kinds_3d = {
     "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface",
 };
 
+static std::set<std::string> kinds_classic_2d = {"barplot", "contour", "contourf", "heatmap", "hexbin", "histogram",
+                                                 "line",    "quiver",  "scatter",  "shade",   "stairs", "stem"};
+
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
@@ -224,10 +241,30 @@ static int plot_scatter_markertypes[] = {
 static int *previous_scatter_marker_type = plot_scatter_markertypes;
 static int *previous_line_marker_type = plot_scatter_markertypes;
 
-static int bounding_id = 0, axis_id = 0;
+static IdPool<int> &id_pool()
+{
+  /*
+   * Use a static pointer to heap memory instead of a static object (`static IdPool<int> id_pool`) to guarantee that
+   * - the object is constructed on first use
+   * - the object will remain alive as long as the program runs
+   * The second point is most important since various other global `Element` objects will call `IdPool::release` in
+   * their destructors, so it must be ensured that id_pool is alive until the last `Element` object is destructed.
+   */
+  static auto id_pool_ = new IdPool<int>;
+  return *id_pool_;
+}
+
+std::map<int, std::weak_ptr<GRM::Element>> &bounding_map()
+{
+  /* See the `id_pool` function above for a detailed explanation why this routine is needed. */
+  static auto bounding_map_ = new std::map<int, std::weak_ptr<GRM::Element>>;
+  return *bounding_map_;
+}
+
+static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
-static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
+static bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
 static string_map_entry_t kind_to_fmt[] = {
@@ -239,7 +276,7 @@ static string_map_entry_t kind_to_fmt[] = {
     {"surface", "xyzc"},       {"wireframe", "xyzc"},
     {"plot3", "xyzc"},         {"scatter", "xyzc"},
     {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-    {"heatmap", "xyzc"},       {"hist", "x"},
+    {"heatmap", "xyzc"},       {"histogram", "x"},
     {"barplot", "y"},          {"isosurface", "z"},
     {"imshow", "z"},           {"nonuniform_heatmap", "xyzc"},
     {"polar_histogram", "x"},  {"pie", "x"},
@@ -330,6 +367,18 @@ static std::map<std::string, int> location_string_to_int{
     {"outside_window_top_right", 11},
     {"outside_window_mid_right", 12},
     {"outside_window_bottom_right", 13},
+};
+static std::map<std::string, int> x_axis_location_string_to_int{
+    {"x", 0},
+    {"twin_x", 1},
+    {"top", 2},
+    {"bottom", 3},
+};
+static std::map<std::string, int> y_axis_location_string_to_int{
+    {"y", 0},
+    {"twin_y", 1},
+    {"right", 2},
+    {"left", 3},
 };
 static std::map<std::string, int> marker_type_string_to_int{
     {"dot", 1},
@@ -433,7 +482,7 @@ static bool isUniformData(const std::shared_ptr<GRM::Element> &element, const st
   std::string x_key, y_key, kind;
   kind = static_cast<std::string>(element->getAttribute("kind"));
   if (str_equals_any(kind, "line", "scatter", "pie", "polar_line", "polar_histogram", "polar_heatmap", "polar_scatter",
-                     "imshow", "hist", "barplot", "stem", "stairs") ||
+                     "imshow", "histogram", "barplot", "stem", "stairs") ||
       kinds_3d.find(kind) != kinds_3d.end())
     return false;
 
@@ -461,7 +510,7 @@ static bool isUniformData(const std::shared_ptr<GRM::Element> &element, const st
         }
     }
   x_key = static_cast<std::string>(element->getAttribute("x"));
-  if (kind == "hist")
+  if (kind == "histogram")
     {
       y_key = static_cast<std::string>(element->getAttribute("weights"));
     }
@@ -615,14 +664,49 @@ static void transformCoordinatesVector(std::vector<double> &coords, double v_min
 
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!bounding_boxes) return;
+
+  if (element->hasAttribute("_bbox_id"))
     {
-      element->setAttribute("_bbox_id", -1);
-      element->removeAttribute("_bbox_x_min");
-      element->removeAttribute("_bbox_x_max");
-      element->removeAttribute("_bbox_y_min");
-      element->removeAttribute("_bbox_y_max");
+      element->setAttribute("_bbox_id", -std::abs(static_cast<int>(element->getAttribute("_bbox_id"))));
     }
+  else
+    {
+      element->setAttribute("_bbox_id", -id_pool().next());
+    }
+  element->removeAttribute("_bbox_x_min");
+  element->removeAttribute("_bbox_x_max");
+  element->removeAttribute("_bbox_y_min");
+  element->removeAttribute("_bbox_y_max");
+}
+
+static bool removeBoundingBoxId(GRM::Element &element)
+{
+  if (element.hasAttribute("_bbox_id"))
+    {
+      auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
+      element.removeAttribute("_bbox_id");
+      id_pool().release(bbox_id);
+      return true;
+    }
+  return false;
+}
+
+static bool applyBoundingBoxId(GRM::Element &new_element, GRM::Element &old_element, bool only_reserve_id = false)
+{
+  if (old_element.hasAttribute("_bbox_id"))
+    {
+      new_element.setAttribute("_bbox_id", std::abs(static_cast<int>(old_element.getAttribute("_bbox_id"))) *
+                                               (only_reserve_id ? -1 : 1));
+      old_element.removeAttribute("_bbox_id");
+      return true;
+    }
+  else if (bounding_boxes)
+    {
+      new_element.setAttribute("_bbox_id", id_pool().next() * (only_reserve_id ? -1 : 1));
+    }
+
+  return false;
 }
 
 static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element> &element)
@@ -935,6 +1019,9 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   if (left_text_margin) left_margin += 0.05;
   if (right_text_margin) right_margin += 0.05;
   if (bottom_text_margin) bottom_margin += 0.05;
+
+  if (plot_parent->hasAttribute("_twin_y_window_xform_a_org")) right_margin += 0.025;
+  if (plot_parent->hasAttribute("_twin_x_window_xform_a_org") && !top_text_margin) top_margin += 0.025;
 
   // calculate text impact for top_margin and adjust all margins if defined by attributes
   if (kind == "marginal_heatmap")
@@ -1672,7 +1759,7 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       "figure",
       "plot",
       "colorbar",
-      "labels_group",
+      "label",
       "titles_3d",
       "text",
       "layout_grid_element",
@@ -2580,6 +2667,49 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
 }
 
+static void calculateWindowTransformationParameter(const std::shared_ptr<GRM::Element> &plot_parent, double w1_min,
+                                                   double w1_max, double w2_min, double w2_max, std::string location,
+                                                   double *a, double *b)
+{
+  bool x_log = false, y_log = false;
+  if (plot_parent->hasAttribute("x_log")) x_log = static_cast<int>(plot_parent->getAttribute("x_log"));
+  if (plot_parent->hasAttribute("y_log")) y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+
+  if ((x_log && str_equals_any(location, "bottom", "top", "twin_x")) ||
+      (y_log && str_equals_any(location, "left", "right", "twin_y")))
+    {
+      *a = (log10(w2_max) - log10(w2_min)) / (log10(w1_max) - log10(w1_min));
+      *b = log10(w2_min) - *a * log10(w1_min);
+    }
+  else
+    {
+      *a = (w2_max - w2_min) / (w1_max - w1_min);
+      *b = w2_min - *a * w1_min;
+    }
+}
+
+static void adjustValueForNonStandardAxis(const std::shared_ptr<GRM::Element> &plot_parent, double *value,
+                                          std::string location)
+{
+  if (str_equals_any(location, "bottom", "left", "right", "top", "twin_x", "twin_y"))
+    {
+      bool x_log = false, y_log = false;
+      auto a = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a"));
+      auto b = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b"));
+      if (plot_parent->hasAttribute("x_log")) x_log = static_cast<int>(plot_parent->getAttribute("x_log"));
+      if (plot_parent->hasAttribute("y_log")) y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+      if ((x_log && str_equals_any(location, "bottom", "top", "twin_x")) ||
+          (y_log && str_equals_any(location, "left", "right", "twin_y")))
+        {
+          *value = pow(10, (log10(*value) - b) / a);
+        }
+      else
+        {
+          *value = (*value - b) / a;
+        }
+    }
+}
+
 static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                                const std::string &y_org_pos, double &x_org, double &y_org, int &x_major, int &y_major,
                                double &x_tick, double &y_tick)
@@ -2587,7 +2717,8 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
   double x_org_low, x_org_high;
   double y_org_low, y_org_high;
   int major_count;
-  std::shared_ptr<GRM::Element> central_region, central_region_parent;
+  double xmin, xmax, ymin, ymax;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent, window_parent;
 
   auto plot_element = getPlotElement(element);
   auto kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
@@ -2604,10 +2735,16 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
     }
 
   auto scale = static_cast<int>(plot_element->getAttribute("scale"));
-  auto xmin = static_cast<double>(central_region->getAttribute("window_x_min"));
-  auto xmax = static_cast<double>(central_region->getAttribute("window_x_max"));
-  auto ymin = static_cast<double>(central_region->getAttribute("window_y_min"));
-  auto ymax = static_cast<double>(central_region->getAttribute("window_y_max"));
+
+  window_parent = central_region;
+  if (element->hasAttribute("window_x_min") && element->hasAttribute("window_x_max") &&
+      element->hasAttribute("window_y_min") && element->hasAttribute("window_y_max"))
+    window_parent = element;
+
+  xmin = static_cast<double>(window_parent->getAttribute("window_x_min"));
+  xmax = static_cast<double>(window_parent->getAttribute("window_x_max"));
+  ymin = static_cast<double>(window_parent->getAttribute("window_y_min"));
+  ymax = static_cast<double>(window_parent->getAttribute("window_y_max"));
 
   getMajorCount(element, kind, major_count);
 
@@ -2983,14 +3120,16 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
 
 void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
 {
-  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
+  if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || bounding_map()[id].expired())
     {
-      bounding_map[id]->setAttribute("_bbox_id", id);
-      bounding_map[id]->setAttribute("_bbox_x_min", x_min);
-      bounding_map[id]->setAttribute("_bbox_x_max", x_max);
-      bounding_map[id]->setAttribute("_bbox_y_min", y_min);
-      bounding_map[id]->setAttribute("_bbox_y_max", y_max);
+      return;
     }
+  auto element = bounding_map()[id].lock();
+  element->setAttribute("_bbox_id", id);
+  element->setAttribute("_bbox_x_min", x_min);
+  element->setAttribute("_bbox_x_max", x_max);
+  element->setAttribute("_bbox_y_min", y_min);
+  element->setAttribute("_bbox_y_max", y_max);
 }
 
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
@@ -3093,6 +3232,22 @@ std::vector<std::string> getLocations()
   std::vector<std::string> locations;
   locations.reserve(location_string_to_int.size());
   for (auto const &imap : location_string_to_int) locations.push_back(imap.first);
+  return locations;
+}
+
+std::vector<std::string> getXAxisLocations()
+{
+  std::vector<std::string> locations;
+  locations.reserve(x_axis_location_string_to_int.size());
+  for (auto const &imap : x_axis_location_string_to_int) locations.push_back(imap.first);
+  return locations;
+}
+
+std::vector<std::string> getYAxisLocations()
+{
+  std::vector<std::string> locations;
+  locations.reserve(y_axis_location_string_to_int.size());
+  for (auto const &imap : y_axis_location_string_to_int) locations.push_back(imap.first);
   return locations;
 }
 
@@ -3947,7 +4102,8 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                   continue;
                 }
 
-              bool is_horizontal = static_cast<std::string>(series->getAttribute("orientation")) == "horizontal";
+              bool is_horizontal =
+                  static_cast<std::string>(series->parentElement()->getAttribute("orientation")) == "horizontal";
               std::vector<std::shared_ptr<GRM::Element>> bar_groups = series->children();
 
               if ((is_horizontal && x_ind == -1) || (!is_horizontal && y_ind == -1)) continue;
@@ -4143,6 +4299,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   if (!(scale & GR_OPTION_X_LOG))
     {
       adjust_x_lim = static_cast<int>(element->getAttribute("adjust_x_lim"));
+      auto x_axis = element->querySelectors("axis[location=\"x\"]");
+      if (x_axis != nullptr && x_axis->hasAttribute("adjust_x_lim") && kinds_3d.count(kind) == 0 &&
+          polar_kinds.count(kind) == 0)
+        adjust_x_lim = static_cast<int>(x_axis->getAttribute("adjust_x_lim"));
       if (adjust_x_lim)
         {
           logger((stderr, "_x_lim before \"gr_adjustlimits\": (%lf, %lf)\n", xmin, xmax));
@@ -4154,6 +4314,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   if (!(scale & GR_OPTION_Y_LOG))
     {
       adjust_y_lim = static_cast<int>(element->getAttribute("adjust_y_lim"));
+      auto y_axis = element->querySelectors("axis[location=\"y\"]");
+      if (y_axis != nullptr && y_axis->hasAttribute("adjust_y_lim") && kinds_3d.count(kind) == 0 &&
+          polar_kinds.count(kind) == 0)
+        adjust_y_lim = static_cast<int>(y_axis->getAttribute("adjust_y_lim"));
       if (adjust_y_lim)
         {
           logger((stderr, "_y_lim before \"gr_adjustlimits\": (%lf, %lf)\n", ymin, ymax));
@@ -4532,6 +4696,36 @@ std::string locationIntToString(int location)
   throw std::logic_error("The given location is unknown.\n");
 }
 
+int xAxisLocationStringToInt(const std::string &location_str)
+{
+  return x_axis_location_string_to_int[location_str];
+}
+
+std::string xAxisLocationIntToString(int location)
+{
+  for (auto const &map_elem : x_axis_location_string_to_int)
+    {
+      if (map_elem.second == location) return map_elem.first;
+    }
+  logger((stderr, "Got unknown location \"%i\"\n", location));
+  throw std::logic_error("The given location is unknown.\n");
+}
+
+int yAxisLocationStringToInt(const std::string &location_str)
+{
+  return y_axis_location_string_to_int[location_str];
+}
+
+std::string yAxisLocationIntToString(int location)
+{
+  for (auto const &map_elem : y_axis_location_string_to_int)
+    {
+      if (map_elem.second == location) return map_elem.first;
+    }
+  logger((stderr, "Got unknown location \"%i\"\n", location));
+  throw std::logic_error("The given location is unknown.\n");
+}
+
 int modelStringToInt(const std::string &model_str)
 {
   return model_string_to_int[model_str];
@@ -4721,36 +4915,143 @@ static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *ti
                                                  const std::shared_ptr<GRM::Element> &axis, del_values del)
 {
   int child_id = 1, label_ind = 0;
-  std::shared_ptr<GRM::Element> tick_group;
+  std::string filter;
+  std::shared_ptr<GRM::Element> tick_group, axis_ref;
   auto num_ticks = static_cast<int>(axis->getAttribute("num_ticks"));
   auto num_labels = static_cast<int>(axis->getAttribute("num_tick_labels"));
   auto axis_type = static_cast<std::string>(axis->getAttribute("axis_type"));
+  auto location = static_cast<std::string>(axis->getAttribute("location"));
+
+  if (location == "twin_x")
+    filter = "x";
+  else if (location == "twin_y")
+    filter = "y";
+  if (!filter.empty()) axis_ref = axis->parentElement()->querySelectors("axis[location=\"" + filter + "\"]");
 
   if (static_cast<int>(axis->getAttribute("mirrored_axis"))) child_id += 1;
-  for (int i = 0; i < num_ticks; i++)
+  if (!str_equals_any(location, "twin_x", "twin_y") || !axis->hasAttribute("_" + location + "_window_xform_a") ||
+      !axis_ref->hasAttribute("draw_grid") || !static_cast<int>(axis_ref->getAttribute("draw_grid")))
     {
-      std::string label;
-      double width = 0.0;
-      if (label_ind < num_labels && tick_labels[label_ind].tick == ticks[i].value)
+      for (int i = 0; i < num_ticks; i++)
         {
-          if (tick_labels[label_ind].label) label = tick_labels[label_ind].label;
-          if (tick_labels[label_ind].width) width = tick_labels[label_ind].width;
-          label_ind += 1;
-        }
+          std::string label;
+          double width = 0.0;
+          if (label_ind < num_labels && tick_labels[label_ind].tick == ticks[i].value)
+            {
+              if (tick_labels[label_ind].label) label = tick_labels[label_ind].label;
+              if (tick_labels[label_ind].width) width = tick_labels[label_ind].width;
+              label_ind += 1;
+            }
 
-      if (del != del_values::update_without_default && del != del_values::update_with_default)
-        {
-          tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width);
-          tick_group->setAttribute("_child_id", child_id++);
-          axis->append(tick_group);
-        }
-      else
-        {
-          tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
-          if (tick_group != nullptr)
-            tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width, tick_group);
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width);
+              tick_group->setAttribute("_child_id", child_id++);
+              axis->append(tick_group);
+            }
+          else
+            {
+              tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
+              if (tick_group != nullptr)
+                tick_group =
+                    global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width, tick_group);
+            }
         }
     }
+  else
+    {
+      std::shared_ptr<GRM::Element> plot_parent = axis;
+      getPlotParent(plot_parent);
+
+      axis->setAttribute("num_ticks", static_cast<int>(axis_ref->getAttribute("num_ticks")));
+      axis->setAttribute("num_tick_labels", static_cast<int>(axis_ref->getAttribute("num_tick_labels")));
+      auto org = static_cast<double>(axis->getAttribute("org"));
+      auto min = static_cast<double>(axis->getAttribute("min"));
+      auto max = static_cast<double>(axis->getAttribute("max"));
+      auto tick = static_cast<double>(axis->getAttribute("tick"));
+      auto major_count = static_cast<double>(axis->getAttribute("major_count"));
+
+      for (int i = 0; i < static_cast<int>(axis->getAttribute("num_ticks")); i++)
+        {
+          std::string label;
+          double width = 0.0;
+
+          auto a = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a"));
+          auto b = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b"));
+          auto ref_tick_group = axis_ref->querySelectors("tick_group[_child_id=" + std::to_string(child_id) + "]");
+          auto is_major = static_cast<int>(ref_tick_group->getAttribute("is_major"));
+          auto tick_value = static_cast<double>(ref_tick_group->getAttribute("value"));
+          tick_value = a * tick_value + b;
+
+          if (label_ind < static_cast<int>(axis->getAttribute("num_tick_labels")) &&
+              !static_cast<std::string>(ref_tick_group->getAttribute("tick_label")).empty())
+            {
+              char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER] = "";
+              format_reference_t reference;
+              gr_getformat(&reference, org, min, max, tick, major_count);
+              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", std::to_string(tick_value).c_str());
+
+              auto value_string = gr_ftoa(text_buffer, tick_value, &reference);
+              label = value_string;
+              width = static_cast<double>(ref_tick_group->getAttribute("width"));
+              label_ind += 1;
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              tick_group = global_render->createTickGroup(is_major, label, tick_value, width);
+              tick_group->setAttribute("_child_id", child_id++);
+              axis->append(tick_group);
+            }
+          else
+            {
+              tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
+              if (tick_group != nullptr)
+                tick_group = global_render->createTickGroup(is_major, label, tick_value, width, tick_group);
+            }
+        }
+    }
+}
+
+static void newWindowForTwinAxis(const std::shared_ptr<GRM::Element> &element,
+                                 const std::shared_ptr<GRM::Element> &axis_ref, double *new_w_min, double *new_w_max,
+                                 double old_w_min, double old_w_max)
+{
+  double a, b;
+  double rounded_tick, tick, diff;
+  int diff_log, num_ticks_log, decimal_places, num_ticks;
+  std::shared_ptr<GRM::Element> plot_parent = element;
+  getPlotParent(plot_parent);
+
+  auto location = static_cast<std::string>(element->getAttribute("location"));
+
+  diff = *new_w_max - *new_w_min;
+  diff_log = ceil(log10(diff));
+  num_ticks = static_cast<int>(axis_ref->getAttribute("num_ticks")) - 1;
+  num_ticks_log = ceil(log10(num_ticks));
+  decimal_places = diff_log - num_ticks_log - 1;
+
+  // modify start window to control the first labels decimal places
+  *new_w_min = floor(*new_w_min, decimal_places);
+  *new_w_max = ceil(*new_w_max, decimal_places);
+
+  diff = *new_w_max - *new_w_min;
+  tick = diff / num_ticks;
+  rounded_tick = round(tick, decimal_places);
+
+  if (fabs(tick - rounded_tick) > 1e-12) //  more digits than wanted
+    {
+      auto new_tick = ceil(tick, decimal_places);
+      auto modification = fabs(new_tick * num_ticks - diff) / 2.0;
+      *new_w_min -= modification;
+      *new_w_max += modification;
+    }
+  calculateWindowTransformationParameter(element, old_w_min, old_w_max, *new_w_min, *new_w_max, location, &a, &b);
+
+  element->setAttribute("_" + location + "_window_xform_a", a);
+  element->setAttribute("_" + location + "_window_xform_b", b);
+  plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+  plot_parent->setAttribute("_" + location + "_window_xform_b", b);
 }
 
 static void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4770,22 +5071,157 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
   double org = NAN, pos = NAN;
   double line_x_min = 0.0, line_x_max = 0.0, line_y_min = 0.0, line_y_max = 0.0;
   std::string x_org_pos = PLOT_DEFAULT_ORG_POS, y_org_pos = PLOT_DEFAULT_ORG_POS;
-  std::shared_ptr<GRM::Element> plot_parent = element, line, axis_elem = element, central_region;
+  std::shared_ptr<GRM::Element> plot_parent = element, line, axis_elem = element, central_region, window_parent;
   double window[4], old_window[4] = {NAN, NAN, NAN, NAN};
-  bool mirrored_axis = MIRRORED_AXIS_DEFAULT, x_flip = false, y_flip = false;
+  bool mirrored_axis = MIRRORED_AXIS_DEFAULT, x_flip = false, y_flip = false, x_log = false, y_log = false;
   std::string kind, axis_type;
   del_values del = del_values::update_without_default;
   int scientific_format = SCIENTIFIC_FORMAT_OPTION, scale = 0;
+  std::string location;
 
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
-  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
   getPlotParent(plot_parent);
 
-  window[0] = static_cast<double>(element->parentElement()->parentElement()->getAttribute("window_x_min"));
-  window[1] = static_cast<double>(element->parentElement()->parentElement()->getAttribute("window_x_max"));
-  window[2] = static_cast<double>(element->parentElement()->parentElement()->getAttribute("window_y_min"));
-  window[3] = static_cast<double>(element->parentElement()->parentElement()->getAttribute("window_y_max"));
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
+
+  if (axis_elem->hasAttribute("location")) location = static_cast<std::string>(axis_elem->getAttribute("location"));
+  axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
+  if (plot_parent->hasAttribute("x_log")) x_log = static_cast<int>(plot_parent->getAttribute("x_log"));
+  if (plot_parent->hasAttribute("y_log")) y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+
+  window_parent = element->parentElement()->parentElement();
+  if (str_equals_any(location, "bottom", "left", "right", "top"))
+    window_parent = plot_parent->querySelectors("central_region");
+  window[0] = static_cast<double>(window_parent->getAttribute("window_x_min"));
+  window[1] = static_cast<double>(window_parent->getAttribute("window_x_max"));
+  window[2] = static_cast<double>(window_parent->getAttribute("window_y_min"));
+  window[3] = static_cast<double>(window_parent->getAttribute("window_y_max"));
+
+  // adjust the window for non standard axis
+  if (axis_elem->hasAttribute("location") && !str_equals_any(location, "x", "y"))
+    {
+      double a, b;
+
+      // reset transformation
+      plot_parent->setAttribute("_" + location + "_window_xform_a",
+                                static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a_org")));
+      plot_parent->setAttribute("_" + location + "_window_xform_b",
+                                static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b_org")));
+      // apply lims if set to window and recalculate transformation
+      if (axis_type == "x" && element->hasAttribute("x_lim_min") && element->hasAttribute("x_lim_max"))
+        {
+          auto x_lim_min = static_cast<double>(element->getAttribute("x_lim_min"));
+          auto x_lim_max = static_cast<double>(element->getAttribute("x_lim_max"));
+          calculateWindowTransformationParameter(element, window[0], window[1], x_lim_min, x_lim_max, location, &a, &b);
+
+          plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+          plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+        }
+      if (axis_type == "y" && element->hasAttribute("y_lim_min") && element->hasAttribute("y_lim_max"))
+        {
+          auto y_lim_min = static_cast<double>(element->getAttribute("y_lim_min"));
+          auto y_lim_max = static_cast<double>(element->getAttribute("y_lim_max"));
+          calculateWindowTransformationParameter(element, window[2], window[3], y_lim_min, y_lim_max, location, &a, &b);
+
+          plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+          plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+        }
+
+      // calculate the window for non default axis
+      a = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a"));
+      b = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b"));
+      if (str_equals_any(location, "twin_x", "twin_y") && element->hasAttribute("_" + location + "_window_xform_a"))
+        {
+          std::string filter = (location == "twin_x") ? "x" : "y";
+          auto axis_ref = element->parentElement()->querySelectors("axis[location=\"" + filter + "\"]");
+          if (axis_ref->hasAttribute("draw_grid") && static_cast<int>(axis_ref->getAttribute("draw_grid")))
+            {
+              // get special transformation for twin axes with grid
+              a = static_cast<double>(element->getAttribute("_" + location + "_window_xform_a"));
+              b = static_cast<double>(element->getAttribute("_" + location + "_window_xform_b"));
+              plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+              plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+        }
+      if (axis_type == "x")
+        {
+          double tmp_window_0, tmp_window_1;
+          if (x_log)
+            {
+              tmp_window_0 = pow(10, a * log10(window[0]) + b);
+              tmp_window_1 = pow(10, a * log10(window[1]) + b);
+            }
+          else
+            {
+              tmp_window_0 = a * window[0] + b;
+              tmp_window_1 = a * window[1] + b;
+            }
+          // apply adjustlimits to window if set and recalculate transformation
+          if (element->hasAttribute("adjust_x_lim") && static_cast<int>(element->getAttribute("adjust_x_lim")))
+            {
+              gr_adjustlimits(&tmp_window_0, &tmp_window_1);
+              calculateWindowTransformationParameter(element, window[0], window[1], tmp_window_0, tmp_window_1,
+                                                     location, &a, &b);
+
+              plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+              plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+
+          if (location == "twin_x" && !element->hasAttribute("_" + location + "_window_xform_a"))
+            {
+              auto x_axis = element->parentElement()->querySelectors("axis[location=\"x\"]");
+              if (x_axis->hasAttribute("draw_grid") && static_cast<int>(x_axis->getAttribute("draw_grid")))
+                {
+                  newWindowForTwinAxis(element, x_axis, &tmp_window_0, &tmp_window_1, window[0], window[1]);
+                }
+            }
+          window[0] = tmp_window_0;
+          window[1] = tmp_window_1;
+        }
+      else if (axis_type == "y")
+        {
+          double tmp_window_2, tmp_window_3;
+          if (y_log)
+            {
+              tmp_window_2 = pow(10, a * log10(window[2]) + b);
+              tmp_window_3 = pow(10, a * log10(window[3]) + b);
+            }
+          else
+            {
+              tmp_window_2 = a * window[2] + b;
+              tmp_window_3 = a * window[3] + b;
+            }
+          // apply adjustlimits to window if set and recalculate transformation
+          if (element->hasAttribute("adjust_y_lim") && static_cast<int>(element->getAttribute("adjust_y_lim")))
+            {
+              gr_adjustlimits(&tmp_window_2, &tmp_window_3);
+              calculateWindowTransformationParameter(element, window[2], window[3], tmp_window_2, tmp_window_3,
+                                                     location, &a, &b);
+
+              plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+              plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+
+          if (location == "twin_y" && !element->hasAttribute("_" + location + "_window_xform_a"))
+            {
+              auto y_axis = element->parentElement()->querySelectors("axis[location=\"y\"]");
+              if (y_axis->hasAttribute("draw_grid") && static_cast<int>(y_axis->getAttribute("draw_grid")))
+                {
+                  newWindowForTwinAxis(element, y_axis, &tmp_window_2, &tmp_window_3, window[2], window[3]);
+                }
+            }
+          window[2] = tmp_window_2;
+          window[3] = tmp_window_3;
+        }
+    }
+  if (str_equals_any(location, "bottom", "left", "right", "top"))
+    global_render->setWindow(element->parentElement(), window[0], window[1], window[2], window[3]);
+  global_render->setWindow(element, window[0], window[1], window[2], window[3]);
+
   if (element->hasAttribute("_window_old_x_min"))
     old_window[0] = static_cast<double>(element->getAttribute("_window_old_x_min"));
   if (element->hasAttribute("_window_old_x_max"))
@@ -4799,14 +5235,18 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
   element->setAttribute("_window_old_y_min", window[2]);
   element->setAttribute("_window_old_y_max", window[3]);
 
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
+
   kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
   if (element->hasAttribute("mirrored_axis")) mirrored_axis = static_cast<int>(element->getAttribute("mirrored_axis"));
-  axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
   if (element->hasAttribute("scientific_format"))
     scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
   if (plot_parent->hasAttribute("font")) processFont(plot_parent);
   if (plot_parent->hasAttribute("x_flip")) x_flip = static_cast<int>(plot_parent->getAttribute("x_flip"));
   if (plot_parent->hasAttribute("y_flip")) y_flip = static_cast<int>(plot_parent->getAttribute("y_flip"));
+
+  // if twin_x or twin_y is set x or y shouldn't be mirrored
+  if (plot_parent->hasAttribute("_twin_" + axis_type + "_window_xform_a")) mirrored_axis = false;
 
   if (element->hasAttribute("scale"))
     {
@@ -4820,6 +5260,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       max_val = window[1];
       tick = x_tick;
       pos = window[2];
+      if (str_equals_any(location, "top", "twin_x")) pos = window[3];
       major_count = x_major;
     }
   else if (axis_type == "y")
@@ -4828,6 +5269,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       max_val = window[3];
       tick = y_tick;
       pos = window[0];
+      if (str_equals_any(location, "right", "twin_y")) pos = window[1];
       major_count = y_major;
     }
   getTickSize(element, tick_size); // GRM calculated tick_size
@@ -4848,6 +5290,8 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
         tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
     }
 
+  if (str_equals_any(location, "right", "top", "twin_x", "twin_y")) tick_orientation = -1;
+
   // special cases for x- and y-flip
   if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y") pos = window[1];
   if ((scale & GR_OPTION_FLIP_Y || y_flip) && axis_type == "x") pos = window[3];
@@ -4863,16 +5307,21 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
               str_equals_any(series->localName(), "series_contourf", "series_heatmap", "series_shade"))
             {
               tick_orientation = -1;
+              if (str_equals_any(location, "twin_x", "twin_y")) tick_orientation = 1;
               break;
             }
         }
     }
   else
     {
-      auto location = static_cast<std::string>(
+      if (element->parentElement()->hasAttribute("x_flip"))
+        x_flip = static_cast<int>(element->parentElement()->getAttribute("x_flip"));
+      if (element->parentElement()->hasAttribute("y_flip"))
+        y_flip = static_cast<int>(element->parentElement()->getAttribute("y_flip"));
+      auto parent_location = static_cast<std::string>(
           element->parentElement()->parentElement()->parentElement()->getAttribute("location"));
-      if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y" && location == "right") pos = window[0];
-      if ((scale & GR_OPTION_FLIP_Y || y_flip) && axis_type == "x" && location == "top") pos = window[2];
+      if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y" && parent_location == "right") pos = window[0];
+      if ((scale & GR_OPTION_FLIP_Y || y_flip) && axis_type == "x" && parent_location == "top") pos = window[2];
       processFlip(element->parentElement());
     }
   tick_size *= tick_orientation;
@@ -4888,7 +5337,8 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
                                         axis.label_position, axis_elem);
   if (del != del_values::update_without_default)
     {
-      if (!axis_elem->hasAttribute("draw_grid")) axis_elem->setAttribute("draw_grid", true);
+      if (!axis_elem->hasAttribute("draw_grid") && !plot_parent->hasAttribute("_twin_" + axis_type + "_window_xform_a"))
+        axis_elem->setAttribute("draw_grid", true);
       if (kind == "barplot")
         {
           bool only_barplot = true;
@@ -4905,12 +5355,17 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
 
           if (only_barplot)
             {
-              if (barplot != nullptr) orientation = static_cast<std::string>(barplot->getAttribute("orientation"));
+              auto parent = axis_elem->parentElement();
+              if (axis_elem->parentElement()->localName() == "coordinate_system") parent = parent->parentElement();
+              orientation = static_cast<std::string>(parent->getAttribute("orientation"));
               if (axis_type == "x" && orientation == "horizontal") axis_elem->setAttribute("draw_grid", false);
               if (axis_type == "y" && orientation == "vertical") axis_elem->setAttribute("draw_grid", false);
             }
         }
       if (kind == "shade") axis_elem->setAttribute("draw_grid", false);
+      // twin axis doesn't have a grid
+      if (axis_elem->hasAttribute("location") && !str_equals_any(location, "x", "y"))
+        axis_elem->setAttribute("draw_grid", false);
       axis_elem->setAttribute("mirrored_axis", mirrored_axis);
     }
   // create tick_group elements
@@ -4939,6 +5394,20 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       line_x_min = line_x_max = axis.position;
       line_y_min = axis.min;
       line_y_max = axis.max;
+    }
+  if (str_equals_any(location, "bottom", "top", "twin_x") && axis_type == "x")
+    {
+      adjustValueForNonStandardAxis(plot_parent, &line_x_min, location);
+      adjustValueForNonStandardAxis(plot_parent, &line_x_max, location);
+      if (location == "twin_x") line_y_min = line_y_max = window[3];
+      if (scale & GR_OPTION_FLIP_Y || y_flip) line_y_min = line_y_max = window[2];
+    }
+  else if (str_equals_any(location, "left", "right", "twin_y") && axis_type == "y")
+    {
+      adjustValueForNonStandardAxis(plot_parent, &line_y_min, location);
+      adjustValueForNonStandardAxis(plot_parent, &line_y_max, location);
+      if (location == "twin_y") line_x_min = line_x_max = window[1];
+      if (scale & GR_OPTION_FLIP_X || x_flip) line_x_min = line_x_max = window[0];
     }
   if (del != del_values::update_without_default && del != del_values::update_with_default)
     {
@@ -5015,8 +5484,9 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
         }
       if (element->hasAttribute("_zoomed") && static_cast<int>(element->getAttribute("_zoomed")))
         {
-          for (const auto &axis : element->querySelectorsAll("axis"))
+          for (const auto &axis : plot_element->querySelectorsAll("axis"))
             {
+              if (axis->parentElement()->localName() == "colorbar") continue;
               clearAxisAttributes(axis);
               processAxis(axis, global_render->context);
             }
@@ -5215,6 +5685,55 @@ static void processZIndex(const std::shared_ptr<GRM::Element> &element)
     }
 }
 
+static void processRefAxisLocation(const std::shared_ptr<GRM::Element> &element)
+{
+  std::shared_ptr<GRM::Element> plot_parent = element, coordinate_system;
+  double window[4];
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+
+  getPlotParent(plot_parent);
+  coordinate_system = plot_parent->querySelectors("coordinate_system");
+  if (coordinate_system != nullptr && static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" &&
+      element->localName() != "series_pie")
+    {
+      if (element->parentElement()->hasAttribute("orientation"))
+        orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
+
+      auto x_location = static_cast<std::string>(element->getAttribute("ref_x_axis_location"));
+      if (x_location.empty()) x_location = "x";
+      auto y_location = static_cast<std::string>(element->getAttribute("ref_y_axis_location"));
+      if (y_location.empty()) y_location = "y";
+
+      if (orientation == "vertical")
+        {
+          auto tmp = x_location;
+          x_location = y_location;
+          y_location = tmp;
+
+          if (y_location == "twin_x") y_location = "twin_y";
+          if (y_location == "top") y_location = "right";
+          if (y_location == "bottom") y_location = "left";
+          if (x_location == "twin_y") x_location = "twin_x";
+          if (x_location == "right") x_location = "top";
+          if (x_location == "left") x_location = "bottom";
+        }
+
+      auto ref_x_axis = plot_parent->querySelectors("axis[location=\"" + x_location + "\"]");
+      if (!ref_x_axis->hasAttribute("window_x_min") || !ref_x_axis->hasAttribute("window_x_max"))
+        processAxis(ref_x_axis, global_render->getContext());
+      window[0] = static_cast<double>(ref_x_axis->getAttribute("window_x_min"));
+      window[1] = static_cast<double>(ref_x_axis->getAttribute("window_x_max"));
+
+      auto ref_y_axis = plot_parent->querySelectors("axis[location=\"" + y_location + "\"]");
+      if (!ref_y_axis->hasAttribute("window_y_min") || !ref_y_axis->hasAttribute("window_y_max"))
+        processAxis(ref_y_axis, global_render->getContext());
+      window[2] = static_cast<double>(ref_y_axis->getAttribute("window_y_min"));
+      window[3] = static_cast<double>(ref_y_axis->getAttribute("window_y_max"));
+
+      gr_setwindow(window[0], window[1], window[2], window[3]);
+    }
+}
+
 static void processBackgroundColor(const std::shared_ptr<GRM::Element> &element)
 {
   if (element->hasAttribute("background_color"))
@@ -5285,6 +5804,8 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("marker_type"), processMarkerType},
       {std::string("projection_type"), processProjectionType},
       {std::string("max_char_height"), processRelativeCharHeight},
+      {std::string("ref_x_axis_location"), processRefAxisLocation},
+      {std::string("ref_y_axis_location"), processRefAxisLocation},
       {std::string("resample_method"), processResampleMethod},
       {std::string("reset_rotation"), processResetRotation},
       {std::string("select_specific_xform"), processSelectSpecificXform},
@@ -5398,17 +5919,8 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
       static_cast<std::string>(series->getAttribute("style")) == "stacked")
     ymin = 0;
 
-  if (series != nullptr)
-    {
-      if (series->hasAttribute("orientation"))
-        {
-          orientation = static_cast<std::string>(series->getAttribute("orientation"));
-        }
-      else
-        {
-          series->setAttribute("orientation", orientation);
-        }
-    }
+  if (central_region->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
 
   bool is_vertical = orientation == "vertical";
 
@@ -5460,6 +5972,11 @@ static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const st
   int tick_orientation = 1;
   double tick_size;
   std::string x_org_pos = PLOT_DEFAULT_ORG_POS, y_org_pos = PLOT_DEFAULT_ORG_POS, z_org_pos = PLOT_DEFAULT_ORG_POS;
+
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
 
   if (element->hasAttribute("x_org_pos")) x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
   if (element->hasAttribute("y_org_pos")) y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
@@ -5514,6 +6031,11 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   auto colors = static_cast<int>(element->getAttribute("color_ind"));
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
+
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
 
   if (!getLimitsForColorbar(element, c_min, c_max) && !getLimitsForColorbar(plot_parent, c_min, c_max))
     throw NotFoundError("Missing limits\n");
@@ -5771,10 +6293,11 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
   double pos_vertical_change = 0, neg_vertical_change = 0;
   double x1, x2, y1, y2;
   double x_min = 0, x_max, y_min = 0;
-  bool is_vertical;
+  bool is_vertical, x_log = false;
   bool inner_series, inner_c = false, inner_c_rgb = false;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  double eps = 1e-12;
 
   /* clear old bars */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -5806,16 +6329,10 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
     {
       element->setAttribute("style", style);
     }
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
-
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   is_vertical = orientation == "vertical";
+  x_log = plot_parent->hasAttribute("x_log") && static_cast<int>(plot_parent->getAttribute("x_log"));
 
   if (bar_color_rgb[0] != -1)
     {
@@ -6003,6 +6520,8 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
             }
           x1 += x_min;
           x2 += x_min;
+          if (x_log && x1 <= 0) x1 = 0 + eps;
+          if (x_log && x2 <= x1) continue;
 
           if (is_vertical)
             {
@@ -6112,6 +6631,8 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
                 }
               x1 += x_min;
               x2 += x_min;
+              if (x_log && x1 <= 0) x1 = 0 + eps;
+              if (x_log && x2 <= x1) continue;
 
               if (is_vertical)
                 {
@@ -6205,6 +6726,8 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
                   x1 = x_min + series_index + 1 - 0.5 * bar_width;
                   x2 = x_min + series_index + 1 + 0.5 * bar_width;
                 }
+              if (x_log && x1 <= 0) x1 = 0 + eps;
+              if (x_log && x2 <= x1) continue;
               bar_centers.push_back((x1 + x2) / 2.0);
             }
           extendErrorBars(child, context, bar_centers, y_vec);
@@ -6222,13 +6745,18 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
    */
   double z_min, z_max;
   int num_levels = PLOT_DEFAULT_CONTOUR_LEVELS;
-  int i;
+  int i, j;
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
   std::vector<double> px_vec, py_vec, pz_vec;
   int major_h = PLOT_DEFAULT_CONTOUR_MAJOR_H;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
+
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
+
   z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
   z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
@@ -6266,6 +6794,26 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
       x_length = x_vec.size();
       y_length = y_vec.size();
       z_length = z_vec.size();
+
+      if (orientation == "vertical")
+        {
+          auto tmp = x_vec;
+          x_vec = y_vec;
+          y_vec = tmp;
+          auto tmp2 = x_length;
+          x_length = y_length;
+          y_length = tmp2;
+
+          std::vector<double> zv(z_length);
+          for (i = 0; i < y_length; i++)
+            {
+              for (j = 0; j < x_length; j++)
+                {
+                  zv[j + i * x_length] = z_vec[i + j * y_length];
+                }
+            }
+          z_vec = zv;
+        }
 
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       global_root->setAttribute("_id", id + 1);
@@ -6357,13 +6905,18 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
    */
   double z_min, z_max;
   int num_levels = PLOT_DEFAULT_CONTOUR_LEVELS;
-  int i;
+  int i, j;
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
   std::vector<double> px_vec, py_vec, pz_vec;
   int major_h = PLOT_DEFAULT_CONTOURF_MAJOR_H;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
+
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
+
   z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
   z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
@@ -6401,6 +6954,26 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
       x_length = x_vec.size();
       y_length = y_vec.size();
       z_length = z_vec.size();
+
+      if (orientation == "vertical")
+        {
+          auto tmp = x_vec;
+          x_vec = y_vec;
+          y_vec = tmp;
+          auto tmp2 = x_length;
+          x_length = y_length;
+          y_length = tmp2;
+
+          std::vector<double> zv(z_length);
+          for (i = 0; i < y_length; i++)
+            {
+              for (j = 0; j < x_length; j++)
+                {
+                  zv[j + i * x_length] = z_vec[i + j * y_length];
+                }
+            }
+          z_vec = zv;
+        }
 
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       global_root->setAttribute("_id", id + 1);
@@ -6594,14 +7167,8 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
   x_length = x_vec.size();
   kind = static_cast<std::string>(series->getAttribute("kind"));
-  if (element->parentElement()->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
-    }
-  else
-    {
-      element->parentElement()->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("orientation"));
 
   if (!element->hasAttribute("absolute_downwards") && !element->hasAttribute("relative_downwards"))
     throw NotFoundError("Error-bars are missing required attribute downwards.\n");
@@ -7122,195 +7689,213 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
                   continue;
                 }
 
-              gr_savestate();
-              mask = gr_uselinespec(specs[spec_i].data());
-              gr_restorestate();
+              std::shared_ptr<GRM::Element> label_elem;
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  label_elem = render->createElement("label");
+                  label_elem->setAttribute("_child_id", child_id++);
+                  element->append(label_elem);
+                }
+              else
+                {
+                  label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
+                }
+              if (label_elem != nullptr)
+                {
+                  gr_savestate();
+                  mask = gr_uselinespec(specs[spec_i].data());
+                  gr_restorestate();
 
-              if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
-                {
-                  legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
-                  legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
-                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                  for (const auto &child : series->children())
+                  if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
                     {
-                      std::shared_ptr<GRM::Element> pl;
-                      if (series->localName() == "series_stem")
+                      legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
+                      legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
+                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                      for (const auto &child : series->children())
                         {
-                          if (got_polymarker && got_polyline) break;
-                          if (child->localName() == "polyline" && got_polyline) continue;
-                          if (child->localName() == "polymarker" && got_polymarker) continue;
-                        }
-                      if (child->localName() == "polyline")
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
+                          std::shared_ptr<GRM::Element> pl;
+                          if (series->localName() == "series_stem")
                             {
-                              pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                          legend_symbol_y[1]);
-                              pl->setAttribute("_child_id", child_id++);
-                              element->append(pl);
+                              if (got_polymarker && got_polyline) break;
+                              if (child->localName() == "polyline" && got_polyline) continue;
+                              if (child->localName() == "polymarker" && got_polymarker) continue;
                             }
-                          else
+                          if (child->localName() == "polyline")
                             {
-                              pl = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-                              if (pl != nullptr)
-                                render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                       legend_symbol_y[1], 0, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setLineSpec(pl, specs[spec_i]);
-                              if (child->hasAttribute("line_color_ind"))
+                              if (del != del_values::update_without_default && del != del_values::update_with_default)
                                 {
-                                  render->setLineColorInd(pl, static_cast<int>(child->getAttribute("line_color_ind")));
+                                  pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                              legend_symbol_y[0], legend_symbol_y[1]);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
                                 }
                               else
                                 {
-                                  render->setLineColorInd(pl, static_cast<int>(series->getAttribute("line_color_ind")));
+                                  pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                           legend_symbol_y[1], 0, 0.0, 0, pl);
                                 }
-                              got_polyline = true;
-                            }
-                        }
-                      else if (child->localName() == "polymarker")
-                        {
-                          int markertype;
-                          if (child->hasAttribute("marker_type"))
-                            {
-                              markertype = static_cast<int>(child->getAttribute("marker_type"));
-                            }
-                          else
-                            {
-                              markertype = static_cast<int>(series->getAttribute("marker_type"));
-                            }
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                            legend_symbol_y[0], markertype);
-                              pl->setAttribute("_child_id", child_id++);
-                              element->append(pl);
-                            }
-                          else
-                            {
-                              pl = element->querySelectors("polymarker[_child_id=" + std::to_string(child_id++) + "]");
                               if (pl != nullptr)
-                                render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor, legend_symbol_y[0],
-                                                         markertype, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              int marker_color_ind = 989;
-                              if (series->hasAttribute("marker_color_ind"))
-                                marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                              if (child->hasAttribute("marker_color_ind"))
-                                marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                              render->setMarkerColorInd(pl, marker_color_ind);
-                              if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                              processMarkerColorInd(pl);
-                              got_polymarker = true;
-                            }
-                        }
-                    }
-                }
-              if (mask & 2)
-                {
-                  legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
-                  legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
-                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                  for (const auto &child : series->children())
-                    {
-                      std::shared_ptr<GRM::Element> pl;
-                      if (child->localName() == "polyline")
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                          legend_symbol_y[1]);
-                              pl->setAttribute("_child_id", child_id++);
-                              element->append(pl);
-                            }
-                          else
-                            {
-                              pl = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-                              if (pl != nullptr)
-                                render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                       legend_symbol_y[1], 0, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setLineSpec(pl, specs[spec_i]);
-                              if (child->hasAttribute("line_color_ind"))
                                 {
-                                  render->setLineColorInd(pl, static_cast<int>(child->getAttribute("line_color_ind")));
+                                  render->setLineSpec(pl, specs[spec_i]);
+                                  if (child->hasAttribute("line_color_ind"))
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(child->getAttribute("line_color_ind")));
+                                    }
+                                  else
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(series->getAttribute("line_color_ind")));
+                                    }
+                                  got_polyline = true;
+                                }
+                            }
+                          else if (child->localName() == "polymarker")
+                            {
+                              int markertype;
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
                                 }
                               else
                                 {
-                                  render->setLineColorInd(pl, static_cast<int>(series->getAttribute("line_color_ind")));
+                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
+                                }
+                              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                                {
+                                  pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                legend_symbol_y[0], markertype);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                             legend_symbol_y[0], markertype, 0.0, 0, pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  int marker_color_ind = 989;
+                                  if (series->hasAttribute("marker_color_ind"))
+                                    marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                  if (child->hasAttribute("marker_color_ind"))
+                                    marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                  render->setMarkerColorInd(pl, marker_color_ind);
+                                  if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
+                                  processMarkerColorInd(pl);
+                                  got_polymarker = true;
                                 }
                             }
                         }
-                      else if (child->localName() == "polymarker")
+                    }
+                  if (mask & 2)
+                    {
+                      legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
+                      legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
+                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                      for (const auto &child : series->children())
                         {
-                          int markertype;
-                          if (child->hasAttribute("marker_type"))
+                          std::shared_ptr<GRM::Element> pl;
+                          if (child->localName() == "polyline")
                             {
-                              markertype = static_cast<int>(child->getAttribute("marker_type"));
-                            }
-                          else
-                            {
-                              markertype = static_cast<int>(series->getAttribute("marker_type"));
-                            }
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                            legend_symbol_y[0], markertype);
-                              pl->setAttribute("_child_id", child_id++);
-                              element->append(pl);
-                            }
-                          else
-                            {
-                              pl = element->querySelectors("polymarker[_child_id=" + std::to_string(child_id++) + "]");
+                              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                                {
+                                  pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                              legend_symbol_y[0], legend_symbol_y[1]);
+                                  pl->setAttribute("_child_id", 1);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polyline[_child_id=\"1\"]");
+                                  if (pl != nullptr)
+                                    render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                           legend_symbol_y[1], 0, 0.0, 0, pl);
+                                }
                               if (pl != nullptr)
-                                render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor, legend_symbol_y[0],
-                                                         markertype, 0.0, 0, pl);
+                                {
+                                  render->setLineSpec(pl, specs[spec_i]);
+                                  if (child->hasAttribute("line_color_ind"))
+                                    {
+                                      render->setLineColorInd(pl,
+                                                              static_cast<int>(child->getAttribute("line_color_ind")));
+                                    }
+                                  else
+                                    {
+                                      render->setLineColorInd(pl,
+                                                              static_cast<int>(series->getAttribute("line_color_ind")));
+                                    }
+                                }
                             }
-                          if (pl != nullptr)
+                          else if (child->localName() == "polymarker")
                             {
-                              render->setMarkerColorInd(
-                                  pl, (series->hasAttribute("marker_color_ind")
-                                           ? static_cast<int>(series->getAttribute("marker_color_ind"))
-                                           : 989));
-                              processMarkerColorInd(pl);
+                              int markertype;
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
+                                }
+                              else
+                                {
+                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
+                                }
+                              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                                {
+                                  pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                legend_symbol_y[0], markertype);
+                                  pl->setAttribute("_child_id", 1);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polymarker[_child_id=\"1\"]");
+                                  if (pl != nullptr)
+                                    render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                             legend_symbol_y[0], markertype, 0.0, 0, pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  render->setMarkerColorInd(
+                                      pl, (series->hasAttribute("marker_color_ind")
+                                               ? static_cast<int>(series->getAttribute("marker_color_ind"))
+                                               : 989));
+                                  processMarkerColorInd(pl);
+                                }
                             }
                         }
                     }
+                  if (i < labels.size())
+                    {
+                      std::shared_ptr<GRM::Element> tx;
+                      if (del != del_values::update_without_default && del != del_values::update_with_default)
+                        {
+                          tx = render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
+                                                  labels[i]);
+                          tx->setAttribute("_child_id", 2);
+                          label_elem->append(tx);
+                        }
+                      else
+                        {
+                          tx = label_elem->querySelectors("text[_child_id=\"2\"]");
+                          if (tx != nullptr)
+                            render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
+                                               labels[i], CoordinateSpace::NDC, tx);
+                        }
+                      if (tx != nullptr && del != del_values::update_without_default)
+                        {
+                          render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+                        }
+                      viewport[3] -= 0.5 * dy;
+                      i += 1;
+                    }
+                  viewport[3] -= 0.03 * scale_factor;
+                  spec_i += 1;
                 }
-              if (i < labels.size())
-                {
-                  std::shared_ptr<GRM::Element> tx;
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      tx = render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                              labels[i]);
-                      tx->setAttribute("_child_id", child_id++);
-                      element->append(tx);
-                    }
-                  else
-                    {
-                      tx = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-                      if (tx != nullptr)
-                        render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                           labels[i], CoordinateSpace::NDC, tx);
-                    }
-                  if (tx != nullptr && del != del_values::update_without_default)
-                    {
-                      render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-                    }
-                  viewport[3] -= 0.5 * dy;
-                  i += 1;
-                }
-              viewport[3] -= 0.03 * scale_factor;
-              spec_i += 1;
             }
         }
       gr_restorestate();
@@ -7320,7 +7905,6 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
   else
     {
       std::shared_ptr<GRM::Element> fr, dr, text;
-      int label_child_id = 0;
       double viewport[4];
 
       /* clear child nodes */
@@ -7371,29 +7955,22 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
       render->setLineColorInd(element, 1);
       render->setLineWidth(element, 1);
 
-      auto labels_group = element->querySelectors("labels_group");
-      if (labels_group == nullptr)
-        {
-          labels_group = render->createElement("labels_group");
-          element->append(labels_group);
-        }
-      render->setTextAlign(labels_group, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
       for (auto &current_label : labels)
         {
           std::shared_ptr<GRM::Element> label_elem;
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
               label_elem = render->createElement("label");
-              label_elem->setAttribute("_child_id", label_child_id++);
-              labels_group->append(label_elem);
+              label_elem->setAttribute("_child_id", child_id++);
+              element->append(label_elem);
             }
           else
             {
-              label_elem = labels_group->querySelectors("label[_child_id=" + std::to_string(label_child_id++) + "]");
+              label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
             }
           if (label_elem != nullptr)
             {
+              render->setTextAlign(label_elem, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
                   fr = render->createFillRect(viewport[0] + 0.02 * scale_factor, viewport[0] + 0.04 * scale_factor,
@@ -7420,8 +7997,8 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
                           if (child->localName() == "series_pie")
                             {
                               std::shared_ptr<GRM::Element> pie_segment;
-                              pie_segment = child->querySelectors(
-                                  "pie_segment[_child_id=" + std::to_string(label_child_id - 1) + "]");
+                              pie_segment =
+                                  child->querySelectors("pie_segment[_child_id=" + std::to_string(child_id - 3) + "]");
                               if (pie_segment != nullptr)
                                 {
                                   int color_ind = static_cast<int>(pie_segment->getAttribute("fill_color_ind"));
@@ -7844,6 +8421,11 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
           break;
         }
     }
+
+  /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
+   * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
+   * functions like `gr_axis` modify the axis text based on the chosen encoding. */
+  processTextEncoding(active_figure);
 
   window[0] = static_cast<double>(central_region->getAttribute("window_x_min"));
   window[1] = static_cast<double>(central_region->getAttribute("window_x_max"));
@@ -8501,6 +9083,8 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
   del_values del = del_values::update_without_default;
   int child_id = 0;
   int x_offset = 0, y_offset = 0;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  bool is_vertical = false;
 
   if (element->parentElement()->parentElement()->localName() == "plot")
     {
@@ -8519,6 +9103,10 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
             }
         }
     }
+
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
+  is_vertical = orientation == "vertical";
 
   if (element_context->hasAttribute("x"))
     {
@@ -8645,6 +9233,24 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
         }
       y_max = y_vec[rows - 1];
     }
+
+  // swap x and y in case of orientation
+  if (is_vertical)
+    {
+      double tmp = x_min;
+      x_min = y_min;
+      y_min = tmp;
+      tmp = x_max;
+      x_max = y_max;
+      y_max = tmp;
+      tmp = rows;
+      rows = cols;
+      cols = tmp;
+      auto tmp2 = x_vec;
+      x_vec = y_vec;
+      y_vec = tmp2;
+    }
+
   if (element_context->hasAttribute("marginal_heatmap_kind"))
     {
       z_min = static_cast<double>(element_context->getAttribute("z_range_min"));
@@ -8679,18 +9285,25 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
   data = std::vector<int>(rows * cols);
   if (z_max > z_min)
     {
-      for (i = 0; i < cols * rows; i++)
+      for (i = 0; i < rows; i++)
         {
-          zv = z_vec[i];
+          for (j = 0; j < cols; j++)
+            {
+              if (is_vertical)
+                zv = z_vec[i + j * rows];
+              else
+                zv = z_vec[j + i * cols];
 
-          if (zv > z_max || zv < z_min || grm_isnan(zv))
-            {
-              data[i] = -1;
-            }
-          else
-            {
-              data[i] = (int)((zv - c_min) / (c_max - c_min) * 255 + 0.5);
-              data[i] = grm_max(grm_min(data[i], 255), 0); // data values must be inside [0, 255]
+              if (zv > z_max || zv < z_min || grm_isnan(zv))
+                {
+                  data[j + i * cols] = -1;
+                }
+              else
+                {
+                  data[j + i * cols] = (int)((zv - c_min) / (c_max - c_min) * 255 + 0.5);
+                  data[j + i * cols] =
+                      grm_max(grm_min(data[j + i * cols], 255), 0); // data values must be inside [0, 255]
+                }
             }
         }
     }
@@ -8809,6 +9422,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
 static void processHexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int nbins = PLOT_DEFAULT_HEXBIN_NBINS;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
   if (!element->hasAttribute("x")) throw NotFoundError("Hexbin series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
@@ -8822,6 +9436,8 @@ static void processHexbin(const std::shared_ptr<GRM::Element> &element, const st
     {
       element->setAttribute("num_bins", nbins);
     }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
 
   double *x_p = &(GRM::get<std::vector<double>>((*context)[x])[0]);
   double *y_p = &(GRM::get<std::vector<double>>((*context)[y])[0]);
@@ -8830,8 +9446,14 @@ static void processHexbin(const std::shared_ptr<GRM::Element> &element, const st
   std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
   auto x_length = (int)x_vec.size();
   auto y_length = (int)y_vec.size();
-  if (x_length != y_length) throw std::length_error("For Hexbin x- and y-data must have the same size\n.");
+  if (x_length != y_length) throw std::length_error("For Hexbin x- and y-data must have the same size.\n");
 
+  if (orientation == "vertical")
+    {
+      auto tmp = x_p;
+      x_p = y_p;
+      y_p = tmp;
+    }
   const hexbin_2pass_t *hexbin_context = gr_hexbin_2pass(x_length, x_p, y_p, nbins, nullptr);
   double c_min = 0.0, c_max = hexbin_context->cntmax;
   std::ostringstream get_address;
@@ -8855,7 +9477,7 @@ static void histBins(const std::shared_ptr<GRM::Element> &element, const std::sh
   std::vector<double> x, weights;
   unsigned int num_bins = 0, num_weights = 0;
 
-  if (!element->hasAttribute("x")) throw NotFoundError("Hist series is missing required attribute x-data.\n");
+  if (!element->hasAttribute("x")) throw NotFoundError("Histogram series is missing required attribute x-data.\n");
   auto key = static_cast<std::string>(element->getAttribute("x"));
   x = GRM::get<std::vector<double>>((*context)[key]);
   auto current_point_count = (int)x.size();
@@ -8868,7 +9490,7 @@ static void histBins(const std::shared_ptr<GRM::Element> &element, const std::sh
       num_weights = weights.size();
     }
   if (!weights.empty() && current_point_count != num_weights)
-    throw std::length_error("For hist series the size of data and weights must be the same.\n");
+    throw std::length_error("For histogram series the size of data and weights must be the same.\n");
 
   if (num_bins <= 1) num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
   auto bins = std::vector<double>(num_bins);
@@ -8885,10 +9507,10 @@ static void histBins(const std::shared_ptr<GRM::Element> &element, const std::sh
   global_root->setAttribute("_id", ++id);
 }
 
-static void processHist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processHistogram(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for hist
+   * Processing function for histogram
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -8930,7 +9552,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
       for (i = 0; i < 3; i++)
         {
           if (bar_color_rgb_vec[i] > 1 || bar_color_rgb_vec[i] < 0)
-            throw std::out_of_range("For hist series bar_color_rgb must be inside [0, 1].\n");
+            throw std::out_of_range("For histogram series bar_color_rgb must be inside [0, 1].\n");
         }
       bar_color_index = 1000;
       global_render->setColorRep(element, bar_color_index, bar_color_rgb_vec[0], bar_color_rgb_vec[1],
@@ -8952,7 +9574,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
       for (i = 0; i < 3; i++)
         {
           if (edge_color_rgb_vec[i] > 1 || edge_color_rgb_vec[i] < 0)
-            throw std::out_of_range("For hist series edge_color_rgb must be inside [0, 1].\n");
+            throw std::out_of_range("For histogram series edge_color_rgb must be inside [0, 1].\n");
         }
       edge_color_index = 1001;
       global_render->setColorRep(element, edge_color_index, edge_color_rgb_vec[0], edge_color_rgb_vec[1],
@@ -8965,14 +9587,8 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   bins_vec = GRM::get<std::vector<double>>((*context)[bins]);
   num_bins = bins_vec.size();
 
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   is_horizontal = orientation == "horizontal";
 
   x_min = static_cast<double>(element->getAttribute("x_range_min"));
@@ -9006,7 +9622,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
       processMarginalHeatmapSidePlot(element->parentElement());
       processMarginalHeatmapKind(marginal_heatmap);
 
-      if (orientation == "vertical")
+      if (!is_horizontal)
         {
           double tmp_min = x_min, tmp_max = x_max;
 
@@ -9350,6 +9966,7 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
 
       auto n = std::min<int>((int)x_vec.size(), (int)y_vec.size());
       auto group = element->parentElement();
+      if (element->hasAttribute("line_color_ind")) processLineColorInd(element);
       if ((element->hasAttribute("line_types") || element->hasAttribute("line_widths") ||
            element->hasAttribute("line_color_indices")) ||
           ((parent_types.count(group->localName())) &&
@@ -9371,6 +9988,7 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
       double x[2] = {x1, x2};
       double y[2] = {y1, y2};
 
+      if (element->hasAttribute("line_color_ind")) processLineColorInd(element);
       if (redraw_ws) gr_polyline(2, x, y);
     }
   if (starts_with(name, "x-axis-line") || starts_with(name, "y-axis-line")) gr_setclip(1);
@@ -9499,6 +10117,10 @@ static void processQuiver(const std::shared_ptr<GRM::Element> &element, const st
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
+
   if (!element->hasAttribute("x")) throw NotFoundError("Quiver series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Quiver series is missing required attribute y-data.\n");
@@ -9523,10 +10145,32 @@ static void processQuiver(const std::shared_ptr<GRM::Element> &element, const st
   if (x_length * y_length != v_length)
     throw std::length_error("For quiver series x_length * y_length must be v_length.\n");
 
+  if (orientation == "vertical")
+    {
+      auto tmp = x_vec;
+      x_vec = y_vec;
+      y_vec = tmp;
+      auto tmp2 = x_length;
+      x_length = y_length;
+      y_length = tmp2;
+
+      std::vector<double> uv(u_length), vv(v_length);
+      for (int i = 0; i < y_length; i++)
+        {
+          for (int j = 0; j < x_length; j++)
+            {
+              uv[j + i * x_length] = u_vec[i + j * y_length];
+              vv[j + i * x_length] = v_vec[i + j * y_length];
+            }
+        }
+      u_vec = uv;
+      v_vec = vv;
+    }
+
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
-  double *u_p = &(GRM::get<std::vector<double>>((*context)[u])[0]);
-  double *v_p = &(GRM::get<std::vector<double>>((*context)[v])[0]);
+  double *u_p = &(u_vec[0]);
+  double *v_p = &(v_vec[0]);
   applyMoveTransformation(element);
 
   if (redraw_ws) gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
@@ -11408,14 +12052,8 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
       c_vec = GRM::get<std::vector<double>>((*context)[c]);
       c_length = c_vec.size();
     }
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   auto is_horizontal = orientation == "horizontal";
 
   if (!element->hasAttribute("marker_type"))
@@ -11690,14 +12328,8 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
   x_length = x_vec.size();
   y_length = y_vec.size();
 
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   if (element->hasAttribute("line_spec"))
     {
       line_spec = static_cast<std::string>(element->getAttribute("line_spec"));
@@ -11923,14 +12555,8 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
   auto x = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Stem series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   if (element->hasAttribute("line_spec"))
     {
       line_spec = static_cast<std::string>(element->getAttribute("line_spec"));
@@ -12028,6 +12654,10 @@ static void processShade(const std::shared_ptr<GRM::Element> &element, const std
   int xform = 5, x_bins = 1200, y_bins = 1200, n;
   std::vector<double> x_vec, y_vec;
   double *x_p, *y_p;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
 
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
   auto y_key = static_cast<std::string>(element->getAttribute("y"));
@@ -12044,6 +12674,15 @@ static void processShade(const std::shared_ptr<GRM::Element> &element, const std
   n = std::min<int>((int)x_vec.size(), (int)y_vec.size());
   applyMoveTransformation(element);
 
+  if (orientation == "vertical")
+    {
+      auto tmp = x_p;
+      x_p = y_p;
+      y_p = tmp;
+      auto tmp2 = x_bins;
+      x_bins = y_bins;
+      y_bins = tmp2;
+    }
   if (redraw_ws) gr_shadepoints(n, x_p, y_p, xform, x_bins, y_bins);
 }
 
@@ -12231,14 +12870,8 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
   std::shared_ptr<GRM::Element> line, marker;
   int mask;
 
-  if (element->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
-    }
-  else
-    {
-      element->setAttribute("orientation", orientation);
-    }
+  if (element->parentElement()->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
 
   if (!element->hasAttribute("y")) throw NotFoundError("Line series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
@@ -12548,7 +13181,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
                                                 (k == 0 ? std::string("right") : std::string("top")) + "\"]");
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              sub_group = global_render->createSeries("hist");
+              sub_group = global_render->createSeries("histogram");
               sub_group->setAttribute("_child_id", child_id++);
               auto side_plot_region = global_render->createSidePlotRegion();
               side_region->append(side_plot_region);
@@ -12556,7 +13189,8 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
             }
           else
             {
-              sub_group = side_region->querySelectors("series_hist[_child_id=\"" + std::to_string(child_id++) + "\"]");
+              sub_group =
+                  side_region->querySelectors("series_histogram[_child_id=\"" + std::to_string(child_id++) + "\"]");
               sub_group->setAttribute("_update_required", true);
             }
           if (side_region != nullptr)
@@ -12593,7 +13227,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
             }
           // special case for marginal_heatmap_kind line - when new indices != -1 are received the 2 lines should be
           // displayed
-          sub_group = side_region->querySelectors("series_stairs[_child_id=0]");
+          sub_group = side_region->querySelectors("series_stairs[_child_id=\"" + std::to_string(child_id) + "\"]");
           auto side_plot_region = side_region->querySelectors("side_plot_region");
           if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
               (sub_group == nullptr && static_cast<int>(element->getAttribute("_update_required"))))
@@ -12628,20 +13262,20 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
             {
               if (k == 0)
                 {
-                  sub_group->setAttribute("orientation", "vertical");
+                  sub_group->parentElement()->setAttribute("orientation", "vertical");
                 }
               else
                 {
-                  sub_group->setAttribute("orientation", "horizontal");
+                  sub_group->parentElement()->setAttribute("orientation", "horizontal");
                 }
             }
         }
 
-      auto tmp = element->querySelectorsAll("series_hist");
+      auto tmp = element->querySelectorsAll("series_histogram");
       for (const auto &child : tmp)
         {
           if (!child->parentElement()->parentElement()->hasAttribute("marginal_heatmap_side_plot")) continue;
-          if (static_cast<std::string>(child->getAttribute("kind")) == "hist" ||
+          if (static_cast<std::string>(child->getAttribute("kind")) == "histogram" ||
               static_cast<std::string>(child->getAttribute("kind")) == "stairs")
             {
               child->parentElement()->setAttribute("y_flip", 0);
@@ -13272,7 +13906,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
   double x, y, y_org, width;
   double window[4];
   int scientific_format = 2;
-  std::shared_ptr<GRM::Element> text_elem, plot_parent = tick_group;
+  std::shared_ptr<GRM::Element> text_elem, plot_parent = tick_group, window_parent;
   char new_label[256];
   int cur_start = 0, scale = 0, cur_child_count = 0, child_id_org = child_id - 1, i = 0;
   bool x_flip, y_flip, text_is_empty_or_number = true;
@@ -13290,20 +13924,30 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
   auto value = static_cast<double>(tick_group->getAttribute("value"));
   auto label_pos = static_cast<double>(tick_group->parentElement()->getAttribute("label_pos"));
   auto pos = static_cast<double>(tick_group->parentElement()->getAttribute("pos"));
+  auto location = static_cast<std::string>(tick_group->parentElement()->getAttribute("location"));
+
   // todo: window should come from axis if axis has window defined on it
-  window[0] =
-      static_cast<double>(tick_group->parentElement()->parentElement()->parentElement()->getAttribute("window_x_min"));
-  window[1] =
-      static_cast<double>(tick_group->parentElement()->parentElement()->parentElement()->getAttribute("window_x_max"));
-  window[2] =
-      static_cast<double>(tick_group->parentElement()->parentElement()->parentElement()->getAttribute("window_y_min"));
-  window[3] =
-      static_cast<double>(tick_group->parentElement()->parentElement()->parentElement()->getAttribute("window_y_max"));
+  window_parent = tick_group->parentElement()->parentElement()->parentElement();
+  if (str_equals_any(location, "bottom", "left", "right", "top"))
+    window_parent = tick_group->parentElement()->parentElement();
+  window[0] = static_cast<double>(window_parent->getAttribute("window_x_min"));
+  window[1] = static_cast<double>(window_parent->getAttribute("window_x_max"));
+  window[2] = static_cast<double>(window_parent->getAttribute("window_y_min"));
+  window[3] = static_cast<double>(window_parent->getAttribute("window_y_max"));
+
+  adjustValueForNonStandardAxis(plot_parent, &value, location);
 
   if (tick_group->parentElement()->hasAttribute("scale"))
     scale = static_cast<int>(tick_group->parentElement()->getAttribute("scale"));
   if (plot_parent->hasAttribute("x_flip")) x_flip = static_cast<int>(plot_parent->getAttribute("x_flip"));
   if (plot_parent->hasAttribute("y_flip")) y_flip = static_cast<int>(plot_parent->getAttribute("y_flip"));
+  if (tick_group->parentElement()->parentElement()->localName() == "colorbar")
+    {
+      if (tick_group->parentElement()->parentElement()->hasAttribute("x_flip"))
+        x_flip = static_cast<int>(tick_group->parentElement()->parentElement()->getAttribute("x_flip"));
+      if (tick_group->parentElement()->parentElement()->hasAttribute("y_flip"))
+        y_flip = static_cast<int>(tick_group->parentElement()->parentElement()->getAttribute("y_flip"));
+    }
   if (tick_group->parentElement()->hasAttribute("scientific_format"))
     scientific_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
   if (tick_group->hasAttribute("scientific_format"))
@@ -13722,6 +14366,9 @@ static void processTick(const std::shared_ptr<GRM::Element> &element, const std:
   auto is_major = static_cast<int>(element->getAttribute("is_major"));
   auto label_pos = static_cast<double>(axis_elem->getAttribute("label_pos"));
   bool mirrored_axis = element->hasAttribute("is_mirrored") && static_cast<int>(element->getAttribute("is_mirrored"));
+  auto location = static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("location"));
+
+  adjustValueForNonStandardAxis(plot_parent, &value, location);
 
   tick_t t = {value, is_major};
   axis_t drawn_tick = {min_val, max_val, tick,      org,  pos, major_count, 1, &t, tick_size * tick_orientation,
@@ -14079,12 +14726,233 @@ void plotProcessWsWindowWsViewport(const std::shared_ptr<GRM::Element> &element,
           ws_viewport[3]));
 }
 
-static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
-                                 const std::shared_ptr<GRM::Context> &context)
+static void kindDependentCoordinateLimAdjustments(const std::shared_ptr<GRM::Element> &element,
+                                                  const std::shared_ptr<GRM::Context> &context, double *min_component,
+                                                  double *max_component, std::string lim, std::string location)
+{
+  std::shared_ptr<GRM::Element> central_region;
+  unsigned int series_count = 0;
+  double x_min = DBL_MAX, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX, z_min = DBL_MAX, z_max = -DBL_MAX;
+  bool x_log = false, y_log = false;
+
+  auto kind = static_cast<std::string>(element->getAttribute("_kind"));
+  central_region = element->querySelectors("central_region");
+
+  if (kind == "barplot")
+    {
+      for (const auto &series : central_region->children())
+        {
+          if (!starts_with(series->localName(), "series")) continue;
+          series_count += 1;
+        }
+    }
+  x_log = element->hasAttribute("x_log") && static_cast<int>(element->getAttribute("x_log"));
+  y_log = element->hasAttribute("y_log") && static_cast<int>(element->getAttribute("y_log"));
+
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  if (kinds_classic_2d.count(kind) > 0)
+    {
+      if (central_region->hasAttribute("orientation"))
+        orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
+      for (const auto &series : central_region->children())
+        {
+          if (!starts_with(series->localName(), "series")) continue;
+          auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+          if (kinds_classic_2d.count(series_kind) == 0) orientation = PLOT_DEFAULT_ORIENTATION;
+        }
+    }
+  if (orientation == "vertical")
+    {
+      if (lim == "x_lim")
+        lim = "y_lim";
+      else if (lim == "y_lim")
+        lim = "x_lim";
+    }
+
+  for (const auto &series : central_region->children())
+    {
+      if (!starts_with(series->localName(), "series_")) continue;
+      std::string ref_x_axis_location = "x", ref_y_axis_location = "y";
+      auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+      if (series->hasAttribute("ref_x_axis_location"))
+        ref_x_axis_location = static_cast<std::string>(series->getAttribute("ref_x_axis_location"));
+      if (series->hasAttribute("ref_y_axis_location"))
+        ref_y_axis_location = static_cast<std::string>(series->getAttribute("ref_y_axis_location"));
+      if (lim == "x_lim" && ref_x_axis_location != location) continue;
+      if (lim == "y_lim" && ref_y_axis_location != location) continue;
+
+      kind = static_cast<std::string>(series->getAttribute("kind"));
+      if (kind == "quiver")
+        {
+          /* For quiver plots use u^2 + v^2 as z value */
+          double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
+          if (!series->hasAttribute("z_range_min") || !series->hasAttribute("z_range_max"))
+            {
+              if (!series->hasAttribute("u"))
+                throw NotFoundError("Quiver series is missing required attribute u-data.\n");
+              auto u_key = static_cast<std::string>(series->getAttribute("u"));
+              if (!series->hasAttribute("v"))
+                throw NotFoundError("Quiver series is missing required attribute v-data.\n");
+              auto v_key = static_cast<std::string>(series->getAttribute("v"));
+
+              auto u = GRM::get<std::vector<double>>((*context)[u_key]);
+              auto v = GRM::get<std::vector<double>>((*context)[v_key]);
+              auto u_length = u.size();
+              auto v_length = v.size();
+              if (u_length != v_length)
+                throw std::length_error("For quiver series the shape of u and v must be the same.\n");
+
+              for (int i = 0; i < u_length; i++)
+                {
+                  double z = u[i] * u[i] + v[i] * v[i];
+                  current_min_component = grm_min(z, current_min_component);
+                  current_max_component = grm_max(z, current_max_component);
+                }
+              current_min_component = sqrt(current_min_component);
+              current_max_component = sqrt(current_max_component);
+            }
+          else
+            {
+              current_min_component = static_cast<double>(series->getAttribute("z_range_min"));
+              current_max_component = static_cast<double>(series->getAttribute("z_range_max"));
+            }
+          z_min = grm_min(current_min_component, z_min);
+          z_max = grm_max(current_max_component, z_max);
+        }
+      else if (kind == "barplot")
+        {
+          std::string style;
+          double xmin, xmax, ymin, ymax;
+
+          if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
+
+          auto key = static_cast<std::string>(series->getAttribute("y"));
+          auto y = GRM::get<std::vector<double>>((*context)[key]);
+          auto len = (int)y.size();
+          if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max"))
+            {
+              xmin = static_cast<double>(series->getAttribute("x_range_min"));
+              xmax = static_cast<double>(series->getAttribute("x_range_max"));
+              double step_x = (xmax - xmin) / (len - 1);
+              if (!str_equals_any(style, "lined", "stacked"))
+                {
+                  if (!x_log || (x_log && xmin - step_x > 0))
+                    xmin -= step_x;
+                  else if (x_log && xmin - step_x <= 0)
+                    xmin = 1;
+                  x_min = grm_min(x_min, xmin);
+                  x_max = grm_max(x_max, xmax + step_x);
+                }
+              else
+                {
+                  if (x_min == DBL_MAX) x_min = xmin;
+                  x_min = style == "stacked" ? xmin - series_count : grm_min(x_min, xmin - (x_max - 1));
+                  if (x_max == -DBL_MAX) x_max = xmax;
+                  x_max = style == "stacked" ? xmin + series_count : grm_max(x_max, xmin + (x_max - 1));
+                }
+            }
+          else
+            {
+              x_min = x_log ? 1 : 0;
+              x_max = str_equals_any(style, "lined", "stacked") ? series_count + 1 : grm_max(len + 1, x_max);
+            }
+
+          if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max"))
+            {
+              ymin = static_cast<double>(series->getAttribute("y_range_min"));
+              ymax = static_cast<double>(series->getAttribute("y_range_max"));
+              y_min = grm_min(y_min, ymin);
+              if (style == "stacked")
+                {
+                  ymin = y_log ? 1 : 0;
+                  for (int i = 0; i < len; i++)
+                    {
+                      if (y[i] < 0) ymin += y[i];
+                    }
+                  y_min = grm_min(y_min, ymin);
+                  ymax = ymin;
+                  for (int i = 0; i < len; i++)
+                    {
+                      ymax += (y_min < 0) ? fabs(y[i]) : y[i] - y_min;
+                    }
+                }
+              y_max = grm_max(y_max, ymax);
+            }
+        }
+      else if (kind == "histogram")
+        {
+          double current_y_min = 0.0, current_y_max = 0.0;
+
+          if (!series->hasAttribute("bins")) histBins(series, context);
+          auto bins_key = static_cast<std::string>(series->getAttribute("bins"));
+          auto bins = GRM::get<std::vector<double>>((*context)[bins_key]);
+          auto num_bins = (int)bins.size();
+
+          for (int i = 0; i < num_bins; i++)
+            {
+              current_y_min = grm_min(current_y_min, bins[i]);
+              current_y_max = grm_max(current_y_max, bins[i]);
+            }
+          // y_max is a bit strange cause it doesn't get affected by y_range, the histogram displayes the sum of 1
+          // or more y-values in each bar -> use the data-values along with the ranges to find the real max
+          y_max = grm_max(current_y_max, y_max);
+          if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max"))
+            {
+              y_min = grm_min(y_min, static_cast<double>(series->getAttribute("y_range_min")));
+              y_max = grm_max(y_max, static_cast<double>(series->getAttribute("y_range_max")));
+            }
+          else
+            {
+              y_min = grm_min(current_y_min, y_min);
+            }
+          if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max"))
+            {
+              x_min = grm_min(x_min, static_cast<double>(series->getAttribute("x_range_min")));
+              x_max = grm_max(x_max, static_cast<double>(series->getAttribute("x_range_max")));
+            }
+          else
+            {
+              x_min = 0.0;
+              x_max = num_bins - 1;
+            }
+        }
+      else if (str_equals_any(kind, "stem", "stairs"))
+        {
+          if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max"))
+            {
+              x_min = grm_min(x_min, static_cast<double>(series->getAttribute("x_range_min")));
+              x_max = grm_max(x_max, static_cast<double>(series->getAttribute("x_range_max")));
+            }
+          if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max"))
+            {
+              y_min = grm_min(y_min, static_cast<double>(series->getAttribute("y_range_min")));
+              y_max = grm_max(y_max, static_cast<double>(series->getAttribute("y_range_max")));
+            }
+        }
+    }
+
+  if (x_min != DBL_MAX && x_max != -DBL_MAX && lim == "x_lim")
+    {
+      *min_component = x_min;
+      *max_component = x_max;
+    }
+  if (y_min != DBL_MAX && y_max != -DBL_MAX && lim == "y_lim")
+    {
+      *min_component = y_min;
+      *max_component = y_max;
+    }
+  if (z_min != DBL_MAX && z_max != -DBL_MAX && lim == "z_lim")
+    {
+      *min_component = z_min;
+      *max_component = z_max;
+    }
+}
+
+static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element,
+                                           const std::shared_ptr<GRM::Context> &context)
 {
   std::string kind, style;
   const char *fmt;
-  unsigned int series_count = 0;
   std::vector<std::string> data_component_names = {"x", "y", "z", "c", ""};
   std::vector<std::string>::iterator current_component_name;
   std::vector<double> current_component;
@@ -14096,19 +14964,10 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
     const char *series;
   } * current_range_keys,
       range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"}, {"c_lim", "c_range"}};
-  std::vector<double> bins;
-  unsigned int i;
 
   logger((stderr, "Storing coordinate ranges\n"));
 
-  for (const auto &child : element->children())
-    {
-      if (child->localName() == "central_region")
-        {
-          central_region = child;
-          break;
-        }
-    }
+  central_region = element->querySelectors("central_region");
 
   /* If a pan and/or zoom was performed before, do not overwrite limits
    * -> the user fully controls limits by interaction */
@@ -14118,16 +14977,16 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
-      element->setAttribute("_x_lim_min", NAN);
-      element->setAttribute("_x_lim_max", NAN);
-      element->setAttribute("_y_lim_min", NAN);
-      element->setAttribute("_y_lim_max", NAN);
+      element->setAttribute("_x_lim_min", -1);
+      element->setAttribute("_x_lim_max", 1);
+      element->setAttribute("_y_lim_min", -1);
+      element->setAttribute("_y_lim_max", 1);
       element->setAttribute("_z_lim_min", NAN);
       element->setAttribute("_z_lim_max", NAN);
       element->setAttribute("_c_lim_min", NAN);
       element->setAttribute("_c_lim_max", NAN);
       kind = static_cast<std::string>(element->getAttribute("_kind"));
-      if (!string_map_at(fmt_map, static_cast<const char *>(kind.c_str()), static_cast<const char **>(&fmt)))
+      if (!string_map_at(fmt_map, kind.c_str(), &fmt))
         {
           std::stringstream ss;
           ss << "Invalid kind \"" << kind << "\" was given.";
@@ -14137,675 +14996,337 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
         {
           current_component_name = data_component_names.begin();
           current_range_keys = range_keys;
+
+          // TODO: Support mixed orientations
+          std::string orientation = PLOT_DEFAULT_ORIENTATION;
+          if (kinds_classic_2d.count(kind) > 0)
+            {
+              if (central_region->hasAttribute("orientation"))
+                orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
+              for (const auto &series : central_region->children())
+                {
+                  if (!starts_with(series->localName(), "series")) continue;
+                  auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+                  if (kinds_classic_2d.count(series_kind) == 0) orientation = PLOT_DEFAULT_ORIENTATION;
+                }
+            }
+          auto plot_type =
+              static_cast<std::string>(central_region->querySelectors("coordinate_system")->getAttribute("plot_type"));
+
           while (!(*current_component_name).empty())
             {
-              double min_component = DBL_MAX;
-              double max_component = -DBL_MAX;
-              double step = -DBL_MAX;
+              if (orientation == "vertical" && (*current_component_name) == "x")
+                (*current_component_name) = "y";
+              else if (orientation == "vertical" && (*current_component_name) == "y")
+                (*current_component_name) = "x";
+              std::list<std::string> location_names = {"tmp"};
+              if (*current_component_name == "x" && plot_type == "2d")
+                location_names = {"x", "twin_x", "top", "bottom"};
+              else if (*current_component_name == "y" && plot_type == "2d")
+                location_names = {"y", "twin_y", "right", "left"};
 
-              if (static_cast<std::string>(fmt).find(*current_component_name) == std::string::npos)
+              for (const auto location : location_names)
                 {
-                  ++current_range_keys;
-                  ++current_component_name;
-                  continue;
-                }
-              /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
-              if (!element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") ||
-                  !element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max") ||
-                  str_equals_any(kind, "heatmap", "marginal_heatmap") || polar_kinds.count(kind) > 0)
-                {
-                  std::shared_ptr<GRM::Element> series_parent = central_region;
-                  if (kind == "marginal_heatmap") series_parent = element;
-                  for (const auto &series : series_parent->children())
+                  double min_component = DBL_MAX, max_component = -DBL_MAX, step = -DBL_MAX;
+                  if (static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
                     {
-                      if (!starts_with(series->localName(), "series") && central_region == series_parent) continue;
-                      if (series->hasAttribute("style"))
-                        style = static_cast<std::string>(series->getAttribute("style"));
-                      double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
-                      if (!series->hasAttribute(static_cast<std::string>(current_range_keys->series) + "_min") ||
-                          !series->hasAttribute((static_cast<std::string>(current_range_keys->series) + "_max")))
+                      std::shared_ptr<GRM::Element> series_parent =
+                          (kind == "marginal_heatmap") ? element : central_region;
+                      for (const auto &series : series_parent->children())
                         {
-                          if (series->hasAttribute(*current_component_name))
+                          std::string ref_x_axis_location = "x", ref_y_axis_location = "y";
+                          double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
+                          auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+                          if (series->hasAttribute("ref_x_axis_location"))
+                            ref_x_axis_location = static_cast<std::string>(series->getAttribute("ref_x_axis_location"));
+                          if (series->hasAttribute("ref_y_axis_location"))
+                            ref_y_axis_location = static_cast<std::string>(series->getAttribute("ref_y_axis_location"));
+                          if (*current_component_name == "x" && (ref_x_axis_location != location && plot_type == "2d"))
+                            continue;
+                          if (*current_component_name == "y" && (ref_y_axis_location != location && plot_type == "2d"))
+                            continue;
+
+                          /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
+                          if (!element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") ||
+                              !element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max") ||
+                              str_equals_any(series_kind, "heatmap", "marginal_heatmap") ||
+                              polar_kinds.count(series_kind) > 0)
                             {
-                              auto key = static_cast<std::string>(series->getAttribute(*current_component_name));
-                              current_component = GRM::get<std::vector<double>>((*context)[key]);
-                              current_point_count = current_component.size();
-                              if (style == "stacked")
+                              if (!starts_with(series->localName(), "series") && central_region == series_parent)
+                                continue;
+                              if (series->hasAttribute("style"))
+                                style = static_cast<std::string>(series->getAttribute("style"));
+
+                              auto key = static_cast<std::string>(current_range_keys->series);
+                              if (orientation == "vertical") key = (key == "x_range") ? "y_range" : "x_range";
+                              if (!series->hasAttribute(key + "_min") || !series->hasAttribute(key + "_max"))
                                 {
-                                  current_max_component = 0.0;
-                                  current_min_component = 0.0;
-                                  for (i = 0; i < current_point_count; i++)
+                                  if (series->hasAttribute(*current_component_name))
                                     {
-                                      if (current_component[i] > 0)
+                                      auto cntx_key =
+                                          static_cast<std::string>(series->getAttribute(*current_component_name));
+                                      current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
+                                      current_point_count = (int)current_component.size();
+                                      if (series_kind == "barplot")
                                         {
-                                          current_max_component += current_component[i];
+                                          current_min_component = 0.0;
+                                          current_max_component = 0.0;
                                         }
-                                      else
+                                      for (int i = 0; i < current_point_count; i++)
                                         {
-                                          current_min_component += current_component[i];
-                                        }
-                                    }
-                                }
-                              else
-                                {
-                                  if (kind == "barplot")
-                                    {
-                                      current_min_component = 0.0;
-                                      current_max_component = 0.0;
-                                    }
-                                  for (i = 0; i < current_point_count; i++)
-                                    {
-                                      if (!std::isnan(current_component[i]))
-                                        {
-                                          current_min_component = grm_min(current_component[i], current_min_component);
-                                          current_max_component = grm_max(current_component[i], current_max_component);
-                                        }
-                                    }
-                                }
-                            }
-                          /* TODO: Add more plot types which can omit `x` */
-                          else if (kind == "line" && *current_component_name == "x")
-                            {
-                              unsigned int y_length;
-                              if (!series->hasAttribute("y"))
-                                throw NotFoundError("Series is missing required attribute y.\n");
-                              auto key = static_cast<std::string>(series->getAttribute("y"));
-                              auto y_vec = GRM::get<std::vector<double>>((*context)[key]);
-                              y_length = y_vec.size();
-                              current_min_component = 0.0;
-                              current_max_component = y_length - 1;
-                            }
-                          else if (ends_with(series->localName(), kind) &&
-                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap",
-                                                  "nonuniform_polar_heatmap", "surface") &&
-                                   str_equals_any((*current_component_name), "x", "y"))
-                            {
-                              /* in this case `x` or `y` (or both) are missing
-                               * -> set the current grm_min/max_component to the dimensions of `z`
-                               *    (shifted by half a unit to center color blocks) */
-                              const char *other_component_name = (*current_component_name == "x") ? "y" : "x";
-                              std::vector<double> other_component;
-                              unsigned int other_point_count;
-                              if (series->hasAttribute(other_component_name))
-                                {
-                                  /* The other component is given -> the missing dimension can be calculated */
-                                  unsigned int z_length;
-
-                                  auto key = static_cast<std::string>(series->getAttribute(other_component_name));
-                                  other_component = GRM::get<std::vector<double>>((*context)[key]);
-                                  other_point_count = other_component.size();
-
-                                  if (!series->hasAttribute("z"))
-                                    throw NotFoundError("Series is missing required attribute z.\n");
-                                  auto z_key = static_cast<std::string>(series->getAttribute("z"));
-                                  auto z_vec = GRM::get<std::vector<double>>((*context)[z_key]);
-                                  z_length = z_vec.size();
-                                  current_point_count = z_length / other_point_count;
-                                }
-                              else
-                                {
-                                  /* A heatmap/surface without `x` and `y` values
-                                   * -> dimensions can only be read from `z_dims` */
-                                  int rows, cols;
-                                  if (!series->hasAttribute("z_dims"))
-                                    throw NotFoundError("Series is missing attribute z_dims.\n");
-                                  auto z_dims_key = static_cast<std::string>(series->getAttribute("z_dims"));
-                                  auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
-                                  cols = z_dims_vec[0];
-                                  rows = z_dims_vec[1];
-                                  current_point_count = (*current_component_name == "x") ? cols : rows;
-                                }
-                              current_min_component = 0.5;
-                              current_max_component = current_point_count + 0.5;
-                            }
-                          else if (series->hasAttribute("indices"))
-                            {
-                              auto indices_key = static_cast<std::string>(series->getAttribute("indices"));
-                              auto indices = GRM::get<std::vector<int>>((*context)[indices_key]);
-
-                              if (series->hasAttribute(*current_component_name))
-                                {
-                                  int index_sum = 0;
-                                  auto key = static_cast<std::string>(series->getAttribute(*current_component_name));
-                                  current_component = GRM::get<std::vector<double>>((*context)[key]);
-                                  current_point_count = current_component.size();
-
-                                  current_max_component = 0;
-                                  current_min_component = 0;
-                                  auto act_index = indices.begin();
-                                  index_sum += *act_index;
-                                  for (i = 0; i < current_point_count; i++)
-                                    {
-                                      if (!std::isnan(current_component[i]))
-                                        {
-                                          if (current_component[i] > 0)
+                                          if (series_kind == "barplot" && style == "stacked")
                                             {
-                                              current_max_component += current_component[i];
+                                              if (current_component[i] > 0)
+                                                current_max_component += current_component[i];
+                                              else
+                                                current_min_component += current_component[i];
                                             }
                                           else
                                             {
-                                              current_min_component += current_component[i];
+                                              if (!std::isnan(current_component[i]))
+                                                {
+                                                  current_min_component =
+                                                      grm_min(current_component[i], current_min_component);
+                                                  current_max_component =
+                                                      grm_max(current_component[i], current_max_component);
+                                                }
                                             }
                                         }
-                                      if (i + 1 == index_sum)
+                                    }
+                                  /* TODO: Add more plot types which can omit `x` */
+                                  else if (series_kind == "line" && *current_component_name == "x")
+                                    {
+                                      if (!series->hasAttribute("y"))
+                                        throw NotFoundError("Series is missing required attribute y.\n");
+                                      auto cntx_key = static_cast<std::string>(series->getAttribute("y"));
+                                      auto y_vec = GRM::get<std::vector<double>>((*context)[cntx_key]);
+                                      auto y_length = y_vec.size();
+                                      current_min_component = 0.0;
+                                      current_max_component = y_length - 1;
+                                    }
+                                  else if (ends_with(series->localName(), series_kind) &&
+                                           str_equals_any(series_kind, "heatmap", "marginal_heatmap", "polar_heatmap",
+                                                          "nonuniform_polar_heatmap", "surface") &&
+                                           str_equals_any((*current_component_name), "x", "y"))
+                                    {
+                                      /* in this case `x` or `y` (or both) are missing
+                                       * -> set the current grm_min/max_component to the dimensions of `z`
+                                       *    (shifted by half a unit to center color blocks) */
+                                      auto other_component_name = (*current_component_name == "x") ? "y" : "x";
+                                      if (series->hasAttribute(other_component_name))
                                         {
-                                          max_component = grm_max(current_max_component, max_component);
-                                          min_component = grm_min(current_min_component, min_component);
+                                          /* The other component is given -> the missing dimension can be calculated */
+                                          unsigned int z_length;
+
+                                          auto cntx_key =
+                                              static_cast<std::string>(series->getAttribute(other_component_name));
+                                          auto other_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
+                                          auto other_point_count = other_component.size();
+
+                                          if (!series->hasAttribute("z"))
+                                            throw NotFoundError("Series is missing required attribute z.\n");
+                                          auto z_key = static_cast<std::string>(series->getAttribute("z"));
+                                          auto z_vec = GRM::get<std::vector<double>>((*context)[z_key]);
+                                          z_length = z_vec.size();
+                                          current_point_count = z_length / other_point_count;
+                                        }
+                                      else
+                                        {
+                                          /* A heatmap/surface without `x` and `y` values
+                                           * -> dimensions can only be read from `z_dims` */
+                                          int rows, cols;
+                                          if (!series->hasAttribute("z_dims"))
+                                            throw NotFoundError("Series is missing attribute z_dims.\n");
+                                          auto z_dims_key = static_cast<std::string>(series->getAttribute("z_dims"));
+                                          auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
+                                          cols = z_dims_vec[0];
+                                          rows = z_dims_vec[1];
+                                          current_point_count = (*current_component_name == "x") ? cols : rows;
+                                        }
+                                      current_min_component = 0.5;
+                                      current_max_component = current_point_count + 0.5;
+                                    }
+                                  else if (series->hasAttribute("indices"))
+                                    {
+                                      auto indices_key = static_cast<std::string>(series->getAttribute("indices"));
+                                      auto indices = GRM::get<std::vector<int>>((*context)[indices_key]);
+
+                                      if (series->hasAttribute(*current_component_name))
+                                        {
+                                          int index_sum = 0;
+                                          auto cntx_key =
+                                              static_cast<std::string>(series->getAttribute(*current_component_name));
+                                          current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
+                                          current_point_count = (int)current_component.size();
 
                                           current_max_component = 0;
                                           current_min_component = 0;
-                                          ++act_index;
+                                          auto act_index = indices.begin();
                                           index_sum += *act_index;
+                                          for (int i = 0; i < current_point_count; i++)
+                                            {
+                                              if (!std::isnan(current_component[i]))
+                                                {
+                                                  if (current_component[i] > 0)
+                                                    current_max_component += current_component[i];
+                                                  else
+                                                    current_min_component += current_component[i];
+                                                }
+                                              if (i + 1 == index_sum)
+                                                {
+                                                  max_component = grm_max(current_max_component, max_component);
+                                                  min_component = grm_min(current_min_component, min_component);
+
+                                                  current_max_component = 0;
+                                                  current_min_component = 0;
+                                                  ++act_index;
+                                                  index_sum += *act_index;
+                                                }
+                                            }
                                         }
                                     }
                                 }
+                              else
+                                {
+                                  current_min_component = static_cast<double>(series->getAttribute(key + "_min"));
+                                  current_max_component = static_cast<double>(series->getAttribute(key + "_max"));
+                                }
+
+                              if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+                                {
+                                  series->setAttribute(key + "_min", current_min_component);
+                                  series->setAttribute(key + "_max", current_max_component);
+                                }
+                              min_component = grm_min(current_min_component, min_component);
+                              max_component = grm_max(current_max_component, max_component);
+                            }
+                          if (series_kind == "quiver")
+                            {
+                              bool x_log = false, y_log = false;
+                              if (element->hasAttribute("x_log"))
+                                x_log = static_cast<int>(element->getAttribute("x_log"));
+                              if (element->hasAttribute("y_log"))
+                                y_log = static_cast<int>(element->getAttribute("y_log"));
+
+                              step = grm_max(findMaxStep(current_point_count, current_component), step);
+                              if (step > 0.0)
+                                {
+                                  current_min_component -= step;
+                                  current_max_component += step;
+                                }
+                              if ((static_cast<std::string>(current_range_keys->plot) == "x_lim" && x_log) ||
+                                  (static_cast<std::string>(current_range_keys->plot) == "y_lim" && y_log))
+                                {
+                                  current_min_component = (current_min_component > 0) ? current_min_component : 1;
+                                  current_max_component =
+                                      (current_max_component > 0) ? current_max_component : current_min_component + 1;
+                                }
+                              min_component = grm_min(current_min_component, min_component);
+                              max_component = grm_max(current_max_component, max_component);
                             }
                         }
-                      else
+                    }
+
+                  if (str_equals_any(location, "x", "y") || plot_type != "2d" ||
+                      !str_equals_any(*current_component_name, "x", "y"))
+                    {
+                      if (str_equals_any(kind, "imshow", "isosurface", "volume"))
                         {
-                          current_min_component = static_cast<double>(
-                              series->getAttribute(static_cast<std::string>(current_range_keys->series) + "_min"));
-                          current_max_component = static_cast<double>(
-                              series->getAttribute(static_cast<std::string>(current_range_keys->series) + "_max"));
+                          min_component = (kind == "imshow" ? 0.0 : -1.0);
+                          max_component = 1.0;
+                        }
+                    }
+
+                  kindDependentCoordinateLimAdjustments(element, context, &min_component, &max_component,
+                                                        static_cast<std::string>(current_range_keys->plot), location);
+
+                  if (str_equals_any(location, "x", "y") || plot_type != "2d" ||
+                      !str_equals_any(*current_component_name, "x", "y"))
+                    {
+                      if (element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") &&
+                          element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"))
+                        {
+                          min_component = static_cast<double>(
+                              element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_min"));
+                          max_component = static_cast<double>(
+                              element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"));
+                        }
+                      if (str_equals_any(static_cast<std::string>(current_range_keys->plot), "x_lim", "y_lim"))
+                        {
+                          std::string l = (static_cast<std::string>(current_range_keys->plot) == "x_lim") ? "x" : "y";
+                          auto axis = element->querySelectors("axis[location=\"" + l + "\"]");
+                          if (axis != nullptr && axis->hasAttribute(l + "_lim_min") &&
+                              axis->hasAttribute(l + "_lim_max") && kinds_3d.count(kind) == 0 &&
+                              polar_kinds.count(kind) == 0)
+                            {
+                              min_component = static_cast<double>(axis->getAttribute(l + "_lim_min"));
+                              max_component = static_cast<double>(axis->getAttribute(l + "_lim_max"));
+                            }
                         }
 
-                      if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+                      if (polar_kinds.count(kind) > 0)
                         {
-                          if (static_cast<std::string>(current_range_keys->series) == "x_range")
+                          if (static_cast<std::string>(current_range_keys->plot) == "y_lim")
                             {
-                              series->setAttribute("x_range_min", current_min_component);
-                              series->setAttribute("x_range_max", current_max_component);
+                              central_region->setAttribute("r_min", min_component);
+                              central_region->setAttribute("r_max", max_component);
                             }
-                          else if (static_cast<std::string>(current_range_keys->series) == "y_range")
+                          // this is needed for interactions replaces gr_setwindow(-1, 1, -1, 1);
+                          if (str_equals_any(static_cast<std::string>(current_range_keys->plot), "x_lim", "y_lim"))
                             {
-                              series->setAttribute("y_range_min", current_min_component);
-                              series->setAttribute("y_range_max", current_max_component);
-                            }
-                          else if (static_cast<std::string>(current_range_keys->series) == "z_range")
-                            {
-                              series->setAttribute("z_range_min", current_min_component);
-                              series->setAttribute("z_range_max", current_max_component);
-                            }
-                          else if (static_cast<std::string>(current_range_keys->series) == "c_range")
-                            {
-                              series->setAttribute("c_range_min", current_min_component);
-                              series->setAttribute("c_range_max", current_max_component);
+                              min_component = -1.0;
+                              max_component = 1.0;
                             }
                         }
-                      min_component = grm_min(current_min_component, min_component);
-                      max_component = grm_max(current_max_component, max_component);
-                      series_count++;
                     }
-                }
-              if (element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") &&
-                  element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"))
-                {
-                  min_component = static_cast<double>(
-                      element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_min"));
-                  max_component = static_cast<double>(
-                      element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"));
-                  if (static_cast<std::string>(current_range_keys->plot) == "x_lim")
-                    {
-                      element->setAttribute("_x_lim_min", min_component);
-                      element->setAttribute("_x_lim_max", max_component);
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "y_lim")
-                    {
-                      element->setAttribute("_y_lim_min", min_component);
-                      element->setAttribute("_y_lim_max", max_component);
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "z_lim")
-                    {
-                      element->setAttribute("_z_lim_min", min_component);
-                      element->setAttribute("_z_lim_max", max_component);
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "c_lim")
-                    {
-                      element->setAttribute("_c_lim_min", min_component);
-                      element->setAttribute("_c_lim_max", max_component);
-                    }
-                }
-              else if (min_component != DBL_MAX && max_component != -DBL_MAX)
-                {
-                  if (kind == "quiver")
-                    {
-                      bool x_log = false, y_log = false;
-                      if (element->hasAttribute("x_log")) x_log = static_cast<int>(element->getAttribute("x_log"));
-                      if (element->hasAttribute("y_log")) y_log = static_cast<int>(element->getAttribute("y_log"));
 
-                      step = grm_max(findMaxStep(current_point_count, current_component), step);
-                      if (step > 0.0)
-                        {
-                          min_component -= step;
-                          max_component += step;
-                        }
-                      if (static_cast<std::string>(current_range_keys->plot) == "x_lim" && x_log)
-                        {
-                          min_component = (min_component > 0) ? min_component : 1;
-                          max_component = (max_component > 0) ? max_component : min_component + 1;
-                        }
-                      if (static_cast<std::string>(current_range_keys->plot) == "y_lim" && y_log)
-                        {
-                          min_component = (min_component > 0) ? min_component : 1;
-                          max_component = (max_component > 0) ? max_component : min_component + 1;
-                        }
-                    }
-                  // TODO: Support mixed orientations
-                  std::string orientation = PLOT_DEFAULT_ORIENTATION;
-                  if (kind != "marginal_heatmap")
+                  if (min_component != DBL_MAX && max_component != -DBL_MAX)
                     {
-                      for (const auto &series : central_region->children())
+                      auto lim = static_cast<std::string>(current_range_keys->plot);
+                      if (str_equals_any(*current_component_name, "x", "y") && !str_equals_any(location, "x", "y") &&
+                          plot_type == "2d")
                         {
-                          if (series->hasAttribute("orientation"))
-                            orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                          if (!starts_with(series->localName(), "series")) continue;
-                        }
-                    }
-                  if (static_cast<std::string>(current_range_keys->plot) == "x_lim")
-                    {
-                      if (orientation == "horizontal")
-                        {
-                          element->setAttribute("_x_lim_min", min_component);
-                          element->setAttribute("_x_lim_max", max_component);
+                          double a, b;
+                          std::string real_location = location;
+                          // calculate transformation from default window to extra axis window (a * w1 + b = w2)
+                          auto lim_min = static_cast<double>(element->getAttribute("_" + lim + "_min"));
+                          auto lim_max = static_cast<double>(element->getAttribute("_" + lim + "_max"));
+
+                          calculateWindowTransformationParameter(element, lim_min, lim_max, min_component,
+                                                                 max_component, location, &a, &b);
+
+                          if (orientation == "vertical")
+                            {
+                              if (location == "twin_x") real_location = "twin_y";
+                              if (location == "top") real_location = "right";
+                              if (location == "bottom") real_location = "left";
+                              if (location == "twin_y") real_location = "twin_x";
+                              if (location == "right") real_location = "top";
+                              if (location == "left") real_location = "bottom";
+                            }
+                          element->setAttribute("_" + real_location + "_window_xform_a_org", a);
+                          element->setAttribute("_" + real_location + "_window_xform_a", a);
+                          element->setAttribute("_" + real_location + "_window_xform_b_org", b);
+                          element->setAttribute("_" + real_location + "_window_xform_b", b);
                         }
                       else
                         {
-                          element->setAttribute("_y_lim_min", min_component);
-                          element->setAttribute("_y_lim_max", max_component);
+                          element->setAttribute("_" + lim + "_min", min_component);
+                          element->setAttribute("_" + lim + "_max", max_component);
                         }
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "y_lim")
-                    {
-                      if (orientation == "horizontal")
-                        {
-                          element->setAttribute("_y_lim_min", min_component);
-                          element->setAttribute("_y_lim_max", max_component);
-                        }
-                      else
-                        {
-                          element->setAttribute("_x_lim_min", min_component);
-                          element->setAttribute("_x_lim_max", max_component);
-                        }
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "z_lim")
-                    {
-                      element->setAttribute("_z_lim_min", min_component);
-                      element->setAttribute("_z_lim_max", max_component);
-                    }
-                  else if (static_cast<std::string>(current_range_keys->plot) == "c_lim")
-                    {
-                      element->setAttribute("_c_lim_min", min_component);
-                      element->setAttribute("_c_lim_max", max_component);
                     }
                 }
+              if (orientation == "vertical" && (*current_component_name) == "x")
+                (*current_component_name) = "y";
+              else if (orientation == "vertical" && (*current_component_name) == "y")
+                (*current_component_name) = "x";
               ++current_range_keys;
               ++current_component_name;
             }
         }
-      if (polar_kinds.count(kind) > 0)
-        {
-          if (kind != "polar_histogram")
-            {
-              if (kind == "nonuniform_polar_heatmap") kind = "polar_heatmap";
-
-              auto series_vec = element->getElementsByTagName("series_" + kind);
-              auto series = series_vec[0];
-
-              // set calc ranges _x_ranges for later distinction from user ranges
-              // Todo: use this attributes somewhere
-              auto xmin = static_cast<double>(series->getAttribute("x_range_min"));
-              auto xmax = static_cast<double>(series->getAttribute("x_range_max"));
-              series->setAttribute("_x_range_min", xmin);
-              series->setAttribute("_x_range_max", xmax);
-
-              auto ymin = static_cast<double>(element->getAttribute("_y_lim_min"));
-              auto ymax = static_cast<double>(element->getAttribute("_y_lim_max"));
-              central_region->setAttribute("r_min", ymin);
-              central_region->setAttribute("r_max", ymax);
-            }
-          // this is needed for interactions replaces gr_setwindow(-1,1,-1,1);
-          element->setAttribute("_x_lim_min", -1.0);
-          element->setAttribute("_x_lim_max", 1.0);
-          element->setAttribute("_y_lim_min", -1.0);
-          element->setAttribute("_y_lim_max", 1.0);
-        }
-
-      /* For quiver plots use u^2 + v^2 as z value */
-      if (kind == "quiver")
-        {
-          double z_min = DBL_MAX, z_max = -DBL_MAX;
-
-          if (!element->hasAttribute("z_lim_min") || !element->hasAttribute("z_lim_max"))
-            {
-              for (const auto &series : central_region->children())
-                {
-                  if (!starts_with(series->localName(), "series")) continue;
-                  double current_min_component = DBL_MAX;
-                  double current_max_component = -DBL_MAX;
-                  if (!series->hasAttribute("z_range_min") || !series->hasAttribute("z_range_max"))
-                    {
-                      unsigned int u_length, v_length;
-                      if (!series->hasAttribute("u"))
-                        throw NotFoundError("Quiver series is missing required attribute u-data.\n");
-                      auto u_key = static_cast<std::string>(series->getAttribute("u"));
-                      if (!series->hasAttribute("v"))
-                        throw NotFoundError("Quiver series is missing required attribute v-data.\n");
-                      auto v_key = static_cast<std::string>(series->getAttribute("v"));
-
-                      std::vector<double> u = GRM::get<std::vector<double>>((*context)[u_key]);
-                      std::vector<double> v = GRM::get<std::vector<double>>((*context)[v_key]);
-                      u_length = u.size();
-                      v_length = v.size();
-                      if (u_length != v_length)
-                        throw std::length_error("For quiver series the shape of u and v must be the same.\n");
-
-                      for (i = 0; i < u_length; i++)
-                        {
-                          double z = u[i] * u[i] + v[i] * v[i];
-                          current_min_component = grm_min(z, current_min_component);
-                          current_max_component = grm_max(z, current_max_component);
-                        }
-                      current_min_component = sqrt(current_min_component);
-                      current_max_component = sqrt(current_max_component);
-                    }
-                  else
-                    {
-                      current_min_component = static_cast<double>(series->getAttribute("z_range_min"));
-                      current_max_component = static_cast<double>(series->getAttribute("z_range_max"));
-                    }
-                  z_min = grm_min(current_min_component, z_min);
-                  z_max = grm_max(current_max_component, z_max);
-                }
-            }
-          else
-            {
-              z_min = static_cast<double>(element->getAttribute("z_lim_min"));
-              z_max = static_cast<double>(element->getAttribute("z_lim_max"));
-            }
-          element->setAttribute("_z_lim_min", z_min);
-          element->setAttribute("_z_lim_max", z_max);
-        }
-      else if (str_equals_any(kind, "imshow", "isosurface", "volume"))
-        {
-          /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
-          current_range_keys = range_keys;
-          for (i = 0; i < 3; i++)
-            {
-              double min_component = (kind == "imshow" ? 0.0 : -1.0);
-              double max_component = 1.0;
-              if (element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") &&
-                  element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"))
-                {
-                  min_component = static_cast<double>(
-                      element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_min"));
-                  max_component = static_cast<double>(
-                      element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"));
-                }
-              if (static_cast<std::string>(current_range_keys->plot) == "x_lim")
-                {
-                  element->setAttribute("_x_lim_min", min_component);
-                  element->setAttribute("_x_lim_max", max_component);
-                }
-              else if (static_cast<std::string>(current_range_keys->plot) == "y_lim")
-                {
-                  element->setAttribute("_y_lim_min", min_component);
-                  element->setAttribute("_y_lim_max", max_component);
-                }
-              else if (static_cast<std::string>(current_range_keys->plot) == "z_lim")
-                {
-                  element->setAttribute("_z_lim_min", min_component);
-                  element->setAttribute("_z_lim_max", max_component);
-                }
-              else if (static_cast<std::string>(current_range_keys->plot) == "c_lim")
-                {
-                  element->setAttribute("_c_lim_min", min_component);
-                  element->setAttribute("_c_lim_max", max_component);
-                }
-              ++current_range_keys;
-            }
-        }
-      else if (kind == "barplot")
-        {
-          double x_min = DBL_MAX, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX;
-          std::string orientation = PLOT_DEFAULT_ORIENTATION;
-
-          if (!element->hasAttribute("x_lim_min") || !element->hasAttribute("x_lim_max"))
-            {
-              double xmin, xmax;
-
-              for (const auto &series : central_region->children())
-                {
-                  if (series->localName() != "series_barplot") continue;
-                  if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max"))
-                    {
-                      if (series->hasAttribute("orientation"))
-                        orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                      auto key = static_cast<std::string>(series->getAttribute("y"));
-                      auto y = GRM::get<std::vector<double>>((*context)[key]);
-                      current_point_count = y.size();
-
-                      xmin = static_cast<double>(series->getAttribute("x_range_min"));
-                      xmax = static_cast<double>(series->getAttribute("x_range_max"));
-                      double step_x = (xmax - xmin) / (current_point_count - 1);
-                      if (!str_equals_any(style, "lined", "stacked"))
-                        {
-                          x_min = grm_min(x_min, xmin - step_x);
-                          x_max = grm_max(x_max, xmax + step_x);
-                        }
-                      else
-                        {
-                          if (x_min == DBL_MAX) x_min = xmin;
-                          if (style == "stacked")
-                            x_min = xmin - series_count;
-                          else
-                            x_min = grm_min(x_min, xmin - (x_max - 1));
-                          if (x_max == -DBL_MAX) x_max = xmax;
-                          if (style == "stacked")
-                            x_max = xmin + series_count;
-                          else
-                            x_max = grm_max(x_max, xmin + (x_max - 1));
-                        }
-                    }
-                  else
-                    {
-                      if (series->hasAttribute("style"))
-                        style = static_cast<std::string>(series->getAttribute("style"));
-                      if (str_equals_any(style, "lined", "stacked"))
-                        {
-                          x_max = series_count + 1;
-                        }
-                      else
-                        {
-                          auto key = static_cast<std::string>(series->getAttribute("y"));
-                          auto y = GRM::get<std::vector<double>>((*context)[key]);
-                          current_point_count = y.size();
-                          x_max = grm_max(current_point_count + 1, x_max);
-                        }
-                      x_min = 0;
-                    }
-                }
-            }
-          else
-            {
-              x_min = static_cast<double>(element->getAttribute("x_lim_min"));
-              x_max = static_cast<double>(element->getAttribute("x_lim_max"));
-            }
-
-          if (!element->hasAttribute("y_lim_min") || !element->hasAttribute("y_lim_max"))
-            {
-              double ymin, ymax;
-              for (const auto &series : central_region->children())
-                {
-                  if (series->localName() != "series_barplot") continue;
-                  if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
-                  if (series->hasAttribute("orientation"))
-                    orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                  auto key = static_cast<std::string>(series->getAttribute("y"));
-                  auto y = GRM::get<std::vector<double>>((*context)[key]);
-                  current_point_count = y.size();
-
-                  if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max"))
-                    {
-                      ymin = static_cast<double>(series->getAttribute("y_range_min"));
-                      ymax = static_cast<double>(series->getAttribute("y_range_max"));
-                      y_min = grm_min(y_min, ymin);
-                      if (style == "stacked")
-                        {
-                          double tmp_ymax, tmp_ymin = 0;
-                          if (element->hasAttribute("y_log") && static_cast<int>(element->getAttribute("y_log")))
-                            tmp_ymin = 1;
-                          for (i = 0; i < current_point_count; i++)
-                            {
-                              if (y[i] < 0) tmp_ymin += y[i];
-                            }
-                          y_min = grm_min(y_min, tmp_ymin);
-                          tmp_ymax = tmp_ymin;
-                          for (i = 0; i < current_point_count; i++)
-                            {
-                              tmp_ymax += (y_min < 0) ? fabs(y[i]) : y[i] - y_min;
-                            }
-                          y_max = grm_max(y_max, tmp_ymax);
-                        }
-                      else
-                        {
-                          y_max = grm_max(y_max, ymax);
-                        }
-                    }
-                }
-            }
-          else
-            {
-              y_min = static_cast<double>(element->getAttribute("y_lim_min"));
-              y_max = static_cast<double>(element->getAttribute("y_lim_max"));
-            }
-
-          if (orientation == "horizontal")
-            {
-              element->setAttribute("_x_lim_min", x_min);
-              element->setAttribute("_x_lim_max", x_max);
-              element->setAttribute("_y_lim_min", y_min);
-              element->setAttribute("_y_lim_max", y_max);
-            }
-          else
-            {
-              element->setAttribute("_x_lim_min", y_min);
-              element->setAttribute("_x_lim_max", y_max);
-              element->setAttribute("_y_lim_min", x_min);
-              element->setAttribute("_y_lim_max", x_max);
-            }
-        }
-      else if (kind == "hist")
-        {
-          double x_min = DBL_MAX, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX;
-          std::string orientation = PLOT_DEFAULT_ORIENTATION;
-          bool is_horizontal;
-
-          if (!element->hasAttribute("y_lim_min") || !element->hasAttribute("y_lim_max"))
-            {
-              for (const auto &series : central_region->children())
-                {
-                  if (series->hasAttribute("orientation"))
-                    orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                  is_horizontal = orientation == "horizontal";
-                  if (!starts_with(series->localName(), "series")) continue;
-                  double current_y_min = 0.0, current_y_max = 0.0;
-
-                  if (!series->hasAttribute("bins")) histBins(series, context);
-                  auto bins_key = static_cast<std::string>(series->getAttribute("bins"));
-                  bins = GRM::get<std::vector<double>>((*context)[bins_key]);
-                  auto num_bins = (int)bins.size();
-
-                  for (i = 0; i < num_bins; i++)
-                    {
-                      current_y_min = grm_min(current_y_min, bins[i]);
-                      current_y_max = grm_max(current_y_max, bins[i]);
-                    }
-                  // y_max is a bit strange cause it doesn't get affected by y_range, the hist displayes the sum of 1
-                  // or more y-values in each bar -> use the data-values along with the ranges to find the real max
-                  y_max = grm_max(current_y_max, y_max);
-                  if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max"))
-                    {
-                      y_min = grm_min(y_min, static_cast<double>(series->getAttribute("y_range_min")));
-                      y_max = grm_max(y_max, static_cast<double>(series->getAttribute("y_range_max")));
-                    }
-                  else
-                    {
-                      y_min = grm_min(current_y_min, y_min);
-                    }
-                  if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max"))
-                    {
-                      x_min = grm_min(x_min, static_cast<double>(series->getAttribute("x_range_min")));
-                      x_max = grm_max(x_max, static_cast<double>(series->getAttribute("x_range_max")));
-                    }
-                  else
-                    {
-                      x_min = 0.0;
-                      x_max = num_bins - 1;
-                    }
-                }
-              if (is_horizontal)
-                {
-                  element->setAttribute("_x_lim_min", x_min);
-                  element->setAttribute("_x_lim_max", x_max);
-                  element->setAttribute("_y_lim_min", y_min);
-                  element->setAttribute("_y_lim_max", y_max);
-                }
-              else
-                {
-                  element->setAttribute("_x_lim_min", y_min);
-                  element->setAttribute("_x_lim_max", y_max);
-                  element->setAttribute("_y_lim_min", x_min);
-                  element->setAttribute("_y_lim_max", x_max);
-                }
-            }
-        }
-      else if (str_equals_any(kind, "stem", "stairs"))
-        {
-          double x_min = DBL_MAX, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX;
-          std::string orientation = PLOT_DEFAULT_ORIENTATION;
-          bool is_horizontal;
-
-          for (const auto &series : central_region->children())
-            {
-              if (series->hasAttribute("orientation"))
-                orientation = static_cast<std::string>(series->getAttribute("orientation"));
-              is_horizontal = orientation == "horizontal";
-              if (!starts_with(series->localName(), "series")) continue;
-              if (series->hasAttribute("x_range_min") && series->hasAttribute("x_range_max") &&
-                  !(element->hasAttribute("x_lim_min") && element->hasAttribute("x_lim_max")))
-                {
-                  x_min = grm_min(x_min, static_cast<double>(series->getAttribute("x_range_min")));
-                  x_max = grm_max(x_max, static_cast<double>(series->getAttribute("x_range_max")));
-                  if (is_horizontal)
-                    {
-                      element->setAttribute("_x_lim_min", x_min);
-                      element->setAttribute("_x_lim_max", x_max);
-                    }
-                  else
-                    {
-                      element->setAttribute("_y_lim_min", x_min);
-                      element->setAttribute("_y_lim_max", x_max);
-                    }
-                }
-              if (series->hasAttribute("y_range_min") && series->hasAttribute("y_range_max") &&
-                  !(element->hasAttribute("y_lim_min") && element->hasAttribute("y_lim_max")))
-                {
-                  y_min = grm_min(y_min, static_cast<double>(series->getAttribute("y_range_min")));
-                  y_max = grm_max(y_max, static_cast<double>(series->getAttribute("y_range_max")));
-                  if (is_horizontal)
-                    {
-                      element->setAttribute("_y_lim_min", y_min);
-                      element->setAttribute("_y_lim_max", y_max);
-                    }
-                  else
-                    {
-                      element->setAttribute("_x_lim_min", y_min);
-                      element->setAttribute("_x_lim_max", y_max);
-                    }
-                }
-            }
-        }
     }
+  // for resetting the side-axis in case of kind switch
+  element->setAttribute("reset_ranges", true);
 }
 
 static void processSideRegion(const std::shared_ptr<GRM::Element> &element,
@@ -15100,6 +15621,8 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             {
               axis->setAttribute("axis_type", "y");
               axis->setAttribute("name", "y-axis mirrored");
+              if (plot_parent->hasAttribute("_twin_y_window_xform_a_org")) axis->setAttribute("name", "y-axis");
+              axis->setAttribute("location", "y");
             }
 
           // x-axis
@@ -15118,6 +15641,50 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             {
               axis->setAttribute("axis_type", "x");
               axis->setAttribute("name", "x-axis mirrored");
+              if (plot_parent->hasAttribute("_twin_x_window_xform_a_org")) axis->setAttribute("name", "x-axis");
+              axis->setAttribute("location", "x");
+            }
+
+          if (plot_parent->hasAttribute("_twin_y_window_xform_a_org"))
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  axis = global_render->createEmptyAxis();
+                  axis->setAttribute("_child_id", child_id++);
+                  element->append(axis);
+                }
+              else
+                {
+                  axis = element->querySelectors("axis[_child_id=" + std::to_string(child_id++) + "]");
+                  if (axis != nullptr) axis = global_render->createEmptyAxis(axis);
+                }
+              if (axis != nullptr && del != del_values::update_without_default)
+                {
+                  axis->setAttribute("axis_type", "y");
+                  axis->setAttribute("name", "twin-y-axis");
+                  axis->setAttribute("location", "twin_y");
+                }
+            }
+
+          if (plot_parent->hasAttribute("_twin_x_window_xform_a_org"))
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  axis = global_render->createEmptyAxis();
+                  axis->setAttribute("_child_id", child_id++);
+                  element->append(axis);
+                }
+              else
+                {
+                  axis = element->querySelectors("axis[_child_id=" + std::to_string(child_id++) + "]");
+                  if (axis != nullptr) axis = global_render->createEmptyAxis(axis);
+                }
+              if (axis != nullptr && del != del_values::update_without_default)
+                {
+                  axis->setAttribute("axis_type", "x");
+                  axis->setAttribute("name", "twin-x-axis");
+                  axis->setAttribute("location", "twin_x");
+                }
             }
         }
     }
@@ -15126,7 +15693,7 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
 
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  std::shared_ptr<GRM::Element> central_region, central_region_parent = element;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent = element, side_region;
   auto kind = static_cast<std::string>(element->getAttribute("_kind"));
   if (kind == "marginal_heatmap") central_region_parent = element->querySelectors("marginal_heatmap_plot");
 
@@ -15209,7 +15776,10 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
         central_region->setAttribute("_space_3d_theta_org",
                                      static_cast<double>(central_region->getAttribute("space_3d_theta")));
 
-      if (static_cast<int>(element->getAttribute("x_log")) && child->hasAttribute("_x_org"))
+      bool x_log = static_cast<int>(element->getAttribute("x_log")) && child->hasAttribute("_x_org");
+      bool y_log = static_cast<int>(element->getAttribute("y_log")) && child->hasAttribute("_y_org");
+      bool z_log = static_cast<int>(element->getAttribute("z_log")) && child->hasAttribute("_z_org");
+      if (x_log)
         {
           double x_min = INFINITY, x_max = (double)-INFINITY;
           auto x = static_cast<std::string>(child->getAttribute("_x_org"));
@@ -15249,7 +15819,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
               if (child->hasAttribute("x_range_max")) child->setAttribute("x_range_max", x_max);
             }
         }
-      if (static_cast<int>(element->getAttribute("y_log")) && child->hasAttribute("_y_org"))
+      if (y_log)
         {
           double y_min = INFINITY, y_max = (double)-INFINITY;
           auto y = static_cast<std::string>(child->getAttribute("_y_org"));
@@ -15290,7 +15860,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
               if (child->hasAttribute("y_range_max")) child->setAttribute("y_range_max", y_max);
             }
         }
-      if (static_cast<int>(element->getAttribute("z_log")) && child->hasAttribute("_z_org"))
+      if (z_log)
         {
           double z_min = INFINITY, z_max = (double)-INFINITY;
           auto z = static_cast<std::string>(child->getAttribute("_z_org"));
@@ -15330,6 +15900,10 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
               if (child->hasAttribute("z_range_max")) child->setAttribute("z_range_max", z_max);
             }
         }
+      if ((x_log || y_log) && kind == "hexbin")
+        fprintf(stderr, "Hexbin plots with logarithmic x- or y-values are currently not supported. If you need this "
+                        "feature, please send a feature request to the GR developers at "
+                        "<https://github.com/sciapp/gr/issues>.\n");
       global_root->setAttribute("_id", ++id);
     }
 
@@ -15337,7 +15911,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
       !element->hasAttribute("_y_lim_min") || !element->hasAttribute("_y_lim_max") ||
       element->hasAttribute("_update_limits") && static_cast<int>(element->getAttribute("_update_limits")))
     {
-      plotCoordinateRanges(element, context);
+      calculateInitialCoordinateLims(element, context);
       element->removeAttribute("_update_limits");
     }
   calculateViewport(element);
@@ -15347,6 +15921,9 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
   if (element->hasAttribute("char_height")) processCharHeight(element);
   GRM::Render::processLimits(element);
   GRM::Render::processScale(element); /* needs to be set before flip is processed */
+
+  if (!central_region->hasAttribute("orientation"))
+    central_region->setAttribute("orientation", PLOT_DEFAULT_ORIENTATION);
 
   /* Map for calculations on the plot level */
   static std::map<std::string,
@@ -15366,27 +15943,47 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
         }
     }
 
-  std::shared_ptr<GRM::Element> side_region;
+  for (const std::string &location : {"right", "left", "bottom", "top"})
+    {
+      if (!element->querySelectors("side_region[location=\"" + location + "\"]"))
+        {
+          side_region = global_render->createSideRegion(location);
+          central_region_parent->append(side_region);
+        }
+      if (element->hasAttribute("_" + location + "_window_xform_a_org") &&
+          element->hasAttribute("_" + location + "_window_xform_b_org"))
+        {
+          side_region = element->querySelectors("side_region[location=\"" + location + "\"]");
+          if (!side_region->querySelectors("side_plot_region"))
+            {
+              std::shared_ptr<GRM::Element> axis;
+              auto side_plot_region = global_render->createSidePlotRegion();
+              side_region->append(side_plot_region);
+              if (location == "right") side_region->setAttribute("offset", 0.05);
+              side_region->setAttribute("width", 0.03);
 
-  if (!element->querySelectors("side_region[location=\"right\"]"))
-    {
-      side_region = global_render->createSideRegion("right");
-      central_region_parent->append(side_region);
-    }
-  if (!element->querySelectors("side_region[location=\"top\"]"))
-    {
-      side_region = global_render->createSideRegion("top");
-      central_region_parent->append(side_region);
-    }
-  if (!element->querySelectors("side_region[location=\"left\"]"))
-    {
-      side_region = global_render->createSideRegion("left");
-      central_region_parent->append(side_region);
-    }
-  if (!element->querySelectors("side_region[location=\"bottom\"]"))
-    {
-      side_region = global_render->createSideRegion("bottom");
-      central_region_parent->append(side_region);
+              if (!side_plot_region->querySelectors("axis"))
+                {
+                  axis = global_render->createEmptyAxis();
+                  axis->setAttribute("_child_id", side_plot_region->querySelectors("axis") ? 1 : 0);
+                  side_plot_region->append(axis);
+                }
+              else
+                {
+                  axis = side_plot_region->querySelectors(
+                      "axis[_child_id=" + std::to_string(side_plot_region->querySelectors("axis") ? 1 : 0) + "]");
+                  if (axis != nullptr) axis = global_render->createEmptyAxis(axis);
+                }
+              if (axis != nullptr)
+                {
+                  axis->setAttribute("axis_type", str_equals_any(location, "left", "right") ? "y" : "x");
+                  axis->setAttribute("name", location + "-axis");
+                  axis->setAttribute("location", location);
+                  axis->setAttribute("mirrored_axis", false);
+                  axis->setAttribute("line_color_ind", 1);
+                }
+            }
+        }
     }
 }
 
@@ -15400,7 +15997,7 @@ static void processSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("contourf"), PushDrawableToZQueue(processContourf)},
           {std::string("heatmap"), processHeatmap},
           {std::string("hexbin"), processHexbin},
-          {std::string("hist"), processHist},
+          {std::string("histogram"), processHistogram},
           {std::string("imshow"), processImshow},
           {std::string("isosurface"), PushDrawableToZQueue(processIsosurface)},
           {std::string("line"), processLine},
@@ -15449,11 +16046,12 @@ static void processSeries(const std::shared_ptr<GRM::Element> &element, const st
         }
     }
   // special case where the data of a series could inflict the window
-  // its important that the series gets first processed so the changed data gets used inside plotCoordinateRanges
+  // its important that the series gets first processed so the changed data gets used inside
+  // calculateInitialCoordinateLims
   if (element->parentElement()->parentElement()->localName() == "plot" &&
       !static_cast<int>(central_region->getAttribute("keep_window")))
     {
-      plotCoordinateRanges(element->parentElement()->parentElement(), global_render->getContext());
+      calculateInitialCoordinateLims(element->parentElement()->parentElement(), global_render->getContext());
     }
 }
 
@@ -15519,7 +16117,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /* Modifier */
-  if (str_equals_any(element->localName(), "axis", "central_region", "figure", "plot", "label", "labels_group", "root",
+  if (str_equals_any(element->localName(), "axis", "central_region", "figure", "plot", "label", "root",
                      "layout_grid_element", "rho_axes", "side_region", "text_region", "side_plot_region", "tick_group",
                      "theta_axes", "arc_grid_line", "angle_line"))
     {
@@ -15629,8 +16227,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
             {
               for (const auto &child : element->children())
                 {
-                  if (!str_equals_any(element->localName(), "figure", "plot", "label", "labels_group", "root",
-                                      "layout_grid_element"))
+                  if (!str_equals_any(element->localName(), "figure", "plot", "label", "root", "layout_grid_element"))
                     {
                       child->setAttribute("_update_required", true);
                       resetOldBoundingBoxes(child);
@@ -15667,15 +16264,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
   z_index_manager.savestate();
   custom_color_index_manager.savestate();
 
-  bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
-
-  if (bounding_boxes && !isDrawable(element))
-    {
-      gr_setbboxcallback(bounding_id, &receiverFunction);
-      bounding_map[bounding_id] = element;
-      bounding_id++;
-    }
-
   processElement(element, context);
   if (element->hasChildNodes() && parent_types.count(element->localName()))
     {
@@ -15685,7 +16273,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
           renderHelper(child, context);
         }
     }
-  if (bounding_boxes && !isDrawable(element)) gr_cancelbboxcallback();
 
   custom_color_index_manager.restorestate();
   z_index_manager.restorestate();
@@ -15698,7 +16285,7 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
 {
   double elem_bbox_xmin = DBL_MAX, elem_bbox_xmax = -DBL_MAX, elem_bbox_ymin = DBL_MAX, elem_bbox_ymax = -DBL_MAX;
 
-  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) != -1)
+  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) >= 0)
     {
       *bbox_xmin = static_cast<double>(element->getAttribute("_bbox_x_min"));
       *bbox_xmax = static_cast<double>(element->getAttribute("_bbox_x_max"));
@@ -15723,13 +16310,21 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
     }
 
   if (element->localName() != "root" &&
-      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) == -1))
+      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) < 0))
     {
       if (!(elem_bbox_xmin == DBL_MAX || elem_bbox_xmax == -DBL_MAX || elem_bbox_ymin == DBL_MAX ||
             elem_bbox_ymax == -DBL_MAX))
         {
-          if (static_cast<int>(element->getAttribute("_bbox_id")) != -1)
-            element->setAttribute("_bbox_id", bounding_id++);
+          if (element->hasAttribute("_bbox_id"))
+            {
+              /* In this case the element already has a negative (placeholder) bounding box id which can be reused by
+                 turning into positive. */
+              element->setAttribute("_bbox_id", -static_cast<int>(element->getAttribute("_bbox_id")));
+            }
+          else
+            {
+              element->setAttribute("_bbox_id", id_pool().next());
+            }
           element->setAttribute("_bbox_x_min", elem_bbox_xmin);
           element->setAttribute("_bbox_x_max", elem_bbox_xmax);
           element->setAttribute("_bbox_y_min", elem_bbox_ymin);
@@ -15746,20 +16341,35 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 {
   z_queue_is_being_rendered = true;
-  bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 
   gr_savestate();
   for (; !z_queue.empty(); z_queue.pop())
     {
       const auto &drawable = z_queue.top();
       auto element = drawable->getElement();
+
       if (!element->parentElement()) continue;
+      if (str_equals_any(element->localName(), "tick", "text", "grid_line"))
+        {
+          auto coordinate_system = element->parentElement()->parentElement()->parentElement();
+          if (coordinate_system != nullptr && coordinate_system->localName() == "coordinate_system" &&
+              coordinate_system->hasAttribute("hide") && static_cast<int>(coordinate_system->getAttribute("hide")))
+            continue;
+        }
 
       if (bounding_boxes)
         {
-          gr_setbboxcallback(bounding_id, &receiverFunction);
-          bounding_map[bounding_id] = element;
-          bounding_id++;
+          int bbox_id;
+          if (element->hasAttribute("_bbox_id"))
+            {
+              bbox_id = std::abs(static_cast<int>(element->getAttribute("_bbox_id")));
+            }
+          else
+            {
+              bbox_id = id_pool().next();
+            }
+          gr_setbboxcallback(bbox_id, &receiverFunction);
+          bounding_map()[bbox_id] = element;
         }
 
       custom_color_index_manager.selectcontext(drawable->getGrContextId());
@@ -16102,7 +16712,6 @@ void GRM::Render::render()
       const unsigned int indent = 2;
 
       redraw_ws = true;
-      bounding_id = 0;
       if (!global_render) GRM::Render::createRender();
       applyRootDefaults(root);
       if (logger_enabled())
@@ -16117,14 +16726,16 @@ void GRM::Render::render()
       renderHelper(root, this->context);
       renderZQueue(this->context);
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
-      if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0) missingBboxCalculator(root, this->context);
       if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
-      // needed when series_line is changed to series_scatter for example
-      if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+      if (bounding_boxes)
         {
-          for (const auto &child : global_render->querySelectorsAll("[_bbox_id=-1]"))
+          missingBboxCalculator(root, this->context);
+          /* Needed when series_line is changed to series_scatter for example
+           * TODO: The `missingBboxCalculator` call before should already be sufficient to determine all missing
+           * bounding boxes, so rework this routine and remove the loop below. */
+          for (const auto &child : global_render->querySelectorsAll("[_bbox_id]"))
             {
-              child->removeAttribute("_bbox_id");
+              if (static_cast<int>(child->getAttribute("_bbox_id")) >= 0) continue;
               missingBboxCalculator(child, this->context);
             }
         }
@@ -16133,6 +16744,7 @@ void GRM::Render::render()
           std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
                                                           GRM::SerializerOptions::InternalAttributesFormat::Plain})
                     << "\n";
+          if (bounding_boxes) id_pool().print(std::cerr, true);
         }
       redraw_ws = false;
       // reset marker types
@@ -16162,6 +16774,7 @@ std::shared_ptr<GRM::Render> GRM::Render::createRender()
   global_render = std::shared_ptr<Render>(new Render());
   global_render->ownerDocument()->setUpdateFct(&renderCaller, &updateFilter);
   global_render->ownerDocument()->setContextFct(&deleteContextAttribute, &updateContextAttribute);
+  global_render->ownerDocument()->setElementCleanupFct(&cleanupElement);
   return global_render;
 }
 
@@ -16252,9 +16865,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("d_max"), std::vector<std::string>{"None", "The ending dimension for the volume"}},
       {std::string("d_min"), std::vector<std::string>{"None", "The beginning dimension for the volume"}},
       {std::string("disable_x_trans"),
-       std::vector<std::string>{"0", "Sets if the parameters for movable transformation in x-direction gets ignored."}},
+       std::vector<std::string>{"0", "Sets if the parameters for movable transformation in x-direction gets ignored"}},
       {std::string("disable_y_trans"),
-       std::vector<std::string>{"0", "Sets if the parameters for movable transformation in y-direction gets ignored."}},
+       std::vector<std::string>{"0", "Sets if the parameters for movable transformation in y-direction gets ignored"}},
       {std::string("downwards_cap_color"), std::vector<std::string>{"None", "The color value for the downwards caps"}},
       {std::string("hide"), std::vector<std::string>{"1", "Determines if the element will be visible or not"}},
       {std::string("draw_edges"),
@@ -16302,7 +16915,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"1", "Sets if the window will be inflicted by attribute changes"}},
       {std::string("kind"),
        std::vector<std::string>{
-           "None", "Defines which kind the displayed series has. Depending on the set kind the kind can be changed."}},
+           "None", "Defines which kind the displayed series has. Depending on the set kind the kind can be changed"}},
       {std::string("labels"), std::vector<std::string>{"None", "The labels which are displayed in the legend"}},
       {std::string("label_pos"),
        std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
@@ -16349,7 +16962,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("only_quadratic_aspect_ratio"),
        std::vector<std::string>{"0", "Sets if the aspect ratio is forced to be quadratic and kept this way"}},
       {std::string("org"), std::vector<std::string>{"None", "The org of the axis. Needed if org != min_value"}},
-      {std::string("orientation"), std::vector<std::string>{"horizontal", "The orientation of the element"}},
+      {std::string("orientation"),
+       std::vector<std::string>{"horizontal", "The orientation of all elements. Only works for some 2d kinds."}},
       {std::string("phi"), std::vector<std::string>{"None", "References the phi-angles stored in the context"}},
       {std::string("phi_dim"), std::vector<std::string>{"None", "The dimension of the phi-angles"}},
       {std::string("phi_max"), std::vector<std::string>{"None", "The ending phi-angle of the polar cell array"}},
@@ -16381,6 +16995,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("r_lim_min"), std::vector<std::string>{"None", "The beginning radius limit"}},
       {std::string("r_max"), std::vector<std::string>{"None", "The ending value for the radius"}},
       {std::string("r_min"), std::vector<std::string>{"None", "The beginning value for the radius"}},
+      {std::string("ref_x_axis_location"), std::vector<std::string>{"x", "The by the series referenced x-axis"}},
+      {std::string("ref_y_axis_location"), std::vector<std::string>{"y", "The by the series referenced y-axis"}},
       {std::string("relative_downwards"),
        std::vector<std::string>{"None", "A context reference for the relative downward errors"}},
       {std::string("relative_downwards_flt"),
@@ -16397,7 +17013,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
       {std::string("scientific_format"),
        std::vector<std::string>{"None", "Set the used format which will determine how a specific text will be drawn. "
-                                        "The text can be plain or for example interpreted with LaTeX."}},
+                                        "The text can be plain or for example interpreted with LaTeX"}},
       {std::string("select_specific_xform"),
        std::vector<std::string>{
            "None", "Selects a predefined transformation from world coordinates to normalized device coordinates"}},
@@ -16434,10 +17050,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("text"), std::vector<std::string>{"None", "The text displayed by this element"}},
       {std::string("text_align_horizontal"),
        std::vector<std::string>{
-           "None", "The horizontal text alignment. Defines where the horizontal anker point of the test is placed."}},
+           "None", "The horizontal text alignment. Defines where the horizontal anker point of the test is placed"}},
       {std::string("text_align_vertical"),
        std::vector<std::string>{
-           "None", "The vertical text alignment. Defines where the vertical anker point of the test is placed."}},
+           "None", "The vertical text alignment. Defines where the vertical anker point of the test is placed"}},
       {std::string("text_color_ind"), std::vector<std::string>{"None", "The index of the text-color"}},
       {std::string("text_encoding"), std::vector<std::string>{"utf8", "The internal text encoding"}},
       {std::string("text_x0"), std::vector<std::string>{"None", "The left x-position of the text"}},
@@ -18350,7 +18966,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "indices",
       "inner_series",
       "line_spec",
-      "orientation",
       "rgb",
       "style",
       "width",
@@ -18369,8 +18984,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "x",
       "y",
   };
-  std::vector<std::string> series_hist{
-      "bins", "fill_color_ind", "fill_color_rgb", "line_color_ind", "line_color_rgb", "line_spec", "orientation",
+  std::vector<std::string> series_histogram{
+      "bins", "fill_color_ind", "fill_color_rgb", "line_color_ind", "line_color_rgb", "line_spec",
   };
   std::vector<std::string> series_imshow{
       "data", "x", "y", "z", "z_dims",
@@ -18380,7 +18995,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
   };
   std::vector<std::string> series_line{
       "line_spec",
-      "orientation",
       "x",
       "y",
   };
@@ -18413,7 +19027,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "color_ind", "u", "v", "x", "y",
   };
   std::vector<std::string> series_scatter{
-      "c", "color_ind", "orientation", "x", "y", "z",
+      "c", "color_ind", "x", "y", "z",
   };
   std::vector<std::string> series_scatter3{
       "c",
@@ -18425,10 +19039,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "transformation", "x", "x_bins", "y", "y_bins",
   };
   std::vector<std::string> series_stairs{
-      "line_spec", "orientation", "step_where", "x", "y", "z",
+      "line_spec", "step_where", "x", "y", "z",
   };
   std::vector<std::string> series_stem{
-      "line_spec", "orientation", "x", "y", "y_range_min",
+      "line_spec",
+      "x",
+      "y",
+      "y_range_min",
   };
   std::vector<std::string> series_surface{
       "accelerate",
@@ -18469,7 +19086,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("series_contourf"), series_contourf},
       {std::string("series_heatmap"), series_heatmap},
       {std::string("series_hexbin"), series_hexbin},
-      {std::string("series_hist"), series_hist},
+      {std::string("series_histogram"), series_histogram},
       {std::string("series_imshow"), series_imshow},
       {std::string("series_isosurface"), series_isosurface},
       {std::string("series_line"), series_line},
@@ -18521,7 +19138,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                                                     "marginal_heatmap", "surface",  "wireframe"};
           std::vector<std::string> isosurface_group = {"isosurface", "volume"};
           std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
-          std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
+          std::vector<std::string> barplot_group = {"barplot", "histogram", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
           std::vector<std::string> polar_line_group = {"polar_line", "polar_scatter"};
           std::shared_ptr<GRM::Element> new_element = nullptr;
@@ -18542,6 +19159,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             }
 
           auto kind = static_cast<std::string>(element->getAttribute("kind"));
+          if (kind == "hist") kind = "histogram";
           if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
               std::find(line_group.begin(), line_group.end(), kind) != line_group.end())
             {
@@ -18551,9 +19169,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
-              if (element->hasAttribute("orientation"))
-                new_series->setAttribute("orientation", static_cast<std::string>(element->getAttribute("orientation")));
+              applyBoundingBoxId(*new_series, *element, true);
+              if (element->hasAttribute("ref_x_axis_location"))
+                new_series->setAttribute("ref_x_axis_location",
+                                         static_cast<std::string>(element->getAttribute("ref_x_axis_location")));
+              if (element->hasAttribute("ref_y_axis_location"))
+                new_series->setAttribute("ref_y_axis_location",
+                                         static_cast<std::string>(element->getAttribute("ref_y_axis_location")));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18656,7 +19278,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               if (kind == "imshow")
                 {
@@ -18707,7 +19329,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("z_dims", element->getAttribute("z_dims"));
               if (element->hasAttribute("d_min")) new_series->setAttribute("d_min", element->getAttribute("d_min"));
               if (element->hasAttribute("d_max")) new_series->setAttribute("d_max", element->getAttribute("d_max"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18727,7 +19349,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18745,17 +19367,21 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->parentElement()->insertBefore(new_series, element);
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
-              new_series->setAttribute("_bbox_id", -1);
-              if (element->hasAttribute("orientation"))
-                new_series->setAttribute("orientation", static_cast<std::string>(element->getAttribute("orientation")));
+              applyBoundingBoxId(*new_series, *element, true);
+              if (element->hasAttribute("ref_x_axis_location"))
+                new_series->setAttribute("ref_x_axis_location",
+                                         static_cast<std::string>(element->getAttribute("ref_x_axis_location")));
+              if (element->hasAttribute("ref_y_axis_location"))
+                new_series->setAttribute("ref_y_axis_location",
+                                         static_cast<std::string>(element->getAttribute("ref_y_axis_location")));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
-              if (kind == "hist")
+              if (kind == "histogram")
                 {
                   new_series->setAttribute("weights", element->getAttribute("y"));
                 }
               else
                 {
-                  if (value == "hist")
+                  if (value == "histogram")
                     {
                       new_series->setAttribute("y", element->getAttribute("weights"));
                     }
@@ -18774,10 +19400,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("_update_required", true);
               new_series->setAttribute("_delete_children", 2);
 
-              if (kind == "barplot" || kind == "hist")
+              if (kind == "barplot" || kind == "histogram")
                 {
                   int series_count = new_series->parentElement()->querySelectorsAll("series_" + kind).size();
-                  // if more than 1 barplot/hist series is displayed they could overlap each other -> problem
+                  // if more than 1 barplot/histogram series is displayed they could overlap each other -> problem
                   // to make everything visible again transparency must be used
                   for (const auto &series : new_series->parentElement()->querySelectorsAll("series_" + kind))
                     {
@@ -18797,7 +19423,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18816,7 +19442,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("clip_negative"))
                 new_series->setAttribute("clip_negative", element->getAttribute("clip_negative"));
               for (const auto &child : element->children())
@@ -18829,7 +19455,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             }
           else
             {
-              element->setAttribute("kind", value);
               fprintf(stderr, "Update kind %s to %s is not possible\n", kind.c_str(), value.c_str());
               std::cerr << toXML(element->getRootNode(), GRM::SerializerOptions{std::string(2, ' ')}) << "\n";
             }
@@ -18980,7 +19605,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                               auto axis_type = static_cast<std::string>(child->getAttribute("axis_type"));
                               std::string orientation = PLOT_DEFAULT_ORIENTATION;
                               if (new_element != nullptr)
-                                orientation = static_cast<std::string>(new_element->getAttribute("orientation"));
+                                orientation =
+                                    static_cast<std::string>(new_element->parentElement()->getAttribute("orientation"));
 
                               getMajorCount(child, new_kind, major_count);
                               if (new_kind == "barplot")
@@ -19177,12 +19803,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                                      "inner_series", "levels", "marginal_heatmap_kind", "num_bins", "px", "py", "pz",
                                      "stairs", "u", "v", "x", "x_colormap", "y", "y_colormap", "z"))
                     element->setAttribute("_delete_children", 2);
-                  if (attr == "orientation")
-                    {
-                      resetOldBoundingBoxes(element->parentElement());
-                      resetOldBoundingBoxes(element);
-                      element->removeAttribute("_bbox_id");
-                    }
                   if (element->localName() == "series_polar_histogram" && (attr == "num_bins" || attr == "bin_widths"))
                     {
                       for (const auto &child : element->children())
@@ -19193,6 +19813,24 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   if (element->localName() == "coordinate_system")
                     {
                       element->setAttribute("_delete_children", 0);
+                    }
+                }
+              if (attr == "ref_y_axis_location" || attr == "ref_x_axis_location")
+                {
+                  auto plot_parent = element->parentElement()->parentElement();
+                  auto coordinate_system = plot_parent->querySelectors("coordinate_system");
+
+                  auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                  if (plot_type == "2d")
+                    {
+                      plot_parent->setAttribute("_update_limits", true);
+                      plot_parent->setAttribute("_update_required", true);
+
+                      if (str_equals_any(static_cast<std::string>(element->getAttribute(attr)), "twin_x", "twin_y"))
+                        {
+                          coordinate_system->setAttribute("_update_required", true);
+                          coordinate_system->setAttribute("_delete_children", 2);
+                        }
                     }
                 }
             }
@@ -19243,8 +19881,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
                   auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
-                  if (attr == "x_ind" && y_ind != -1) element->setAttribute("_update_required", true);
-                  if (attr == "y_ind" && x_ind != -1) element->setAttribute("_update_required", true);
+                  if ((attr == "x_ind" && y_ind != -1) || (attr == "y_ind" && x_ind != -1))
+                    element->setAttribute("_update_required", true);
                 }
             }
           else if ((attr == "size_x" || attr == "size_y") && element->localName() == "figure" &&
@@ -19284,13 +19922,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                     {
                       resetOldBoundingBoxes(elem);
                       // plot gets calculated to quit so this special case is needed to get the right bboxes
-                      if (name == "plot") elem->removeAttribute("_bbox_id");
+                      if (name == "plot") removeBoundingBoxId(*elem);
                     }
                 }
 
               // reset the bounding boxes for figure
               resetOldBoundingBoxes(element);
-              element->removeAttribute("_bbox_id");
+              removeBoundingBoxId(*element);
             }
           else if (element->localName() == "plot" && std::find(plot_bbox_attributes.begin(), plot_bbox_attributes.end(),
                                                                attr) != plot_bbox_attributes.end())
@@ -19451,6 +20089,258 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         }
                     }
                 }
+              else if (element->localName() == "axis")
+                {
+                  std::shared_ptr<GRM::Element> plot_parent = element, new_parent;
+                  getPlotParent(plot_parent);
+
+                  auto new_location = static_cast<std::string>(element->getAttribute(attr));
+                  auto parent = element->parentElement();
+
+                  if (!str_equals_any(std::string(value), "x", "y") ||
+                      plot_parent->querySelectors("axis[location=\"" + std::string(value) + "\"]") ||
+                      plot_parent->querySelectors("axis[location=\"" + new_location + "\"]"))
+                    {
+                      if ((str_equals_any(std::string(value), "left", "right", "twin_y", "y") &&
+                           str_equals_any(new_location, "left", "right", "twin_y", "y")) ||
+                          (str_equals_any(std::string(value), "bottom", "top", "twin_x", "x") &&
+                           str_equals_any(new_location, "bottom", "top", "twin_x", "x")))
+                        {
+                          auto a = plot_parent->getAttribute("_" + std::string(value) + "_window_xform_a_org");
+                          auto b = plot_parent->getAttribute("_" + std::string(value) + "_window_xform_b_org");
+
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_a_org", a);
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_b_org", b);
+
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_a");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_b");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_a_org");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_b_org");
+
+                          // change the reference on the series elements
+                          for (const auto &series : plot_parent->querySelectors("central_region")->children())
+                            {
+                              if (!starts_with(series->localName(), "series_")) continue;
+
+                              if (str_equals_any(new_location, "bottom", "top", "twin_x", "x"))
+                                {
+                                  if ((series->hasAttribute("ref_x_axis_location") &&
+                                       static_cast<std::string>(series->getAttribute("ref_x_axis_location")) ==
+                                           std::string(value)) ||
+                                      (std::string(value) == "x" && !series->hasAttribute("ref_x_axis_location")))
+                                    {
+                                      series->setAttribute("ref_x_axis_location", new_location);
+                                    }
+                                  else if ((series->hasAttribute("ref_x_axis_location") &&
+                                            static_cast<std::string>(series->getAttribute("ref_x_axis_location")) ==
+                                                new_location) ||
+                                           (new_location == "x" && !series->hasAttribute("ref_x_axis_location")))
+                                    {
+                                      series->setAttribute("ref_x_axis_location", std::string(value));
+                                    }
+                                }
+                              else if (str_equals_any(new_location, "left", "right", "twin_y", "y"))
+                                {
+                                  if ((series->hasAttribute("ref_y_axis_location") &&
+                                       static_cast<std::string>(series->getAttribute("ref_y_axis_location")) ==
+                                           std::string(value)) ||
+                                      (std::string(value) == "y" && !series->hasAttribute("ref_y_axis_location")))
+                                    {
+                                      series->setAttribute("ref_y_axis_location", new_location);
+                                    }
+                                  else if ((series->hasAttribute("ref_y_axis_location") &&
+                                            static_cast<std::string>(series->getAttribute("ref_y_axis_location")) ==
+                                                new_location) ||
+                                           (new_location == "y" && !series->hasAttribute("ref_y_axis_location")))
+                                    {
+                                      series->setAttribute("ref_y_axis_location", std::string(value));
+                                    }
+                                }
+                            }
+
+                          // special cases to reset special twin-axis xform whioch allows a grid
+                          if (element->hasAttribute("_twin_x_window_xform_a"))
+                            {
+                              element->removeAttribute("_twin_x_window_xform_a");
+                              element->removeAttribute("_twin_x_window_xform_b");
+                            }
+                          if (element->hasAttribute("_twin_y_window_xform_a"))
+                            {
+                              element->removeAttribute("_twin_y_window_xform_a");
+                              element->removeAttribute("_twin_y_window_xform_b");
+                            }
+                          if (str_equals_any(new_location, "x", "y"))
+                            {
+                              auto axis = plot_parent->querySelectors("axis[location=\"twin_x\"");
+                              if (axis != nullptr && axis->hasAttribute("_twin_x_window_xform_a"))
+                                {
+                                  axis->removeAttribute("_twin_x_window_xform_a");
+                                  axis->removeAttribute("_twin_x_window_xform_b");
+                                }
+                              axis = plot_parent->querySelectors("axis[location=\"twin_y\"");
+                              if (axis != nullptr && axis->hasAttribute("_twin_y_window_xform_a"))
+                                {
+                                  axis->removeAttribute("_twin_y_window_xform_a");
+                                  axis->removeAttribute("_twin_y_window_xform_b");
+                                }
+                            }
+
+                          // get the parent element for the new axis
+                          if (str_equals_any(new_location, "twin_x", "twin_y", "x", "y"))
+                            new_parent = plot_parent->querySelectors("coordinate_system");
+                          else if (str_equals_any(new_location, "bottom", "left", "right", "top"))
+                            new_parent = plot_parent->querySelectors("side_region[location=" + new_location + "]");
+
+                          // figure out if an element needs to be swapped back
+                          for (const auto &child : new_parent->querySelectorsAll(element->localName()))
+                            {
+                              if (child != element && child->localName() == "side_plot_region")
+                                {
+                                  parent->appendChild(child);
+                                  child->setAttribute("_update_required", 1);
+                                  child->setAttribute("location", value);
+                                  resetOldBoundingBoxes(child);
+                                }
+                              else if (child != element &&
+                                       static_cast<std::string>(child->getAttribute("location")) == new_location)
+                                {
+                                  child->setAttribute("_update_required", 1);
+                                  child->setAttribute("location", value);
+                                }
+                            }
+
+                          // move the old axis to the new parent
+                          if (str_equals_any(new_location, "twin_x", "twin_y", "x", "y"))
+                            {
+                              if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                new_parent->appendChild(element);
+                              if (str_equals_any(std::string(value), "x", "y"))
+                                plot_parent->setAttribute("_update_required", true);
+                              if (new_location == "twin_x")
+                                {
+                                  auto x_axis = plot_parent->querySelectors("axis[location=\"x\"]");
+                                  x_axis->setAttribute("_update_required", true);
+                                  x_axis->setAttribute("_delete_children", 2);
+                                  x_axis->setAttribute("draw_grid", false);
+                                  if (str_equals_any(std::string(value), "x", "y"))
+                                    plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                    parent->remove();
+                                }
+                              else if (new_location == "twin_y")
+                                {
+                                  auto y_axis = plot_parent->querySelectors("axis[location=\"y\"]");
+                                  y_axis->setAttribute("_update_required", true);
+                                  y_axis->setAttribute("_delete_children", 2);
+                                  y_axis->setAttribute("draw_grid", false);
+                                  if (str_equals_any(std::string(value), "x", "y"))
+                                    plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                    parent->remove();
+                                }
+                              else if (str_equals_any(new_location, "x", "y"))
+                                {
+                                  auto axis = plot_parent->querySelectors("axis[location=\"" + value + "\"]");
+                                  for (const auto &child : axis->children())
+                                    {
+                                      child->remove();
+                                    }
+                                  clearAxisAttributes(axis);
+                                  axis->setAttribute("_update_required", true);
+                                  plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y"))
+                                    {
+                                      new_parent->appendChild(element);
+                                      new_parent->setAttribute("offset", 0.02);
+                                      if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                                      new_parent->setAttribute("width", 0.03);
+                                      element->setAttribute("mirrored_axis", true);
+                                      element->setAttribute("draw_grid", true);
+                                      parent->appendChild(axis);
+                                      axis->setAttribute("mirrored_axis", false);
+                                      axis->setAttribute("line_color_ind", 1);
+                                    }
+                                }
+                              for (const auto &child : element->children())
+                                {
+                                  child->remove();
+                                }
+
+                              clearAxisAttributes(element);
+                              element->setAttribute("_update_required", true);
+                            }
+                          else if (str_equals_any(new_location, "bottom", "left", "right", "top"))
+                            {
+                              if (str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                {
+                                  auto axis = new_parent->querySelectors("axis[location=\"" + value + "\"]");
+                                  if (new_parent->querySelectors("side_plot_region") != nullptr)
+                                    {
+                                      new_parent->querySelectors("side_plot_region")->appendChild(element);
+                                    }
+                                  else
+                                    {
+                                      auto side_plot_region = global_render->createSidePlotRegion();
+                                      new_parent->appendChild(side_plot_region);
+                                      side_plot_region->appendChild(element);
+                                    }
+
+                                  element->setAttribute("mirrored_axis", false);
+                                  element->setAttribute("line_color_ind", 1);
+                                  if (axis != nullptr)
+                                    {
+                                      parent->appendChild(axis);
+                                      axis->setAttribute("mirrored_ticks", true);
+                                      axis->setAttribute("draw_grid", true);
+                                    }
+                                  else if (std::string(value) == "twin_x")
+                                    {
+                                      auto x_axis = plot_parent->querySelectors("axis[location=\"x\"]");
+                                      x_axis->setAttribute("mirrored_axis", true);
+                                      x_axis->setAttribute("_delete_children", 2);
+                                      x_axis->setAttribute("_update_required", true);
+                                    }
+                                  else if (std::string(value) == "twin_y")
+                                    {
+                                      auto y_axis = plot_parent->querySelectors("axis[location=\"y\"]");
+                                      y_axis->setAttribute("mirrored_axis", true);
+                                      y_axis->setAttribute("_delete_children", 2);
+                                      y_axis->setAttribute("_update_required", true);
+                                    }
+                                }
+                              else
+                                {
+                                  new_parent->appendChild(parent);
+                                }
+                              new_parent->setAttribute("offset", 0.02);
+                              if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                              new_parent->setAttribute("width", 0.03);
+                              for (const auto &child : element->children())
+                                {
+                                  child->remove();
+                                }
+                              clearAxisAttributes(element);
+                              element->setAttribute("_update_required", true);
+                              if (str_equals_any(std::string(value), "x", "y"))
+                                plot_parent->setAttribute("_update_limits", true);
+                            }
+                          resetOldBoundingBoxes(new_parent);
+                          resetOldBoundingBoxes(parent);
+                        }
+                      else
+                        {
+                          fprintf(stderr, "The location can only be swapped if the old and new location match the same "
+                                          "axis_type.\n");
+                        }
+                    }
+                  else
+                    {
+                      fprintf(stderr,
+                              "The location swap is invalid. If the selected axis has the location x or y the new "
+                              "location must match an existing axis. Therefore no location change was made.\n");
+                      element->setAttribute("location", value);
+                    }
+                }
             }
           else if (element->localName() == "integral" &&
                    std::find(integral_critical_attributes.begin(), integral_critical_attributes.end(), attr) !=
@@ -19574,6 +20464,58 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   theta_axes->setAttribute("_delete_children", 2);
                 }
             }
+          else if (element->localName() == "axis" && attr == "tick_orientation")
+            {
+              if (element->hasAttribute("_ignore_next_tick_orientation"))
+                {
+                  element->removeAttribute("_ignore_next_tick_orientation");
+                  element->setAttribute("tick_orientation", value);
+                }
+            }
+          else if (element->localName() == "axis" && str_equals_any(attr, "adjust_x_lim", "adjust_y_lim", "x_lim_max",
+                                                                    "x_lim_min", "y_lim_max", "y_lim_min"))
+            {
+              auto plot_parent = element;
+              getPlotParent(plot_parent);
+              auto location = static_cast<std::string>(element->getAttribute("location"));
+              if (str_equals_any(location, "x", "y"))
+                {
+                  plot_parent->setAttribute("_update_limits", true);
+                  clearAxisAttributes(element);
+                }
+
+              if (str_equals_any(location, "twin_x", "twin_y", "x", "y"))
+                {
+                  auto axis = plot_parent->querySelectors("axis[location=\"twin_x\"");
+                  if (axis != nullptr && axis->hasAttribute("_twin_x_window_xform_a"))
+                    {
+                      axis->removeAttribute("_twin_x_window_xform_a");
+                      axis->removeAttribute("_twin_x_window_xform_b");
+                    }
+                  axis = plot_parent->querySelectors("axis[location=\"twin_y\"");
+                  if (axis != nullptr && axis->hasAttribute("_twin_y_window_xform_a"))
+                    {
+                      axis->removeAttribute("_twin_y_window_xform_a");
+                      axis->removeAttribute("_twin_y_window_xform_b");
+                    }
+                }
+            }
+          else if (element->localName() == "axis" && str_equals_any(attr, "draw_grid", "mirrored_axis"))
+            {
+              element->setAttribute("_update_required", true);
+              element->setAttribute("_delete_children", 2);
+            }
+          else if (attr == "orientation")
+            {
+              element->setAttribute("_update_required", true);
+              for (const auto &child : element->children())
+                {
+                  if (starts_with(child->localName(), "series_")) child->setAttribute("_update_required", true);
+                }
+              resetOldBoundingBoxes(element->parentElement());
+              resetOldBoundingBoxes(element);
+              removeBoundingBoxId(*element);
+            }
         }
       global_root->setAttribute("_modified", true);
 
@@ -19602,8 +20544,7 @@ std::shared_ptr<GRM::Element> GRM::Render::getActiveFigure()
   return active_figure;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modify context ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modify context ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
                             const GRM::Value &old_value)
@@ -19640,5 +20581,17 @@ void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element)
         {
           (*context)[attr].decrement_key(static_cast<std::string>(value));
         }
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ cleanup element ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void cleanupElement(GRM::Element &element)
+{
+  if (element.hasAttribute("_bbox_id"))
+    {
+      auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
+      id_pool().release(bbox_id);
+      bounding_map().erase(bbox_id);
     }
 }

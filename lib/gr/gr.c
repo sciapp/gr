@@ -181,7 +181,7 @@ typedef struct
   int clip_tnr;
   int clip_region;
   double clip_start_angle, clip_end_angle;
-  int resize_behaviour;
+  double nominal_size;
   double alpha;
   double txoff[2];
 } state_list;
@@ -3745,21 +3745,21 @@ void gr_inqfillcolorind(int *color)
   gks_inq_fill_color_index(&errind, color);
 }
 
-void gr_setresizebehaviour(int flag)
+void gr_setnominalsize(double factor)
 {
   check_autoinit;
 
-  gks_set_resize_behaviour(flag);
-  if (ctx) ctx->resize_behaviour = flag;
+  gks_set_nominal_size(factor);
+  if (ctx) ctx->nominal_size = factor;
 
-  if (flag_stream) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
+  if (flag_stream) gr_writestream("<setnominalsize=\"%g\"/>\n", factor);
 }
 
-void gr_inqresizebehaviour(int *flag)
+void gr_inqnominalsize(double *factor)
 {
   check_autoinit;
 
-  gks_inq_resize_behaviour(flag);
+  gks_inq_nominal_size(factor);
 }
 
 static void setcolor(int workstation_id, color_t *color)
@@ -12996,7 +12996,7 @@ void gr_savestate(void)
       gks_inq_clip_xform(&errind, &s->clip_tnr);
       gks_inq_clip_region(&errind, &s->clip_region);
       gks_inq_clip_sector(&errind, &s->clip_start_angle, &s->clip_end_angle);
-      gks_inq_resize_behaviour(&s->resize_behaviour);
+      gks_inq_nominal_size(&s->nominal_size);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13055,7 +13055,7 @@ void gr_restorestate(void)
       gks_select_clip_xform(s->clip_tnr);
       gks_set_clip_region(s->clip_region);
       gks_set_clip_sector(s->clip_start_angle, s->clip_end_angle);
-      gks_set_resize_behaviour(s->resize_behaviour);
+      gks_set_nominal_size(s->nominal_size);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13102,7 +13102,7 @@ void gr_restorestate(void)
           ctx->clip_region = s->clip_region;
           ctx->clip_start_angle = s->clip_start_angle;
           ctx->clip_end_angle = s->clip_end_angle;
-          ctx->resize_behaviour = s->resize_behaviour;
+          ctx->nominal_size = s->nominal_size;
 
           ctx->txoff[0] = s->txoff[0];
           ctx->txoff[1] = s->txoff[1];
@@ -13188,7 +13188,7 @@ void gr_selectcontext(int context)
           ctx->clip_region = GKS_K_REGION_RECTANGLE;
           ctx->clip_start_angle = 0;
           ctx->clip_end_angle = 360;
-          ctx->resize_behaviour = GKS_K_RESIZE;
+          ctx->nominal_size = 0;
 
           ctx->txoff[0] = 0;
           ctx->txoff[1] = 0;
@@ -13235,7 +13235,7 @@ void gr_selectcontext(int context)
       gks_select_clip_xform(ctx->clip_tnr);
       gks_set_clip_region(ctx->clip_region);
       gks_set_clip_sector(ctx->clip_start_angle, ctx->clip_end_angle);
-      gks_set_resize_behaviour(ctx->resize_behaviour);
+      gks_set_nominal_size(ctx->nominal_size);
 
       txoff[0] = ctx->txoff[0];
       txoff[1] = ctx->txoff[1];
@@ -13316,7 +13316,7 @@ void gr_savecontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
       gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_nominal_size(&app_context->buf[id]->nominal_size);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];
@@ -13396,7 +13396,7 @@ void gr_destroycontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
       gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_nominal_size(&app_context->buf[id]->nominal_size);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];

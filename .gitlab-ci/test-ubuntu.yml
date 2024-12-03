@@ -81,3 +81,23 @@ ubuntu-cmake-self-contained-test-snoop:
     paths:
     - diff_images
     when: on_failure
+
+ubuntu-cmake-self-contained-test-grm-internal:
+  stage: test
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
+  - export TERM=ansi
+  - export CLICOLOR_FORCE=1
+  - for f in grm_test_internal_api/*; do
+      [[ -f "$f" && -x "$f" ]] || continue;
+      printf "\n\e[1mRunning \"%s\":\e[0m\n" "$f";
+      $f 2>&1 || exit 1;
+    done
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure

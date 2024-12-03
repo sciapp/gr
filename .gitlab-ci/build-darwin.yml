@@ -1,57 +1,3 @@
-darwin-self-contained-iff1600:
-  stage: build
-  only:
-  - branches@Scientific-IT-Systems/gr
-  - tags@Scientific-IT-Systems/gr
-  script:
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
-  - tar xf cmake-3.23.0-macos-universal.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
-  - export MACOSX_DEPLOYMENT_TARGET=10.15
-  - rm -rf /usr/local/gr/*
-  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
-  - mkdir artifacts
-  - cp lib/gks/demo artifacts/gksdemo
-  - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
-       lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - cp -r lib/grm/include/grm artifacts/include/
-  - mkdir artifacts/Applications/
-  - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-  - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
-  - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
-  - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
-  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
-  - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
-  - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
-  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
-  - cd artifacts/Applications
-  - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
-    done
-  - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
-        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
-    done
-  - cd ../../
-  - mv artifacts artifacts-darwin-iff1600
-  tags:
-  - macos
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-darwin-iff1600/
-
 darwin-self-contained:
   stage: build
   image: macos:sonoma-gr-build
@@ -92,6 +38,12 @@ darwin-self-contained:
           rsync -a --exclude Headers --exclude *_debug* /usr/local/qt6/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/
           install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1 | head -1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY
         done
+      done
+      for APP in gksqt.app grplot.app; do
+        codesign -f -s - ${APP}
+        codesign -f -s - ${APP}/Contents/Frameworks/*.framework
+        codesign -f -s - ${APP}/Contents/Frameworks/Qt*.framework/Qt*
+        codesign -f -s - ${APP}/Contents/plugins/platforms/libqcocoa.dylib
       done
       cd ../../
     }
