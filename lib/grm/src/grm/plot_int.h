@@ -134,7 +134,7 @@ err_t plot_stairs(grm_args_t *subplot_args);
 err_t plot_scatter(grm_args_t *subplot_args);
 err_t plot_quiver(grm_args_t *subplot_args);
 err_t plot_stem(grm_args_t *subplot_args);
-err_t plot_hist(grm_args_t *subplot_args);
+err_t plot_histogram(grm_args_t *subplot_args);
 err_t plot_barplot(grm_args_t *subplot_args);
 err_t plot_contour(grm_args_t *subplot_args);
 err_t plot_contourf(grm_args_t *subplot_args);

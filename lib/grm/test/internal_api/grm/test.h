@@ -3,24 +3,25 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifndef NDEBUG
-#define DEFINE_TEST_MAIN                                \
-  int main(void)                                        \
-  {                                                     \
-    test();                                             \
-                                                        \
-    if (isatty(fileno(stdout)))                         \
-      {                                                 \
-        printf("\033[32;1mAll tests passed!\033[0m\n"); \
-      }                                                 \
-    else                                                \
-      {                                                 \
-        printf("All tests passed!\n");                  \
-      }                                                 \
-                                                        \
-    return 0;                                           \
+#define DEFINE_TEST_MAIN                                                      \
+  int main(void)                                                              \
+  {                                                                           \
+    test();                                                                   \
+                                                                              \
+    if (isatty(fileno(stdout)) || strcmp(getenv("CLICOLOR_FORCE"), "1") == 0) \
+      {                                                                       \
+        printf("\033[32;1mAll tests passed!\033[0m\n");                       \
+      }                                                                       \
+    else                                                                      \
+      {                                                                       \
+        printf("All tests passed!\n");                                        \
+      }                                                                       \
+                                                                              \
+    return 0;                                                                 \
   }
 #else
 #define DEFINE_TEST_MAIN                                \

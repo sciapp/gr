@@ -237,7 +237,7 @@ const char *gks_function_name(int routine)
       name = "SET_RESAMPLE_METHOD";
       break;
     case 109:
-      name = "SET_RESIZE_BEHAVIOUR";
+      name = "SET_NOMINAL_SIZE";
       break;
     case 110:
       name = "INQ_TEXT";

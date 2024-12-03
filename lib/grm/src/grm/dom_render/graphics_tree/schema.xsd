@@ -197,7 +197,7 @@
                 <xs:element ref="series_contourf" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_hexbin" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_hist" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_histogram" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
@@ -226,6 +226,7 @@
             <xs:attribute name="diag_factor" type="xs:double"/>
             <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
+            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="projection_type" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
@@ -278,13 +279,15 @@
     <xs:element name="side_plot_region">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="axis" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="colorbar" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="series_hist" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="series_histogram" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="series_stairs" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="offset" type="xs:double"/>
+            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="window_x_max" type="xs:double"/>
             <xs:attribute name="window_x_min" type="xs:double"/>
@@ -362,10 +365,13 @@
                 <xs:element ref="tick_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="adjust_x_lim" type="xs:integer"/>
+            <xs:attribute name="adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="axis_type" type="xs:string" use="required"/> <!-- X or Y -->
             <xs:attribute name="draw_grid" type="xs:integer"/>
             <xs:attribute name="label_pos" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="location" type="strint"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="num_tick_labels" type="xs:integer"/>
             <xs:attribute name="num_ticks" type="xs:integer"/>
@@ -380,8 +386,16 @@
             <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="tick_orientation" type="xs:integer"/>
             <xs:attribute name="tick_size" type="xs:double"/>
+            <xs:attribute name="window_x_max" type="xs:double"/>
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
+            <xs:attribute name="x_lim_max" type="xs:double"/>
+            <xs:attribute name="x_lim_min" type="xs:double"/>
             <xs:attribute name="x_major" type="xs:integer"/> <!-- remove later -->
             <xs:attribute name="x_tick" type="xs:integer"/> <!-- remove later -->
+            <xs:attribute name="y_lim_max" type="xs:double"/>
+            <xs:attribute name="y_lim_min" type="xs:double"/>
             <xs:attribute name="y_major" type="xs:integer"/> <!-- remove later -->
             <xs:attribute name="y_tick" type="xs:integer"/> <!-- remove later -->
             <xs:attribute name="z_index" type="xs:integer"/>
@@ -490,10 +504,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_rect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="fill_rect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="labels_group" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
@@ -513,31 +524,23 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of labels_group -->
-    <xs:element name="labels_group">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of label -->
     <xs:element name="label">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_rect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="fill_rect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
@@ -844,6 +847,7 @@
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="bar_width" type="xs:double"/>
             <xs:attribute name="clip_transformation" type="xs:integer"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
@@ -857,7 +861,6 @@
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_color_rgb" type="xs:string"/>
             <xs:attribute name="line_width" type="xs:double"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="series_index" type="xs:integer"/>
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
@@ -874,6 +877,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="contour"/>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="series"/>
         </xs:complexType>
     </xs:element>
 
@@ -882,6 +886,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="contour"/>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -896,6 +901,7 @@
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
         </xs:complexType>
     </xs:element>
 
@@ -904,6 +910,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -911,8 +918,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of hist -->
-    <xs:element name="series_hist">
+    <!-- definition of histogram -->
+    <xs:element name="series_histogram">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="bar" minOccurs="0" maxOccurs="unbounded"/>
@@ -921,6 +928,7 @@
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="bins" type="xs:string"/>
             <xs:attribute name="fill_color_rgb" type="xs:string"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
@@ -928,7 +936,6 @@
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_color_rgb" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="weights" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -943,6 +950,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="data" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="scale" type="xs:integer"/>
@@ -959,6 +967,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="ambient" type="xs:double"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="diffuse" type="xs:double"/>
@@ -986,10 +995,10 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="marker_type" type="strint"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1002,6 +1011,7 @@
                 <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="series"/>
         </xs:complexType>
     </xs:element>
 
@@ -1012,6 +1022,7 @@
                 <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="series"/>
         </xs:complexType>
     </xs:element>
 
@@ -1023,6 +1034,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="fill_int_style" type="strint"/>
@@ -1041,6 +1053,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1058,6 +1071,7 @@
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
         </xs:complexType>
     </xs:element>
 
@@ -1070,6 +1084,7 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="bin_counts" type="xs:string"/>
             <xs:attribute name="bin_edges" type="xs:string"/>
             <xs:attribute name="bin_width" type="xs:double"/>
@@ -1108,6 +1123,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
@@ -1127,6 +1143,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
@@ -1144,6 +1161,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="color_ind" type="xs:integer" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="u" type="xs:string" use="required"/>
@@ -1163,8 +1181,8 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="marker_sizes" type="xs:string"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -1178,6 +1196,7 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -1187,6 +1206,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="transformation" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1205,9 +1225,9 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="xi" type="xs:string"/>
@@ -1225,9 +1245,9 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1252,6 +1272,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="levels" type="xs:integer" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1265,6 +1286,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1277,6 +1299,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="algorithm" type="strint" use="required"/>
             <xs:attribute name="d_max" type="xs:double"/>
             <xs:attribute name="d_min" type="xs:double"/>
@@ -1291,6 +1314,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1559,7 +1583,13 @@
         <xs:attribute name="y" type="xs:string" use="required"/>
     </xs:attributeGroup>
 
-    <!-- definition of colorrep attribute -->
+    <!-- definition of series attributes -->
+    <xs:attributeGroup name="series">
+        <xs:attribute name="ref_x_axis_location" type="strint"/>
+        <xs:attribute name="ref_y_axis_location" type="strint"/>
+    </xs:attributeGroup>
+
+    <!-- definition of colorrep attributes -->
     <xs:attributeGroup name="colorrep">
         <xs:attribute name="colorrep.0" type="xs:string"/>
         <xs:attribute name="colorrep.1" type="xs:string"/>

@@ -101,7 +101,7 @@ extern "C" {
 #define SET_ENCODING 106
 #define INQ_ENCODING 107
 #define SET_RESAMPLE_METHOD 108
-#define SET_RESIZE_BEHAVIOUR 109
+#define SET_NOMINAL_SIZE 109
 #define INQ_TEXT 110
 
 #define SET_TEXT_SLANT 200
@@ -173,7 +173,7 @@ typedef struct
   int clip_tnr;
   int clip_region;
   double clip_start_angle, clip_end_angle;
-  int resize_behaviour;
+  double nominal_size;
   double aspect_ratio;
   char *(*callback)(const char *);
   int debug;

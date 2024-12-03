@@ -1,8 +1,10 @@
 #define _USE_MATH_DEFINES
 
+/* ######################### includes ############################################################################### */
+
 #include "utilcpp_int.hxx"
 #include <cmath>
-#include <list>
+#include <iomanip>
 #include <algorithm>
 #include <string_view>
 
@@ -16,6 +18,13 @@
 #else
 #include <unistd.h>
 #endif
+
+
+/* ######################### internal implementation ################################################################ */
+
+/* ========================= functions ============================================================================== */
+
+/* ------------------------- util ----------------------------------------------------------------------------------- */
 
 std::string_view ltrim(std::string_view s)
 {
@@ -238,3 +247,204 @@ bool is_number(std::string_view str)
   auto pos = str.find_first_not_of(".-0123456789", start_pos);
   return pos == std::string::npos;
 }
+
+double round(double val, int digits)
+{
+  if (digits < 0) return (round((val * pow(0.1, digits)) + ((val < 0) ? -0.5 : 0.5))) / pow(0.1, digits);
+  return (round((val * pow(0.1, digits)) + ((val < 0) ? -0.5 : 0.5) * pow(0.1, digits))) / pow(0.1, digits);
+}
+
+double ceil(double val, int digits)
+{
+  return ceil(val * pow(0.1, digits)) / pow(0.1, digits);
+}
+
+double floor(double val, int digits)
+{
+  return floor(round(val, -15) * pow(0.1, digits)) / pow(0.1, digits);
+}
+
+
+/* ========================= methods ================================================================================ */
+
+/* ------------------------- IdPool --------------------------------------------------------------------------------- */
+
+template <typename T> IdPool<T>::IdPool(T start_id) : start_id_(start_id) {}
+
+template <typename T> T IdPool<T>::current()
+{
+  if (current_id_)
+    {
+      return current_id_.value();
+    }
+  else
+    {
+      throw NoCurrentIdError();
+    }
+}
+
+template <typename T> T IdPool<T>::next()
+{
+  T next_id;
+  if (used_id_ranges_.empty())
+    {
+      // There are no IDs in use, so the next ID is the start ID
+      next_id = start_id_;
+      used_id_ranges_.emplace_front(next_id, next_id);
+    }
+  else if (used_id_ranges_.front().first != start_id_)
+    {
+      // The `start_id_` was released in a previous operation, so use it as the next ID
+      next_id = start_id_;
+      if (used_id_ranges_.front().first == start_id_ + 1)
+        {
+          /* In this case, only the `start_id_` is missing from the first interval, so we can just add it, for
+           * example:
+           * ```
+           * [1, 10] -> [0, 10]  (`start_id_` is `0`)
+           * ``` */
+          used_id_ranges_.front().first = next_id;
+        }
+      else
+        {
+          /* Otherwise, multiple IDs are missing from the first interval, for example:
+           * ```
+           * [5, 10]
+           * ```
+           * so create a new interval with the `start_id_` and add it to the front of the list:
+           * ```
+           * [0, 0], [5, 10]
+           * ``` */
+          used_id_ranges_.emplace_front(next_id, next_id);
+        }
+    }
+  else
+    {
+      next_id = used_id_ranges_.front().second + 1;
+      if (used_id_ranges_.size() > 1 && (++std::cbegin(used_id_ranges_))->first == next_id + 1)
+        {
+          /* In this case we have a gap of a single value between the first two intervals, for example:
+           * ```
+           * [0, 9], [11, 20]
+           * ```
+           * so `next_id` is `10` and both intervals can be merged to a single interval `[0, 20]`. */
+          (++std::begin(used_id_ranges_))->first = start_id_;
+          used_id_ranges_.pop_front();
+        }
+      else
+        {
+          used_id_ranges_.front().second = next_id;
+        }
+    }
+  current_id_ = next_id;
+  return next_id;
+}
+
+template <typename T> void IdPool<T>::print(std::ostream &os, bool compact) const
+{
+  os << "Used id ranges:";
+  if (used_id_ranges_.empty())
+    {
+      os << std::endl;
+      return;
+    }
+  if (compact)
+    {
+      os << " ";
+      for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
+        {
+          if (it != std::begin(used_id_ranges_))
+            {
+              os << ", ";
+            }
+          os << it->first;
+          if (it->first != it->second)
+            {
+              os << "-" << it->second;
+            }
+        }
+      os << std::endl;
+    }
+  else
+    {
+      os << std::endl;
+      auto field_width = std::to_string(used_id_ranges_.back().second).length();
+      for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
+        {
+          os << "  " << std::setw(field_width) << it->first;
+          if (it->first != it->second)
+            {
+              os << " - " << std::setw(field_width) << it->second;
+            }
+          os << std::endl;
+        }
+    }
+}
+
+template <typename T> void IdPool<T>::release(T id)
+{
+  for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
+    {
+      if (it->first <= id && id <= it->second)
+        {
+          if (it->first == it->second)
+            {
+              // In this case, the interval only consists of one value (`id`), so we can just remove it.
+              used_id_ranges_.erase(it);
+            }
+          else if (it->first == id)
+            {
+              /* `id` is at the start of the interval and the interval consists of multiple values, for example
+               * ```
+               * [10, 12] with id = 10
+               * ```
+               * so increment the start value of the interval, so we get:
+               * ```
+               * [11, 12]
+               * ``` */
+              ++(it->first);
+            }
+          else if (it->second == id)
+            {
+              /* `id` is at the end of the interval and the interval consists of multiple values, for example
+               * ```
+               * [10, 12] with id = 12
+               * ```
+               * so decrement the end value of the interval, so we get:
+               * ```
+               * [10, 11]
+               * ``` */
+              --(it->second);
+            }
+          else
+            {
+              /* In this case, `id` is in the middle of the interval, so split it into two intervals, for example:
+               * ```
+               * [10, 12] with id = 11
+               * ```
+               * so we get:
+               * ```
+               * [10, 10], [12, 12]
+               * ``` */
+              auto second = it->second;
+              it->second = id - 1;
+              used_id_ranges_.emplace(++it, id + 1, second);
+            }
+          if (id == current_id_)
+            {
+              current_id_.reset();
+            }
+          return;
+        }
+    }
+  throw IdNotFoundError(id);
+}
+
+template <typename T> void IdPool<T>::reset()
+{
+  used_id_ranges_.clear();
+  current_id_.reset();
+}
+
+/* Generate code for int IDs since this is needed in the code */
+template class IdPool<int>;

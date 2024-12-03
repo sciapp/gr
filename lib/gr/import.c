@@ -81,11 +81,11 @@ static char *format[] = {
     "setmarkersize:f",
     "setmarkertype:i",
     "setmathfont:i",
+    "setnominalsize:f",
     "setorthographicprojection:ffffff",
     "setperspectiveprojection:fff",
     "setpicturesizeforvolume:ii",
     "setprojectiontype:i",
-    "setresizebehaviour:i",
     "setscale:i",
     "setscalefactors3d:fff",
     "setspace:ffii",
@@ -483,19 +483,19 @@ static void gr(int id)
       gr_setmathfont(i_arg[0]);
       break;
     case 61:
-      gr_setorthographicprojection(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5]);
+      gr_setnominalsize(f_arg[0]);
       break;
     case 62:
-      gr_setperspectiveprojection(f_arg[0], f_arg[1], f_arg[2]);
+      gr_setorthographicprojection(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5]);
       break;
     case 63:
-      gr_setpicturesizeforvolume(i_arg[0], i_arg[1]);
+      gr_setperspectiveprojection(f_arg[0], f_arg[1], f_arg[2]);
       break;
     case 64:
-      gr_setprojectiontype(i_arg[0]);
+      gr_setpicturesizeforvolume(i_arg[0], i_arg[1]);
       break;
     case 65:
-      gr_setresizebehaviour(i_arg[0]);
+      gr_setprojectiontype(i_arg[0]);
       break;
     case 66:
       gr_setscale(i_arg[0]);

@@ -11,6 +11,12 @@ GRM::Element::Element(std::string local_name, const std::shared_ptr<GRM::Documen
 {
 }
 
+GRM::Element::~Element()
+{
+  auto cleanupElement = ownerDocument()->getElementCleanupFct();
+  if (cleanupElement) cleanupElement(*this);
+}
+
 std::string GRM::Element::nodeName() const
 {
   return tagName();

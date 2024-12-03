@@ -9,6 +9,7 @@ static void (*render)() = nullptr;
 static void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
 static void (*contextUpdate)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &) = nullptr;
 static void (*contextDelete)(const std::shared_ptr<GRM::Element> &) = nullptr;
+static void (*elementCleanup)(GRM::Element &) = nullptr;
 GRM::Document::Document() : GRM::Node(GRM::Node::Type::DOCUMENT_NODE, nullptr) {}
 
 std::string GRM::Document::nodeName() const
@@ -264,4 +265,14 @@ void GRM::Document::getContextFct(void (**del)(const std::shared_ptr<GRM::Elemen
 {
   *del = contextDelete;
   *upt = contextUpdate;
+}
+
+void GRM::Document::setElementCleanupFct(void (*cleanup)(GRM::Element &))
+{
+  elementCleanup = cleanup;
+}
+
+void (*GRM::Document::getElementCleanupFct())(GRM::Element &)
+{
+  return elementCleanup;
 }

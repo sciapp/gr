@@ -70,7 +70,7 @@ public slots:
   void closeConnection(GKSConnection &connection);
 
 private:
-  static const unsigned int port;
+  static unsigned int port;
   std::list<const GKSConnection *> connections;
 };
 

@@ -278,7 +278,6 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
-    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
     case 211: /* set clip region */
@@ -307,6 +306,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 28:  /* set character expansion factor */
     case 29:  /* set character spacing */
     case 31:  /* set character height */
+    case 109: /* set nominal size */
     case 200: /* set text slant */
     case 203: /* set transparency */
     case 206: /* set border width */
@@ -521,7 +521,6 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
-    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
     case 211: /* set clip region */
@@ -545,6 +544,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 28:  /* set character expansion factor */
     case 29:  /* set character spacing */
     case 31:  /* set character height */
+    case 109: /* set nominal size */
     case 200: /* set text slant */
     case 203: /* set transparency */
     case 206: /* set border width */
@@ -677,7 +677,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       (*gkss)->resample_method = ia[0];
       break;
     case 109:
-      (*gkss)->resize_behaviour = ia[0];
+      (*gkss)->nominal_size = r1[0];
       break;
     case 200:
       (*gkss)->txslant = r1[0];

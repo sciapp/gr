@@ -97,6 +97,9 @@ public:
   void getContextFct(void (**del)(const std::shared_ptr<GRM::Element> &),
                      void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &));
 
+  void setElementCleanupFct(void (*cleanup)(GRM::Element &));
+  void (*getElementCleanupFct())(GRM::Element &);
+
 protected:
   Document();
 

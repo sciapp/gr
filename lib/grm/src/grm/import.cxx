@@ -99,12 +99,10 @@ static std::map<std::string, const char *> key_to_types{
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<std::string> kind_types = {
-    "barplot",    "contour",       "contourf",        "heatmap",       "hexbin",
-    "hist",       "imshow",        "isosurface",      "line",          "marginal_heatmap",
-    "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "pie",
-    "plot3",      "scatter",       "scatter3",        "shade",         "surface",
-    "stem",       "stairs",        "tricontour",      "trisurface",    "quiver",
-    "volume",     "wireframe"};
+    "barplot",       "contour",    "contourf",   "heatmap",          "hexbin",     "hist",          "histogram",
+    "imshow",        "isosurface", "line",       "marginal_heatmap", "polar_line", "polar_heatmap", "polar_histogram",
+    "polar_scatter", "pie",        "plot3",      "scatter",          "scatter3",   "shade",         "surface",
+    "stem",          "stairs",     "tricontour", "trisurface",       "quiver",     "volume",        "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -509,12 +507,44 @@ grm_file_args_t *grm_file_args_new()
   return args;
 }
 
+grm_special_axis_series_t *grm_special_axis_series_new()
+{
+  auto *args = new grm_special_axis_series_t;
+  if (args == nullptr)
+    {
+      debug_print_malloc_error();
+      return nullptr;
+    }
+  args->bottom = "";
+  args->left = "";
+  args->right = "";
+  args->top = "";
+  args->twin_x = "";
+  args->twin_y = "";
+  return args;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utils ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void adjust_ranges(double *range_min, double *range_max, double default_value_min, double default_value_max)
 {
   *range_min = (*range_min == INFINITY) ? default_value_min : grm_min(*range_min, default_value_min);
   *range_max = (*range_max == INFINITY) ? default_value_max : grm_max(*range_max, default_value_max);
+}
+
+void setSeriesLocation(std::vector<grm_args_t *> series, int idx, std::list<int> bottom_series,
+                       std::list<int> left_series, std::list<int> right_series, std::list<int> top_series,
+                       std::list<int> twin_x_series, std::list<int> twin_y_series)
+{
+  std::string x_location, y_location;
+  if (std::find(bottom_series.begin(), bottom_series.end(), idx) != bottom_series.end()) x_location = "bottom";
+  if (std::find(left_series.begin(), left_series.end(), idx) != left_series.end()) y_location = "left";
+  if (std::find(right_series.begin(), right_series.end(), idx) != right_series.end()) y_location = "right";
+  if (std::find(top_series.begin(), top_series.end(), idx) != top_series.end()) x_location = "top";
+  if (std::find(twin_x_series.begin(), twin_x_series.end(), idx) != twin_x_series.end()) x_location = "twin_x";
+  if (std::find(twin_y_series.begin(), twin_y_series.end(), idx) != twin_y_series.end()) y_location = "twin_y";
+  if (!x_location.empty()) grm_args_push(series[idx], "ref_x_axis_location", "s", x_location.c_str());
+  if (!y_location.empty()) grm_args_push(series[idx], "ref_y_axis_location", "s", y_location.c_str());
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -555,6 +585,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   size_t row, col, rows, cols, depth;
   std::vector<std::vector<std::vector<double>>> file_data;
   std::vector<int> x_data, y_data, error_data;
+  std::list<int> bottom_series, left_series, right_series, top_series, twin_x_series, twin_y_series;
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
@@ -562,14 +593,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   void *handle = nullptr;
   const char *kind;
   int grplot;
-  grm_file_args_t *file_args;
-  file_args = grm_file_args_new();
+  grm_file_args_t *file_args = grm_file_args_new();
+  grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
 
-  if (!convert_inputstream_into_args(args, file_args, argc, argv, &ranges))
-    {
-      return 0;
-    }
+  if (!convert_inputstream_into_args(args, file_args, argc, argv, &ranges, special_axis_series)) return 0;
 
   if (file_args->file_path != "-" && !file_exists(file_args->file_path))
     {
@@ -578,7 +606,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if (!str_equals_any(kind, "barplot", "hist", "line", "scatter", "stairs", "stem"))
+  if (!str_equals_any(kind, "barplot", "histogram", "line", "scatter", "stairs", "stem"))
     {
       file_args->file_x_columns.clear();
       file_args->file_y_columns.clear();
@@ -601,11 +629,19 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       return 0;
     }
 
+  // convert grm_special_axis_series_t entries into int vector
+  if (parse_columns(&bottom_series, special_axis_series->bottom.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&left_series, special_axis_series->left.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&right_series, special_axis_series->right.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&top_series, special_axis_series->top.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&twin_x_series, special_axis_series->twin_x.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&twin_y_series, special_axis_series->twin_y.c_str()) != ERROR_NONE) return 0;
+
   if (!file_data.empty())
     {
       depth = file_data.size();
       cols = file_data[0].size();
-      if (str_equals_any(kind, "barplot", "hist", "line", "scatter", "stairs", "stem"))
+      if (str_equals_any(kind, "barplot", "histogram", "line", "scatter", "stairs", "stem"))
         {
           cols -= x_data.size() + error_data.size(); // less y columns if x or error data given
         }
@@ -935,6 +971,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           for (col = 0; col < series_num; col++)
             {
               series[col] = grm_args_new();
+              setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                                twin_y_series);
             }
         }
       else
@@ -946,6 +984,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           if (x_data.empty() && y_data.empty() && error_data.empty())
             {
               series[col] = grm_args_new();
+              setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                                twin_y_series);
               grm_args_push(series[col], "x", "nD", rows, x.data());
               grm_args_push(series[col], "y", "nD", rows,
                             file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
@@ -1081,7 +1121,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
       grm_args_push(args, "z", "nD", rows, file_data[depth][2].data());
     }
-  else if (str_equals_any(kind, "barplot", "hist", "stem", "stairs"))
+  else if (str_equals_any(kind, "barplot", "histogram", "stem", "stairs"))
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
@@ -1109,7 +1149,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       cols += x_data.size() + error_data.size();
 
       // precalculate the number of error columns, so they can be removed from the y-data in the following step
-      if (str_equals_any(kind, "barplot", "hist") &&
+      if (str_equals_any(kind, "barplot", "histogram") &&
           (grm_args_values(args, "error", "a", &error) || xye_file || equal_up_and_down_error))
         {
           if (error == nullptr)
@@ -1140,13 +1180,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               fprintf(stderr, "Not enough data for error parameter\n");
             }
-          else if (str_equals_any(kind, "barplot", "hist"))
+          else if (str_equals_any(kind, "barplot", "histogram"))
             {
               if (!grm_args_values(args, "num_bins", "i", &nbins))
                 {
                   if (!grm_args_values(args, "bins", "i", &nbins, &bins))
                     {
-                      if (strcmp(kind, "hist") == 0) nbins = (int)(3.3 * log10((int)rows) + 0.5) + 1;
+                      if (strcmp(kind, "histogram") == 0) nbins = (int)(3.3 * log10((int)rows) + 0.5) + 1;
                     }
                 }
               if (strcmp(kind, "barplot") == 0) nbins = (int)rows;
@@ -1232,6 +1272,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       for (col = 0; col < series_num; col++)
         {
           series[col] = grm_args_new();
+          setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                            twin_y_series);
         }
 
       // find min and max value of all x-data and make sure the all data points are inside that range
@@ -1287,9 +1329,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                                             ((double)file_data[depth][x_data[col]][row] - xmin);
                     }
                 }
-              // special case for barplot and hist cause the x-values and bar_width gets calculated via x_range_min and
-              // max; without the following code block all series will allways have the same x and same width
-              if (str_equals_any(kind, "barplot", "hist"))
+              // special case for barplot and histogram cause the x-values and bar_width gets calculated via x_range_min
+              // and max; without the following code block all series will allways have the same x and same width
+              if (str_equals_any(kind, "barplot", "histogram"))
                 {
                   for (col = 0; col < x_data.size(); ++col)
                     {
@@ -1349,7 +1391,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                             std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
                             std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
             }
-          if (str_equals_any(kind, "barplot", "hist", "stem")) ymin = grm_min(ymin, 0);
+          if (str_equals_any(kind, "barplot", "histogram", "stem")) ymin = grm_min(ymin, 0);
           for (col = 0; col < cols; ++col)
             {
               if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
@@ -1374,14 +1416,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               /* for barplot */
               grm_args_push(series[col], "y", "nD", rows,
                             file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
-              /* for hist */
+              /* for histogram */
               grm_args_push(series[col], "weights", "nD", rows,
                             file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
               /* for stairs */
               grm_args_push(series[col], "z", "nD", rows,
                             file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
               if (grm_args_values(args, "line_spec", "s", &spec)) grm_args_push(series[col], "line_spec", "s", spec);
-              if (str_equals_any(kind, "barplot", "hist") && series_num > 1)
+              if (str_equals_any(kind, "barplot", "histogram") && series_num > 1)
                 grm_args_push(series[col], "transparency", "d", 0.5);
               if (col < err / down_err_off)
                 {
@@ -1405,17 +1447,17 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   if (!labels.empty() && labels.size() > y_cnt) labels_c.push_back(labels[y_cnt].c_str());
                   grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
-                  /* for hist */
+                  /* for histogram */
                   grm_args_push(series[y_cnt], "weights", "nD", rows, file_data[depth][col].data());
                   /* for stairs */
                   grm_args_push(series[y_cnt], "z", "nD", rows, file_data[depth][col].data());
                   if (grm_args_values(args, "line_spec", "s", &spec))
                     grm_args_push(series[y_cnt], "line_spec", "s", spec);
-                  if (str_equals_any(kind, "barplot", "hist") && series_num > 1)
+                  if (str_equals_any(kind, "barplot", "histogram") && series_num > 1)
                     grm_args_push(series[y_cnt], "transparency", "d", 0.5);
                   y_cnt += 1;
                 }
-              else if (!equal_up_and_down_error && str_equals_any(kind, "barplot", "hist") && error != nullptr &&
+              else if (!equal_up_and_down_error && str_equals_any(kind, "barplot", "histogram") && error != nullptr &&
                        std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col) ==
                            filtered_error_columns.end())
                 {
@@ -1587,23 +1629,24 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       double xmin, xmax, ymin, ymax;
       if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed\n");
 
-      if (!grm_args_values(args, "x_range", "dd", &xmin, &xmax))
-        {
-          xmin = 0.0;
-          xmax = cols - 1.0;
-        }
-      if (!grm_args_values(args, "y_range", "dd", &ymin, &ymax))
-        {
-          ymin = 0.0;
-          ymax = rows - 1.0;
-        }
-      adjust_ranges(&ranges.xmin, &ranges.xmax, xmin, xmax);
-      adjust_ranges(&ranges.ymin, &ranges.ymax, ymin, ymax);
-      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
       min_x = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
       max_x = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
       min_y = *std::min_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
       max_y = *std::max_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+
+      if (!grm_args_values(args, "x_range", "dd", &xmin, &xmax))
+        {
+          xmin = min_x;
+          xmax = max_x;
+        }
+      if (!grm_args_values(args, "y_range", "dd", &ymin, &ymax))
+        {
+          ymin = min_y;
+          ymax = max_y;
+        }
+      adjust_ranges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
 
       for (row = 0; row < rows; row++)
         {
@@ -1712,7 +1755,7 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
  */
 
 int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv,
-                                  PlotRange *ranges)
+                                  PlotRange *ranges, grm_special_axis_series_t *special_axis_series)
 {
   int i;
   std::string token, found_key;
@@ -1748,6 +1791,30 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       else if (starts_with(token, "error_columns:"))
         {
           file_args->file_error_columns = token.substr(14, token.length() - 1);
+        }
+      else if (starts_with(token, "bottom:"))
+        {
+          special_axis_series->bottom = token.substr(7, token.length() - 1);
+        }
+      else if (starts_with(token, "left:"))
+        {
+          special_axis_series->left = token.substr(5, token.length() - 1);
+        }
+      else if (starts_with(token, "right:"))
+        {
+          special_axis_series->right = token.substr(6, token.length() - 1);
+        }
+      else if (starts_with(token, "top:"))
+        {
+          special_axis_series->top = token.substr(4, token.length() - 1);
+        }
+      else if (starts_with(token, "twin_x:"))
+        {
+          special_axis_series->twin_x = token.substr(7, token.length() - 1);
+        }
+      else if (starts_with(token, "twin_y:"))
+        {
+          special_axis_series->twin_y = token.substr(7, token.length() - 1);
         }
       else
         {
@@ -2055,6 +2122,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
+  if (kind == "hist") kind = "histogram";
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;
 }

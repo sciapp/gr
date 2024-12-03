@@ -16,7 +16,7 @@ default: QMakefile
 	@if [ "$(QMAKE)" != "" ]; then $(MAKE) -f QMakefile; fi
 
 QMakefile:
-	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile; fi
+	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile THIRDPARTYDIR=$(THIRDPARTYDIR); fi
 
 install: default
 ifeq ($(UNAME), Darwin)

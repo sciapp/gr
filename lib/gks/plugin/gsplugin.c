@@ -502,13 +502,13 @@ static void set_xform(double *wn, double *vp)
 
   p->width = p->a;
   p->height = p->c;
-  if (gkss->resize_behaviour == GKS_K_RESIZE)
+  if (gkss->nominal_size > 0)
     {
-      p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
+      p->nominal_size = 72.0 / 600 * gkss->nominal_size;
     }
   else
     {
-      p->nominal_size = 72.0 / 600;
+      p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
     }
 
   p->stroke = 0;

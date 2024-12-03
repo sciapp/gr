@@ -119,6 +119,8 @@ EXPORT int fontStringToInt(const std::string &font_str);
 EXPORT int fontPrecisionStringToInt(const std::string &font_precision_str);
 EXPORT int lineTypeStringToInt(const std::string &line_type_str);
 EXPORT int locationStringToInt(const std::string &location_str);
+EXPORT int xAxisLocationStringToInt(const std::string &location_str);
+EXPORT int yAxisLocationStringToInt(const std::string &location_str);
 EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
 EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
 EXPORT int modelStringToInt(const std::string &model_str);
@@ -139,6 +141,8 @@ EXPORT std::string fontIntToString(int font);
 EXPORT std::string fontPrecisionIntToString(int font_precision);
 EXPORT std::string lineTypeIntToString(int line_type);
 EXPORT std::string locationIntToString(int location);
+EXPORT std::string xAxisLocationIntToString(int location);
+EXPORT std::string yAxisLocationIntToString(int location);
 EXPORT std::string markerTypeIntToString(int marker_type);
 EXPORT std::string projectionTypeIntToString(int projection_type);
 EXPORT std::string modelIntToString(int model);
@@ -157,6 +161,8 @@ EXPORT std::vector<std::string> getFonts();
 EXPORT std::vector<std::string> getFontPrecisions();
 EXPORT std::vector<std::string> getLineTypes();
 EXPORT std::vector<std::string> getLocations();
+EXPORT std::vector<std::string> getXAxisLocations();
+EXPORT std::vector<std::string> getYAxisLocations();
 EXPORT std::vector<std::string> getMarkerTypes();
 EXPORT std::vector<std::string> getTextAlignHorizontal();
 EXPORT std::vector<std::string> getTextAlignVertical();
@@ -186,6 +192,7 @@ EXPORT void renderCaller();
 EXPORT void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
                                    const GRM::Value &old_value);
 EXPORT void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element);
+EXPORT void cleanupElement(GRM::Element &element);
 
 namespace GRM
 {

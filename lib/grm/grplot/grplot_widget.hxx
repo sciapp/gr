@@ -97,7 +97,7 @@ private slots:
   void tricont();
   void scatter3();
   void scatter();
-  void hist();
+  void histogram();
   void barplot();
   void stairs();
   void stem();
@@ -237,7 +237,7 @@ private:
   QAction *volumeAct, *isosurfaceAct;
   QAction *heatmapAct, *surfaceAct, *wireframeAct, *contourAct, *imshowAct, *contourfAct;
   QAction *plot3Act, *trisurfAct, *tricontAct, *scatter3Act;
-  QAction *histAct, *barplotAct, *stairsAct, *stemAct;
+  QAction *histogramAct, *barplotAct, *stairsAct, *stemAct;
   QAction *shadeAct, *hexbinAct;
   QAction *polarLineAct, *polarScatterAct;
   QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;

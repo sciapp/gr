@@ -382,7 +382,11 @@ static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
-  if (gkss->resize_behaviour == GKS_K_RESIZE)
+  if (gkss->nominal_size > 0)
+    {
+      p->nominal_size = gkss->nominal_size;
+    }
+  else
     {
       p->nominal_size = min(p->width, p->height) / 500.0;
     }

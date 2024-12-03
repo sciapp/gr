@@ -5,15 +5,73 @@
 
 #include <grm/util.h>
 #include <cassert>
+#include <complex>
+#include <iostream>
+#include <list>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <complex>
 
 
 /* ######################### internal interface ##################################################################### */
+
+/* ========================= classes ================================================================================ */
+
+/* ------------------------- IdPool --------------------------------------------------------------------------------- */
+
+class NoCurrentIdError : public std::exception
+{
+public:
+  NoCurrentIdError() {}
+
+  const char *what() const noexcept { return "No ID in use"; }
+};
+
+template <typename T> class IdNotFoundError : public std::exception
+{
+public:
+  IdNotFoundError(T id) : id_(id)
+  {
+    std::ostringstream ss;
+    ss << "ID \"" << id_ << "\" not found";
+    message_ = ss.str();
+  }
+
+  const char *what() const noexcept { return message_.c_str(); }
+
+  T id() const { return id_; }
+
+private:
+  const T id_;
+  std::string message_;
+};
+
+template <typename T> class IdPool
+{
+public:
+  IdPool(T start_id = 0);
+  T current();
+  T next();
+  void print(std::ostream &os = std::cout, bool compact = false) const;
+  void release(T id);
+  void reset();
+
+  friend std::ostream &operator<<(std::ostream &os, const IdPool<T> &id_pool)
+  {
+    id_pool.print(os);
+    return os;
+  }
+
+private:
+  const T start_id_;
+  std::optional<T> current_id_;
+  std::list<std::pair<T, T>> used_id_ranges_;
+};
+
+/* Use generated code for unsigned int IDs from the translation unit `utilcpp.cxx` */
+extern template class IdPool<int>;
 
 /* ========================= macros ================================================================================= */
 
@@ -71,5 +129,8 @@ template <typename... Args> constexpr bool str_equals_any(std::string_view targe
 }
 
 bool is_number(std::string_view str);
+double round(double val, int digits);
+double ceil(double val, int digits);
+double floor(double val, int digits);
 
 #endif // GRM_UTIL_INT_HXX_INCLUDED
