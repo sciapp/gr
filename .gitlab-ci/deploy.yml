@@ -24,10 +24,10 @@ deploy-to-obs:
     mv -f ${OBS_PROJECT}/gr/_service.new
     ${OBS_PROJECT}/gr/_service
   - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
-  - fails=`osc results -w -f -F ${OBS_PROJECT}/gr`
-    if [ -z "${fails}" ]; then
-      echo "$fails"
-      exit 1
+  - fails="$(osc results -w -f -F ${OBS_PROJECT}/gr)"
+  - if [ -z "${fails}" ]; then
+      echo "$fails";
+      exit 1;
     fi
 
 deploy-to-aur:
