@@ -25,7 +25,7 @@ deploy-to-obs:
     ${OBS_PROJECT}/gr/_service
   - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
   - fails="$(osc results -w -f -F ${OBS_PROJECT}/gr)"
-  - if [ -z "${fails}" ]; then
+  - if [[ -n "${fails}" ]]; then
       echo "$fails";
       exit 1;
     fi
