@@ -5,6 +5,9 @@ UNAME_S := $(shell uname -s)
 
 CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
 LDFLAGS = $(EXTRA_LDFLAGS)
+ifeq ($(UNAME_S),Linux)
+LDFLAGS += -Wl,-soname,$@
+endif
 
 
 ifeq ($(UNAME_S),Darwin)
