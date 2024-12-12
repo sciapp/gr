@@ -37,7 +37,7 @@ else
 GR_SHARED_LIBRARY_SUFFIX ?= .so
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
-     SOFLAGS = -shared
+     SOFLAGS = -shared -Wl,-soname,$@
 endif
         LIBS = -lpthread -ldl -lc -lm
       FTDEFS =
