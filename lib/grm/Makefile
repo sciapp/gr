@@ -79,7 +79,7 @@ else
 GR_SHARED_LIBRARY_SUFFIX ?= .so
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
-     SOFLAGS = -shared
+     SOFLAGS = -shared -Wl,-soname,$@
 endif
       GRLIBS = -L ../gr/ -lGR
      GR3LIBS = -L ../gr3/ -lGR3
