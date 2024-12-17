@@ -11,6 +11,9 @@ endif
    CXXFLAGS = -O -Wall -Wextra -pedantic -Wno-deprecated-copy -fPIC $(EXTRA_CXXFLAGS) # -Wno-deprecated-copy to avoid warnings from wx headers
    INCLUDES = -I.. -I$(THIRDPARTYDIR)/include
     SOFLAGS = -shared
+ifeq ($(UNAME),Linux)
+    SOFLAGS += -Wl,-soname,$@
+endif
     LDFLAGS = $(EXTRA_LDFLAGS)
 ifeq ($(UNAME),Darwin)
 	 CFLAGS += -mmacosx-version-min=10.15
