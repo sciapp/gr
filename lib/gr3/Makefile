@@ -33,7 +33,7 @@ PLATFORMLIBS = -lX11 -lGL
         OBJS+= gr3_glx.o
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
-     SOFLAGS = -shared
+     SOFLAGS = -shared -Wl,-soname,$@
         LIBS = -ldl
 endif
 

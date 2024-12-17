@@ -1330,7 +1330,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     }
                 }
               // special case for barplot and histogram cause the x-values and bar_width gets calculated via x_range_min
-              // and max; without the following code block all series will allways have the same x and same width
+              // and max; without the following code block all series will always have the same x and same width
               if (str_equals_any(kind, "barplot", "histogram"))
                 {
                   for (col = 0; col < x_data.size(); ++col)
@@ -1520,7 +1520,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       if (cols % 2 == 1)
         {
-          fprintf(stderr, "For polar_line and polar_scatter plots x and y must allways be given, but in this case the "
+          fprintf(stderr, "For polar_line and polar_scatter plots x and y must always be given, but in this case the "
                           "number of columns is odd -> 1 column is missing.\n");
           cols -= 1;
         }
