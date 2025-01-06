@@ -9,11 +9,9 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
   if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
     {
       auto *w = new QWidget(this);
-      QString s;
       std::string kind;
       static char path[MAXPATHLEN];
       std::snprintf(path, MAXPATHLEN, "%s/lib", GRDIR);
-
 
       auto *message = new QTextBrowser(w);
       message->setSearchPaths(QStringList(path));
@@ -36,12 +34,22 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
       grplot_widget_ = new GRPlotWidget(this, argc, argv);
       setCentralWidget(grplot_widget_);
       grplot_widget_->resize(WIDTH, HEIGHT);
+      grplot_widget_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     }
 
   setWindowTitle("GR Plot");
   if (strcmp(argv[1], "--listen") != 0)
     {
-      resize(WIDTH, HEIGHT);
+      if (grplot_widget_)
+        {
+          grplot_widget_->setMinimumSize(WIDTH, HEIGHT);
+          adjustSize();
+          grplot_widget_->setMinimumSize(0, 0);
+        }
+      else
+        {
+          resize(WIDTH, HEIGHT);
+        }
     }
 }
 

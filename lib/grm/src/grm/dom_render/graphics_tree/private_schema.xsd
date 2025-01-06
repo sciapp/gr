@@ -82,6 +82,7 @@
             <xs:attribute name="_left_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_left_window_xform_b" type="xs:double"/>
             <xs:attribute name="_left_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_initial_factor" type="xs:double"/>
             <xs:attribute name="_original_adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="_original_adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="_original_x_lim" type="xs:integer"/>

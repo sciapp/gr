@@ -873,7 +873,8 @@ static void legendSize(const std::vector<std::string> &labels, double *w, double
 }
 
 static void sidePlotMargin(const std::shared_ptr<GRM::Element> &side_region, double *margin, double inc,
-                           bool aspect_ratio_scale, double aspect_ratio_ws, double start_aspect_ratio_ws)
+                           bool aspect_ratio_scale, double aspect_ratio_ws, double start_aspect_ratio_ws,
+                           bool quadratic)
 {
   if (side_region->querySelectors("side_plot_region") ||
       (side_region->hasAttribute("marginal_heatmap_side_plot") &&
@@ -882,9 +883,13 @@ static void sidePlotMargin(const std::shared_ptr<GRM::Element> &side_region, dou
       *margin += inc;
       if (aspect_ratio_scale)
         {
-          if (aspect_ratio_ws > start_aspect_ratio_ws)
+          if (!quadratic && aspect_ratio_ws > start_aspect_ratio_ws)
             {
               *margin /= (start_aspect_ratio_ws / aspect_ratio_ws);
+            }
+          else if (quadratic && aspect_ratio_ws > 1)
+            {
+              *margin *= aspect_ratio_ws;
             }
           else
             {
@@ -1097,13 +1102,13 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   // margin respects colorbar and sideplot in the specific side_region
   // TODO: respect individual size defined by user
   sidePlotMargin(left_side_region, &left_margin, (org_vp1 - org_vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
   sidePlotMargin(right_side_region, &right_margin, (org_vp1 - org_vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
   sidePlotMargin(bottom_side_region, &bottom_margin, (org_vp3 - org_vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
   sidePlotMargin(top_side_region, &top_margin, (org_vp3 - org_vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
   if (!top_text_is_title && top_margin != 0) top_margin += 0.05;
   if (bottom_margin != 0) bottom_margin += 0.05;
 
@@ -5128,6 +5133,11 @@ static void processSpace3d(const std::shared_ptr<GRM::Element> &element)
     {
       element->setAttribute("space_3d_theta", theta);
     }
+  // save the original plot rotation so it can be restored
+  if (element->hasAttribute("space_3d_phi") && !element->hasAttribute("_space_3d_phi_org"))
+    element->setAttribute("_space_3d_phi_org", static_cast<double>(element->getAttribute("space_3d_phi")));
+  if (element->hasAttribute("space_3d_theta") && !element->hasAttribute("_space_3d_theta_org"))
+    element->setAttribute("_space_3d_theta_org", static_cast<double>(element->getAttribute("space_3d_theta")));
   fov = static_cast<double>(element->getAttribute("space_3d_fov"));
   camera_distance = static_cast<double>(element->getAttribute("space_3d_camera_distance"));
 
@@ -16322,14 +16332,6 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
       // from 0 to length. The cases for log can be ignored cause log gets ignored on imshow plots.
       if (child->localName() == "series_imshow") continue;
 
-      // save the original plot rotation so it can be restored
-      if (central_region->hasAttribute("space_3d_phi") && !central_region->hasAttribute("_space_3d_phi_org"))
-        central_region->setAttribute("_space_3d_phi_org",
-                                     static_cast<double>(central_region->getAttribute("space_3d_phi")));
-      if (central_region->hasAttribute("space_3d_theta") && !central_region->hasAttribute("_space_3d_theta_org"))
-        central_region->setAttribute("_space_3d_theta_org",
-                                     static_cast<double>(central_region->getAttribute("space_3d_theta")));
-
       bool x_log = static_cast<int>(element->getAttribute("x_log")) && child->hasAttribute("_x_org");
       bool y_log = static_cast<int>(element->getAttribute("y_log")) && child->hasAttribute("_y_org");
       bool z_log = static_cast<int>(element->getAttribute("z_log")) && child->hasAttribute("_z_org");
@@ -16682,9 +16684,13 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         {
           if (!static_cast<int>(element->getAttribute("active"))) return;
           if (element->hasAttribute("size_x") && !element->hasAttribute("_initial_width"))
-            element->setAttribute("_initial_width", static_cast<double>(element->getAttribute("size_x")));
-          if (element->hasAttribute("size_y") && !element->hasAttribute("_initial_height"))
-            element->setAttribute("_initial_height", static_cast<double>(element->getAttribute("size_y")));
+            {
+              int mwidth, mheight;
+              GRM::Render::getFigureSize(&mwidth, &mheight, nullptr, nullptr);
+
+              element->setAttribute("_initial_width", static_cast<double>(mwidth));
+              element->setAttribute("_initial_height", static_cast<double>(mheight));
+            }
           if (element->querySelectorsAll("draw_graphics").empty()) plotProcessWsWindowWsViewport(element, context);
         }
       if (element->localName() == "plot")
@@ -16693,7 +16699,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           processPlot(element, context);
           if (static_cast<std::string>(element->getAttribute("_kind")) == "marginal_heatmap")
             central_region_parent = element->children()[0]; // if the kind is marginal_heatmap plot can only has 1 child
-                                                            // and this child is the marginal_heatmap_plot
+          // and this child is the marginal_heatmap_plot
 
           if (central_region_parent != element) calculateViewport(central_region_parent);
 
@@ -16803,10 +16809,59 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           automatic_update = old_state;
         }
     }
+
+  // use the correct nominal factor for each plot respecting the actual size of the central_region
+  if (element->localName() == "plot")
+    {
+      double vp[4], viewport[4];
+      double metric_width, metric_height;
+      int px_width, px_height;
+      double initial_factor;
+      std::shared_ptr<GRM::Element> plot_parent = element;
+
+      auto central_region_elem = plot_parent->querySelectors("central_region");
+      if (central_region_elem == nullptr) return;
+      auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                   ? plot_parent->parentElement()
+                                   : plot_parent;
+
+      vp[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      vp[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      vp[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      vp[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+      viewport[0] = static_cast<double>(central_region_elem->getAttribute("viewport_x_min"));
+      viewport[1] = static_cast<double>(central_region_elem->getAttribute("viewport_x_max"));
+      viewport[2] = static_cast<double>(central_region_elem->getAttribute("viewport_y_min"));
+      viewport[3] = static_cast<double>(central_region_elem->getAttribute("viewport_y_max"));
+
+      GRM::Render::getFigureSize(&px_width, &px_height, &metric_width, &metric_height);
+      auto aspect_ratio_ws = metric_width / metric_height;
+      auto initial_width = static_cast<int>(active_figure->getAttribute("_initial_width")) * (vp[1] - vp[0]);
+      auto initial_height = static_cast<int>(active_figure->getAttribute("_initial_height")) * (vp[3] - vp[2]);
+      double central_region_width = (viewport[1] - viewport[0]) * px_width;
+      double central_region_height = (viewport[3] - viewport[2]) * px_height;
+      if (aspect_ratio_ws > 1)
+        central_region_height *= aspect_ratio_ws;
+      else
+        central_region_width /= aspect_ratio_ws;
+
+      if (!plot_parent->hasAttribute("_initial_factor"))
+        {
+          initial_factor = (central_region_width * central_region_height) / (initial_width * initial_height);
+          plot_parent->setAttribute("_initial_factor", initial_factor);
+        }
+      else
+        {
+          initial_factor = static_cast<double>(plot_parent->getAttribute("_initial_factor"));
+        }
+      double factor = (central_region_width * central_region_height) / (initial_width * initial_height);
+
+      gr_setnominalsize(sqrt(factor / initial_factor) *
+                        (grm_min(initial_width, initial_height) / grm_min(px_width, px_height)));
+    }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
@@ -18862,8 +18917,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createArcGridLine(double value,
   return element;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void GRM::Render::setClipRegion(const std::shared_ptr<GRM::Element> &element, int region)
 {
@@ -20074,6 +20128,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   if (new_type == "3d" && !central_region->hasAttribute("_diag_factor_set_by_user"))
                     central_region->removeAttribute("diag_factor");
                   active_figure->setAttribute("_kind_changed", true);
+                  plot_parent->removeAttribute("_initial_factor");
                 }
 
               if (coordinate_system)

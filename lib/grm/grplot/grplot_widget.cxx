@@ -1041,11 +1041,15 @@ void GRPlotWidget::draw()
   static bool called_at_least_once = false;
   if (!file_export.empty())
     {
+      std::string kind;
       static char file[50];
 
       auto global_root = grm_get_document_root();
-      auto plot_elem = global_root->querySelectors("plot");
-      auto kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
+      auto plot_elem = global_root->querySelectorsAll("plot");
+      if (plot_elem.size() > 1)
+        kind = "multiplot";
+      else
+        kind = static_cast<std::string>(plot_elem[0]->getAttribute("_kind"));
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
       grm_export(file);
     }
@@ -1245,13 +1249,18 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                 }
               label.setDefaultStyleSheet(QString::fromStdString(tooltipStyle));
               label.setHtml(QString::fromStdString(info));
-              auto global_root = grm_get_document_root();
-              auto plot_elem = global_root->querySelectors("plot");
-              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
-              if (kind == "heatmap" || kind == "marginal_heatmap")
-                {
-                  background.setAlpha(224);
-                }
+
+              /* tooltips for filled plot kinds gets a higher alpha value to make the values more visible */
+              int width = this->size().width(), height = this->size().height();
+              GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+              auto max_width_height = std::max(width, height);
+              auto x = (double)tooltip.x_px() / max_width_height;
+              auto y = (double)(height - tooltip.y_px()) / max_width_height;
+              auto plot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
+              kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
+              if (kind == "heatmap" || kind == "marginal_heatmap" || kind == "contourf" || kind == "imshow")
+                background.setAlpha(224);
+
               painter.fillRect(tooltip.x_px() + 8, (int)(tooltip.y_px() - label.size().height() / 2),
                                (int)label.size().width(), (int)label.size().height(),
                                QBrush(background, Qt::SolidPattern));
@@ -1421,9 +1430,6 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_args_push(args, "y", "i", mouseState.anchor.y());
           grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
           grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
-
-          /* get the correct cursor and sets it */
-          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
           grm_args_push(args, "move_selection", "i", 1);
 
           grm_input(args);
@@ -1499,15 +1505,36 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       else
         {
           std::string kind;
-          int x, y;
-          getMousePos(event, &x, &y);
+          int mouse_x, mouse_y;
+          double x, y;
+          int width = this->size().width(), height = this->size().height();
+          getMousePos(event, &mouse_x, &mouse_y);
           collectTooltips();
+
+          GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+          auto max_width_height = std::max(width, height);
+          x = (double)mouse_x / max_width_height;
+          y = (double)(height - mouse_y) / max_width_height;
+
           auto global_root = grm_get_document_root();
-          auto plot_elems = global_root->querySelectorsAll("plot");
-          // TODO: Select only the plot_elem where the mouse is (active_plot)
-          for (const auto &plot_elem : plot_elems)
+          auto plot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
+          if (plot_element)
             {
-              if (plot_elem)
+              kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
+              if (kind == "marginal_heatmap")
+                {
+                  grm_args_t *input_args;
+                  input_args = grm_args_new();
+
+                  grm_args_push(input_args, "x", "i", mouse_x);
+                  grm_args_push(input_args, "y", "i", mouse_y);
+                  grm_input(input_args);
+                  redraw();
+                }
+            }
+          else
+            {
+              for (const auto &plot_elem : global_root->querySelectorsAll("plot"))
                 {
                   kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
                   if (kind == "marginal_heatmap")
@@ -1515,30 +1542,30 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                       grm_args_t *input_args;
                       input_args = grm_args_new();
 
-                      grm_args_push(input_args, "x", "i", x);
-                      grm_args_push(input_args, "y", "i", y);
+                      grm_args_push(input_args, "x", "i", mouse_x);
+                      grm_args_push(input_args, "y", "i", mouse_y);
                       grm_input(input_args);
+                      redraw();
                     }
-
-                  /* get the correct cursor and sets it */
-                  int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
-                  if (cursor_state == DEFAULT_HOVER_MODE)
-                    {
-                      csr->setShape(Qt::ArrowCursor);
-                    }
-                  else if (cursor_state == MOVABLE_HOVER_MODE)
-                    {
-                      csr->setShape(Qt::OpenHandCursor);
-                    }
-                  else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
-                    {
-                      csr->setShape(Qt::SizeHorCursor);
-                    }
-                  setCursor(*csr);
-
-                  redraw();
                 }
             }
+
+          /* get the correct cursor and sets it */
+          int cursor_state = grm_get_hover_mode(mouse_x, mouse_y, disable_movable_xform);
+          if (cursor_state == DEFAULT_HOVER_MODE)
+            {
+              csr->setShape(Qt::ArrowCursor);
+            }
+          else if (cursor_state == MOVABLE_HOVER_MODE)
+            {
+              csr->setShape(Qt::OpenHandCursor);
+            }
+          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+            {
+              csr->setShape(Qt::SizeHorCursor);
+            }
+          setCursor(*csr);
+
           update();
         }
     }
@@ -1697,7 +1724,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   auto global_root = grm_get_document_root();
-  auto figure = global_root->querySelectors("[active=1]");
+  auto figure = global_root->querySelectors("figure[active=1]");
   if (figure != nullptr)
     {
       figure->setAttribute("size_x", (double)event->size().width());
@@ -2944,7 +2971,10 @@ void GRPlotWidget::processTestCommandsFile()
               int height = words[2].toInt(&height_flag);
               if (width_flag && height_flag)
                 {
-                  window()->resize(width, height);
+                  this->resize(width, height);
+                  this->setMinimumSize(width, height);
+                  window()->adjustSize();
+                  this->setMinimumSize(0, 0);
                   tooltips.clear();
 
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
