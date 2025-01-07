@@ -289,7 +289,7 @@ static int pre_plot_text_encoding = -1;
  * flat object that mixes keys of different hierarchies */
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", nullptr};
-const char *valid_plot_keys[] = {"clear", "fig_size", "raw", "size", "subplots", "update", nullptr};
+const char *valid_plot_keys[] = {"clear", "raw", "size", "subplots", "update", nullptr};
 
 const char *valid_subplot_keys[] = {"abs_height",
                                     "abs_width",
@@ -445,7 +445,6 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
                                               {"error_bar_style", "i"},
-                                              {"fig_size", "D"},
                                               {"fit_parents_height", "i"},
                                               {"fit_parents_width", "i"},
                                               {"font", "i"},
@@ -632,6 +631,7 @@ error_cleanup:
 static std::shared_ptr<GRM::Element> getCentralRegion()
 {
   auto plot_parent = edit_figure->lastChildElement();
+  plot_parent = plot_parent->querySelectors("plot");
   for (const auto &child : plot_parent->children())
     {
       if (child->localName() == "central_region")
@@ -788,7 +788,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
               grm_args_clear(current_args);
               if (cleared_args == nullptr)
                 {
-                  cleared_args = args_set_new(10); /* FIXME: do not use a magic number, use a growable set instead! */
+                  cleared_args = args_set_new(100); /* FIXME: do not use a magic number, use a growable set instead! */
                   cleanup_and_set_error_if(cleared_args == nullptr, ERROR_MALLOC);
                   cleanup_and_set_error_if(
                       !args_set_map_insert(key_to_cleared_args, *current_hierarchy_name_ptr, cleared_args),
@@ -1069,11 +1069,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
 
   logger((stderr, "Set plot attribute defaults\n"));
 
-  if (!grm_args_contains(plot_args, "fig_size"))
-    {
-      // TODO: Remove this default
-      args_setdefault(plot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
-    }
+  args_setdefault(plot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
 
   grm_args_values(plot_args, "subplots", "A", &current_subplot);
   while (*current_subplot != nullptr)
@@ -1327,7 +1323,8 @@ void plot_process_resample_method(grm_args_t *subplot_args)
 {
   int resample_method_flag;
   auto group = edit_figure->lastChildElement();
-  auto central_region = getCentralRegion();
+  auto central_region =
+      (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   if (!grm_args_values(subplot_args, "resample_method", "i", &resample_method_flag))
     {
@@ -1350,7 +1347,8 @@ void plot_process_window(grm_args_t *subplot_args)
   double rotation, tilt;
 
   auto group = edit_figure->lastChildElement();
-  auto central_region = getCentralRegion();
+  auto central_region =
+      (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   if (strcmp(kind, "hist") == 0)
@@ -1358,16 +1356,18 @@ void plot_process_window(grm_args_t *subplot_args)
       kind = "histogram";
       grm_args_push(subplot_args, "kind", "s", kind);
     }
-  if (grm_args_values(subplot_args, "x_log", "i", &x_log)) group->setAttribute("x_log", x_log);
-  if (grm_args_values(subplot_args, "y_log", "i", &y_log)) group->setAttribute("y_log", y_log);
-  if (grm_args_values(subplot_args, "z_log", "i", &z_log)) group->setAttribute("z_log", z_log);
-  if (grm_args_values(subplot_args, "x_flip", "i", &x_flip)) group->setAttribute("x_flip", x_flip);
-  if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) group->setAttribute("y_flip", y_flip);
-  if (grm_args_values(subplot_args, "z_flip", "i", &z_flip)) group->setAttribute("z_flip", z_flip);
+  auto plot = strcmp(kind, "marginal_heatmap") != 0 ? central_region->parentElement()
+                                                    : central_region->parentElement()->parentElement();
+  if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
+  if (grm_args_values(subplot_args, "y_log", "i", &y_log)) plot->setAttribute("y_log", y_log);
+  if (grm_args_values(subplot_args, "z_log", "i", &z_log)) plot->setAttribute("z_log", z_log);
+  if (grm_args_values(subplot_args, "x_flip", "i", &x_flip)) plot->setAttribute("x_flip", x_flip);
+  if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) plot->setAttribute("y_flip", y_flip);
+  if (grm_args_values(subplot_args, "z_flip", "i", &z_flip)) plot->setAttribute("z_flip", z_flip);
 
   if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
-      group->setAttribute("adjust_z_lim", true);
+      plot->setAttribute("adjust_z_lim", true);
       global_render->setSpace3d(central_region, 30.0, 0.0);
       if (grm_args_values(subplot_args, "rotation", "d", &rotation))
         central_region->setAttribute("space_3d_phi", rotation);
@@ -1383,9 +1383,8 @@ void plot_process_window(grm_args_t *subplot_args)
     }
 
   if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-    getCentralRegion()->setAttribute("orientation", orientation);
-  if (grm_args_values(subplot_args, "scale", "i", scale))
-    global_render->setScale(edit_figure->lastChildElement(), scale);
+    central_region->setAttribute("orientation", orientation);
+  if (grm_args_values(subplot_args, "scale", "i", scale)) global_render->setScale(plot, scale);
 }
 
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
@@ -1864,7 +1863,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
         temp->setAttribute("ref_y_axis_location", y_axis_ref);
 
       group->append(temp);
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
   error = plot_draw_colorbar(subplot_args, 0.0, 256);
@@ -2499,7 +2498,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 
       plot_draw_colorbar(subplot_args, 0.0, 256);
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
 
@@ -2709,7 +2708,7 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   unsigned int num_bins_x, num_bins_y, n;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
-  auto subGroup = global_render->querySelectors("marginal_heatmap_plot");
+  auto subGroup = group->querySelectors("marginal_heatmap_plot");
   if (subGroup == nullptr)
     {
       subGroup = global_render->createElement("marginal_heatmap_plot");
@@ -2901,7 +2900,7 @@ err_t plot_surface(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3029,7 +3028,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
             }
         }
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3073,7 +3072,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       (*context)["z_dims" + str] = shape_vec;
       subGroup->setAttribute("z_dims", "z_dims" + str);
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
 
@@ -3487,7 +3486,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     {
       series_group->setAttribute("y_colormap", y_colormap);
     }
-  global_root->setAttribute("_id", id++);
+  global_root->setAttribute("_id", ++id);
 
   return ERROR_NONE;
 }
@@ -3550,7 +3549,7 @@ err_t plot_pie(grm_args_t *subplot_args)
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
     }
-  global_root->setAttribute("_id", id++);
+  global_root->setAttribute("_id", ++id);
 
   return ERROR_NONE;
 }
@@ -3594,7 +3593,7 @@ err_t plot_trisurface(grm_args_t *subplot_args)
 
       group->append(temp);
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3661,7 +3660,7 @@ err_t plot_tricontour(grm_args_t *subplot_args)
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
   plot_draw_colorbar(subplot_args, 0.0, 256);
@@ -3722,7 +3721,7 @@ err_t plot_shade(grm_args_t *subplot_args)
       subGroup->setAttribute("y_range_min", y_min);
       subGroup->setAttribute("y_range_max", y_max);
     }
-  global_root->setAttribute("_id", id++);
+  global_root->setAttribute("_id", ++id);
 
   return ERROR_NONE;
 }
@@ -3780,7 +3779,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      group = global_render->getElementsByTagName("coordinate_system")[0];
+      if (current_central_region_element_locked)
+        group = current_central_region_element.lock()->getElementsByTagName("coordinate_system")[0];
+      else
+        group = getCentralRegion()->getElementsByTagName("coordinate_system")[0];
     }
   grm_args_values(args, "kind", "s", &kind);
   grm_args_values(args, "x_grid", "i", &x_grid);
@@ -4230,15 +4232,20 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   std::shared_ptr<GRM::Element> group, subGroup;
 
   group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
+  auto current_central_region_element_locked = current_central_region_element.lock();
 
-  if (global_render->getElementsByTagName("coordinate_system").empty())
+  if (!current_central_region_element_locked ||
+      current_central_region_element_locked->getElementsByTagName("coordinate_system").empty())
     {
       subGroup = global_render->createElement("coordinate_system");
       group->append(subGroup);
     }
   else
     {
-      subGroup = global_render->getElementsByTagName("coordinate_system")[0];
+      if (current_central_region_element_locked)
+        subGroup = current_central_region_element_locked->getElementsByTagName("coordinate_system")[0];
+      else
+        subGroup = getCentralRegion()->getElementsByTagName("coordinate_system")[0];
     }
 
   subGroup->setAttribute("plot_type", "polar");
@@ -4332,7 +4339,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
   int id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", id++);
+  global_root->setAttribute("_id", ++id);
   std::string labels_key = "labels" + std::to_string(id);
   std::vector<std::string> labels_vec(labels, labels + num_labels);
 
@@ -4732,7 +4739,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", id++);
+  global_root->setAttribute("_id", ++id);
   auto str = std::to_string(id);
 
   grm_args_values(subplot_args, "series", "A", &series);
@@ -6379,7 +6386,8 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 
   if (plot_pre_subplot(subplot_args) != ERROR_NONE) return 0;
 
-  auto central_region = getCentralRegion();
+  auto central_region =
+      (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   if (grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio))
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
@@ -6583,11 +6591,6 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
                   return 0;
                 }
             }
-        }
-      if (grm_args_values(edit_plot_args, "fig_size", "dd", &fig_size_x, &fig_size_y))
-        {
-          edit_figure->setAttribute("fig_size_x", fig_size_x);
-          edit_figure->setAttribute("fig_size_y", fig_size_y);
         }
       if (!edit_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
         {
@@ -6880,7 +6883,7 @@ int grm_iterate_grid(grm::Grid *grid, const std::shared_ptr<GRM::Element> &paren
     {
       for (const auto &element : row)
         {
-          if (!processedGridElements.count(element))
+          if (!processedGridElements.count(element) && element != nullptr)
             {
               processedGridElements.insert(element);
               auto slice = elementsToPosition.at(element);
@@ -6899,19 +6902,30 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
 
   if (gridElement == nullptr)
     {
-      std::cout << "Error: gridElement is nullptr\n";
+      std::cout << "Error: grid element is nullptr\n";
       return 0;
     }
 
   if (!gridElement->isGrid())
     {
+      const char *kind;
       grm_args_t **current_subplot_args = &gridElement->plot_args;
       auto layoutGridElement = global_render->createLayoutGridElement(*gridElement, *slice);
       parentDomElement->append(layoutGridElement);
       auto plot = global_render->createPlot(plotId);
       auto central_region = global_render->createCentralRegion();
       layoutGridElement->append(plot);
-      plot->append(central_region);
+      grm_args_values(*current_subplot_args, "kind", "s", &kind);
+      if (strcmp(kind, "marginal_heatmap") == 0)
+        {
+          auto marginal_heatmap = global_render->createElement("marginal_heatmap_plot");
+          plot->append(marginal_heatmap);
+          marginal_heatmap->append(central_region);
+        }
+      else
+        {
+          plot->append(central_region);
+        }
       current_dom_element = plot;
       current_central_region_element = central_region;
 
@@ -6963,38 +6977,25 @@ int get_free_id_from_figure_elements()
 std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::shared_ptr<GRM::Element> element,
                                                                           double x, double y)
 {
-  bool elementIsSubplotGroup =
+  bool element_is_plot_group =
       (element->hasAttribute("plot_group") && static_cast<int>(element->getAttribute("plot_group")));
 
-  if (element->localName() == "layout_grid_element" || elementIsSubplotGroup)
+  if (element_is_plot_group)
     {
       double viewport[4];
-      viewport[0] = static_cast<double>(element->getAttribute("viewport_x_min"));
-      viewport[1] = static_cast<double>(element->getAttribute("viewport_x_max"));
-      viewport[2] = static_cast<double>(element->getAttribute("viewport_y_min"));
-      viewport[3] = static_cast<double>(element->getAttribute("viewport_y_max"));
-      if (elementIsSubplotGroup)
-        {
-          auto central_region = element->querySelectors("central_region");
-          viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-          viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-          viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-          viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
-        }
-      if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
-        {
-          return element;
-        }
+      auto central_region = element->querySelectors("central_region");
+      viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+      viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+      viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+      viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+      if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3]) return element;
     }
-  if (element->localName() == "layout_grid")
+  if (element->localName() == "layout_grid" || element->localName() == "layout_grid_element")
     {
       for (const auto &child : element->children())
         {
           std::shared_ptr<GRM::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
-          if (subplot_element != nullptr)
-            {
-              return subplot_element;
-            }
+          if (subplot_element != nullptr) return subplot_element;
         }
     }
 
@@ -7009,10 +7010,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom(double x, dou
       for (const auto &child : edit_figure->children())
         {
           std::shared_ptr<GRM::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
-          if (subplot_element != nullptr)
-            {
-              return subplot_element;
-            }
+          if (subplot_element != nullptr) return subplot_element;
         }
     }
 
@@ -7102,19 +7100,17 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   ndc_box_x[3] = ndc_right;
   ndc_box_y[3] = ndc_top;
   subplot_element = get_subplot_from_ndc_points_using_dom(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
-  if (subplot_element == nullptr)
-    {
-      return 0;
-    }
+  if (subplot_element == nullptr) return 0;
+
   auto central_region = subplot_element->querySelectors("central_region");
   viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
   viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
   viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
-  wswindow[0] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_min"));
-  wswindow[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_max"));
-  wswindow[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_min"));
-  wswindow[3] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_max"));
+  wswindow[0] = static_cast<double>(edit_figure->getAttribute("ws_window_x_min"));
+  wswindow[1] = static_cast<double>(edit_figure->getAttribute("ws_window_x_max"));
+  wswindow[2] = static_cast<double>(edit_figure->getAttribute("ws_window_y_min"));
+  wswindow[3] = static_cast<double>(edit_figure->getAttribute("ws_window_y_max"));
 
   *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
   *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));

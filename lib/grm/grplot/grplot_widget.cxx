@@ -78,7 +78,7 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
 {
-  const char *kind;
+  const char *kind = "";
   unsigned int z_length;
   double *z = nullptr;
   int error = 0;
@@ -144,12 +144,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
+      "flip_col_and_row",
       "grplot",
       "hide",
       "is_major",
       "is_mirrored",
       "keep_aspect_ratio",
       "keep_radii_axes",
+      "keep_size_if_swapped",
       "keep_window",
       "marginal_heatmap_side_plot",
       "mirrored_axis",
@@ -161,6 +163,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "space",
       "stairs",
       "text_is_title",
+      "trim_col",
+      "trim_row",
       "x_flip",
       "x_grid",
       "x_log",
@@ -1499,37 +1503,41 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           getMousePos(event, &x, &y);
           collectTooltips();
           auto global_root = grm_get_document_root();
-          auto plot_elem = global_root->querySelectors("plot");
-          if (plot_elem)
+          auto plot_elems = global_root->querySelectorsAll("plot");
+          // TODO: Select only the plot_elem where the mouse is (active_plot)
+          for (const auto &plot_elem : plot_elems)
             {
-              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
-              if (kind == "marginal_heatmap")
+              if (plot_elem)
                 {
-                  grm_args_t *input_args;
-                  input_args = grm_args_new();
+                  kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
+                  if (kind == "marginal_heatmap")
+                    {
+                      grm_args_t *input_args;
+                      input_args = grm_args_new();
 
-                  grm_args_push(input_args, "x", "i", x);
-                  grm_args_push(input_args, "y", "i", y);
-                  grm_input(input_args);
-                }
+                      grm_args_push(input_args, "x", "i", x);
+                      grm_args_push(input_args, "y", "i", y);
+                      grm_input(input_args);
+                    }
 
-              /* get the correct cursor and sets it */
-              int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
-              if (cursor_state == DEFAULT_HOVER_MODE)
-                {
-                  csr->setShape(Qt::ArrowCursor);
-                }
-              else if (cursor_state == MOVABLE_HOVER_MODE)
-                {
-                  csr->setShape(Qt::OpenHandCursor);
-                }
-              else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
-                {
-                  csr->setShape(Qt::SizeHorCursor);
-                }
-              setCursor(*csr);
+                  /* get the correct cursor and sets it */
+                  int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+                  if (cursor_state == DEFAULT_HOVER_MODE)
+                    {
+                      csr->setShape(Qt::ArrowCursor);
+                    }
+                  else if (cursor_state == MOVABLE_HOVER_MODE)
+                    {
+                      csr->setShape(Qt::OpenHandCursor);
+                    }
+                  else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+                    {
+                      csr->setShape(Qt::SizeHorCursor);
+                    }
+                  setCursor(*csr);
 
-              redraw();
+                  redraw();
+                }
             }
           update();
         }
@@ -2656,7 +2664,6 @@ void GRPlotWidget::generateLinearContextSlot()
   auto scrollAreaContent = new QWidget;
   scrollAreaContent->setLayout(form);
   auto scrollArea = new QScrollArea;
-  scrollArea = new QScrollArea;
   scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
   scrollArea->setWidgetResizable(true);

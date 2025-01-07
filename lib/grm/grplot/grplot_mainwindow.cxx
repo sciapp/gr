@@ -1,6 +1,8 @@
 #include "grplot_mainwindow.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
+const unsigned int WIDTH = 600;
+const unsigned int HEIGHT = 450;
 
 GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
 {
@@ -27,19 +29,19 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
             fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
         }
       setCentralWidget(message);
-      resize(600, 450);
+      resize(WIDTH, HEIGHT);
     }
   else
     {
       grplot_widget_ = new GRPlotWidget(this, argc, argv);
       setCentralWidget(grplot_widget_);
-      grplot_widget_->resize(600, 450);
+      grplot_widget_->resize(WIDTH, HEIGHT);
     }
 
   setWindowTitle("GR Plot");
   if (strcmp(argv[1], "--listen") != 0)
     {
-      resize(600, 450);
+      resize(WIDTH, HEIGHT);
     }
 }
 
