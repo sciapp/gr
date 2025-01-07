@@ -228,13 +228,9 @@ static void resize_window(void)
       p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
     }
   if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = gkss->nominal_size;
-    }
+    p->nominal_size = gkss->nominal_size;
   else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+    p->nominal_size = min(p->width, p->height) / 500.0;
 
   if (p->pixmap)
     {
@@ -1528,6 +1524,12 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
           p->viewport[3] = r2[1];
         }
       break;
+    case 109:
+      if (gkss->nominal_size > 0)
+        p->nominal_size = gkss->nominal_size;
+      else
+        p->nominal_size = min(p->width, p->height) / 500.0;
+      break;
     }
   if (p->memory_plugin_initialised)
     {
@@ -1674,6 +1676,13 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       resize_window();
       set_xform();
       init_norm_xform();
+      break;
+
+    case 109:
+      if (gkss->nominal_size > 0)
+        p->nominal_size = gkss->nominal_size;
+      else
+        p->nominal_size = min(p->width, p->height) / 500.0;
       break;
 
     case 203:

@@ -383,13 +383,9 @@ static void resize_window(void)
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
   if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = gkss->nominal_size;
-    }
+    p->nominal_size = 2000 / 500.0 * gkss->nominal_size;
   else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+    p->nominal_size = min(p->width, p->height) / 500.0;
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -1814,6 +1810,14 @@ void gks_drv_js(
       resize_window();
       set_xform();
       init_norm_xform();
+      break;
+
+      /* set nominal size */
+    case 109:
+      if (gkss->nominal_size > 0)
+        p->nominal_size = 2000 / 500.0 * gkss->nominal_size;
+      else
+        p->nominal_size = min(p->width, p->height) / 500.0;
       break;
 
     case 203:
