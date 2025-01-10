@@ -451,10 +451,8 @@ static void set_xform(double *wn, double *vp)
 
   p->width = p->a;
   p->height = p->c;
-  if (gkss->nominal_size > 0)
-    p->nominal_size = 72.0 / 600 * gkss->nominal_size;
-  else
-    p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
+  p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
   p->stroke = 0;
 }
@@ -2237,10 +2235,8 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
 
       /* set nominal size */
     case 109:
-      if (gkss->nominal_size > 0)
-        p->nominal_size = 72.0 / 600 * gkss->nominal_size;
-      else
-        p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
+      p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     default:;

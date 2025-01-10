@@ -392,10 +392,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
           p->width = [self bounds].size.width;
           p->height = [self bounds].size.height;
-          if (gkss->nominal_size > 0)
-            p->nominal_size = gkss->nominal_size;
-          else
-            p->nominal_size = min(p->width, p->height) / 500.0;
+          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
           p->swidth = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
@@ -589,10 +587,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 109:
           gkss->nominal_size = f_arr_1[0];
-          if (gkss->nominal_size > 0)
-            p->nominal_size = gkss->nominal_size;
-          else
-            p->nominal_size = min(p->width, p->height) / 500.0;
+          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
           break;
 
         case 200:
@@ -1113,10 +1109,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
       p->width = width;
       p->height = height;
-      if (gkss->nominal_size > 0)
-        p->nominal_size = gkss->nominal_size;
-      else
-        p->nominal_size = min(p->width, p->height) / 500.0;
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
       [self setNeedsDisplay:YES];
       [[self window] setFrame:rect display:YES];
