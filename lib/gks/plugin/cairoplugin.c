@@ -2276,10 +2276,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 4650;
           p->dpi = 600;
           resize(2400, 2400);
-          if (gkss->nominal_size > 0)
-            p->nominal_size = 2400 / 500.0 * gkss->nominal_size;
-          else
-            p->nominal_size = 2400 / 500.0;
+          p->nominal_size = 2400 / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
         }
       else if (p->wtype == 143)
         {
@@ -2339,10 +2337,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mw = p->w * 2.54 / 100 / p->dpi;
           p->mh = p->h * 2.54 / 100 / p->dpi;
           resize(width, height);
-          if (gkss->nominal_size > 0)
-            p->nominal_size = 2400 / 500.0 * gkss->nominal_size;
-          else
-            p->nominal_size = min(p->width, p->height) / 500.0;
+          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
         }
       else if (p->wtype == 150)
         {
@@ -2352,10 +2348,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 420;
           p->dpi = 100;
           resize(400, 400);
-          if (gkss->nominal_size > 0)
-            p->nominal_size = 400 / 500.0 * gkss->nominal_size;
-          else
-            p->nominal_size = 0.8;
+          p->nominal_size = 400 / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
         }
       else
         {
@@ -2365,10 +2359,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 768;
           p->dpi = 100;
           resize(500, 500);
-          if (gkss->nominal_size > 0)
-            p->nominal_size = gkss->nominal_size;
-          else
-            p->nominal_size = 1;
+          p->nominal_size = 1;
+          if (gkss->nominal_size > 0) p->nominal_size = gkss->nominal_size;
         }
 
       p->max_points = MAX_POINTS;
@@ -2593,10 +2585,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
-              if (gkss->nominal_size > 0)
-                p->nominal_size = 2400 / 500.0 * gkss->nominal_size;
-              else
-                p->nominal_size = min(p->width, p->height) / 500.0;
+              p->nominal_size = min(p->width, p->height) / 500.0;
+              if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
             }
           close_page();
           open_page();
@@ -2609,10 +2599,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       break;
 
     case 109:
-      if (gkss->nominal_size > 0)
-        p->nominal_size = 2400 / 500.0 * gkss->nominal_size;
-      else
-        p->nominal_size = min(p->width, p->height) / 500.0;
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     case 203:
