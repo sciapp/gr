@@ -1445,7 +1445,7 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
       p->viewport[1] = (double)p->width * p->mw / p->w;
       p->viewport[3] = (double)p->height * p->mh / p->h;
       p->nominal_size = min(p->width, p->height) / 500.0;
-      if (gkss->nominal_size > 0) p->nominal_size *= p->dpi / 100 * gkss->nominal_size;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
       init_colors();
       open_page();
@@ -1595,7 +1595,7 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
           p->width = (int)(p->viewport[1] * p->w / p->mw);
           p->height = (int)(p->viewport[3] * p->h / p->mh);
           p->nominal_size = min(p->width, p->height) / 500.0;
-          if (gkss->nominal_size > 0) p->nominal_size *= p->dpi / 100 * gkss->nominal_size;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
           close_page();
           open_page();
@@ -1604,7 +1604,7 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
 
     case 109:
       p->nominal_size = min(p->width, p->height) / 500.0;
-      if (gkss->nominal_size > 0) p->nominal_size *= p->dpi / 100 * gkss->nominal_size;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     case 203:
