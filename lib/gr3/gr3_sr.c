@@ -11,20 +11,9 @@
 #include <assert.h>
 #include "gks.h"
 
-#ifdef _MSC_VER
-#define NO_THREADS 1
-#endif
-#ifndef NO_THREADS
-#include <pthread.h>
-#endif
 #include "gr3_internals.h"
 #include "gr3_sr.h"
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MINTHREE(a, b, c) MIN(MIN(a, b), c)
 
@@ -32,6 +21,40 @@
 #define MAXTHREE(a, b, c) MAX(MAX(a, b), c)
 /* the following macro enables BACKFACE_CULLING */
 /*#define BACKFACE_CULLING*/
+
+#ifndef NO_THREADS
+#ifndef _MSC_VER
+#define thread_create(thread, callback, arg) pthread_create(thread, NULL, callback, arg)
+#define thread_join(thread) pthread_join(thread, NULL)
+#define thread_mutex_init(lock) pthread_mutex_init(lock, NULL)
+#define thread_mutex_lock(lock) pthread_mutex_lock(lock)
+#define thread_mutex_unlock(lock) pthread_mutex_unlock(lock)
+#define thread_cond_init(cond) pthread_cond_init(cond, NULL)
+#define thread_cond_wait(cond, lock) pthread_cond_wait(cond, lock)
+#define thread_cond_signal(cond) pthread_cond_signal(cond)
+#define thread_cond_broadcast(cond) pthread_cond_broadcast(cond)
+#else
+#define thread_create(thread, callback, arg) (*thread = CreateThread(NULL, 0, callback, arg, 0, NULL))
+#define thread_join(thread) WaitForSingleObject(thread, INFINITE)
+#define thread_mutex_init(lock) InitializeCriticalSection(lock)
+#define thread_mutex_lock(lock) EnterCriticalSection(lock)
+#define thread_mutex_unlock(lock) LeaveCriticalSection(lock)
+#define thread_cond_init(cond) InitializeConditionVariable(cond)
+#define thread_cond_wait(cond, lock) SleepConditionVariableCS(cond, lock, INFINITE)
+#define thread_cond_signal(cond) WakeConditionVariable(cond)
+#define thread_cond_broadcast(cond) WakeAllConditionVariable(cond)
+#endif
+#else
+#define thread_create(thread, callback, arg)
+#define thread_join(thread)
+#define thread_mutex_init(lock)
+#define thread_mutex_lock(lock)
+#define thread_mutex_unlock(lock)
+#define thread_cond_init(cond)
+#define thread_cond_wait(cond, lock)
+#define thread_cond_signal(cond)
+#define thread_cond_broadcast(cond)
+#endif
 
 static int queue_destroy(queue *queue);
 static queue *queue_new(void);
@@ -120,10 +143,10 @@ static void merge(_TransparencyObject *pixel_transparency_buffer, int l, int m, 
  * to finish so that the main thread can finally return the pixmap containing the final image.*/
 #ifndef NO_THREADS
 static volatile int threads_done = 0;
-static pthread_mutex_t lock;
-static pthread_mutex_t lock_main;
-static pthread_cond_t wait_for_merge;
-static pthread_cond_t wait_after_merge;
+static thread_mutex_t lock;
+static thread_mutex_t lock_main;
+static thread_cond_t wait_for_merge;
+static thread_cond_t wait_after_merge;
 #endif
 
 
@@ -160,10 +183,8 @@ static queue *queue_new(void)
     {
       return NULL;
     }
-#ifndef NO_THREADS
-  pthread_mutex_init(&queue->lock, NULL);
-  pthread_cond_init(&queue->cond, NULL);
-#endif
+  thread_mutex_init(&queue->lock);
+  thread_cond_init(&queue->cond);
 
   queue->front = queue->back = NULL;
   return queue;
@@ -173,13 +194,11 @@ static void *queue_dequeue(queue *queue)
 {
   struct queue_node_s *node;
   void *argument;
-#ifndef NO_THREADS
-  pthread_mutex_lock(&queue->lock);
+  thread_mutex_lock(&queue->lock);
   if (queue == NULL || queue->front == NULL)
     {
-      pthread_cond_wait(&queue->cond, &queue->lock);
+      thread_cond_wait(&queue->cond, &queue->lock);
     }
-#endif
   node = queue->front;
   if (node == NULL)
     {
@@ -192,18 +211,14 @@ static void *queue_dequeue(queue *queue)
       queue->back = NULL;
     }
   free(node);
-#ifndef NO_THREADS
-  pthread_mutex_unlock(&queue->lock);
-#endif
+  thread_mutex_unlock(&queue->lock);
   return argument;
 }
 
 static int queue_enqueue(queue *queue, void *data)
 {
   struct queue_node_s *node;
-#ifndef NO_THREADS
-  pthread_mutex_lock(&queue->lock);
-#endif
+  thread_mutex_lock(&queue->lock);
   if (queue == NULL)
     {
       abort();
@@ -226,10 +241,8 @@ static int queue_enqueue(queue *queue, void *data)
       queue->back->next = node;
       queue->back = node;
     }
-#ifndef NO_THREADS
-  pthread_mutex_unlock(&queue->lock);
-  pthread_cond_signal(&queue->cond);
-#endif
+  thread_mutex_unlock(&queue->lock);
+  thread_cond_signal(&queue->cond);
   return SUCCESS;
 }
 
@@ -529,27 +542,27 @@ static void *draw_and_merge(void *queue_and_merge_area)
       if (((args *)argument)->id == 1)
         {
 #ifndef NO_THREADS
-          pthread_mutex_lock(&lock);
+          thread_mutex_lock(&lock);
           threads_done += 1;
           if (threads_done == context_struct_.num_threads)
             {
-              pthread_cond_broadcast(&wait_for_merge);
+              thread_cond_broadcast(&wait_for_merge);
             }
           else
             {
-              pthread_cond_wait(&wait_for_merge, &lock);
+              thread_cond_wait(&wait_for_merge, &lock);
             }
-          pthread_mutex_unlock(&lock);
+          thread_mutex_unlock(&lock);
 #endif
 
           merge_pixmaps(queue_and_merge_area_s.width, queue_and_merge_area_s.starty, queue_and_merge_area_s.endy);
 #ifndef NO_THREADS
-          pthread_mutex_lock(&lock);
+          thread_mutex_lock(&lock);
           threads_done += 1;
-          pthread_mutex_unlock(&lock);
+          thread_mutex_unlock(&lock);
           if (threads_done == 2 * context_struct_.num_threads)
             {
-              pthread_cond_signal(&wait_after_merge);
+              thread_cond_signal(&wait_after_merge);
             }
 #endif
         }
@@ -600,7 +613,7 @@ static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int 
       queue_and_merge_area->queue = queues[i];
       queue_and_merge_area->width = width;
 #ifndef NO_THREADS
-      pthread_create(&context_struct_.threads[i], NULL, draw_and_merge, (void *)queue_and_merge_area);
+      thread_create(&context_struct_.threads[i], draw_and_merge, (void *)queue_and_merge_area);
 #else
       draw_and_merge(queue_and_merge_area);
 #endif
@@ -1997,10 +2010,10 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
   width *= ssaa_factor;
   height *= ssaa_factor;
 #ifndef NO_THREADS
-  pthread_mutex_init(&lock, NULL);
-  pthread_mutex_init(&lock_main, NULL);
-  pthread_cond_init(&wait_for_merge, NULL);
-  pthread_cond_init(&wait_after_merge, NULL);
+  thread_mutex_init(&lock);
+  thread_mutex_init(&lock_main);
+  thread_cond_init(&wait_for_merge);
+  thread_cond_init(&wait_after_merge);
   threads_done = 0;
 #endif
   int j;
@@ -2078,12 +2091,12 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
 #endif
 
 #ifndef NO_THREADS
-  pthread_mutex_lock(&lock_main);
+  thread_mutex_lock(&lock_main);
   if (threads_done < 2 * context_struct_.num_threads)
     {
-      pthread_cond_wait(&wait_after_merge, &lock_main);
+      thread_cond_wait(&wait_after_merge, &lock_main);
     }
-  pthread_mutex_unlock(&lock_main);
+  thread_mutex_unlock(&lock_main);
 #endif
 
   if (ssaa_factor != 1)
@@ -2561,7 +2574,7 @@ GR3API void gr3_terminateSR_(void)
       arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL,
                        MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0, 0, NULL);
       queue_enqueue(context_struct_.queues[i], arg);
-      pthread_join(context_struct_.threads[i], NULL);
+      thread_join(context_struct_.threads[i]);
 #endif
       queue_destroy(context_struct_.queues[i]);
     }

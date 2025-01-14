@@ -1,13 +1,22 @@
 #ifndef GR3_SR_H_INCLUDED
 #define GR3_SR_H_INCLUDED
-#ifndef _MSC_VER
-#include <unistd.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN 1
+#include <windows.h>
 #else
-#define NO_THREADS 1
-#include <io.h>
+#include <unistd.h>
 #endif
 #ifndef NO_THREADS
+#ifndef _MSC_VER
 #include <pthread.h>
+#define thread_t pthread_t
+#define thread_mutex_t pthread_mutex_t
+#define thread_cond_t pthread_cond_t
+#else
+#define thread_t HANDLE
+#define thread_mutex_t CRITICAL_SECTION
+#define thread_cond_t CONDITION_VARIABLE
+#endif
 #endif
 #include "gr.h"
 #include "gr3.h"
@@ -31,8 +40,8 @@ struct queue_node_s
 struct queue_s
 {
 #ifndef NO_THREADS
-  pthread_mutex_t lock;
-  pthread_cond_t cond;
+  thread_mutex_t lock;
+  thread_cond_t cond;
 #endif
   struct queue_node_s *front;
   struct queue_node_s *back;
