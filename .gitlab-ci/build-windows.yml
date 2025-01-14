@@ -221,12 +221,12 @@ windows-64bit-cmake-msvc:
   - vcvars_cmd cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/c/gr -DGR_USE_BUNDLED_LIBRARIES=OFF
   - vcvars_cmd cmake --build build --config Release
   - vcvars_cmd cmake --install build --config Release
-  - cd /c/Qt/5.15.2/msvc2019_64/bin
-  - cp -v Qt5Core.dll Qt5Gui.dll Qt5Widgets.dll Qt5Network.dll /c/gr/bin/
+  - cd /c/Qt6/6.8.1/msvc2022_64/bin
+  - cp -v Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6Network.dll /c/gr/bin/
   - cd -
   - cd /c/gr/bin
   - mkdir -p platforms
-  - cp -v /c/Qt/5.15.2/msvc2019_64/plugins/platforms/qwindows.dll platforms/
+  - cp -v /c/Qt6/6.8.1/msvc2022_64/plugins/platforms/qwindows.dll platforms/
   - cd -
   - cd /c/local/bin
   - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll xerces-c_3_2.dll zlib.dll /c/gr/bin/
