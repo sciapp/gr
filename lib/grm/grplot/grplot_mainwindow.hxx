@@ -1,6 +1,7 @@
 #ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED
 #define GRPLOT_MAIN_WINDOW_H_INCLUDED
 #include "grplot_widget.hxx"
+
 #include <QMainWindow>
 #include <QTextBrowser>
 #include <fstream>
@@ -15,6 +16,19 @@ public:
 
 private:
   GRPlotWidget *grplot_widget_;
+  QMenuBar *menu;
+  QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
+  QMenu *file_menu, *configuration_menu, *context_menu, *add_context_data;
+  QMenu *marginal_sub_menu;
+
+private slots:
+  void hideAlgoMenu();
+  void showAlgoMenu();
+  void hideMarginalSubMenu();
+  void showMarginalSubMenu();
+  void hideConfigurationMenu();
+  void showConfigurationMenu();
+  void addSeperator();
 };
 
 #endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */

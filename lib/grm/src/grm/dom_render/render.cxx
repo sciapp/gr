@@ -1180,12 +1180,15 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   if (kind == "imshow")
     {
       double w, h, x_min, x_max, y_min, y_max;
+      auto context = render->getContext();
+      auto imshow_series = element->querySelectors("series_imshow");
+      if (!imshow_series->hasAttribute("z_dims"))
+        throw NotFoundError("Imshow series is missing required attribute z_dims-data.\n");
+      auto z_dims_key = static_cast<std::string>(imshow_series->getAttribute("z_dims"));
+      auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
 
-      auto cols = static_cast<int>(element->getAttribute("cols"));
-      auto rows = static_cast<int>(element->getAttribute("rows"));
-
-      h = (double)rows / (double)cols * (vp1 - vp0);
-      w = (double)cols / (double)rows * (vp3 - vp2);
+      h = (double)z_dims_vec[1] / (double)z_dims_vec[0] * (vp1 - vp0);
+      w = (double)z_dims_vec[0] / (double)z_dims_vec[1] * (vp3 - vp2);
 
       x_min = grm_max(0.5 * (vp0 + vp1 - w), vp0);
       x_max = grm_min(0.5 * (vp0 + vp1 + w), vp1);
@@ -13873,8 +13876,8 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
  * `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value `GR_COLOR_RESET` resets all
  * color modifications.
  */
-static int set_next_color(const std::string &key, gr_color_type_t color_type,
-                          const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static int setNextColor(const std::string &key, gr_color_type_t color_type,
+                        const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::vector<int> fallback_color_indices = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                                              991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
@@ -14051,7 +14054,7 @@ static void processPie(const std::shared_ptr<GRM::Element> &element, const std::
   GRM::normalize_vec_int(x_vec, &normalized_x_int, 1000);
 
   start_angle = 90;
-  color_index = set_next_color("c", GR_COLOR_FILL, element, context); // key doesn't matter as long as it's not empty
+  color_index = setNextColor("c", GR_COLOR_FILL, element, context); // key doesn't matter as long as it's not empty
 
   /* clear old pie_segments */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -14076,14 +14079,14 @@ static void processPie(const std::shared_ptr<GRM::Element> &element, const std::
         }
       if (pie_segment != nullptr)
         {
-          color_index = set_next_color("", GR_COLOR_FILL, pie_segment, context);
+          color_index = setNextColor("", GR_COLOR_FILL, pie_segment, context);
           processFillColorInd(pie_segment);
         }
 
       start_angle = end_angle;
       if (start_angle < 0) start_angle += 360.0;
     }
-  set_next_color("", GR_COLOR_RESET, element, context);
+  setNextColor("", GR_COLOR_RESET, element, context);
   processFillColorInd(element);
   processFillIntStyle(element);
   processTextAlign(element);
@@ -14154,7 +14157,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   unsigned int dims, z_data_length, i, j, k;
   bool grplot = false;
   int rows, cols;
-  auto plot_parent = element->parentElement();
+  auto plot_parent = element->parentElement(), central_region = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
   std::vector<double> z_data_vec;
@@ -14223,16 +14226,15 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   processSelectSpecificXform(element);
 
   double x_min, x_max, y_min, y_max;
-  double vp[4];
   int scale;
 
   if (plot_parent->hasAttribute("viewport_x_min") && plot_parent->hasAttribute("viewport_x_max") &&
       plot_parent->hasAttribute("viewport_y_min") && plot_parent->hasAttribute("viewport_y_max"))
     {
-      vp[0] = static_cast<double>(plot_parent->getAttribute("viewport_x_min"));
-      vp[1] = static_cast<double>(plot_parent->getAttribute("viewport_x_max"));
-      vp[2] = static_cast<double>(plot_parent->getAttribute("viewport_y_min"));
-      vp[3] = static_cast<double>(plot_parent->getAttribute("viewport_y_max"));
+      x_min = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+      x_max = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+      y_min = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+      y_max = static_cast<double>(central_region->getAttribute("viewport_y_max"));
     }
   else
     {
@@ -14240,23 +14242,6 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
     }
 
   gr_inqscale(&scale);
-
-  if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
-    {
-      double w = (double)cols / (double)rows * (vp[3] - vp[2]);
-      x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-      x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
-      y_min = vp[2];
-      y_max = vp[3];
-    }
-  else
-    {
-      double h = (double)rows / (double)cols * (vp[1] - vp[0]);
-      x_min = vp[0];
-      x_max = vp[1];
-      y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-      y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
-    }
 
   if (scale & GR_OPTION_FLIP_X)
     {
@@ -19456,7 +19441,7 @@ void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, con
                                const std::vector<int> &color_indices, const std::shared_ptr<GRM::Context> &ext_context)
 {
   auto use_context = (ext_context == nullptr) ? context : ext_context;
-  element->setAttribute("set_next_color", 1);
+  element->setAttribute("set_next_color", true);
   if (!color_indices.empty())
     {
       (*use_context)[color_indices_key] = color_indices;
