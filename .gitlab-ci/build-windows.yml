@@ -235,6 +235,7 @@ windows-64bit-cmake-msvc:
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140_1.dll" /c/gr/bin/
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140.dll" /c/gr/bin/
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140_1.dll" /c/gr/bin/
+  - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140_2.dll" /c/gr/bin/
   - mv /c/gr artifacts-windows-64bit-cmake-msvc
   artifacts:
     expire_in: 1 week
