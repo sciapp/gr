@@ -25,7 +25,7 @@
 #   If false, do not try to use Agg.
 
 if(NOT AGG_INCLUDE_DIR)
-  find_path(AGG_INCLUDE_DIR agg_basics.h)
+  find_path(AGG_INCLUDE_DIR agg_basics.h PATH_SUFFIXES agg2)
 endif()
 
 if(NOT AGG_LIBRARY)
