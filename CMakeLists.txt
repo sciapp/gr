@@ -284,7 +284,7 @@ foreach(LIBRARY gks_static gks_shared)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} pthread)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} m)
   endif()
-  if(FREETYPE_FOUND)
+  if(Freetype_FOUND)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Freetype::Freetype)
   else()
     target_compile_definitions(
