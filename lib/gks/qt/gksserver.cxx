@@ -188,7 +188,7 @@ void GKSConnection::readClient()
 void GKSConnection::destroyedWidget()
 {
   widget = NULL;
-  emit(close(*this));
+  socket->close();
 }
 
 void GKSConnection::disconnectedSocket()
@@ -198,6 +198,7 @@ void GKSConnection::disconnectedSocket()
       widget->close();
       widget = NULL;
     }
+  emit(close(*this));
 }
 
 void GKSConnection::updateWindowTitle(QString renderer)
