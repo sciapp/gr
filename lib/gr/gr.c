@@ -1520,14 +1520,12 @@ static void initgks(void)
       used[color] = 0;
     }
 
+#ifdef SIGUSR1
   if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL)
     {
-#ifdef SIGUSR1
       previous_handler = signal(SIGUSR1, resetgks);
-#else
-      atexit(resetgks);
-#endif
     }
+#endif
 }
 
 void gr_initgr(void)
