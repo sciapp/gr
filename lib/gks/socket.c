@@ -283,7 +283,7 @@ static int open_socket(int wstype)
         {
           if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\gksqt.exe", GRDIR);
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\gksqt.exe", GRDIR);
             }
           else
             {
