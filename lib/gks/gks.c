@@ -382,8 +382,16 @@ static int gks_parse_encoding(const char *encoding)
 }
 
 
+static void gks_exit_handler(void)
+{
+  s->in_exit_handler = 1;
+  gks_emergency_close();
+}
+
+
 static void gks_parse_env(void)
 {
+  static int exit_handler_installed = 0;
   static int did_report_invalid_encoding = 0;
   const char *env;
 
@@ -416,7 +424,11 @@ static void gks_parse_env(void)
       s->input_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL ? ENCODING_UTF8 : ENCODING_LATIN1;
     }
 
-  if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
+  if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL && !exit_handler_installed)
+    {
+      atexit(gks_exit_handler);
+      exit_handler_installed = 1;
+    }
 
   if (gks_getenv("GKS_DEBUG") != NULL) s->debug = 1;
 }
@@ -546,6 +558,7 @@ void gks_init_gks(void)
       s->aspect_ratio = 1;
 
       s->callback = NULL;
+      s->in_exit_handler = 0;
       s->debug = 0;
     }
 }

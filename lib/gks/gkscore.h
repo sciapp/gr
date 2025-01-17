@@ -176,6 +176,7 @@ typedef struct
   double nominal_size;
   double aspect_ratio;
   char *(*callback)(const char *);
+  int in_exit_handler;
   int debug;
 } gks_state_list_t;
 
