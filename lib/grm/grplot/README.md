@@ -9,7 +9,7 @@ This program allows to create plots from the command line while using simple key
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe.
-- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
+- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `line3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
 
@@ -18,6 +18,12 @@ The following parameters are key-value pairs which can be used for every plot ty
     ```
 
   Alternatively `-h` can be used instead of `--help`.
+
+   The initial size of the window can be changed with following command at the beginning of the commandline arguments:
+
+   ```shell
+   --size width,height
+   ```
 
 There are more parameters that can be used for all two-dimensional data sets:
 
@@ -122,7 +128,7 @@ The next line after the header may contain the column labels. If the data does n
 1. `contour`, `contourf`, `heatmap`, `imshow`, `marginal_heatmap`, `surface`, `wireframe`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `x_range` and `y_range`. If the x- or y-values are non-linear this can not be handled by the previous explained data-format. For that there is another format which allows to define the x-, y- and z-values. Each values will stand in a different column while the x- and y-values will loop so that all columns have the same amount of rows. The x-values has to change first. To use this option the parameter flag `xyz_file` with the value of `1` can be used.
 2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter every 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which columns include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. 
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
-4. `plot3`, `scatter`, `scatter3`, `tricontour`, `trisurface`: Three columns with data are expected, representing the x-, y- and z-data.
+4. `line3`, `scatter`, `scatter3`, `tricontour`, `trisurface`: Three columns with data are expected, representing the x-, y- and z-data.
 5. `barplot`, `histogram`, `stem`, `stairs`: One or more columns are expected. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
 6. `pie`: The expected data are 1-4 lines. The first line represents the data which should be displayed. The next 3 rows are used to set the RGB of the pie charts. Each row stands for one RGB element.
 7. `polar_histogram`: One column is expected which represents the values.
@@ -391,7 +397,7 @@ This plot type converts the data into a pie plot. A Pie Chart is a circular stat
 
 The expected data are 1-4 lines. The first line represents the data to be displayed. The next three rows are used to set the RGB values for the slices.
 
-### PLOT3
+### LINE3
 
 This plot type converts the data into a three-dimensional line plot. The data points inside the three-dimensional space are connected through polylines.
 

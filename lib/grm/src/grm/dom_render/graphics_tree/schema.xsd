@@ -205,7 +205,7 @@
                 <xs:element ref="series_nonuniform_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_nonuniform_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_plot3" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_line3" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar_histogram" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar_line" minOccurs="0" maxOccurs="unbounded"/>
@@ -424,6 +424,7 @@
         <xs:attribute name="tick_size" type="xs:double"/>
         <xs:attribute name="value" type="xs:double"/>
         <xs:attribute name="width" type="xs:double"/>
+        <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -1047,8 +1048,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of plot3 -->
-    <xs:element name="series_plot3">
+    <!-- definition of line3 -->
+    <xs:element name="series_line3">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="polyline_3d" minOccurs="0" maxOccurs="unbounded"/>

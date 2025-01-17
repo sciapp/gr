@@ -31,7 +31,6 @@
 #endif
 
 static std::string file_export;
-static QString test_commands_file_path = "";
 static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
@@ -75,7 +74,8 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 }
 
 
-GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
+GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, bool test_mode,
+                           QString test_commands)
     : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
 {
   args_ = grm_args_new();
@@ -204,7 +204,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   SvgAct = new QAction(tr("&SVG"), this);
   connect(SvgAct, &QAction::triggered, this, &GRPlotWidget::svg);
 
-  if (strcmp(argv[1], "--listen") == 0)
+  if (listen_mode)
     {
       in_listen_mode = true;
       qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
@@ -232,12 +232,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     }
   else
     {
-      if (strcmp(argv[1], "--test") == 0)
+      if (test_mode)
         {
-          test_commands_file_path = argv[2];
-          argv += 2;
-          argc -= 2;
-          test_commands_file = new QFile(test_commands_file_path);
+          test_commands_file = new QFile(test_commands);
           if (test_commands_file->open(QIODevice::ReadOnly))
             {
               test_commands_stream = new QTextStream(test_commands_file);
@@ -280,8 +277,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
       isosurfaceAct = new QAction(tr("&Isosurface"), this);
       connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
-      plot3Act = new QAction(tr("&Plot3"), this);
-      connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
+      line3Act = new QAction(tr("&Line3"), this);
+      connect(line3Act, &QAction::triggered, this, &GRPlotWidget::line3);
       trisurfAct = new QAction(tr("&Trisurface"), this);
       connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
       tricontAct = new QAction(tr("&Tricontour"), this);
@@ -672,10 +669,11 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList heatmap_group = {"contour",          "contourf", "heatmap",  "imshow",
                                    "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
-      QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
+      QStringList line3_group = {"line3", "scatter", "scatter3", "tricontour", "trisurface"};
       QStringList barplot_group = {"barplot", "histogram", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
-      QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter", "quiver"};
+      QStringList polar_line_group = {"polar_line", "polar_scatter"};
+      QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "quiver"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -694,9 +692,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
         {
           list = isosurface_group;
         }
-      else if (plot3_group.contains(kind.c_str()))
+      else if (line3_group.contains(kind.c_str()))
         {
-          list = plot3_group;
+          list = line3_group;
         }
       else if (barplot_group.contains(kind.c_str()))
         {
@@ -709,6 +707,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       else if (kind == "hexbin" || kind == "shade")
         {
           list = hexbin_group;
+        }
+      else if (kind == "polar_line" || kind == "polar_scatter")
+        {
+          list = polar_line_group;
         }
 
       for (const auto &elem : list)
@@ -1132,8 +1134,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   bounding_logic->clear();
   extract_bounding_boxes_from_grm((QPainter &)painter);
   highlight_current_selection((QPainter &)painter);
-  // Todo: trigger this method in non multiplot case where 1 plot has different series when not all elements has to be
-  // processed to figure out which kinds are all used
+  // Todo: only trigger this method in non multiplot case where 1 plot has different series when not all elements has to
+  // be processed to figure out which kinds are all used
   auto global_root = grm_get_document_root();
   if (global_root->querySelectors("layout_grid") == nullptr)
     adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot"));
@@ -1145,23 +1147,16 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
             {
               QColor background(224, 224, 224, 128);
               QPainterPath triangle;
-              std::string x_label = tooltip.xlabel();
-              std::string info;
+              std::string info, x_label = tooltip.xlabel();
 
-              if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
-                {
-                  x_label = "x";
-                }
+              if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$")) x_label = "x";
 
               if (tooltip.holds_alternative<grm_tooltip_info_t>())
                 {
                   const auto *single_tooltip = tooltip.get<grm_tooltip_info_t>();
                   std::string y_label = single_tooltip->ylabel;
 
-                  if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
-                    {
-                      y_label = "y";
-                    }
+                  if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$")) y_label = "y";
                   info = util::string_format(tooltipTemplate, single_tooltip->label, x_label.c_str(), single_tooltip->x,
                                              y_label.c_str(), single_tooltip->y);
                 }
@@ -1178,10 +1173,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                     {
                       auto &y = accumulated_tooltip->y[i];
                       auto &y_label = y_labels[i];
-                      if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
-                        {
-                          y_label = "y";
-                        }
+                      if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$")) y_label = "y";
                       info_parts.emplace_back("<br>\n");
                       info_parts.push_back(util::string_format(accumulatedTooltipTemplate, y_label.c_str(), y));
                     }
@@ -1421,7 +1413,6 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_args_delete(args);
 
           mouseState.anchor = event->pos();
-
           redraw();
         }
       else if (mouseState.mode == MouseState::Mode::movable_xform)
@@ -1494,22 +1485,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                 }
             }
 
-          /* get the correct cursor and sets it */
-          int cursor_state = grm_get_hover_mode(mouse_x, mouse_y, disable_movable_xform);
-          if (cursor_state == DEFAULT_HOVER_MODE)
-            {
-              csr->setShape(Qt::ArrowCursor);
-            }
-          else if (cursor_state == MOVABLE_HOVER_MODE)
-            {
-              csr->setShape(Qt::OpenHandCursor);
-            }
-          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
-            {
-              csr->setShape(Qt::SizeHorCursor);
-            }
-          setCursor(*csr);
-
+          cursorHandler(x, y); // get the correct cursor and sets it
           update();
         }
     }
@@ -1611,19 +1587,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 }
             }
 
-          if (cursor_state == DEFAULT_HOVER_MODE)
-            {
-              csr->setShape(Qt::ArrowCursor);
-            }
-          else if (cursor_state == MOVABLE_HOVER_MODE)
-            {
-              csr->setShape(Qt::ClosedHandCursor);
-            }
-          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
-            {
-              csr->setShape(Qt::SizeHorCursor);
-            }
-          setCursor(*csr);
+          cursorHandler(x, y);
         }
     }
 }
@@ -1654,23 +1618,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
     {
       mouseState.mode = MouseState::Mode::normal;
 
-      if (!enable_editor)
-        {
-          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
-          if (cursor_state == DEFAULT_HOVER_MODE)
-            {
-              csr->setShape(Qt::ArrowCursor);
-            }
-          else if (cursor_state == MOVABLE_HOVER_MODE)
-            {
-              csr->setShape(Qt::OpenHandCursor);
-            }
-          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
-            {
-              csr->setShape(Qt::SizeHorCursor);
-            }
-          setCursor(*csr);
-        }
+      cursorHandler(x, y);
     }
   else if (mouseState.mode == MouseState::Mode::move_selected)
     {
@@ -1691,6 +1639,11 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
     {
       figure->setAttribute("size_x", (double)event->size().width());
       figure->setAttribute("size_y", (double)event->size().height());
+    }
+  else
+    {
+      grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
+      grm_merge(args_);
     }
 
   current_selection = nullptr;
@@ -2039,7 +1992,7 @@ void GRPlotWidget::imshow()
   redraw();
 }
 
-void GRPlotWidget::plot3()
+void GRPlotWidget::line3()
 {
   auto global_root = grm_get_document_root();
   auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
@@ -2052,7 +2005,7 @@ void GRPlotWidget::plot3()
       auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
-          series_elem->setAttribute("kind", "plot3");
+          series_elem->setAttribute("kind", "line3");
         }
     }
   redraw();
@@ -2084,7 +2037,7 @@ void GRPlotWidget::trisurf()
   auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                             : global_root->querySelectors("figure[active=1]");
-  std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_plot3",
+  std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_line3",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
@@ -2103,7 +2056,7 @@ void GRPlotWidget::tricont()
   auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                             : global_root->querySelectors("figure[active=1]");
-  std::vector<std::string> valid_series_names = {"series_scatter3", "series_plot3", "series_trisurface",
+  std::vector<std::string> valid_series_names = {"series_scatter3", "series_line3", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
@@ -2122,7 +2075,7 @@ void GRPlotWidget::scatter3()
   auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                             : global_root->querySelectors("figure[active=1]");
-  std::vector<std::string> valid_series_names = {"series_plot3", "series_tricontour", "series_trisurface",
+  std::vector<std::string> valid_series_names = {"series_line3", "series_tricontour", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
@@ -2860,6 +2813,7 @@ void GRPlotWidget::processTestCommandsFile()
                 }
               auto value = words[n - 1].toUtf8().constData();
               if (strcmp(value, "hist") == 0) value = "histogram";
+              if (strcmp(value, "plot3") == 0) value = "line3";
 
               if (strcmp(value, "line") == 0)
                 {
@@ -3176,6 +3130,38 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
   // hide all menu elements
   if (treewidget != nullptr) // dummy elem which only exist in default grplot case
     {
+      std::vector<std::string> valid_series_names = {
+          "marginal_heatmap_plot",
+          "series_barplot",
+          "series_contour",
+          "series_contourf",
+          "series_heatmap",
+          "series_hexbin",
+          "series_histogram",
+          "series_imshow",
+          "series_isosurface",
+          "series_line",
+          "series_nonuniform_heatmap",
+          "series_nonuniform_polar_heatmap",
+          "series_pie",
+          "series_line3",
+          "series_polar_heatmap",
+          "series_polar_histogram",
+          "series_polar_line",
+          "series_polar_scatter",
+          "series_quiver",
+          "series_scatter",
+          "series_scatter3",
+          "series_shade",
+          "series_stairs",
+          "series_stem",
+          "series_surface",
+          "series_tricontour",
+          "series_trisurface",
+          "series_volume",
+          "series_wireframe",
+      };
+
       hidePlotTypeMenuElements();
       hide_marginal_sub_menu_act->trigger();
       hide_algo_menu_act->trigger();
@@ -3186,62 +3172,69 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
           fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
         }
 
-      for (const auto &series : central_region->children())
+      for (const auto &name : valid_series_names)
         {
-          int z, z_length;
-          if (!util::startsWith(series->localName(), "series_")) continue;
-          auto kind = static_cast<std::string>(series->getAttribute("kind"));
+          std::vector<std::shared_ptr<GRM::Element>> series_elements;
+          if (name == "marginal_heatmap_plot")
+            series_elements = plot_parent->querySelectorsAll(name);
+          else
+            series_elements = central_region->querySelectorsAll(name);
+          for (const auto &series : series_elements)
+            {
+              int z, z_length;
+              auto kind = static_cast<std::string>(series->getAttribute("kind"));
 
-          if (kind == "contour" || kind == "heatmap" || kind == "imshow" || kind == "marginal_heatmap" ||
-              kind == "surface" || kind == "wireframe" || kind == "contourf")
-            {
-              if (kind == "marginal_heatmap") show_algo_menu_act->trigger();
+              if (kind == "contour" || kind == "heatmap" || kind == "imshow" || kind == "marginal_heatmap" ||
+                  kind == "surface" || kind == "wireframe" || kind == "contourf")
+                {
+                  if (kind == "marginal_heatmap") show_algo_menu_act->trigger();
 
-              heatmapAct->setVisible(true);
-              surfaceAct->setVisible(true);
-              wireframeAct->setVisible(true);
-              contourAct->setVisible(true);
-              contourfAct->setVisible(true);
-              imshowAct->setVisible(true);
-              show_marginal_sub_menu_act->trigger();
+                  heatmapAct->setVisible(true);
+                  surfaceAct->setVisible(true);
+                  wireframeAct->setVisible(true);
+                  contourAct->setVisible(true);
+                  contourfAct->setVisible(true);
+                  imshowAct->setVisible(true);
+                  show_marginal_sub_menu_act->trigger();
+                }
+              else if (kind == "line" || (kind == "scatter" && !grm_args_values(args_, "z", "D", &z, &z_length)))
+                {
+                  lineAct->setVisible(true);
+                  scatterAct->setVisible(true);
+                }
+              else if (kind == "volume" || kind == "isosurface")
+                {
+                  volumeAct->setVisible(true);
+                  isosurfaceAct->setVisible(true);
+                }
+              else if (kind == "line3" || kind == "trisurface" || kind == "tricontour" || kind == "scatter3" ||
+                       kind == "scatter")
+                {
+                  line3Act->setVisible(true);
+                  trisurfAct->setVisible(true);
+                  tricontAct->setVisible(true);
+                  scatter3Act->setVisible(true);
+                  scatterAct->setVisible(true);
+                }
+              else if ((kind == "histogram" || kind == "barplot" || kind == "stairs" || kind == "stem") && !error)
+                {
+                  histogramAct->setVisible(true);
+                  barplotAct->setVisible(true);
+                  stairsAct->setVisible(true);
+                  stemAct->setVisible(true);
+                }
+              else if (kind == "shade" || kind == "hexbin")
+                {
+                  shadeAct->setVisible(true);
+                  hexbinAct->setVisible(true);
+                }
+              else if (kind == "polar_line" || kind == "polar_scatter")
+                {
+                  polarLineAct->setVisible(true);
+                  polarScatterAct->setVisible(true);
+                }
+              add_seperator_act->trigger();
             }
-          else if (kind == "line" || (kind == "scatter" && !grm_args_values(args_, "z", "D", &z, &z_length)))
-            {
-              lineAct->setVisible(true);
-              scatterAct->setVisible(true);
-            }
-          else if (kind == "volume" || kind == "isosurface")
-            {
-              volumeAct->setVisible(true);
-              isosurfaceAct->setVisible(true);
-            }
-          else if (kind == "plot3" || kind == "trisurface" || kind == "tricontour" || kind == "scatter3" ||
-                   kind == "scatter")
-            {
-              plot3Act->setVisible(true);
-              trisurfAct->setVisible(true);
-              tricontAct->setVisible(true);
-              scatter3Act->setVisible(true);
-              scatterAct->setVisible(true);
-            }
-          else if ((kind == "histogram" || kind == "barplot" || kind == "stairs" || kind == "stem") && !error)
-            {
-              histogramAct->setVisible(true);
-              barplotAct->setVisible(true);
-              stairsAct->setVisible(true);
-              stemAct->setVisible(true);
-            }
-          else if (kind == "shade" || kind == "hexbin")
-            {
-              shadeAct->setVisible(true);
-              hexbinAct->setVisible(true);
-            }
-          else if (kind == "polar_line" || kind == "polar_scatter")
-            {
-              polarLineAct->setVisible(true);
-              polarScatterAct->setVisible(true);
-            }
-          add_seperator_act->trigger();
         }
     }
 }
@@ -3258,7 +3251,7 @@ void GRPlotWidget::hidePlotTypeMenuElements()
   scatterAct->setVisible(false);
   volumeAct->setVisible(false);
   isosurfaceAct->setVisible(false);
-  plot3Act->setVisible(false);
+  line3Act->setVisible(false);
   trisurfAct->setVisible(false);
   tricontAct->setVisible(false);
   scatter3Act->setVisible(false);
@@ -3292,9 +3285,9 @@ QAction *GRPlotWidget::getSvgAct()
   return SvgAct;
 }
 
-QAction *GRPlotWidget::getPlot3Act()
+QAction *GRPlotWidget::getLine3Act()
 {
-  return plot3Act;
+  return line3Act;
 }
 
 QAction *GRPlotWidget::getTrisurfAct()
@@ -3515,4 +3508,25 @@ QAction *GRPlotWidget::getShowConfigurationMenuAct()
 QAction *GRPlotWidget::getAddSeperatorAct()
 {
   return add_seperator_act;
+}
+
+void GRPlotWidget::cursorHandler(int x, int y)
+{
+  if (!enable_editor)
+    {
+      int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+      if (cursor_state == DEFAULT_HOVER_MODE)
+        {
+          csr->setShape(Qt::ArrowCursor);
+        }
+      else if (cursor_state == MOVABLE_HOVER_MODE)
+        {
+          csr->setShape(Qt::OpenHandCursor);
+        }
+      else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+        {
+          csr->setShape(Qt::SizeHorCursor);
+        }
+      setCursor(*csr);
+    }
 }

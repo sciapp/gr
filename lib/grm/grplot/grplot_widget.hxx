@@ -34,7 +34,8 @@ class GRPlotWidget : public QWidget
   Q_OBJECT
 
 public:
-  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
+  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, bool test_mode = false,
+                        QString test_commands = "");
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool tree_update = true);
@@ -63,7 +64,7 @@ public:
   QAction *getPngAct();
   QAction *getJpegAct();
   QAction *getSvgAct();
-  QAction *getPlot3Act();
+  QAction *getLine3Act();
   QAction *getTrisurfAct();
   QAction *getTricontAct();
   QAction *getScatter3Act();
@@ -142,7 +143,7 @@ private slots:
   void wireframe();
   void contour();
   void imshow();
-  void plot3();
+  void line3();
   void contourf();
   void trisurf();
   void tricont();
@@ -284,7 +285,7 @@ private:
   QAction *lineAct, *scatterAct;
   QAction *volumeAct, *isosurfaceAct;
   QAction *heatmapAct, *surfaceAct, *wireframeAct, *contourAct, *imshowAct, *contourfAct;
-  QAction *plot3Act, *trisurfAct, *tricontAct, *scatter3Act;
+  QAction *line3Act, *trisurfAct, *tricontAct, *scatter3Act;
   QAction *histogramAct, *barplotAct, *stairsAct, *stemAct;
   QAction *shadeAct, *hexbinAct;
   QAction *polarLineAct, *polarScatterAct;
@@ -308,6 +309,7 @@ private:
   void cmd_callback(const grm_request_event_t *);
   void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
   void hidePlotTypeMenuElements();
+  void cursorHandler(int x, int y);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
