@@ -27,6 +27,9 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_figure_id" type="xs:string" use="required"/>
+            <xs:attribute name="_initial_height" type="xs:double"/>
+            <xs:attribute name="_initial_width" type="xs:double"/>
+            <xs:attribute name="_kind_changed" type="xs:integer"/>
             <xs:attribute name="_previous_pixel_height" type="xs:integer"/>
             <xs:attribute name="_previous_pixel_width" type="xs:integer"/>
         </xs:complexType>
@@ -47,6 +50,10 @@
     <xs:element name="layout_grid_element">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_start_col" type="xs:integer"/>
+            <xs:attribute name="_start_row" type="xs:integer"/>
+            <xs:attribute name="_stop_col" type="xs:integer"/>
+            <xs:attribute name="_stop_row" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -75,6 +82,7 @@
             <xs:attribute name="_left_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_left_window_xform_b" type="xs:double"/>
             <xs:attribute name="_left_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_initial_factor" type="xs:double"/>
             <xs:attribute name="_original_adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="_original_adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="_original_x_lim" type="xs:integer"/>
@@ -269,6 +277,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_initial_scale_factor" type="xs:double"/>
             <xs:attribute name="_legend_elems" type="xs:integer"/>
             <xs:attribute name="_scale_factor" type="xs:double"/>
             <xs:attribute name="_start_h" type="xs:double"/>

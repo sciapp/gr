@@ -307,7 +307,7 @@ typedef struct _GR3_ContextStruct_t_
   float *depth_buffers[MAX_NUM_THREADS];
   TransparencyVector *transparency_buffer[MAX_NUM_THREADS];
 #ifndef NO_THREADS
-  pthread_t threads[MAX_NUM_THREADS];
+  thread_t threads[MAX_NUM_THREADS];
 #endif
   queue *queues[MAX_NUM_THREADS];
   int last_width;

@@ -85,6 +85,16 @@ To start 'grplot' with a test case you have to run:
 grplot --test <command-file> <data-file> <parameter>
 ```
 
+## Multiple plots
+
+'grplot' also supports figures with multiple plots by using the --plot command line option. After this keyword the data-file must be named followed by the specific plot parameters if they should be applied to that plot. It's also possible to use interactions in each subplot.
+
+To create multiple plots in one figure with 'grplot' use:
+
+```shell
+grplot --plot <data-file-1> <parameter-file-1> --plot <data-file-2> <parameter-file-2> ...
+```
+
 ## Data file
 
 These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. Important to know is that the parameters which can stand in these files doesn't belong to a specific plot. They are atleast valid for all 2D or 3D plots for example. The first lines of teh datafile define parameters just like the `title` and have the following pattern:

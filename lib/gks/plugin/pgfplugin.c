@@ -1494,6 +1494,8 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       p->height = 500;
       p->width = 500;
       p->nominal_size = 1;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
+
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
@@ -1687,19 +1689,19 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
           p->width = p->viewport[1] * WIDTH / MWIDTH;
           p->height = p->viewport[3] * HEIGHT / MHEIGHT;
-          if (gkss->nominal_size > 0)
-            {
-              p->nominal_size = gkss->nominal_size;
-            }
-          else
-            {
-              p->nominal_size = min(p->width, p->height) / 500.0;
-            }
+          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
           set_xform();
           init_norm_xform();
           set_clip_rect(gkss->cntnr);
         }
+      break;
+
+    case 109:
+      /* set nominal size */
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     case 203:

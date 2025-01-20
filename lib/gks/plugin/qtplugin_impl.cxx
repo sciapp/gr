@@ -227,14 +227,8 @@ static void resize_window(void)
       p->height = 2;
       p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
     }
-  if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = gkss->nominal_size;
-    }
-  else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
   if (p->pixmap)
     {
@@ -282,14 +276,8 @@ static void set_xform(void)
   p->c = h / (p->window[2] - p->window[3]);
   p->d = y + p->window[2] * p->c;
 
-  if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = gkss->nominal_size;
-    }
-  else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 }
 
 static void seg_xform(double *x, double *y)
@@ -1528,6 +1516,10 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
           p->viewport[3] = r2[1];
         }
       break;
+    case 109:
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
+      break;
     }
   if (p->memory_plugin_initialised)
     {
@@ -1674,6 +1666,11 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       resize_window();
       set_xform();
       init_norm_xform();
+      break;
+
+    case 109:
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     case 203:
@@ -1903,14 +1900,8 @@ static int get_paint_device(void)
   p->device_dpi_y = device->physicalDpiY();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
-  if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = gkss->nominal_size;
-    }
-  else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
   return 0;
 }

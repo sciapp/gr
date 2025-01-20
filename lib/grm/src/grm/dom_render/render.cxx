@@ -464,6 +464,7 @@ static void processTickGroup(const std::shared_ptr<GRM::Element> &element,
                              const std::shared_ptr<GRM::Context> &context);
 static void processThetaAxes(const std::shared_ptr<GRM::Element> &element,
                              const std::shared_ptr<GRM::Context> &context);
+static void processSpace3d(const std::shared_ptr<GRM::Element> &element);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -529,11 +530,30 @@ static double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool 
   double max_vp;
   int pixel_width, pixel_height;
   double metric_width, metric_height;
-  auto plot_element = global_root->querySelectors("plot");
+  auto plot_element = element;
+  // Todo: this is not correct in subplot case for element layout_grid and figure
+  if (str_equals_any(element->localName(), "figure", "layout_grid", "layout_grid_element"))
+    plot_element = element->querySelectors("plot");
+  else
+    getPlotParent(plot_element);
 
   GRM::Render::getFigureSize(&pixel_width, &pixel_height, &metric_width, &metric_height);
   auto aspect_ratio_ws = metric_width / metric_height;
   auto max_width_height = grm_max(pixel_width, pixel_height);
+  if (plot_element != nullptr && plot_element->parentElement() != nullptr &&
+      plot_element->parentElement()->localName() == "layout_grid_element")
+    {
+      double figure_viewport[4];
+      auto figure_vp_element = plot_element->parentElement();
+      figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+      metric_width *= (figure_viewport[1] - figure_viewport[0]);
+      metric_height *= (figure_viewport[3] - figure_viewport[2]);
+      aspect_ratio_ws = metric_width / metric_height;
+    }
 
   if (plot_element == nullptr) return 1;
   if (x)
@@ -853,7 +873,8 @@ static void legendSize(const std::vector<std::string> &labels, double *w, double
 }
 
 static void sidePlotMargin(const std::shared_ptr<GRM::Element> &side_region, double *margin, double inc,
-                           bool aspect_ratio_scale, double aspect_ratio_ws, double start_aspect_ratio_ws)
+                           bool aspect_ratio_scale, double aspect_ratio_ws, double start_aspect_ratio_ws,
+                           bool quadratic)
 {
   if (side_region->querySelectors("side_plot_region") ||
       (side_region->hasAttribute("marginal_heatmap_side_plot") &&
@@ -862,9 +883,13 @@ static void sidePlotMargin(const std::shared_ptr<GRM::Element> &side_region, dou
       *margin += inc;
       if (aspect_ratio_scale)
         {
-          if (aspect_ratio_ws > start_aspect_ratio_ws)
+          if (!quadratic && aspect_ratio_ws > start_aspect_ratio_ws)
             {
               *margin /= (start_aspect_ratio_ws / aspect_ratio_ws);
+            }
+          else if (quadratic && aspect_ratio_ws > 1)
+            {
+              *margin *= aspect_ratio_ws;
             }
           else
             {
@@ -900,8 +925,8 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   std::string kind;
   bool keep_aspect_ratio, uniform_data = true, only_quadratic_aspect_ratio = false;
   double metric_width, metric_height;
-  double aspect_ratio_ws, start_aspect_ratio_ws;
-  double vp0, vp1, vp2, vp3;
+  double aspect_ratio_ws, start_aspect_ratio_ws, org_aspect_ratio_ws;
+  double vp0, vp1, vp2, vp3, org_vp0 = *vp_x_min, org_vp1 = *vp_x_max, org_vp2 = *vp_y_min, org_vp3 = *vp_y_max;
   double left_margin = 0.0, right_margin = 0.0, bottom_margin = 0.0, top_margin = 0.0;
   double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   std::shared_ptr<GRM::Element> plot_parent = element, left_side_region, right_side_region, bottom_side_region,
@@ -936,7 +961,38 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
 
   GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
   aspect_ratio_ws = metric_width / metric_height;
+  org_aspect_ratio_ws = aspect_ratio_ws;
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
+  if (plot_parent->parentElement()->localName() == "layout_grid_element")
+    {
+      double figure_viewport[4];
+      auto figure_vp_element = plot_parent->parentElement();
+      figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+      org_aspect_ratio_ws = (metric_width * (figure_viewport[1] - figure_viewport[0])) /
+                            (metric_height * (figure_viewport[3] - figure_viewport[2]));
+      org_vp0 = static_cast<double>(plot_parent->getAttribute("plot_x_min"));
+      org_vp1 = static_cast<double>(plot_parent->getAttribute("plot_x_max"));
+      org_vp2 = static_cast<double>(plot_parent->getAttribute("plot_y_min"));
+      org_vp3 = static_cast<double>(plot_parent->getAttribute("plot_y_max"));
+      if (org_aspect_ratio_ws > 1)
+        {
+          org_vp2 /= org_aspect_ratio_ws;
+          org_vp3 /= org_aspect_ratio_ws;
+        }
+      else
+        {
+          org_vp0 *= org_aspect_ratio_ws;
+          org_vp1 *= org_aspect_ratio_ws;
+        }
+
+      metric_width *= (figure_viewport[1] - figure_viewport[0]);
+      metric_height *= (figure_viewport[3] - figure_viewport[2]);
+      aspect_ratio_ws = metric_width / metric_height;
+    }
 
   if (keep_aspect_ratio && (!only_quadratic_aspect_ratio || (only_quadratic_aspect_ratio && !uniform_data)) &&
       !diag_factor && kind != "imshow")
@@ -957,6 +1013,25 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
           *vp_y_min += diff;
           *vp_y_max -= diff;
         }
+      if (plot_parent->parentElement()->localName() == "layout_grid_element")
+        {
+          if (org_aspect_ratio_ws > start_aspect_ratio_ws)
+            {
+              auto x_min = org_vp0 * (start_aspect_ratio_ws / org_aspect_ratio_ws);
+              auto x_max = org_vp1 * (start_aspect_ratio_ws / org_aspect_ratio_ws);
+              auto diff = 0.5 * ((org_vp1 - org_vp0) - (x_max - x_min));
+              org_vp0 += diff;
+              org_vp1 -= diff;
+            }
+          else
+            {
+              auto y_min = org_vp2 / (start_aspect_ratio_ws / org_aspect_ratio_ws);
+              auto y_max = org_vp3 / (start_aspect_ratio_ws / org_aspect_ratio_ws);
+              auto diff = 0.5 * ((org_vp3 - org_vp2) - (y_max - y_min));
+              org_vp2 += diff;
+              org_vp3 -= diff;
+            }
+        }
     }
   else if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio && !diag_factor && kind != "imshow")
     {
@@ -972,6 +1047,21 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
           *vp_y_min += border;
           *vp_y_max -= border;
         }
+      if (plot_parent->parentElement()->localName() == "layout_grid_element")
+        {
+          if (org_aspect_ratio_ws > 1)
+            {
+              double border = 0.5 * (org_vp1 - org_vp0) * (1.0 - 1.0 / org_aspect_ratio_ws);
+              org_vp0 += border;
+              org_vp1 -= border;
+            }
+          else if (org_aspect_ratio_ws <= 1)
+            {
+              double border = 0.5 * (org_vp3 - org_vp2) * (1.0 - org_aspect_ratio_ws);
+              org_vp2 += border;
+              org_vp3 -= border;
+            }
+        }
     }
 
   if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
@@ -983,6 +1073,16 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       vp1 = 0.5 * (*vp_x_min + *vp_x_max + extent);
       vp2 = 0.5 * (*vp_y_min + *vp_y_max - extent);
       vp3 = 0.5 * (*vp_y_min + *vp_y_max + extent);
+
+      if (plot_parent->parentElement()->localName() == "layout_grid_element")
+        {
+          auto sum1 = org_vp0 + org_vp1, sum2 = org_vp2 + org_vp3;
+          extent = grm_min(org_vp1 - org_vp0, org_vp3 - org_vp2);
+          org_vp0 = 0.5 * (sum1 - extent);
+          org_vp1 = 0.5 * (sum1 + extent);
+          org_vp2 = 0.5 * (sum2 - extent);
+          org_vp3 = 0.5 * (sum2 + extent);
+        }
     }
   else
     {
@@ -991,17 +1091,24 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       vp2 = *vp_y_min;
       vp3 = *vp_y_max;
     }
+  if (plot_parent->parentElement()->localName() != "layout_grid_element")
+    {
+      org_vp0 = vp0;
+      org_vp1 = vp1;
+      org_vp2 = vp2;
+      org_vp3 = vp3;
+    }
 
   // margin respects colorbar and sideplot in the specific side_region
   // TODO: respect individual size defined by user
-  sidePlotMargin(left_side_region, &left_margin, (vp1 - vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
-  sidePlotMargin(right_side_region, &right_margin, (vp1 - vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
-  sidePlotMargin(bottom_side_region, &bottom_margin, (vp3 - vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
-                 aspect_ratio_ws, start_aspect_ratio_ws);
-  sidePlotMargin(top_side_region, &top_margin, (vp3 - vp2) * 0.1, (keep_aspect_ratio && !diag_factor), aspect_ratio_ws,
-                 start_aspect_ratio_ws);
+  sidePlotMargin(left_side_region, &left_margin, (org_vp1 - org_vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
+  sidePlotMargin(right_side_region, &right_margin, (org_vp1 - org_vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
+  sidePlotMargin(bottom_side_region, &bottom_margin, (org_vp3 - org_vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
+  sidePlotMargin(top_side_region, &top_margin, (org_vp3 - org_vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws, only_quadratic_aspect_ratio && uniform_data);
   if (!top_text_is_title && top_margin != 0) top_margin += 0.05;
   if (bottom_margin != 0) bottom_margin += 0.05;
 
@@ -1151,7 +1258,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
                                              bool uniform_data)
 {
   double viewport[4];
-  std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
+  std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION, kind;
   double max_vp, min_vp;
   double offset_rel, width_rel;
   double metric_width, metric_height, start_aspect_ratio_ws;
@@ -1170,22 +1277,91 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
   location = static_cast<std::string>(side_region->getAttribute("location"));
+  kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
-  GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
-  auto aspect_ratio_ws = metric_width / metric_height;
   double diag_factor = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                                  (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   if (!element->hasAttribute("_default_diag_factor"))
-    element->setAttribute("_default_diag_factor",
-                          ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
-                           (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
-                              diag_factor);
+    {
+      auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
+      auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
+      auto size_x = static_cast<double>(active_figure->getAttribute("size_x"));
+      auto size_y = static_cast<double>(active_figure->getAttribute("size_y"));
+      auto size_scale_factor = 1.0;
+      if ((initial_size_x != size_x || initial_size_y != size_y) && (active_figure->hasAttribute("_kind_changed")))
+        size_scale_factor = (size_x < size_y) ? (size_y / size_x) : (size_x / size_y);
+      double figure_viewport[4];
+      auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                   ? plot_parent->parentElement()
+                                   : plot_parent;
+      figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+      auto default_diag_factor =
+          ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+           (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
+          (diag_factor * size_scale_factor);
+      if (figure_vp_element != plot_parent)
+        {
+          auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+          auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+          auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+          auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+          auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+          auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+          if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+              figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+            {
+              num_col = static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+              num_row = static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+            }
+          num_col -= stop_col - start_col - 1;
+          num_row -= stop_row - start_row - 1;
+
+          if (num_row > 1 && num_row < num_col && num_row % 2 != num_col % 2)
+            {
+              default_diag_factor *= (1. / (num_col + 1));
+              if (num_row % 2 == 0) default_diag_factor /= start_aspect_ratio_ws;
+              if (polar_kinds.count(kind) > 0) default_diag_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+            }
+          else if (num_row > 1)
+            {
+              default_diag_factor *= (1. / num_col);
+              if (polar_kinds.count(kind) > 0 && num_row != num_col)
+                default_diag_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+            }
+          else if (num_row == 1 && num_row % 2 == num_col % 2)
+            default_diag_factor *= 0.6;
+          else if (num_row == 1 && num_row % 2 != num_col % 2)
+            default_diag_factor *= 0.5;
+        }
+      element->setAttribute("_default_diag_factor", default_diag_factor);
+    }
 
   // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
   if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || !keep_aspect_ratio)
     {
-      if (!element->hasAttribute("_offset_set_by_user")) offset *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
-      if (!element->hasAttribute("_width_set_by_user")) width *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+      double figure_viewport[4];
+      auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                   ? plot_parent->parentElement()
+                                   : plot_parent;
+      figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+      GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+      metric_width *= (figure_viewport[1] - figure_viewport[0]);
+      metric_height *= (figure_viewport[3] - figure_viewport[2]);
+      auto aspect_ratio_ws = metric_width / metric_height;
+
+      if (figure_vp_element == plot_parent)
+        {
+          if (!element->hasAttribute("_offset_set_by_user")) offset *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+          if (!element->hasAttribute("_width_set_by_user")) width *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+        }
       if (aspect_ratio_ws <= 1)
         {
           offset_rel = offset * aspect_ratio_ws;
@@ -1195,6 +1371,40 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
         {
           offset_rel = offset / aspect_ratio_ws;
           width_rel = width / aspect_ratio_ws;
+        }
+      if (figure_vp_element != plot_parent)
+        {
+          auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+          auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+          auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+          auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+          auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+          auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+          if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+              figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+            {
+              num_col = static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+              num_row = static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+            }
+          num_col -= stop_col - start_col - 1;
+          num_row -= stop_row - start_row - 1;
+
+          if (location == "left" || location == "right")
+            {
+              if (num_row != 1)
+                {
+                  offset_rel /= num_col;
+                  width_rel /= num_col;
+                }
+            }
+          else
+            {
+              if (num_col != 1)
+                {
+                  offset_rel /= num_row;
+                  width_rel /= num_row;
+                }
+            }
         }
     }
   else
@@ -1292,6 +1502,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
 
       GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
       aspect_ratio_ws = metric_width / metric_height;
+      // plot viewport fits into the window, for this the complete window must be considered in aspect_ratio_ws
       if (aspect_ratio_ws > 1)
         {
           vp[2] /= aspect_ratio_ws;
@@ -1301,6 +1512,20 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           vp[0] *= aspect_ratio_ws;
           vp[1] *= aspect_ratio_ws;
+        }
+
+      if (element->parentElement()->localName() == "layout_grid_element")
+        {
+          double figure_viewport[4];
+          auto figure_vp_element = element->parentElement();
+          figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+          figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+          figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+          figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+          metric_width *= (figure_viewport[1] - figure_viewport[0]);
+          metric_height *= (figure_viewport[3] - figure_viewport[2]);
+          aspect_ratio_ws = metric_width / metric_height;
         }
       if (!element->hasAttribute("_start_aspect_ratio")) element->setAttribute("_start_aspect_ratio", aspect_ratio_ws);
 
@@ -1331,6 +1556,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           static_cast<double>(plot_parent->getAttribute("plot_y_min")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
       plot_viewport[3] =
           static_cast<double>(plot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
       only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
       kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
@@ -1414,6 +1640,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           static_cast<double>(plot_parent->getAttribute("plot_y_min")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
       plot_viewport[3] =
           static_cast<double>(plot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+
       location = static_cast<std::string>(element->parentElement()->getAttribute("location"));
       kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
@@ -1471,6 +1698,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           static_cast<double>(plot_parent->getAttribute("plot_y_min")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
       plot_viewport[3] =
           static_cast<double>(plot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
       only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
       location = static_cast<std::string>(element->parentElement()->getAttribute("location"));
@@ -1574,9 +1802,10 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       const std::shared_ptr<GRM::Context> &context = render->getContext();
       std::string kind, labels_key = static_cast<std::string>(element->getAttribute("labels"));
       auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
-      std::shared_ptr<GRM::Element> central_region;
+      std::shared_ptr<GRM::Element> central_region, plot_parent = element;
       bool keep_aspect_ratio = false;
 
+      getPlotParent(plot_parent);
       for (const auto &child : element->parentElement()->children())
         {
           if (child->localName() == "central_region")
@@ -1617,24 +1846,113 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
           auto aspect_ratio_ws = metric_width / metric_height;
 
-          scale_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+          if (plot_parent->parentElement()->localName() == "layout_grid_element")
+            {
+              double figure_viewport[4];
+              auto figure_vp_element = plot_parent->parentElement();
+              figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+              metric_width *= (figure_viewport[1] - figure_viewport[0]);
+              metric_height *= (figure_viewport[3] - figure_viewport[2]);
+              aspect_ratio_ws = metric_width / metric_height;
+            }
+
+          if (plot_parent->parentElement()->localName() != "layout_grid_element")
+            scale_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
           scale_factor *= (aspect_ratio_ws <= 1) ? aspect_ratio_ws : 1.0 / aspect_ratio_ws;
+
+          if (plot_parent->parentElement()->localName() == "layout_grid_element")
+            {
+              auto figure_vp_element = plot_parent->parentElement();
+              auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+              auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+              auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+              auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+              auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+              auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+              if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+                  figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+                {
+                  num_col =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+                  num_row =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+                }
+              num_col -= stop_col - start_col - 1;
+              num_row -= stop_row - start_row - 1;
+
+              if (num_col > 1 && num_row > 1)
+                scale_factor /= grm_min(num_col, num_row);
+              else
+                scale_factor *= grm_max(num_col, num_row);
+            }
         }
       else
         {
           double diag_factor = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                                          (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
           if (!element->hasAttribute("_default_diag_factor"))
-            element->setAttribute(
-                "_default_diag_factor",
-                ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
-                 (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
-                    diag_factor);
+            {
+              auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
+              auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
+              auto size_x = static_cast<double>(active_figure->getAttribute("size_x"));
+              auto size_y = static_cast<double>(active_figure->getAttribute("size_y"));
+              auto size_scale_factor = 1.0;
+              if ((initial_size_x != size_x || initial_size_y != size_y) &&
+                  (active_figure->hasAttribute("_kind_changed")))
+                size_scale_factor = (size_x < size_y) ? (size_y / size_x) : (size_x / size_y);
+              double figure_viewport[4];
+              auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                           ? plot_parent->parentElement()
+                                           : plot_parent;
+              figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+              auto default_diag_factor =
+                  ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                   (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
+                  (diag_factor * size_scale_factor);
+              if (figure_vp_element != plot_parent)
+                {
+                  auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+                  auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+                  auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+                  auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+                  auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+                  auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+                  if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+                      figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+                    {
+                      num_col = static_cast<int>(
+                          figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+                      num_row = static_cast<int>(
+                          figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+                    }
+                  num_col -= stop_col - start_col - 1;
+                  num_row -= stop_row - start_row - 1;
+
+                  auto plot_diag_factor =
+                      std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                                (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+                  default_diag_factor =
+                      ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                       (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
+                      ((diag_factor * size_scale_factor) / plot_diag_factor);
+                  if (num_col > 1 && num_row > num_col) default_diag_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+                }
+              element->setAttribute("_default_diag_factor", default_diag_factor);
+            }
           auto default_diag_factor = static_cast<double>(element->getAttribute("_default_diag_factor"));
 
           scale_factor = diag_factor * default_diag_factor;
         }
       element->setAttribute("_scale_factor", scale_factor);
+      if (!element->hasAttribute("_initial_scale_factor")) element->setAttribute("_initial_scale_factor", scale_factor);
 
       if (kind != "pie")
         {
@@ -2372,6 +2690,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
         }
       else if (str == "polymarker_3d")
         {
+          processSpace3d(element->parentElement()->parentElement());
           if (redraw_ws) gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
@@ -2492,6 +2811,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
         }
       else if (str == "polyline_3d")
         {
+          processSpace3d(element->parentElement()->parentElement());
           if (redraw_ws) gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
@@ -2529,6 +2849,8 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
 
       GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
       auto aspect_ratio_ws = metric_width / metric_height;
+      auto location = static_cast<std::string>(
+          element->parentElement()->parentElement()->parentElement()->getAttribute("location"));
 
       if (element->hasAttribute("_tick_size_set_by_user"))
         {
@@ -2566,6 +2888,20 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
 
       if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || !keep_aspect_ratio)
         {
+          if (plot_parent->parentElement()->localName() == "layout_grid_element")
+            {
+              double figure_viewport[4];
+              auto figure_vp_element = plot_parent->parentElement();
+              figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+              metric_width *= (figure_viewport[1] - figure_viewport[0]);
+              metric_height *= (figure_viewport[3] - figure_viewport[2]);
+              aspect_ratio_ws = metric_width / metric_height;
+            }
+
           if (aspect_ratio_ws <= 1)
             {
               tick_size_rel = tick_size * aspect_ratio_ws;
@@ -2574,7 +2910,9 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
             {
               tick_size_rel = tick_size / aspect_ratio_ws;
             }
-          if (!element->hasAttribute("_tick_size_set_by_user")) tick_size_rel *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+          if (!element->hasAttribute("_tick_size_set_by_user") &&
+              plot_parent->parentElement()->localName() != "layout_grid_element")
+            tick_size_rel *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
         }
       else
         {
@@ -2601,18 +2939,68 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
           auto start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
           auto diag_factor = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                                        (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-          if (element->hasAttribute("_default_diag_factor"))
+          if (!element->hasAttribute("_default_diag_factor"))
             {
-              default_diag_factor = static_cast<double>(element->getAttribute("_default_diag_factor"));
-            }
-          else
-            {
+              auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
+              auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
+              auto size_x = static_cast<double>(active_figure->getAttribute("size_x"));
+              auto size_y = static_cast<double>(active_figure->getAttribute("size_y"));
+              auto size_scale_factor = 1.0;
+              if ((initial_size_x != size_x || initial_size_y != size_y) &&
+                  (active_figure->hasAttribute("_kind_changed")))
+                size_scale_factor = (size_x < size_y) ? (size_y / size_x) : (size_x / size_y);
+              double figure_viewport[4];
+              auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                           ? plot_parent->parentElement()
+                                           : plot_parent;
+              figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
               default_diag_factor =
                   ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
                    (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
-                  diag_factor;
+                  (diag_factor * size_scale_factor);
+              if (figure_vp_element != plot_parent)
+                {
+                  auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+                  auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+                  auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+                  auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+                  auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+                  auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+                  if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+                      figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+                    {
+                      num_col = static_cast<int>(
+                          figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+                      num_row = static_cast<int>(
+                          figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+                    }
+                  num_col -= stop_col - start_col - 1;
+                  num_row -= stop_row - start_row - 1;
+
+                  if (num_row > 1 && num_row < num_col && num_row % 2 != num_col % 2)
+                    {
+                      default_diag_factor *= (1. / (num_col + 1));
+                      if (num_row % 2 == 0) default_diag_factor /= start_aspect_ratio_ws;
+                      if (polar_kinds.count(kind) > 0) default_diag_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+                    }
+                  else if (num_row > 1)
+                    {
+                      default_diag_factor *= (1. / num_col);
+                      if (polar_kinds.count(kind) > 0 && num_row != num_col)
+                        default_diag_factor *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+                    }
+                  else if (num_row == 1 && num_row % 2 == num_col % 2)
+                    default_diag_factor *= 0.6;
+                  else if (num_row == 1 && num_row % 2 != num_col % 2)
+                    default_diag_factor *= 0.5;
+                }
               element->setAttribute("_default_diag_factor", default_diag_factor);
             }
+          default_diag_factor = static_cast<double>(element->getAttribute("_default_diag_factor"));
           tick_size_rel = tick_size * diag_factor * default_diag_factor;
         }
       tick_size = tick_size_rel;
@@ -3069,17 +3457,7 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
   dpi[1] = dpm[1] * 0.0254;
 
   /* TODO: Overwork this calculation */
-  if (figure->hasAttribute("fig_size_x") && figure->hasAttribute("fig_size_y"))
-    {
-      tmp_size_d[0] = static_cast<double>(figure->getAttribute("fig_size_x"));
-      tmp_size_d[1] = static_cast<double>(figure->getAttribute("fig_size_y"));
-      for (i = 0; i < 2; ++i)
-        {
-          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
-          metric_size[i] = tmp_size_d[i] / 0.0254;
-        }
-    }
-  else if (figure->hasAttribute("size_x") && figure->hasAttribute("size_y"))
+  if (figure->hasAttribute("size_x") && figure->hasAttribute("size_y"))
     {
       for (i = 0; i < 2; ++i)
         {
@@ -4524,6 +4902,13 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
   GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
   auto aspect_ratio_ws = metric_width / metric_height;
 
+  if (plot_element->parentElement()->localName() == "layout_grid_element")
+    {
+      metric_width *= (figure_viewport[1] - figure_viewport[0]);
+      metric_height *= (figure_viewport[3] - figure_viewport[2]) * DEFAULT_ASPECT_RATIO_FOR_SCALING;
+      aspect_ratio_ws = metric_width / metric_height;
+    }
+
   // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
   if (keep_aspect_ratio && only_quadratic_aspect_ratio)
     {
@@ -4569,15 +4954,86 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
         }
       else
         {
-          calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
-                                                   &figure_viewport[2], &figure_viewport[3], true);
-          double plot_diag_factor =
-              std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
-                        (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+          auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
+          auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
+          auto size_x = static_cast<double>(active_figure->getAttribute("size_x"));
+          auto size_y = static_cast<double>(active_figure->getAttribute("size_y"));
+          auto size_scale_factor = 1.0;
+          if ((initial_size_x != size_x || initial_size_y != size_y) && (active_figure->hasAttribute("_kind_changed")))
+            size_scale_factor = (size_x < size_y) ? (size_y / size_x) : (size_x / size_y);
           auto start_aspect_ratio_ws = static_cast<double>(plot_element->getAttribute("_start_aspect_ratio"));
-          default_diag_factor = ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
-                                 (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
-                                (plot_diag_factor / diag_factor);
+          double multi_plot_factor =
+              grm_max(std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                                (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]) *
+                                    DEFAULT_ASPECT_RATIO_FOR_SCALING * DEFAULT_ASPECT_RATIO_FOR_SCALING) /
+                          sqrt(5),
+                      figure_viewport[1] - figure_viewport[0]);
+
+          if (figure_vp_element == plot_element)
+            {
+              calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
+                                                       &figure_viewport[2], &figure_viewport[3], true);
+              double plot_diag_factor =
+                  std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                            (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+              default_diag_factor =
+                  ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                   (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
+                  (plot_diag_factor / (diag_factor * size_scale_factor));
+            }
+          else
+            {
+              GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+              auto default_aspect_ratio_ws =
+                  (metric_width * (figure_viewport[1] - figure_viewport[0])) /
+                  (metric_height * (figure_viewport[3] - figure_viewport[2]) * DEFAULT_ASPECT_RATIO_FOR_SCALING);
+              figure_viewport[0] = static_cast<double>(plot_element->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(plot_element->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(plot_element->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(plot_element->getAttribute("plot_y_max"));
+              if (default_aspect_ratio_ws > 1)
+                {
+                  viewport[2] /= default_aspect_ratio_ws;
+                  viewport[3] /= default_aspect_ratio_ws;
+                }
+              else
+                {
+                  viewport[0] *= default_aspect_ratio_ws;
+                  viewport[1] *= default_aspect_ratio_ws;
+                }
+              calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
+                                                       &figure_viewport[2], &figure_viewport[3], true);
+              calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
+                                                       &figure_viewport[2], &figure_viewport[3], true);
+
+              auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+              auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+              auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+              auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+              auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+              auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+              if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+                  figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+                {
+                  num_col =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+                  num_row =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+                }
+              num_col -= stop_col - start_col - 1;
+              num_row -= stop_row - start_row - 1;
+
+              double plot_diag_factor =
+                  std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                            (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+              default_diag_factor =
+                  ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                   (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
+                  (plot_diag_factor / (diag_factor * size_scale_factor));
+
+              if (num_col < num_row && num_col == 1) multi_plot_factor = 1. / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+              default_diag_factor *= multi_plot_factor;
+            }
           element->setAttribute("_default_diag_factor", default_diag_factor);
         }
       diag_factor *= default_diag_factor;
@@ -4586,7 +5042,9 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
 
   if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || !keep_aspect_ratio)
     {
-      if (!element->hasAttribute("_max_char_height_set_by_user")) max_char_height *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+      if (!element->hasAttribute("_max_char_height_set_by_user") &&
+          plot_element->parentElement()->localName() != "layout_grid_element")
+        max_char_height *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
       if (aspect_ratio_ws <= 1)
         {
           max_char_height_rel = max_char_height * aspect_ratio_ws;
@@ -4675,6 +5133,11 @@ static void processSpace3d(const std::shared_ptr<GRM::Element> &element)
     {
       element->setAttribute("space_3d_theta", theta);
     }
+  // save the original plot rotation so it can be restored
+  if (element->hasAttribute("space_3d_phi") && !element->hasAttribute("_space_3d_phi_org"))
+    element->setAttribute("_space_3d_phi_org", static_cast<double>(element->getAttribute("space_3d_phi")));
+  if (element->hasAttribute("space_3d_theta") && !element->hasAttribute("_space_3d_theta_org"))
+    element->setAttribute("_space_3d_theta_org", static_cast<double>(element->getAttribute("space_3d_theta")));
   fov = static_cast<double>(element->getAttribute("space_3d_fov"));
   camera_distance = static_cast<double>(element->getAttribute("space_3d_camera_distance"));
 
@@ -5593,6 +6056,13 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
   GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
   auto aspect_ratio_ws = metric_width / metric_height;
 
+  if (plot_parent->parentElement()->localName() == "layout_grid_element")
+    {
+      metric_width *= (figure_viewport[1] - figure_viewport[0]);
+      metric_height *= (figure_viewport[3] - figure_viewport[2]) * DEFAULT_ASPECT_RATIO_FOR_SCALING;
+      aspect_ratio_ws = metric_width / metric_height;
+    }
+
   // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
   if (keep_aspect_ratio && only_quadratic_aspect_ratio)
     {
@@ -5628,16 +6098,76 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
                               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
       if (!element->hasAttribute("_default_diag_factor"))
         {
-          calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
-                                                   &figure_viewport[2], &figure_viewport[3], true);
-          double plot_diag_factor =
-              std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
-                        (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+          double default_diag_factor;
+          auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
+          auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
+          auto size_x = static_cast<double>(active_figure->getAttribute("size_x"));
+          auto size_y = static_cast<double>(active_figure->getAttribute("size_y"));
+          auto size_scale_factor = 1.0;
+          if ((initial_size_x != size_x || initial_size_y != size_y) && (active_figure->hasAttribute("_kind_changed")))
+            size_scale_factor = (size_x < size_y) ? (size_y / size_x) : (size_x / size_y);
           auto start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
-          double default_diag_factor =
-              ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
-               (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
-              (plot_diag_factor / diag_factor);
+          double multi_plot_factor =
+              grm_max(std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                                (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]) *
+                                    DEFAULT_ASPECT_RATIO_FOR_SCALING * DEFAULT_ASPECT_RATIO_FOR_SCALING) /
+                          sqrt(5),
+                      figure_viewport[1] - figure_viewport[0]);
+
+          if (figure_vp_element == plot_parent)
+            {
+              calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
+                                                       &figure_viewport[2], &figure_viewport[3], true);
+              double plot_diag_factor =
+                  std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                            (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+              default_diag_factor =
+                  ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                   (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
+                  (plot_diag_factor / (diag_factor * size_scale_factor));
+            }
+          else
+            {
+              figure_viewport[0] = static_cast<double>(plot_parent->getAttribute("plot_x_min"));
+              figure_viewport[1] = static_cast<double>(plot_parent->getAttribute("plot_x_max"));
+              figure_viewport[2] = static_cast<double>(plot_parent->getAttribute("plot_y_min"));
+              figure_viewport[3] = static_cast<double>(plot_parent->getAttribute("plot_y_max"));
+              calculateCentralRegionMarginOrDiagFactor(element, &figure_viewport[0], &figure_viewport[1],
+                                                       &figure_viewport[2], &figure_viewport[3], true);
+
+              auto num_col = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_col"));
+              auto num_row = static_cast<int>(figure_vp_element->parentElement()->getAttribute("num_row"));
+              auto start_col = static_cast<int>(figure_vp_element->getAttribute("_start_col"));
+              auto stop_col = static_cast<int>(figure_vp_element->getAttribute("_stop_col"));
+              auto start_row = static_cast<int>(figure_vp_element->getAttribute("_start_row"));
+              auto stop_row = static_cast<int>(figure_vp_element->getAttribute("_stop_row"));
+              if (figure_vp_element->parentElement()->parentElement() != nullptr &&
+                  figure_vp_element->parentElement()->parentElement()->localName() == "layout_grid")
+                {
+                  num_col =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_col"));
+                  num_row =
+                      static_cast<int>(figure_vp_element->parentElement()->parentElement()->getAttribute("num_row"));
+                }
+              num_col -= stop_col - start_col - 1;
+              num_row -= stop_row - start_row - 1;
+
+              double plot_diag_factor =
+                  std::sqrt((figure_viewport[1] - figure_viewport[0]) * (figure_viewport[1] - figure_viewport[0]) +
+                            (figure_viewport[3] - figure_viewport[2]) * (figure_viewport[3] - figure_viewport[2]));
+              default_diag_factor =
+                  ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
+                   (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) *
+                  (plot_diag_factor / (diag_factor * size_scale_factor));
+
+              if (num_col < num_row && num_col == 1) multi_plot_factor = 1. / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+              // 3d axes need unscaled diag_factor cause scaling is done by gr3
+              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume") &&
+                  !element->hasAttribute("diag_factor"))
+                element->setAttribute("diag_factor", (diag_factor * size_scale_factor) * default_diag_factor *
+                                                         start_aspect_ratio_ws / DEFAULT_ASPECT_RATIO_FOR_SCALING);
+              default_diag_factor *= multi_plot_factor;
+            }
           element->setAttribute("_default_diag_factor", default_diag_factor);
         }
       diag_factor *= static_cast<double>(element->getAttribute("_default_diag_factor"));
@@ -5669,7 +6199,9 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
         {
           char_height *= aspect_ratio_ws;
         }
-      if (!element->hasAttribute("_char_height_set_by_user")) char_height *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+      if (!element->hasAttribute("_char_height_set_by_user") &&
+          plot_parent->parentElement()->localName() != "layout_grid_element")
+        char_height *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
     }
 
   plot_parent->setAttribute("char_height", char_height);
@@ -5740,9 +6272,9 @@ static void processBackgroundColor(const std::shared_ptr<GRM::Element> &element)
     {
       double vp[4];
       double metric_width, metric_height;
-      double aspect_ratio_ws;
       std::shared_ptr<GRM::Element> plot_elem = element;
       getPlotParent(plot_elem);
+      if (plot_elem->parentElement()->localName() == "layout_grid_element") plot_elem = plot_elem->parentElement();
 
       vp[0] = static_cast<double>(plot_elem->getAttribute("plot_x_min"));
       vp[1] = static_cast<double>(plot_elem->getAttribute("plot_x_max"));
@@ -5750,7 +6282,20 @@ static void processBackgroundColor(const std::shared_ptr<GRM::Element> &element)
       vp[3] = static_cast<double>(plot_elem->getAttribute("plot_y_max"));
 
       GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
-      aspect_ratio_ws = metric_width / metric_height;
+      auto aspect_ratio_ws = metric_width / metric_height;
+      if (plot_elem->parentElement()->localName() == "layout_grid_element")
+        {
+          double figure_viewport[4];
+          auto figure_vp_element = plot_elem->parentElement();
+          figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+          figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+          figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+          figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+
+          metric_width *= (figure_viewport[1] - figure_viewport[0]);
+          metric_height *= (figure_viewport[3] - figure_viewport[2]);
+          aspect_ratio_ws = metric_width / metric_height;
+        }
 
       auto background_color_index = static_cast<int>(element->getAttribute("background_color"));
       gr_savestate();
@@ -5991,6 +6536,8 @@ static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const st
   getTickSize(element, tick_size);
   tick_size *= tick_orientation;
   applyMoveTransformation(element);
+  GRM::Render::processWindow(element->parentElement()->parentElement());
+  processSpace3d(element->parentElement()->parentElement());
 
   if (redraw_ws) gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
 }
@@ -7527,20 +8074,18 @@ static void processIsosurface(const std::shared_ptr<GRM::Element> &element,
   float diffuse = (float)static_cast<double>(element->getAttribute("diffuse"));
   float specular = (float)static_cast<double>(element->getAttribute("specular"));
   float specular_power = (float)static_cast<double>(element->getAttribute("specular_power"));
-
   float *data = &(conv_data[0]);
-  float light_parameters[4];
 
   gr3_clear();
-
-  /* Save and restore original light parameters */
-  gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
   gr3_setlightparameters(ambient, diffuse, specular, specular_power);
+
+  GRM::Render::processWindow(element->parentElement());
+  processSpace3d(element->parentElement());
 
   if (redraw_ws)
     gr3_isosurface(z_dims_vec[0], z_dims_vec[1], z_dims_vec[2], data, (float)isovalue, foreground_colors, strides);
 
-  gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
+  gr3_setdefaultlightparameters();
 }
 
 static void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -7574,6 +8119,7 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
       auto specs_key = static_cast<std::string>(element->getAttribute("specs"));
       std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
       auto scale_factor = static_cast<double>(element->getAttribute("_scale_factor"));
+      auto initial_scale_factor = static_cast<double>(element->getAttribute("_initial_scale_factor"));
 
       viewport[0] = static_cast<double>(element->getAttribute("viewport_x_min"));
       viewport[1] = static_cast<double>(element->getAttribute("viewport_x_max"));
@@ -7702,6 +8248,9 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
                 }
               if (label_elem != nullptr)
                 {
+                  label_elem->setAttribute("char_height",
+                                           static_cast<double>(plot_parent->getAttribute("char_height")) *
+                                               initial_scale_factor);
                   gr_savestate();
                   mask = gr_uselinespec(specs[spec_i].data());
                   gr_restorestate();
@@ -7912,6 +8461,7 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
       clearOldChildren(&del, element);
 
       auto scale_factor = static_cast<double>(element->getAttribute("_scale_factor"));
+      auto initial_scale_factor = static_cast<double>(element->getAttribute("_initial_scale_factor"));
       auto h = static_cast<double>(element->getAttribute("_start_h"));
 
       viewport[0] = static_cast<double>(element->getAttribute("viewport_x_min"));
@@ -7970,6 +8520,9 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
             }
           if (label_elem != nullptr)
             {
+              label_elem->setAttribute("char_height", static_cast<double>(plot_parent->getAttribute("char_height")) *
+                                                          initial_scale_factor);
+              processCharHeight(label_elem);
               render->setTextAlign(label_elem, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
@@ -9024,6 +9577,8 @@ static void processGrid3d(const std::shared_ptr<GRM::Element> &element, const st
   getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
                        y_tick, z_tick);
   applyMoveTransformation(element);
+  GRM::Render::processWindow(element->parentElement()->parentElement());
+  processSpace3d(element->parentElement()->parentElement());
 
   if (redraw_ws) gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
@@ -10027,6 +10582,7 @@ static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
+      processSpace3d(element->parentElement()->parentElement());
       if (redraw_ws) gr_polyline3d((int)x_vec.size(), x_p, y_p, z_p);
     }
 }
@@ -10105,6 +10661,7 @@ static void processPolymarker3d(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
+      processSpace3d(element->parentElement()->parentElement());
       if (redraw_ws) gr_polymarker3d((int)x_vec.size(), x_p, y_p, z_p);
     }
 }
@@ -12832,6 +13389,7 @@ static void processSurface(const std::shared_ptr<GRM::Element> &element, const s
     }
 
   applyMoveTransformation(element);
+  processSpace3d(element->parentElement());
   if (!accelerate)
     {
       double *px_p = &(x_vec[0]);
@@ -13765,6 +14323,7 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
     scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
 
   applyMoveTransformation(element);
+  processTextEncoding(active_figure);
   if (space == CoordinateSpace::WC)
     {
       gr_wctondc(&x, &y);
@@ -13801,6 +14360,7 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
         }
     }
 
+  if (element->parentElement()->localName() == "label") processCharHeight(element->parentElement());
   if (text_fits && redraw_ws && scientific_format == 2)
     {
       gr_settextcolorind(text_color_ind); // needed to have a visible text after update
@@ -14498,6 +15058,7 @@ static void processTriSurface(const std::shared_ptr<GRM::Element> &element,
   double *py_p = &(py_vec[0]);
   double *pz_p = &(pz_vec[0]);
   applyMoveTransformation(element);
+  processSpace3d(element->parentElement());
 
   if (redraw_ws) gr_trisurface(nx, px_p, py_p, pz_p);
 }
@@ -14581,6 +15142,7 @@ static void processVolume(const std::shared_ptr<GRM::Element> &element, const st
   if (element->hasAttribute("d_min")) d_min = static_cast<double>(element->getAttribute("d_min"));
   if (element->hasAttribute("d_max")) d_max = static_cast<double>(element->getAttribute("d_max"));
 
+  processSpace3d(element->parentElement());
   if (redraw_ws)
     {
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
@@ -14676,6 +15238,8 @@ static void processWireframe(const std::shared_ptr<GRM::Element> &element, const
   double *py_p = &(y_vec[0]);
   double *pz_p = &(z_vec[0]);
   applyMoveTransformation(element);
+  processSpace3d(element->parentElement());
+
   if (redraw_ws) gr_surface((int)x_length, (int)y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
 }
 
@@ -15768,14 +16332,6 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
       // from 0 to length. The cases for log can be ignored cause log gets ignored on imshow plots.
       if (child->localName() == "series_imshow") continue;
 
-      // save the original plot rotation so it can be restored
-      if (central_region->hasAttribute("space_3d_phi") && !central_region->hasAttribute("_space_3d_phi_org"))
-        central_region->setAttribute("_space_3d_phi_org",
-                                     static_cast<double>(central_region->getAttribute("space_3d_phi")));
-      if (central_region->hasAttribute("space_3d_theta") && !central_region->hasAttribute("_space_3d_theta_org"))
-        central_region->setAttribute("_space_3d_theta_org",
-                                     static_cast<double>(central_region->getAttribute("space_3d_theta")));
-
       bool x_log = static_cast<int>(element->getAttribute("x_log")) && child->hasAttribute("_x_org");
       bool y_log = static_cast<int>(element->getAttribute("y_log")) && child->hasAttribute("_y_org");
       bool z_log = static_cast<int>(element->getAttribute("z_log")) && child->hasAttribute("_z_org");
@@ -16127,7 +16683,15 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       if (element->localName() == "figure")
         {
           if (!static_cast<int>(element->getAttribute("active"))) return;
-          if (global_root->querySelectorsAll("draw_graphics").empty()) plotProcessWsWindowWsViewport(element, context);
+          if (element->hasAttribute("size_x") && !element->hasAttribute("_initial_width"))
+            {
+              int mwidth, mheight;
+              GRM::Render::getFigureSize(&mwidth, &mheight, nullptr, nullptr);
+
+              element->setAttribute("_initial_width", static_cast<double>(mwidth));
+              element->setAttribute("_initial_height", static_cast<double>(mheight));
+            }
+          if (element->querySelectorsAll("draw_graphics").empty()) plotProcessWsWindowWsViewport(element, context);
         }
       if (element->localName() == "plot")
         {
@@ -16135,7 +16699,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           processPlot(element, context);
           if (static_cast<std::string>(element->getAttribute("_kind")) == "marginal_heatmap")
             central_region_parent = element->children()[0]; // if the kind is marginal_heatmap plot can only has 1 child
-                                                            // and this child is the marginal_heatmap_plot
+          // and this child is the marginal_heatmap_plot
 
           if (central_region_parent != element) calculateViewport(central_region_parent);
 
@@ -16245,10 +16809,59 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           automatic_update = old_state;
         }
     }
+
+  // use the correct nominal factor for each plot respecting the actual size of the central_region
+  if (element->localName() == "plot")
+    {
+      double vp[4], viewport[4];
+      double metric_width, metric_height;
+      int px_width, px_height;
+      double initial_factor;
+      std::shared_ptr<GRM::Element> plot_parent = element;
+
+      auto central_region_elem = plot_parent->querySelectors("central_region");
+      if (central_region_elem == nullptr) return;
+      auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
+                                   ? plot_parent->parentElement()
+                                   : plot_parent;
+
+      vp[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
+      vp[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
+      vp[2] = static_cast<double>(figure_vp_element->getAttribute("plot_y_min"));
+      vp[3] = static_cast<double>(figure_vp_element->getAttribute("plot_y_max"));
+      viewport[0] = static_cast<double>(central_region_elem->getAttribute("viewport_x_min"));
+      viewport[1] = static_cast<double>(central_region_elem->getAttribute("viewport_x_max"));
+      viewport[2] = static_cast<double>(central_region_elem->getAttribute("viewport_y_min"));
+      viewport[3] = static_cast<double>(central_region_elem->getAttribute("viewport_y_max"));
+
+      GRM::Render::getFigureSize(&px_width, &px_height, &metric_width, &metric_height);
+      auto aspect_ratio_ws = metric_width / metric_height;
+      auto initial_width = static_cast<int>(active_figure->getAttribute("_initial_width")) * (vp[1] - vp[0]);
+      auto initial_height = static_cast<int>(active_figure->getAttribute("_initial_height")) * (vp[3] - vp[2]);
+      double central_region_width = (viewport[1] - viewport[0]) * px_width;
+      double central_region_height = (viewport[3] - viewport[2]) * px_height;
+      if (aspect_ratio_ws > 1)
+        central_region_height *= aspect_ratio_ws;
+      else
+        central_region_width /= aspect_ratio_ws;
+
+      if (!plot_parent->hasAttribute("_initial_factor"))
+        {
+          initial_factor = (central_region_width * central_region_height) / (initial_width * initial_height);
+          plot_parent->setAttribute("_initial_factor", initial_factor);
+        }
+      else
+        {
+          initial_factor = static_cast<double>(plot_parent->getAttribute("_initial_factor"));
+        }
+      double factor = (central_region_width * central_region_height) / (initial_width * initial_height);
+
+      gr_setnominalsize(sqrt(factor / initial_factor) *
+                        (grm_min(initial_width, initial_height) / grm_min(px_width, px_height)));
+    }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
@@ -16390,6 +17003,8 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
     {
       for (const auto &child : element->children())
         {
+          std::string prefix = "";
+          int row_start, row_stop, col_start, col_stop;
           if (child->localName() != "layout_grid_element" && child->localName() != "layout_grid") return;
 
           auto abs_height = (child->hasAttribute("absolute_height"))
@@ -16414,10 +17029,11 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
               (child->hasAttribute("aspect_ratio")) ? static_cast<double>(child->getAttribute("aspect_ratio")) : -1.0;
           auto fit_parents_height = static_cast<int>(child->getAttribute("fit_parents_height"));
           auto fit_parents_width = static_cast<int>(child->getAttribute("fit_parents_width"));
-          auto row_start = static_cast<int>(child->getAttribute("start_row"));
-          auto row_stop = static_cast<int>(child->getAttribute("stop_row"));
-          auto col_start = static_cast<int>(child->getAttribute("start_col"));
-          auto col_stop = static_cast<int>(child->getAttribute("stop_col"));
+          if (child->localName() != "layout_grid") prefix = "_";
+          row_start = static_cast<int>(child->getAttribute(prefix + "start_row"));
+          row_stop = static_cast<int>(child->getAttribute(prefix + "stop_row"));
+          col_start = static_cast<int>(child->getAttribute(prefix + "start_col"));
+          col_stop = static_cast<int>(child->getAttribute(prefix + "stop_col"));
           auto *slice = new grm::Slice(row_start, row_stop, col_start, col_stop);
 
           if (child->localName() == "layout_grid_element")
@@ -16725,6 +17341,7 @@ void GRM::Render::render()
       finalizeGrid(active_figure);
       renderHelper(root, this->context);
       renderZQueue(this->context);
+      if (active_figure->hasAttribute("_kind_changed")) active_figure->removeAttribute("_kind_changed");
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
       if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
       if (bounding_boxes)
@@ -16756,6 +17373,7 @@ void GRM::Render::render()
 void GRM::Render::process_tree()
 {
   global_root->setAttribute("_modified", true);
+  finalizeGrid(active_figure);
   renderHelper(global_root, this->context);
   renderZQueue(this->context);
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
@@ -16850,6 +17468,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("clip_region"),
        std::vector<std::string>{
            "0", "Defines whether a quadratic(0) or elliptic(1) clip region will be used to clip the displayed plot"}},
+      {std::string("col_span"),
+       std::vector<std::string>{"None", "Define the number of columns the grid element contains"}},
       {std::string("color_ind"), std::vector<std::string>{"None", "The index of the used color"}},
       {std::string("color_ind_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in index format"}},
@@ -16882,8 +17502,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("error_bar_x"), std::vector<std::string>{"None", "The x-value for the error"}},
       {std::string("error_bar_y_max"), std::vector<std::string>{"None", "The ending y-value for the error"}},
       {std::string("error_bar_y_min"), std::vector<std::string>{"None", "The beginning y-value for the error"}},
-      {std::string("fig_size_x"), std::vector<std::string>{"None", "The figure x-size"}},
-      {std::string("fig_size_y"), std::vector<std::string>{"None", "The figure y-size"}},
       {std::string("fill_color_ind"), std::vector<std::string>{"None", "Sets the index of the current fill color"}},
       {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Color for the bars in rgb format"}},
       {std::string("fill_int_style"), std::vector<std::string>{"None", "Sets the index of the current fill style"}},
@@ -16892,6 +17510,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "Toggle if the parent grid should match the element`s height"}},
       {std::string("fit_parents_width"),
        std::vector<std::string>{"None", "Toggle if the parent grid should match the element`s width"}},
+      {std::string("flip_col_and_row"),
+       std::vector<std::string>{"False", "Define if the rows and cols inside the layout should be flipped"}},
       {std::string("font"), std::vector<std::string>{"computermodern", "The used text font"}},
       {std::string("font_precision"), std::vector<std::string>{"precision_outline", "The precision of the text font"}},
       {std::string("grplot"), std::vector<std::string>{"0", "Sets if GRPlot is used or not"}},
@@ -16911,6 +17531,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("keep_aspect_ratio"), std::vector<std::string>{"1", "Sets if the aspect ratio is kept"}},
       {std::string("keep_radii_axes"),
        std::vector<std::string>{"False", "Defines if the radii-axes respect the ranges defined by y_lim_max/min"}},
+      {std::string("keep_size_if_swapped"),
+       std::vector<std::string>{"True", "If the position of this layout grid element gets changed it's size is kept"}},
       {std::string("keep_window"),
        std::vector<std::string>{"1", "Sets if the window will be inflicted by attribute changes"}},
       {std::string("kind"),
@@ -16982,6 +17604,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("pos"),
        std::vector<std::string>{
            "None", "F.e. where the x-axis should be placed in relation to the y-axis (position on the y-axis)"}},
+      {std::string("position"),
+       std::vector<std::string>{"None", "Defines the position of a grid_layout-element. The first numbers defines the "
+                                        "row the second the column. Between both numbers must stand a space."}},
       {std::string("projection_type"), std::vector<std::string>{"None", "The used projection type"}},
       {std::string("px"), std::vector<std::string>{"None", "References the px-values stored in the context. The "
                                                            "px-values are the modified version of the x-values"}},
@@ -17010,6 +17635,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("relative_upwards_flt"),
        std::vector<std::string>{"None", "The flat relative upward error. It gets applied at all error points"}},
       {std::string("resample_method"), std::vector<std::string>{"None", "The used resample method"}},
+      {std::string("row_span"),
+       std::vector<std::string>{"None", "Define the number of rows the grid element contains"}},
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
       {std::string("scientific_format"),
        std::vector<std::string>{"None", "Set the used format which will determine how a specific text will be drawn. "
@@ -17067,6 +17694,12 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("total"), std::vector<std::string>{"None", "The total-value of the bins"}},
       {std::string("transformation"), std::vector<std::string>{"5", "The used transformation"}},
       {std::string("transparency"), std::vector<std::string>{"None", "Sets the transparency value"}},
+      {std::string("trim_col"),
+       std::vector<std::string>{"False", "Define if the program should remove empty cells columnwise inside the layout "
+                                         "grid if this reduces the number of columns"}},
+      {std::string("trim_row"),
+       std::vector<std::string>{"False", "Define if the program should remove empty cells rowwise inside the layout "
+                                         "grid if this reduces the number of rows"}},
       {std::string("u"), std::vector<std::string>{"None", "References the u-values stored in the context"}},
       {std::string("upwards_cap_color"), std::vector<std::string>{"None", "The color value for the upwards caps"}},
       {std::string("v"), std::vector<std::string>{"None", "References the v-values stored in the context"}},
@@ -18128,15 +18761,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string 
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int drawable_type)
-{
-  auto element = createElement("isosurface_render");
-
-  element->setAttribute("drawable_type", drawable_type);
-
-  return element;
-}
-
 std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &grid)
 {
   auto element = createElement("layout_grid");
@@ -18170,10 +18794,14 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::Gr
   if (grid_element.relative_height != -1) element->setAttribute("relative_height", grid_element.relative_height);
   if (grid_element.relative_width != -1) element->setAttribute("relative_width", grid_element.relative_width);
   if (grid_element.aspect_ratio != -1) element->setAttribute("aspect_ratio", grid_element.aspect_ratio);
-  element->setAttribute("start_row", slice.row_start);
-  element->setAttribute("stop_row", slice.row_stop);
-  element->setAttribute("start_col", slice.col_start);
-  element->setAttribute("stop_col", slice.col_stop);
+  element->setAttribute("_start_row", slice.row_start);
+  element->setAttribute("_stop_row", slice.row_stop);
+  element->setAttribute("_start_col", slice.col_start);
+  element->setAttribute("_stop_col", slice.col_stop);
+  element->setAttribute("row_span", slice.row_stop - slice.row_start);
+  element->setAttribute("col_span", slice.col_stop - slice.col_start);
+  element->setAttribute("keep_size_if_swapped", true);
+  element->setAttribute("position", std::to_string(slice.row_start) + " " + std::to_string(slice.col_start));
 
   double *plot = grid_element.plot;
   GRM::Render::setPlot(element, plot[0], plot[1], plot[2], plot[3]);
@@ -18289,8 +18917,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createArcGridLine(double value,
   return element;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void GRM::Render::setClipRegion(const std::shared_ptr<GRM::Element> &element, int region)
 {
@@ -19185,7 +19812,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->remove();
               new_series->setAttribute("_update_required", true);
               new_series->setAttribute("_delete_children", 2);
-              auto legend = global_render->querySelectors("legend");
+              auto legend = plot_parent->querySelectors("legend");
               if (legend != nullptr)
                 {
                   legend->setAttribute("_delete_children", 2);
@@ -19492,12 +20119,16 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               // f.e. surface plots are smaller than heatmap plots so the diag_factor isn't the same
               if (old_kind != new_kind)
                 {
-                  for (const auto &elem : global_root->querySelectorsAll("[_default_diag_factor]"))
+                  for (const auto &elem : plot_parent->querySelectorsAll("[_default_diag_factor]"))
                     {
                       elem->removeAttribute("_default_diag_factor");
                     }
+                  if (plot_parent->parentElement()->localName() == "layout_grid_element")
+                    plot_parent->removeAttribute("_default_diag_factor");
                   if (new_type == "3d" && !central_region->hasAttribute("_diag_factor_set_by_user"))
                     central_region->removeAttribute("diag_factor");
+                  active_figure->setAttribute("_kind_changed", true);
+                  plot_parent->removeAttribute("_initial_factor");
                 }
 
               if (coordinate_system)
@@ -19935,6 +20566,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             {
               // when the ranges gets reseted the bounding boxes of the series can be wrong, to solve this problem
               // they get calculated again out of their children
+              if (str_equals_any(attr, "keep_aspect_ratio", "only_quadratic_aspect_ratio")) gr_clearws();
               if (attr == "reset_ranges")
                 {
                   for (const auto &child : element->children())
@@ -20515,6 +21147,643 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               resetOldBoundingBoxes(element->parentElement());
               resetOldBoundingBoxes(element);
               removeBoundingBoxId(*element);
+            }
+          else if (element->localName() == "layout_grid_element")
+            {
+              if (attr == "col_span")
+                {
+                  auto new_num = static_cast<int>(element->getAttribute(attr));
+                  auto diff = new_num - std::stoi(value);
+                  auto stop_col = static_cast<int>(element->getAttribute("_stop_col"));
+                  auto start_col = static_cast<int>(element->getAttribute("_start_col"));
+                  auto start_row = static_cast<int>(element->getAttribute("_start_row"));
+                  element->setAttribute("_stop_col", stop_col + diff);
+
+                  auto num_col = static_cast<int>(element->parentElement()->getAttribute("num_col"));
+                  auto max = stop_col + diff;
+
+                  for (const auto &grid_element : element->parentElement()->children())
+                    {
+                      if (grid_element != element)
+                        {
+                          auto grid_stop_col = static_cast<int>(grid_element->getAttribute("_stop_col"));
+                          auto grid_start_col = static_cast<int>(grid_element->getAttribute("_start_col"));
+                          auto grid_start_row = static_cast<int>(grid_element->getAttribute("_start_row"));
+                          if (grid_start_col > start_col && grid_start_row >= start_row)
+                            {
+                              grid_element->setAttribute("_stop_col", grid_stop_col + diff);
+                              grid_element->setAttribute("_start_col", grid_start_col + diff);
+                              grid_element->setAttribute("position", std::to_string(grid_start_row) + " " +
+                                                                         std::to_string(grid_start_col + diff));
+                              max = grm_max(max, grid_stop_col + diff);
+                            }
+                        }
+                    }
+                  element->parentElement()->setAttribute("num_col", grm_max(num_col, max));
+                }
+              else if (attr == "row_span")
+                {
+                  auto new_num = static_cast<int>(element->getAttribute(attr));
+                  auto diff = new_num - std::stoi(value);
+                  auto stop_row = static_cast<int>(element->getAttribute("_stop_row"));
+                  auto start_row = static_cast<int>(element->getAttribute("_start_row"));
+                  auto start_col = static_cast<int>(element->getAttribute("_start_col"));
+                  element->setAttribute("_stop_row", stop_row + diff);
+
+                  auto num_row = static_cast<int>(element->parentElement()->getAttribute("num_row"));
+                  auto max = stop_row + diff;
+
+                  for (const auto &grid_element : element->parentElement()->children())
+                    {
+                      if (grid_element != element)
+                        {
+                          auto grid_stop_row = static_cast<int>(grid_element->getAttribute("_stop_row"));
+                          auto grid_start_row = static_cast<int>(grid_element->getAttribute("_start_row"));
+                          auto grid_start_col = static_cast<int>(grid_element->getAttribute("_start_col"));
+                          if (grid_start_row > start_row && grid_start_col >= start_col)
+                            {
+                              grid_element->setAttribute("_start_row", grid_start_row + diff);
+                              grid_element->setAttribute("_stop_row", grid_stop_row + diff);
+                              grid_element->setAttribute("position", std::to_string(grid_start_row + diff) + " " +
+                                                                         std::to_string(grid_start_col));
+                              max = grm_max(max, grid_stop_row + diff);
+                            }
+                        }
+                    }
+                  element->parentElement()->setAttribute("num_row", grm_max(num_row, stop_row + diff));
+                }
+              else if (attr == "position")
+                {
+                  auto new_pos = static_cast<std::string>(element->getAttribute("position"));
+                  if (element->parentElement()
+                          ->querySelectorsAll("layout_grid_element[position=\"" + new_pos + "\"]")
+                          .size() > 1)
+                    {
+                      for (const auto &grid_element : element->parentElement()->querySelectorsAll(
+                               "layout_grid_element[position=\"" + new_pos + "\"]"))
+                        {
+                          if (grid_element != element)
+                            {
+                              auto elem_start_row = static_cast<int>(element->getAttribute("_start_row"));
+                              auto elem_stop_row = static_cast<int>(element->getAttribute("_stop_row"));
+                              auto elem_start_col = static_cast<int>(element->getAttribute("_start_col"));
+                              auto elem_stop_col = static_cast<int>(element->getAttribute("_stop_col"));
+                              auto elem_col_span = static_cast<int>(element->getAttribute("col_span"));
+                              auto elem_row_span = static_cast<int>(element->getAttribute("row_span"));
+                              auto grid_start_row = static_cast<int>(grid_element->getAttribute("_start_row"));
+                              auto grid_stop_row = static_cast<int>(grid_element->getAttribute("_stop_row"));
+                              auto grid_start_col = static_cast<int>(grid_element->getAttribute("_start_col"));
+                              auto grid_stop_col = static_cast<int>(grid_element->getAttribute("_stop_col"));
+                              auto grid_col_span = static_cast<int>(grid_element->getAttribute("col_span"));
+                              auto grid_row_span = static_cast<int>(grid_element->getAttribute("row_span"));
+
+                              element->setAttribute("_start_row", grid_start_row);
+                              element->setAttribute("_start_col", grid_start_col);
+                              grid_element->setAttribute("_start_row", elem_start_row);
+                              grid_element->setAttribute("_start_col", elem_start_col);
+
+                              if (element->hasAttribute("keep_size_if_swapped") &&
+                                  static_cast<int>(element->getAttribute("keep_size_if_swapped")))
+                                {
+                                  element->setAttribute("_stop_row", grid_start_row + elem_row_span);
+                                  element->setAttribute("_stop_col", grid_start_col + elem_col_span);
+                                  grid_element->setAttribute("_stop_row", elem_start_row + grid_row_span);
+                                  grid_element->setAttribute("_stop_col", elem_start_col + grid_col_span);
+
+                                  auto max_col =
+                                      grm_max(grid_start_col + elem_col_span, elem_start_col + grid_col_span);
+                                  auto max_row =
+                                      grm_max(grid_start_row + elem_row_span, elem_start_row + grid_row_span);
+                                  for (const auto &elem : element->parentElement()->children())
+                                    {
+                                      if (elem == grid_element || elem == element) continue;
+                                      auto stop_row = static_cast<int>(elem->getAttribute("_stop_row"));
+                                      auto start_row = static_cast<int>(elem->getAttribute("_start_row"));
+                                      auto start_col = static_cast<int>(elem->getAttribute("_start_col"));
+                                      auto stop_col = static_cast<int>(elem->getAttribute("_stop_col"));
+                                      if (start_row > elem_start_row && start_col >= elem_start_col)
+                                        {
+                                          elem->setAttribute("_start_row", start_row + (start_row - elem_start_row));
+                                          elem->setAttribute("_stop_row", stop_row + (start_row - elem_start_row));
+                                          elem->setAttribute("position",
+                                                             std::to_string(start_row + (start_row - elem_start_row)) +
+                                                                 " " + std::to_string(start_col));
+                                          max_row = grm_max(max_row, stop_row + (start_row - elem_start_row));
+                                        }
+                                      if (start_col > elem_start_col && start_row >= elem_start_row)
+                                        {
+                                          elem->setAttribute("_stop_col", stop_col + (start_col - elem_start_col));
+                                          elem->setAttribute("_start_col", start_col + (start_col - elem_start_col));
+                                          elem->setAttribute(
+                                              "position", std::to_string(start_row) + " " +
+                                                              std::to_string(start_col + (start_col - elem_start_col)));
+                                          max_col = grm_max(max_col, stop_col + (start_col - elem_start_col));
+                                        }
+                                      if (start_row > grid_start_row && start_col >= grid_start_col)
+                                        {
+                                          elem->setAttribute("_start_row", start_row + (start_row - grid_start_row));
+                                          elem->setAttribute("_stop_row", stop_row + (start_row - grid_start_row));
+                                          elem->setAttribute("position",
+                                                             std::to_string(start_row + (start_row - grid_start_row)) +
+                                                                 " " + std::to_string(start_col));
+                                          max_row = grm_max(max_row, stop_row + (start_row - grid_start_row));
+                                        }
+                                      if (start_col > grid_start_col && start_row >= grid_start_row)
+                                        {
+                                          elem->setAttribute("_stop_col", stop_col + (start_col - grid_start_col));
+                                          elem->setAttribute("_start_col", start_col + (start_col - grid_start_col));
+                                          elem->setAttribute(
+                                              "position", std::to_string(start_row) + " " +
+                                                              std::to_string(start_col + (start_col - grid_start_col)));
+                                          max_col = grm_max(max_col, stop_col + (start_col - grid_start_col));
+                                        }
+                                    }
+
+                                  auto num_col = static_cast<int>(element->parentElement()->getAttribute("num_col"));
+                                  auto num_row = static_cast<int>(element->parentElement()->getAttribute("num_row"));
+                                  element->parentElement()->setAttribute("num_col", grm_max(num_col, max_col));
+                                  element->parentElement()->setAttribute("num_row", grm_max(num_row, max_row));
+                                }
+                              else
+                                {
+                                  element->setAttribute("_stop_row", grid_stop_row);
+                                  element->setAttribute("_stop_col", grid_stop_col);
+                                  element->setAttribute("col_span", grid_col_span);
+                                  element->setAttribute("row_span", grid_row_span);
+                                  grid_element->setAttribute("_stop_row", elem_stop_row);
+                                  grid_element->setAttribute("_stop_col", elem_stop_col);
+                                  grid_element->setAttribute("col_span", elem_col_span);
+                                  grid_element->setAttribute("row_span", elem_row_span);
+                                }
+
+                              grid_element->setAttribute("position", value);
+                              break;
+                            }
+                        }
+                    }
+                  else
+                    {
+                      auto new_row = std::stoi(GRM::split(new_pos, " ")[0]);
+                      auto new_col = std::stoi(GRM::split(new_pos, " ")[1]);
+                      auto num_col = static_cast<int>(element->parentElement()->getAttribute("num_col"));
+                      auto num_row = static_cast<int>(element->parentElement()->getAttribute("num_row"));
+                      auto col_span = static_cast<int>(element->getAttribute("col_span"));
+                      auto row_span = static_cast<int>(element->getAttribute("row_span"));
+
+                      // check if number of rows or cols must be adjusted
+                      if (new_row + row_span > num_row)
+                        element->parentElement()->setAttribute("num_row", new_row + row_span);
+                      if (new_col + col_span > num_col)
+                        element->parentElement()->setAttribute("num_col", new_col + col_span);
+
+                      element->setAttribute("_start_row", new_row);
+                      element->setAttribute("_start_col", new_col);
+                      element->setAttribute("_stop_row", new_row + row_span);
+                      element->setAttribute("_stop_col", new_col + col_span);
+                    }
+                }
+              if (element->parentElement()->hasAttribute("trim_col") &&
+                  static_cast<int>(element->parentElement()->getAttribute("trim_col")))
+                {
+                  const auto num_col = static_cast<int>(element->parentElement()->getAttribute("num_col"));
+                  const auto num_row = static_cast<int>(element->parentElement()->getAttribute("num_row"));
+                  std::vector<std::vector<int>> grid_matrix;
+                  // min num of empty space which all cols/rows contains
+                  int min_empty_col_num = num_col;
+
+                  // initialize grid_matrix with layout grid
+                  for (int i = 0; i < num_row; i++)
+                    {
+                      std::vector<int> row;
+                      for (int j = 0; j < num_col; j++)
+                        {
+                          row.push_back(-1);
+                        }
+                      grid_matrix.push_back(row);
+                    }
+                  for (const auto &grid_elem : element->parentElement()->children())
+                    {
+                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+                      auto stop_col = static_cast<int>(grid_elem->getAttribute("_stop_col"));
+                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+                      auto stop_row = static_cast<int>(grid_elem->getAttribute("_stop_row"));
+                      auto pos = static_cast<std::string>(grid_elem->getAttribute("position"));
+
+                      for (int i = start_row; i < stop_row; i++)
+                        {
+                          for (int j = start_col; j < stop_col; j++)
+                            {
+                              grid_matrix[i][j] = 1;
+                            }
+                        }
+                    }
+
+                  // calculate amount of columns which can be removed in each row
+                  for (int i = 0; i < num_row; i++)
+                    {
+                      int cnt = 0;
+                      for (int j = 0; j < num_col; j++)
+                        {
+                          if (grid_matrix[i][j] == -1) cnt += 1;
+                        }
+                      min_empty_col_num = grm_min(min_empty_col_num, cnt);
+                    }
+
+                  // remove min num of empty grid elements in each row
+                  /* a bit tricky is "a x x b c" with min_empty_col = 1, cause b and c must be moved 1 to the
+                  left and then num_col on the parent element has to be changed to remove to useless col */
+                  if (min_empty_col_num > 0)
+                    {
+                      for (int i = 0; i < num_row; i++)
+                        {
+                          int removed_spaces = 0;
+                          for (int j = 0; j < num_col; j++)
+                            {
+                              if (grid_matrix[i][j] == -1 && removed_spaces < min_empty_col_num)
+                                {
+                                  removed_spaces += 1;
+                                }
+                              else if (removed_spaces != 0 && grid_matrix[i][j] != -1)
+                                {
+                                  auto grid_elem = element->parentElement()->querySelectors(
+                                      "layout_grid_element[position=\"" + std::to_string(i) + " " + std::to_string(j) +
+                                      "\"]");
+                                  if (grid_elem != nullptr)
+                                    {
+                                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+                                      auto stop_col = static_cast<int>(grid_elem->getAttribute("_stop_col"));
+                                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+
+                                      grid_elem->setAttribute("_start_col", start_col - removed_spaces);
+                                      grid_elem->setAttribute("_stop_col", stop_col - removed_spaces);
+                                      grid_elem->setAttribute("position",
+                                                              std::to_string(start_row) + " " +
+                                                                  std::to_string(start_col - removed_spaces));
+                                    }
+                                }
+                            }
+                        }
+                      automatic_update = false;
+                      element->parentElement()->setAttribute("num_col", num_col - min_empty_col_num);
+                      automatic_update = true;
+                    }
+                }
+              if (element->parentElement()->hasAttribute("trim_row") &&
+                  static_cast<int>(element->parentElement()->getAttribute("trim_row")))
+                {
+                  const auto num_col = static_cast<int>(element->parentElement()->getAttribute("num_col"));
+                  const auto num_row = static_cast<int>(element->parentElement()->getAttribute("num_row"));
+                  std::vector<std::vector<int>> grid_matrix;
+                  // min num of empty space which all cols/rows contains
+                  int min_empty_row_num = num_row;
+
+                  // initialize grid_matrix with layout grid
+                  for (int i = 0; i < num_row; i++)
+                    {
+                      std::vector<int> row;
+                      for (int j = 0; j < num_col; j++)
+                        {
+                          row.push_back(-1);
+                        }
+                      grid_matrix.push_back(row);
+                    }
+                  for (const auto &grid_elem : element->parentElement()->children())
+                    {
+                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+                      auto stop_col = static_cast<int>(grid_elem->getAttribute("_stop_col"));
+                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+                      auto stop_row = static_cast<int>(grid_elem->getAttribute("_stop_row"));
+                      auto pos = static_cast<std::string>(grid_elem->getAttribute("position"));
+
+                      for (int i = start_row; i < stop_row; i++)
+                        {
+                          for (int j = start_col; j < stop_col; j++)
+                            {
+                              grid_matrix[i][j] = 1;
+                            }
+                        }
+                    }
+
+                  // calculate amount of rows which can be removed in each col
+                  for (int j = 0; j < num_col; j++)
+                    {
+                      int cnt = 0;
+                      for (int i = 0; i < num_row; i++)
+                        {
+                          if (grid_matrix[i][j] == -1) cnt += 1;
+                        }
+                      min_empty_row_num = grm_min(min_empty_row_num, cnt);
+                    }
+
+                  // remove min num of empty grid elements in each col
+                  if (min_empty_row_num > 0)
+                    {
+                      for (int j = 0; j < num_col; j++)
+                        {
+                          int removed_spaces = 0;
+                          for (int i = 0; i < num_row; i++)
+                            {
+                              if (grid_matrix[i][j] == -1 && removed_spaces < min_empty_row_num)
+                                {
+                                  removed_spaces += 1;
+                                }
+                              else if (removed_spaces != 0 && grid_matrix[i][j] != -1)
+                                {
+                                  auto grid_elem = element->parentElement()->querySelectors(
+                                      "layout_grid_element[position=\"" + std::to_string(i) + " " + std::to_string(j) +
+                                      "\"]");
+                                  if (grid_elem != nullptr)
+                                    {
+                                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+                                      auto stop_row = static_cast<int>(grid_elem->getAttribute("_stop_row"));
+                                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+
+                                      grid_elem->setAttribute("_start_row", start_row - removed_spaces);
+                                      grid_elem->setAttribute("_stop_row", stop_row - removed_spaces);
+                                      grid_elem->setAttribute("position", std::to_string(start_row - removed_spaces) +
+                                                                              " " + std::to_string(start_col));
+                                    }
+                                }
+                            }
+                        }
+                      automatic_update = false;
+                      element->parentElement()->setAttribute("num_row", num_row - min_empty_row_num);
+                      automatic_update = true;
+                    }
+                }
+              if (str_equals_any(attr, "fit_parents_height", "fit_parents_width", "col_span", "row_span", "position"))
+                {
+                  for (const auto &grid_element : element->parentElement()->children())
+                    {
+                      auto plot_x_min = static_cast<double>(grid_element->getAttribute("plot_x_min"));
+                      auto plot_x_max = static_cast<double>(grid_element->getAttribute("plot_x_max"));
+                      auto plot_y_min = static_cast<double>(grid_element->getAttribute("plot_y_min"));
+                      auto plot_y_max = static_cast<double>(grid_element->getAttribute("plot_y_max"));
+
+                      grid_element->setAttribute("plot_x_min", plot_y_min);
+                      grid_element->setAttribute("plot_x_max", plot_y_max);
+                      grid_element->setAttribute("plot_y_min", plot_x_min);
+                      grid_element->setAttribute("plot_y_max", plot_x_max);
+                      grid_element->querySelectors("plot")->removeAttribute("_start_aspect_ratio");
+                      for (const auto &elem : grid_element->querySelectorsAll("[_default_diag_factor]"))
+                        {
+                          elem->removeAttribute("_default_diag_factor");
+                          resetOldBoundingBoxes(elem);
+                        }
+                      resetOldBoundingBoxes(grid_element);
+                    }
+
+                  // imshow needs vp which gets inflicted by the size attributes in figure, this means when the size is
+                  // changed the imshow_series must be recalculated
+                  auto imshow = global_render->querySelectorsAll("series_imshow");
+                  for (const auto &imshow_elem : imshow)
+                    {
+                      imshow_elem->setAttribute("_update_required", true);
+                    }
+                }
+            }
+          else if (element->localName() == "layout_grid")
+            {
+              if (attr == "flip_col_and_row" && static_cast<int>(element->getAttribute(attr)))
+                {
+                  auto num_col = static_cast<int>(element->getAttribute("num_col"));
+                  auto num_row = static_cast<int>(element->getAttribute("num_row"));
+                  auto fit_parents_height = static_cast<int>(element->getAttribute("fit_parents_height"));
+                  auto fit_parents_width = static_cast<int>(element->getAttribute("fit_parents_width"));
+                  element->setAttribute("num_col", num_row);
+                  element->setAttribute("num_row", num_col);
+                  element->setAttribute("fit_parents_height", fit_parents_width);
+                  element->setAttribute("fit_parents_width", fit_parents_height);
+
+                  for (const auto &grid_element : element->children())
+                    {
+                      auto legend = grid_element->querySelectors("legend");
+                      auto start_col = static_cast<int>(grid_element->getAttribute("_start_col"));
+                      auto stop_col = static_cast<int>(grid_element->getAttribute("_stop_col"));
+                      auto start_row = static_cast<int>(grid_element->getAttribute("_start_row"));
+                      auto stop_row = static_cast<int>(grid_element->getAttribute("_stop_row"));
+                      auto plot_x_min = static_cast<double>(grid_element->getAttribute("plot_x_min"));
+                      auto plot_x_max = static_cast<double>(grid_element->getAttribute("plot_x_max"));
+                      auto plot_y_min = static_cast<double>(grid_element->getAttribute("plot_y_min"));
+                      auto plot_y_max = static_cast<double>(grid_element->getAttribute("plot_y_max"));
+                      fit_parents_height = static_cast<int>(grid_element->getAttribute("fit_parents_height"));
+                      fit_parents_width = static_cast<int>(grid_element->getAttribute("fit_parents_width"));
+
+                      grid_element->setAttribute("_start_col", start_row);
+                      grid_element->setAttribute("_stop_col", stop_row);
+                      grid_element->setAttribute("_start_row", start_col);
+                      grid_element->setAttribute("_stop_row", stop_col);
+                      grid_element->setAttribute("plot_x_min", plot_y_min);
+                      grid_element->setAttribute("plot_x_max", plot_y_max);
+                      grid_element->setAttribute("plot_y_min", plot_x_min);
+                      grid_element->setAttribute("plot_y_max", plot_x_max);
+                      grid_element->setAttribute("fit_parents_height", fit_parents_width);
+                      grid_element->setAttribute("fit_parents_width", fit_parents_height);
+
+                      grid_element->querySelectors("plot")->removeAttribute("_start_aspect_ratio");
+                      for (const auto &elem : grid_element->querySelectorsAll("[_default_diag_factor]"))
+                        {
+                          elem->removeAttribute("_default_diag_factor");
+                        }
+                      if (legend != nullptr)
+                        {
+                          legend->removeAttribute("_initial_scale_factor");
+                          legend->removeAttribute("_scale_factor");
+                          legend->removeAttribute("_start_w");
+                          legend->removeAttribute("_start_h");
+                        }
+                      resetOldBoundingBoxes(grid_element);
+                    }
+
+                  element->setAttribute("flip_col_and_row", false);
+                }
+              else if (str_equals_any(attr, "num_col", "num_row"))
+                {
+                  for (const auto &grid_element : element->children())
+                    {
+                      auto legend = grid_element->querySelectors("legend");
+                      grid_element->querySelectors("plot")->removeAttribute("_start_aspect_ratio");
+                      for (const auto &elem : grid_element->querySelectorsAll("[_default_diag_factor]"))
+                        {
+                          elem->removeAttribute("_default_diag_factor");
+                        }
+                      if (legend != nullptr)
+                        {
+                          legend->removeAttribute("_initial_scale_factor");
+                          legend->removeAttribute("_scale_factor");
+                          legend->removeAttribute("_start_w");
+                          legend->removeAttribute("_start_h");
+                        }
+                      resetOldBoundingBoxes(grid_element);
+                    }
+                }
+              else if (str_equals_any(attr, "start_col", "start_col", "stop_col", "stop_row"))
+                {
+                  if (str_equals_any(attr, "stop_col", "stop_row"))
+                    {
+                      auto num_col = static_cast<int>(element->getAttribute("num_col"));
+                      auto num_row = static_cast<int>(element->getAttribute("num_row"));
+                      auto end_val = static_cast<int>(element->getAttribute(attr));
+                      if (attr == "stop_col")
+                        element->setAttribute("num_col", grm_max(num_col, end_val));
+                      else
+                        element->setAttribute("num_row", grm_max(num_row, end_val));
+                    }
+                  else if (str_equals_any(attr, "start_col", "start_row"))
+                    {
+                      auto start_val = static_cast<int>(element->getAttribute(attr));
+                      if (attr == "start_col")
+                        element->setAttribute("col_span",
+                                              static_cast<int>(element->getAttribute("stop_col")) - start_val);
+                      else
+                        element->setAttribute("row_span",
+                                              static_cast<int>(element->getAttribute("stop_row")) - start_val);
+                    }
+
+                  for (const auto &grid_element : element->parentElement()->children())
+                    {
+                      grid_element->querySelectors("plot")->removeAttribute("_start_aspect_ratio");
+                      for (const auto &elem : grid_element->querySelectorsAll("[_default_diag_factor]"))
+                        {
+                          elem->removeAttribute("_default_diag_factor");
+                          resetOldBoundingBoxes(elem);
+                        }
+                      resetOldBoundingBoxes(grid_element);
+                    }
+                }
+              else if (attr == "trim_row" || attr == "trim_col")
+                {
+                  const auto num_col = static_cast<int>(element->getAttribute("num_col"));
+                  const auto num_row = static_cast<int>(element->getAttribute("num_row"));
+                  std::vector<std::vector<int>> grid_matrix;
+                  // min num of empty space which all cols/rows contains
+                  int min_empty_num = attr == "trim_row" ? num_row : num_col;
+
+                  // initialize grid_matrix with layout grid
+                  for (int i = 0; i < num_row; i++)
+                    {
+                      std::vector<int> row;
+                      for (int j = 0; j < num_col; j++)
+                        {
+                          row.push_back(-1);
+                        }
+                      grid_matrix.push_back(row);
+                    }
+                  for (const auto &grid_elem : element->children())
+                    {
+                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+                      auto stop_col = static_cast<int>(grid_elem->getAttribute("_stop_col"));
+                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+                      auto stop_row = static_cast<int>(grid_elem->getAttribute("_stop_row"));
+
+                      for (int i = start_row; i < stop_row; i++)
+                        {
+                          for (int j = start_col; j < stop_col; j++)
+                            {
+                              grid_matrix[i][j] = 1;
+                            }
+                        }
+                    }
+
+                  // calculate amount of rows/cols which can be removed in each col/row
+                  for (int j = 0; j < (attr == "trim_row" ? num_col : num_row); j++)
+                    {
+                      int cnt = 0;
+                      for (int i = 0; i < (attr == "trim_row" ? num_row : num_col); i++)
+                        {
+                          if ((attr == "trim_row" && grid_matrix[i][j] == -1) ||
+                              (attr == "trim_col" && grid_matrix[j][i] == -1))
+                            cnt += 1;
+                        }
+                      min_empty_num = grm_min(min_empty_num, cnt);
+                    }
+
+                  // remove min num of empty grid elements in each col/row
+                  if (min_empty_num > 0)
+                    {
+                      for (int j = 0; j < (attr == "trim_row" ? num_col : num_row); j++)
+                        {
+                          int removed_spaces = 0;
+                          for (int i = 0; i < (attr == "trim_row" ? num_row : num_col); i++)
+                            {
+                              int matrix_entry;
+                              if (attr == "trim_row")
+                                matrix_entry = grid_matrix[i][j];
+                              else
+                                matrix_entry = grid_matrix[j][i];
+                              if (matrix_entry == -1 && removed_spaces < min_empty_num)
+                                {
+                                  removed_spaces += 1;
+                                }
+                              else if (removed_spaces != 0 && matrix_entry != -1)
+                                {
+                                  std::shared_ptr<GRM::Element> grid_elem;
+                                  if (attr == "trim_row")
+                                    {
+                                      grid_elem =
+                                          element->querySelectors("layout_grid_element[position=\"" +
+                                                                  std::to_string(i) + " " + std::to_string(j) + "\"]");
+                                    }
+                                  else
+                                    {
+                                      grid_elem =
+                                          element->querySelectors("layout_grid_element[position=\"" +
+                                                                  std::to_string(j) + " " + std::to_string(i) + "\"]");
+                                    }
+                                  if (grid_elem != nullptr)
+                                    {
+                                      auto start_row = static_cast<int>(grid_elem->getAttribute("_start_row"));
+                                      auto stop_row = static_cast<int>(grid_elem->getAttribute("_stop_row"));
+                                      auto start_col = static_cast<int>(grid_elem->getAttribute("_start_col"));
+                                      auto stop_col = static_cast<int>(grid_elem->getAttribute("_stop_col"));
+
+                                      if (attr == "trim_row")
+                                        {
+                                          grid_elem->setAttribute("_start_row", start_row - removed_spaces);
+                                          grid_elem->setAttribute("_stop_row", stop_row - removed_spaces);
+                                          grid_elem->setAttribute("position",
+                                                                  std::to_string(start_row - removed_spaces) + " " +
+                                                                      std::to_string(start_col));
+                                        }
+                                      else
+                                        {
+                                          grid_elem->setAttribute("_start_col", start_col - removed_spaces);
+                                          grid_elem->setAttribute("_stop_col", stop_col - removed_spaces);
+                                          grid_elem->setAttribute("position",
+                                                                  std::to_string(start_row) + " " +
+                                                                      std::to_string(start_col - removed_spaces));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                      automatic_update = false;
+                      if (attr == "trim_row")
+                        element->setAttribute("num_row", num_row - min_empty_num);
+                      else
+                        element->setAttribute("num_col", num_col - min_empty_num);
+                      automatic_update = true;
+
+                      for (const auto &grid_element : element->children())
+                        {
+                          grid_element->querySelectors("plot")->removeAttribute("_start_aspect_ratio");
+                          for (const auto &elem : grid_element->querySelectorsAll("[_default_diag_factor]"))
+                            {
+                              elem->removeAttribute("_default_diag_factor");
+                              resetOldBoundingBoxes(elem);
+                            }
+                          resetOldBoundingBoxes(grid_element);
+                        }
+                    }
+                }
+
+              // imshow needs vp which gets inflicted by the size attributes in figure, this means when the size is
+              // changed the imshow_series must be recalculated
+              auto imshow = global_render->querySelectorsAll("series_imshow");
+              for (const auto &imshow_elem : imshow)
+                {
+                  imshow_elem->setAttribute("_update_required", true);
+                }
             }
         }
       global_root->setAttribute("_modified", true);

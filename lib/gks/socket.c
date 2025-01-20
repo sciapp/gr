@@ -63,6 +63,8 @@ static int is_running = 0;
 
 #ifdef _WIN32
 
+static int wsa_initialized = 0;
+
 #define CMD_LINE_LEN (32767 + 10)
 /*
  * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd /c ""'
@@ -182,13 +184,17 @@ static int connect_socket(char *server, char *servname, int quiet)
   int opt;
 
 #if defined(_WIN32)
-  WORD wVersionRequested = MAKEWORD(1, 1);
-  WSADATA wsaData;
-
-  if (WSAStartup(wVersionRequested, &wsaData) != 0)
+  if (!wsa_initialized)
     {
-      fprintf(stderr, "Can't find a usable WinSock DLL\n");
-      return -1;
+      WORD wVersionRequested = MAKEWORD(1, 1);
+      WSADATA wsaData;
+
+      if (WSAStartup(wVersionRequested, &wsaData) != 0)
+        {
+          fprintf(stderr, "Can't find a usable WinSock DLL\n");
+          return -1;
+        }
+      wsa_initialized = 1;
     }
 #endif
 
@@ -283,7 +289,7 @@ static int open_socket(int wstype)
         {
           if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\gksqt.exe", GRDIR);
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\gksqt.exe", GRDIR);
             }
           else
             {
@@ -372,6 +378,12 @@ static int send_socket(int s, char *buf, int size, int ignore_error)
 {
   int sent, n = 0;
 
+  /*
+   * If this routine is called from an exit handler, the WinSock library might already be unloaded, leading to sending
+   * errors. This cannot be avoided, so always ignore send errors if called from an exit handler.
+   */
+  if (gkss != NULL && gkss->in_exit_handler) ignore_error = 1;
+
   for (sent = 0; sent < size; sent += n)
     {
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
@@ -422,6 +434,7 @@ static int close_socket(int s)
 #endif
 #if defined(_WIN32) && !defined(__GNUC__)
   WSACleanup();
+  wsa_initialized = 0;
 #endif
   return 0;
 }

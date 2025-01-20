@@ -778,14 +778,9 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
-  if (gkss->nominal_size > 0)
-    {
-      p->nominal_size = 558 / 500.0 * gkss->nominal_size;
-    }
-  else
-    {
-      p->nominal_size = min(p->width, p->height) / 500.0;
-    }
+
+  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 }
 
 static void seg_xform(double *x, double *y)
@@ -873,7 +868,8 @@ static void open_ws(int fd, int wstype)
   p->viewport[0] = p->viewport[2] = 0;
   p->viewport[1] = p->viewport[3] = 0.1984;
   p->width = p->height = 558;
-  p->nominal_size = 558 / 500.0;
+  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
   p->empty = 1;
 
@@ -2225,6 +2221,12 @@ void gks_drv_js(
 
       set_xform();
       init_norm_xform();
+      break;
+
+    case 109:
+      /* set nominal size */
+      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
       break;
 
     case 203:
