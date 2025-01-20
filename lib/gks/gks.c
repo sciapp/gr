@@ -384,7 +384,7 @@ static int gks_parse_encoding(const char *encoding)
 
 static void gks_exit_handler(void)
 {
-  s->in_exit_handler = 1;
+  if (s != NULL) s->in_exit_handler = 1;
   gks_emergency_close();
 }
 
