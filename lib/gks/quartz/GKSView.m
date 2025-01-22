@@ -685,6 +685,8 @@ static void seg_xform_rel(double *x, double *y) {}
       double scale = [self.window backingScaleFactor];
       c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 
+      NSSize boundsSizeBefore = self.bounds.size;
+
       layer = CGLayerCreateWithContext(c, CGSizeMake(self.bounds.size.width * scale, self.bounds.size.height * scale),
                                        NULL);
       context = CGLayerGetContext(layer);
@@ -707,6 +709,7 @@ static void seg_xform_rel(double *x, double *y) {}
         }
 
       [self interp:buffer];
+      NSSize boundsSizeAfter = self.bounds.size;
       CGContextDrawLayerInRect(c, CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height), layer);
 
       CGContextFlush(context);
@@ -717,7 +720,21 @@ static void seg_xform_rel(double *x, double *y) {}
 
       context = (CGContextRef)[contextStack lastObject];
       layer = (CGLayerRef)[layerStack lastObject];
+
+      if (boundsSizeBefore.width != boundsSizeAfter.width || boundsSizeBefore.height != boundsSizeAfter.height)
+        {
+          [NSTimer scheduledTimerWithTimeInterval:0.0f
+                                           target:self
+                                         selector:@selector(setNeedsDisplayAfterResize)
+                                         userInfo:nil
+                                          repeats:NO];
+        }
     }
+}
+
+- (void)setNeedsDisplayAfterResize
+{
+  [self setNeedsDisplay:YES];
 }
 
 - (void)setDisplayList:(id)display_list
