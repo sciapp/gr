@@ -1227,7 +1227,7 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
   tooltip_list = tooltip_reflist_new();
   error_cleanup_if(tooltip_list == nullptr);
 
-  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips, true) != ERROR_NONE);
 
   y = static_cast<double *>(malloc(tooltip_list->size * sizeof(double)));
   error_cleanup_if(y == nullptr);
@@ -1299,7 +1299,8 @@ error_cleanup:
   return nullptr;
 }
 
-err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
+                    bool accumulated = false)
 {
   double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
@@ -1578,12 +1579,13 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
 
                       y_px = (y_px - b) / a;
                     }
-                  if (y_px < y_range_min || y_px > y_range_max) continue;
+                  if (!accumulated && (y_px < y_range_min || y_px > y_range_max)) continue;
 
                   gr_wctondc(&x_px, &y_px);
                   x_px = x_px * max_width_height;
                   y_px = y_px * max_width_height;
                   diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
+                  if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
                   if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                     {
                       mindiff = diff;
@@ -1806,14 +1808,15 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   return ERROR_NONE;
 }
 
-err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
+                   bool accumulated)
 {
   auto render = grm_get_render();
   bool auto_update;
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
 
-  auto error = get_tooltips_(mouse_x, mouse_y, tooltip_callback);
+  auto error = get_tooltips_(mouse_x, mouse_y, tooltip_callback, accumulated);
 
   render->setAutoUpdate(auto_update);
 

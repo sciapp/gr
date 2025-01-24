@@ -97,6 +97,7 @@
             <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_selected_for_menu" type="xs:integer"/>
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a_org" type="xs:double"/>
