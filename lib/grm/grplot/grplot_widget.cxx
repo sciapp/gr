@@ -25,7 +25,6 @@
 #include <QCursor>
 
 #include "grplot_widget.hxx"
-#include "util.hxx"
 
 #ifndef GR_UNUSED
 #define GR_UNUSED(x) (void)(x)
@@ -78,10 +77,6 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
 {
-  const char *kind = "";
-  unsigned int z_length;
-  double *z = nullptr;
-  int error = 0;
   args_ = grm_args_new();
 
   enable_editor = false;
@@ -199,22 +194,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   mouseState.pressed = {0, 0};
   mouseState.anchor = {0, 0};
 
-  menu = parent->menuBar();
-  file_menu = new QMenu("&File");
-  export_menu = file_menu->addMenu("&Export");
-
   PdfAct = new QAction(tr("&PDF"), this);
   connect(PdfAct, &QAction::triggered, this, &GRPlotWidget::pdf);
-  export_menu->addAction(PdfAct);
   PngAct = new QAction(tr("&PNG"), this);
   connect(PngAct, &QAction::triggered, this, &GRPlotWidget::png);
-  export_menu->addAction(PngAct);
   JpegAct = new QAction(tr("&JPEG"), this);
   connect(JpegAct, &QAction::triggered, this, &GRPlotWidget::jpeg);
-  export_menu->addAction(JpegAct);
   SvgAct = new QAction(tr("&SVG"), this);
   connect(SvgAct, &QAction::triggered, this, &GRPlotWidget::svg);
-  export_menu->addAction(SvgAct);
 
   if (strcmp(argv[1], "--listen") == 0)
     {
@@ -262,148 +249,72 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
             }
         }
       grm_args_push(args_, "keep_aspect_ratio", "i", 1);
-      if (!grm_interactive_plot_from_file(args_, argc, argv))
-        {
-          exit(0);
-        }
+      if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
 
-      type = new QMenu("&Plot type");
-      algo = new QMenu("&Algorithm");
-      modi_menu = new QMenu("&Modi");
+      heatmapAct = new QAction(tr("&Heatmap"), this);
+      connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
+      marginalheatmapAllAct = new QAction(tr("&Type 1 all"), this);
+      connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
+      marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
+      connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
+      surfaceAct = new QAction(tr("&Surface"), this);
+      connect(surfaceAct, &QAction::triggered, this, &GRPlotWidget::surface);
+      wireframeAct = new QAction(tr("&Wireframe"), this);
+      connect(wireframeAct, &QAction::triggered, this, &GRPlotWidget::wireframe);
+      contourAct = new QAction(tr("&Contour"), this);
+      connect(contourAct, &QAction::triggered, this, &GRPlotWidget::contour);
+      imshowAct = new QAction(tr("&Imshow"), this);
+      connect(imshowAct, &QAction::triggered, this, &GRPlotWidget::imshow);
+      sumAct = new QAction(tr("&Sum"), this);
+      connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
+      maxAct = new QAction(tr("&Maximum"), this);
+      connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
+      contourfAct = new QAction(tr("&Contourf"), this);
+      connect(contourfAct, &QAction::triggered, this, &GRPlotWidget::contourf);
+      lineAct = new QAction(tr("&Line"), this);
+      connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
+      scatterAct = new QAction(tr("&Scatter"), this);
+      connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
+      volumeAct = new QAction(tr("&Volume"), this);
+      connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
+      isosurfaceAct = new QAction(tr("&Isosurface"), this);
+      connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
+      plot3Act = new QAction(tr("&Plot3"), this);
+      connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
+      trisurfAct = new QAction(tr("&Trisurface"), this);
+      connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
+      tricontAct = new QAction(tr("&Tricontour"), this);
+      connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
+      scatter3Act = new QAction(tr("&Scatter3"), this);
+      connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
+      histogramAct = new QAction(tr("&Histogram"), this);
+      connect(histogramAct, &QAction::triggered, this, &GRPlotWidget::histogram);
+      barplotAct = new QAction(tr("&Barplot"), this);
+      connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
+      stairsAct = new QAction(tr("&Stairs"), this);
+      connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
+      stemAct = new QAction(tr("&Stem"), this);
+      connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
+      shadeAct = new QAction(tr("&Shade"), this);
+      connect(shadeAct, &QAction::triggered, this, &GRPlotWidget::shade);
+      hexbinAct = new QAction(tr("&Hexbin"), this);
+      connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
+      polarLineAct = new QAction(tr("&Polar Line"), this);
+      connect(polarLineAct, &QAction::triggered, this, &GRPlotWidget::polar_line);
+      polarScatterAct = new QAction(tr("&Polar Scatter"), this);
+      connect(polarScatterAct, &QAction::triggered, this, &GRPlotWidget::polar_scatter);
 
-      grm_args_values(args_, "kind", "s", &kind);
-      if (grm_args_contains(args_, "error"))
-        {
-          error = 1;
-          fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
-        }
-      if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
-          strcmp(kind, "marginal_heatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
-          strcmp(kind, "contourf") == 0)
-        {
-          auto submenu = type->addMenu("&Marginal-heatmap");
-
-          heatmapAct = new QAction(tr("&Heatmap"), this);
-          connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
-          marginalheatmapAllAct = new QAction(tr("&Type 1 all"), this);
-          connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
-          marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
-          connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
-          surfaceAct = new QAction(tr("&Surface"), this);
-          connect(surfaceAct, &QAction::triggered, this, &GRPlotWidget::surface);
-          wireframeAct = new QAction(tr("&Wireframe"), this);
-          connect(wireframeAct, &QAction::triggered, this, &GRPlotWidget::wireframe);
-          contourAct = new QAction(tr("&Contour"), this);
-          connect(contourAct, &QAction::triggered, this, &GRPlotWidget::contour);
-          imshowAct = new QAction(tr("&Imshow"), this);
-          connect(imshowAct, &QAction::triggered, this, &GRPlotWidget::imshow);
-          sumAct = new QAction(tr("&Sum"), this);
-          connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
-          maxAct = new QAction(tr("&Maximum"), this);
-          connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
-          contourfAct = new QAction(tr("&Contourf"), this);
-          connect(contourfAct, &QAction::triggered, this, &GRPlotWidget::contourf);
-
-          submenu->addAction(marginalheatmapAllAct);
-          submenu->addAction(marginalheatmapLineAct);
-          type->addAction(heatmapAct);
-          type->addAction(surfaceAct);
-          type->addAction(wireframeAct);
-          type->addAction(contourAct);
-          type->addAction(imshowAct);
-          type->addAction(contourfAct);
-          algo->addAction(sumAct);
-          algo->addAction(maxAct);
-          algo->menuAction()->setVisible(false);
-          if (strcmp(kind, "marginal_heatmap") == 0)
-            {
-              algo->menuAction()->setVisible(true);
-            }
-        }
-      else if (strcmp(kind, "line") == 0 ||
-               (strcmp(kind, "scatter") == 0 && !grm_args_values(args_, "z", "D", &z, &z_length)))
-        {
-          lineAct = new QAction(tr("&Line"), this);
-          connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
-          scatterAct = new QAction(tr("&Scatter"), this);
-          connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
-          type->addAction(lineAct);
-          type->addAction(scatterAct);
-        }
-      else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
-        {
-          volumeAct = new QAction(tr("&Volume"), this);
-          connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
-          isosurfaceAct = new QAction(tr("&Isosurface"), this);
-          connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
-          type->addAction(volumeAct);
-          type->addAction(isosurfaceAct);
-        }
-      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurface") == 0 || strcmp(kind, "tricontour") == 0 ||
-               strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
-        {
-          plot3Act = new QAction(tr("&Plot3"), this);
-          connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
-          trisurfAct = new QAction(tr("&Trisurface"), this);
-          connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
-          tricontAct = new QAction(tr("&Tricontour"), this);
-          connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
-          scatter3Act = new QAction(tr("&Scatter3"), this);
-          connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
-          scatterAct = new QAction(tr("&Scatter"), this);
-          connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
-          type->addAction(plot3Act);
-          type->addAction(trisurfAct);
-          type->addAction(tricontAct);
-          type->addAction(scatter3Act);
-          type->addAction(scatterAct);
-        }
-      else if ((strcmp(kind, "histogram") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
-                strcmp(kind, "stem") == 0) &&
-               !error)
-        {
-          histogramAct = new QAction(tr("&Histogram"), this);
-          connect(histogramAct, &QAction::triggered, this, &GRPlotWidget::histogram);
-          barplotAct = new QAction(tr("&Barplot"), this);
-          connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
-          stairsAct = new QAction(tr("&Stairs"), this);
-          connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
-          stemAct = new QAction(tr("&Stem"), this);
-          connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
-          type->addAction(histogramAct);
-          type->addAction(barplotAct);
-          type->addAction(stairsAct);
-          type->addAction(stemAct);
-        }
-      else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
-        {
-          shadeAct = new QAction(tr("&Shade"), this);
-          connect(shadeAct, &QAction::triggered, this, &GRPlotWidget::shade);
-          hexbinAct = new QAction(tr("&Hexbin"), this);
-          connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
-          type->addAction(shadeAct);
-          type->addAction(hexbinAct);
-        }
-      else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
-        {
-          polarLineAct = new QAction(tr("&Polar Line"), this);
-          connect(polarLineAct, &QAction::triggered, this, &GRPlotWidget::polar_line);
-          polarScatterAct = new QAction(tr("&Polar Scatter"), this);
-          connect(polarScatterAct, &QAction::triggered, this, &GRPlotWidget::polar_scatter);
-          type->addAction(polarLineAct);
-          type->addAction(polarScatterAct);
-        }
+      hidePlotTypeMenuElements();
       moveableModeAct = new QAction(tr("&Disable movable transformation"), this);
       connect(moveableModeAct, &QAction::triggered, this, &GRPlotWidget::moveableMode);
-      modi_menu->addAction(moveableModeAct);
 
-      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
-        {
-          menu->addMenu(file_menu);
-          menu->addMenu(type);
-          menu->addMenu(algo);
-          menu->addMenu(modi_menu);
-        }
+      hide_algo_menu_act = new QAction(this);
+      show_algo_menu_act = new QAction(this);
+      hide_marginal_sub_menu_act = new QAction(this);
+      show_marginal_sub_menu_act = new QAction(this);
+      hide_configuration_menu_act = new QAction(this);
+      show_configuration_menu_act = new QAction(this);
+      add_seperator_act = new QAction(this);
     }
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
@@ -416,68 +327,89 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       add_element_widget = new AddElementWidget(this);
       add_element_widget->hide();
 
-      editor_menu = new QMenu(tr("&Editor"));
       editor_action = new QAction(tr("&Enable Editorview"));
       editor_action->setCheckable(true);
-      editor_menu->addAction(editor_action);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enable_editor_functions()));
 
       save_file_action = new QAction("&Save");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
-      file_menu->addAction(save_file_action);
       QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(save_file_slot()));
 
       load_file_action = new QAction("&Load");
       load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
-      file_menu->addAction(load_file_action);
       QObject::connect(load_file_action, SIGNAL(triggered()), this, SLOT(load_file_slot()));
 
-      configuration_menu = editor_menu->addMenu(tr("&Show"));
-      configuration_menu->menuAction()->setVisible(false);
       show_container_action = new QAction(tr("&GRM Container"));
       show_container_action->setCheckable(true);
       show_container_action->setShortcut(Qt::CTRL | Qt::Key_C);
       show_container_action->setVisible(false);
-      configuration_menu->addAction(show_container_action);
       QObject::connect(show_container_action, SIGNAL(triggered()), this, SLOT(show_container_slot()));
 
       show_bounding_boxes_action = new QAction(tr("&Bounding Boxes"));
       show_bounding_boxes_action->setCheckable(true);
       show_bounding_boxes_action->setShortcut(Qt::CTRL | Qt::Key_B);
       show_bounding_boxes_action->setVisible(false);
-      configuration_menu->addAction(show_bounding_boxes_action);
       QObject::connect(show_bounding_boxes_action, SIGNAL(triggered()), this, SLOT(show_bounding_boxes_slot()));
 
       add_element_action = new QAction("&Add Element");
       add_element_action->setCheckable(true);
       add_element_action->setShortcut(Qt::CTRL | Qt::Key_Plus);
-      editor_menu->addAction(add_element_action);
       QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
       add_element_action->setVisible(false);
 
-      context_menu = new QMenu("&Data");
-      add_context_data = new QMenu("Add Data-Context");
       show_context_action = new QAction(tr("&Display Data-Context"));
       show_context_action->setCheckable(true);
       QObject::connect(show_context_action, SIGNAL(triggered()), this, SLOT(showContextSlot()));
-      context_menu->addAction(show_context_action);
       add_context_action = new QAction(tr("&Column files"));
       QObject::connect(add_context_action, SIGNAL(triggered()), this, SLOT(addContextSlot()));
-      add_context_data->addAction(add_context_action);
       add_grplot_data_context = new QAction(tr("&Interpret matrix as 1 column data"));
       QObject::connect(add_grplot_data_context, SIGNAL(triggered()), this, SLOT(addGRPlotDataContextSlot()));
-      add_context_data->addAction(add_grplot_data_context);
       generate_linear_context_action = new QAction(tr("&Generate linear Data-Context"));
       QObject::connect(generate_linear_context_action, SIGNAL(triggered()), this, SLOT(generateLinearContextSlot()));
-      add_context_data->addAction(generate_linear_context_action);
-
-      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
-        {
-          menu->addMenu(editor_menu);
-          menu->addMenu(context_menu);
-          context_menu->addMenu(add_context_data);
-        }
     }
+}
+
+GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
+    : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
+{
+  args_ = args;
+
+  enable_editor = false;
+  highlightBoundingObjects = false;
+  bounding_logic = new Bounding_logic();
+  current_selection = nullptr;
+  amount_scrolled = 0;
+  selected_parent = nullptr;
+  treewidget = nullptr;
+  table_widget = nullptr;
+  add_element_widget = nullptr;
+  edit_element_widget = nullptr;
+  csr = new QCursor(Qt::ArrowCursor);
+  setCursor(*csr);
+
+#ifdef _WIN32
+  putenv("GKS_WSTYPE=381");
+  putenv("GKS_DOUBLE_BUF=True");
+#else
+  setenv("GKS_WSTYPE", "381", 1);
+  setenv("GKS_DOUBLE_BUF", "True", 1);
+#endif
+
+  rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+  setFocusPolicy(Qt::FocusPolicy::StrongFocus); // needed to receive key press events
+  setMouseTracking(true);
+  mouseState.mode = MouseState::Mode::normal;
+  mouseState.pressed = {0, 0};
+  mouseState.anchor = {0, 0};
+
+  PdfAct = new QAction(tr("&PDF"), this);
+  connect(PdfAct, &QAction::triggered, this, &GRPlotWidget::pdf);
+  PngAct = new QAction(tr("&PNG"), this);
+  connect(PngAct, &QAction::triggered, this, &GRPlotWidget::png);
+  JpegAct = new QAction(tr("&JPEG"), this);
+  connect(JpegAct, &QAction::triggered, this, &GRPlotWidget::jpeg);
+  SvgAct = new QAction(tr("&SVG"), this);
+  connect(SvgAct, &QAction::triggered, this, &GRPlotWidget::svg);
 }
 
 GRPlotWidget::~GRPlotWidget()
@@ -1141,9 +1073,12 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-      if (!table_widget->isVisible() && show_context_action->isChecked()) show_context_action->setChecked(false);
-      if (!treewidget->isVisible() && show_container_action->isChecked()) show_container_action->setChecked(false);
-      if (!add_element_widget->isVisible() && add_element_action->isChecked()) add_element_action->setChecked(false);
+      if (table_widget != nullptr && !table_widget->isVisible() && show_context_action->isChecked())
+        show_context_action->setChecked(false);
+      if (treewidget != nullptr && !treewidget->isVisible() && show_container_action->isChecked())
+        show_container_action->setChecked(false);
+      if (add_element_widget != nullptr && !add_element_widget->isVisible() && add_element_action->isChecked())
+        add_element_action->setChecked(false);
     }
   util::unused(event);
   paint(this);
@@ -1186,7 +1121,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       painter.end();
       redraw_pixmap = false;
 
-      if (tree_update) treewidget->updateData(grm_get_document_root());
+      if (treewidget != nullptr && tree_update) treewidget->updateData(grm_get_document_root());
       emit pixmapRedrawn();
     }
 
@@ -1195,6 +1130,11 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   bounding_logic->clear();
   extract_bounding_boxes_from_grm((QPainter &)painter);
   highlight_current_selection((QPainter &)painter);
+  // Todo: trigger this method in non multiplot case where 1 plot has different series when not all elements has to be
+  // processed to figure out which kinds are all used
+  auto global_root = grm_get_document_root();
+  if (global_root->querySelectors("layout_grid") == nullptr)
+    adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot"));
   if (!tooltips.empty() && !enable_editor)
     {
       for (const auto &tooltip : tooltips)
@@ -1257,7 +1197,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               auto x = (double)tooltip.x_px() / max_width_height;
               auto y = (double)(height - tooltip.y_px()) / max_width_height;
               auto plot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
-              kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
+              if (plot_element != nullptr && plot_element->hasAttribute("_kind"))
+                kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
               if (kind == "heatmap" || kind == "marginal_heatmap" || kind == "contourf" || kind == "imshow")
                 background.setAlpha(224);
 
@@ -1617,10 +1558,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
               update();
               return;
             }
-          else
-            {
-              clicked = cur_clicked;
-            }
+          clicked = cur_clicked;
           current_selection = &clicked[0];
           if (ctrl_key_mode)
             {
@@ -1649,6 +1587,27 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
         }
       else
         {
+          auto global_root = grm_get_document_root();
+          // mark the last clicked plot to adjust the plot type menu
+          if (global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid"))
+            {
+              int width, height;
+              GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+              auto max_width_height = std::max(width, height);
+              auto ndc_x = (double)x / max_width_height;
+              auto ndc_y = (double)(height - y) / max_width_height;
+              auto plot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
+              if (plot_element != nullptr)
+                {
+                  for (const auto &selected : global_root->querySelectorsAll("[_selected_for_menu]"))
+                    {
+                      selected->removeAttribute("_selected_for_menu");
+                    }
+                  plot_element->setAttribute("_selected_for_menu", true);
+                  adjustPlotTypeMenu(plot_element);
+                }
+            }
+
           if (cursor_state == DEFAULT_HOVER_MODE)
             {
               csr->setShape(Qt::ArrowCursor);
@@ -1860,13 +1819,16 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
 void GRPlotWidget::heatmap()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "heatmap");
@@ -1877,20 +1839,23 @@ void GRPlotWidget::heatmap()
 
 void GRPlotWidget::marginalheatmapall()
 {
-  algo->menuAction()->setVisible(true);
+  show_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_heatmap", "series_surface",  "series_wireframe",
                                                  "series_contour", "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           if (series_elem->parentElement()->parentElement()->localName() != "marginal_heatmap_plot")
             series_elem->setAttribute("kind", "marginal_heatmap");
         }
     }
-  for (const auto &series_elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
+  for (const auto &series_elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       series_elem->setAttribute("marginal_heatmap_kind", "all");
     }
@@ -1899,20 +1864,23 @@ void GRPlotWidget::marginalheatmapall()
 
 void GRPlotWidget::marginalheatmapline()
 {
-  algo->menuAction()->setVisible(true);
+  show_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_heatmap", "series_surface",  "series_wireframe",
                                                  "series_contour", "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           if (series_elem->parentElement()->parentElement()->localName() != "marginal_heatmap_plot")
             series_elem->setAttribute("kind", "marginal_heatmap");
         }
     }
-  for (const auto &series_elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
+  for (const auto &series_elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       series_elem->setAttribute("marginal_heatmap_kind", "line");
     }
@@ -1922,13 +1890,16 @@ void GRPlotWidget::marginalheatmapline()
 void GRPlotWidget::line()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_scatter"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_scatter"))
     {
       elem->setAttribute("kind", "line");
     }
 
   // to get the same lines then before all lines have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_line"))
+  for (const auto &elem : plot_elem->querySelectorsAll("series_line"))
     {
       elem->setAttribute("_update_required", true);
     }
@@ -1938,7 +1909,10 @@ void GRPlotWidget::line()
 void GRPlotWidget::sumalgorithm()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "sum");
     }
@@ -1948,7 +1922,10 @@ void GRPlotWidget::sumalgorithm()
 void GRPlotWidget::maxalgorithm()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "max");
     }
@@ -1958,7 +1935,10 @@ void GRPlotWidget::maxalgorithm()
 void GRPlotWidget::volume()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_isosurface"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_isosurface"))
     {
       elem->setAttribute("kind", "volume");
     }
@@ -1967,7 +1947,10 @@ void GRPlotWidget::volume()
 void GRPlotWidget::isosurface()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_volume"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_volume"))
     {
       elem->setAttribute("kind", "isosurface");
     }
@@ -1976,13 +1959,16 @@ void GRPlotWidget::isosurface()
 
 void GRPlotWidget::surface()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_heatmap",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "surface");
@@ -1992,13 +1978,16 @@ void GRPlotWidget::surface()
 }
 void GRPlotWidget::wireframe()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_heatmap",
                                                  "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "wireframe");
@@ -2009,13 +1998,16 @@ void GRPlotWidget::wireframe()
 
 void GRPlotWidget::contour()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_heatmap",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "contour");
@@ -2026,13 +2018,16 @@ void GRPlotWidget::contour()
 
 void GRPlotWidget::imshow()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
                                                  "series_contour",        "series_contourf", "series_heatmap"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "imshow");
@@ -2044,11 +2039,14 @@ void GRPlotWidget::imshow()
 void GRPlotWidget::plot3()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "plot3");
@@ -2059,13 +2057,16 @@ void GRPlotWidget::plot3()
 
 void GRPlotWidget::contourf()
 {
-  algo->menuAction()->setVisible(false);
+  hide_algo_menu_act->trigger();
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface", "series_wireframe",
                                                  "series_contour",        "series_heatmap", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "contourf");
@@ -2077,11 +2078,14 @@ void GRPlotWidget::contourf()
 void GRPlotWidget::trisurf()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_tricontour", "series_plot3",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "trisurface");
@@ -2093,11 +2097,14 @@ void GRPlotWidget::trisurf()
 void GRPlotWidget::tricont()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_scatter3", "series_plot3", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "tricontour");
@@ -2109,11 +2116,14 @@ void GRPlotWidget::tricont()
 void GRPlotWidget::scatter3()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_plot3", "series_tricontour", "series_trisurface",
                                                  "series_scatter"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "scatter3");
@@ -2124,8 +2134,11 @@ void GRPlotWidget::scatter3()
 
 void GRPlotWidget::scatter()
 {
-  auto root = grm_get_document_root();
-  for (const auto &elem : root->querySelectorsAll("series_line"))
+  auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_line"))
     {
       elem->setAttribute("kind", "scatter");
     }
@@ -2135,10 +2148,13 @@ void GRPlotWidget::scatter()
 void GRPlotWidget::histogram()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "histogram");
@@ -2146,7 +2162,7 @@ void GRPlotWidget::histogram()
     }
 
   // to get the same bars then before all bars have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_histogram"))
+  for (const auto &elem : plot_elem->querySelectorsAll("series_histogram"))
     {
       elem->setAttribute("_update_required", true);
     }
@@ -2156,10 +2172,13 @@ void GRPlotWidget::histogram()
 void GRPlotWidget::barplot()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_histogram", "series_stem", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "barplot");
@@ -2167,7 +2186,7 @@ void GRPlotWidget::barplot()
     }
 
   // to get the same bars then before all bars have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_barplot"))
+  for (const auto &elem : plot_elem->querySelectorsAll("series_barplot"))
     {
       elem->removeAttribute("fill_color_ind");
       elem->setAttribute("_update_required", true);
@@ -2178,10 +2197,13 @@ void GRPlotWidget::barplot()
 void GRPlotWidget::stairs()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_histogram"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "stairs");
@@ -2189,7 +2211,7 @@ void GRPlotWidget::stairs()
     }
 
   // to get the same lines then before all lines have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_stairs"))
+  for (const auto &elem : plot_elem->querySelectorsAll("series_stairs"))
     {
       elem->setAttribute("_update_required", true);
     }
@@ -2199,10 +2221,13 @@ void GRPlotWidget::stairs()
 void GRPlotWidget::stem()
 {
   auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
   std::vector<std::string> valid_series_names = {"series_barplot", "series_histogram", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
-      auto series_elements = global_root->querySelectorsAll(name);
+      auto series_elements = plot_elem->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
           series_elem->setAttribute("kind", "stem");
@@ -2214,7 +2239,10 @@ void GRPlotWidget::stem()
 void GRPlotWidget::shade()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_hexbin"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_hexbin"))
     {
       elem->setAttribute("kind", "shade");
     }
@@ -2224,7 +2252,10 @@ void GRPlotWidget::shade()
 void GRPlotWidget::hexbin()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_shade"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_shade"))
     {
       elem->setAttribute("kind", "hexbin");
     }
@@ -2234,7 +2265,10 @@ void GRPlotWidget::hexbin()
 void GRPlotWidget::polar_line()
 {
   auto global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_polar_scatter"))
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_polar_scatter"))
     {
       elem->setAttribute("kind", "polar_line");
     }
@@ -2243,8 +2277,11 @@ void GRPlotWidget::polar_line()
 
 void GRPlotWidget::polar_scatter()
 {
-  auto root = grm_get_document_root();
-  for (const auto &elem : root->querySelectorsAll("series_polar_line"))
+  auto global_root = grm_get_document_root();
+  auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                            : global_root->querySelectors("figure[active=1]");
+  for (const auto &elem : plot_elem->querySelectorsAll("series_polar_line"))
     {
       elem->setAttribute("kind", "polar_scatter");
     }
@@ -2393,6 +2430,24 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
             }
         }
     }
+  else
+    {
+      auto global_root = grm_get_document_root();
+      auto plot_elem = global_root->querySelectors("[_selected_for_menu=1]");
+      if (plot_elem != nullptr)
+        {
+          int width, height;
+          double mwidth, mheight;
+          GRM::Render::getFigureSize(&width, &height, &mwidth, &mheight);
+          auto aspect_r = mwidth / mheight;
+          auto vp_xmin = static_cast<double>(plot_elem->getAttribute("viewport_x_min")) * width;
+          auto vp_xmax = static_cast<double>(plot_elem->getAttribute("viewport_x_max")) * width;
+          auto vp_ymin = static_cast<double>(plot_elem->getAttribute("viewport_y_min")) * aspect_r * height;
+          auto vp_ymax = static_cast<double>(plot_elem->getAttribute("viewport_y_max")) * aspect_r * height;
+
+          painter.drawRect(vp_xmin, std::max(0.0, height - vp_ymax), abs(vp_xmax - vp_xmin), abs(vp_ymax - vp_ymin));
+        }
+    }
 }
 
 void GRPlotWidget::leaveEvent(QEvent *event)
@@ -2515,7 +2570,7 @@ void GRPlotWidget::enable_editor_functions()
       show_bounding_boxes_action->setChecked(false);
       show_container_action->setVisible(true);
       show_container_action->setChecked(false);
-      configuration_menu->menuAction()->setVisible(true);
+      show_configuration_menu_act->trigger();
       editor_action->setText(tr("&Disable Editorview"));
 
       // dirty reset of screen position
@@ -2537,7 +2592,7 @@ void GRPlotWidget::enable_editor_functions()
       show_bounding_boxes_action->setChecked(false);
       show_container_action->setVisible(false);
       show_container_action->setChecked(false);
-      configuration_menu->menuAction()->setVisible(false);
+      hide_configuration_menu_act->trigger();
       treewidget->hide();
       add_element_widget->hide();
       editor_action->setText(tr("&Enable Editorview"));
@@ -3107,4 +3162,354 @@ void GRPlotWidget::editElementAccepted()
 void GRPlotWidget::set_referenced_elements(std::vector<Bounding_object> referenced_elements)
 {
   this->referenced_elements = referenced_elements;
+}
+
+void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
+{
+  bool error = false;
+  auto central_region = plot_parent->querySelectors("central_region");
+  if (central_region == nullptr) return;
+
+  // hide all menu elements
+  if (treewidget != nullptr) // dummy elem which only exist in default grplot case
+    {
+      hidePlotTypeMenuElements();
+      hide_marginal_sub_menu_act->trigger();
+      hide_algo_menu_act->trigger();
+
+      if (grm_args_contains(args_, "error"))
+        {
+          error = true;
+          fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
+        }
+
+      for (const auto &series : central_region->children())
+        {
+          int z, z_length;
+          if (!util::startsWith(series->localName(), "series_")) continue;
+          auto kind = static_cast<std::string>(series->getAttribute("kind"));
+
+          if (kind == "contour" || kind == "heatmap" || kind == "imshow" || kind == "marginal_heatmap" ||
+              kind == "surface" || kind == "wireframe" || kind == "contourf")
+            {
+              if (kind == "marginal_heatmap") show_algo_menu_act->trigger();
+
+              heatmapAct->setVisible(true);
+              surfaceAct->setVisible(true);
+              wireframeAct->setVisible(true);
+              contourAct->setVisible(true);
+              contourfAct->setVisible(true);
+              imshowAct->setVisible(true);
+              show_marginal_sub_menu_act->trigger();
+            }
+          else if (kind == "line" || (kind == "scatter" && !grm_args_values(args_, "z", "D", &z, &z_length)))
+            {
+              lineAct->setVisible(true);
+              scatterAct->setVisible(true);
+            }
+          else if (kind == "volume" || kind == "isosurface")
+            {
+              volumeAct->setVisible(true);
+              isosurfaceAct->setVisible(true);
+            }
+          else if (kind == "plot3" || kind == "trisurface" || kind == "tricontour" || kind == "scatter3" ||
+                   kind == "scatter")
+            {
+              plot3Act->setVisible(true);
+              trisurfAct->setVisible(true);
+              tricontAct->setVisible(true);
+              scatter3Act->setVisible(true);
+              scatterAct->setVisible(true);
+            }
+          else if ((kind == "histogram" || kind == "barplot" || kind == "stairs" || kind == "stem") && !error)
+            {
+              histogramAct->setVisible(true);
+              barplotAct->setVisible(true);
+              stairsAct->setVisible(true);
+              stemAct->setVisible(true);
+            }
+          else if (kind == "shade" || kind == "hexbin")
+            {
+              shadeAct->setVisible(true);
+              hexbinAct->setVisible(true);
+            }
+          else if (kind == "polar_line" || kind == "polar_scatter")
+            {
+              polarLineAct->setVisible(true);
+              polarScatterAct->setVisible(true);
+            }
+          add_seperator_act->trigger();
+        }
+    }
+}
+
+void GRPlotWidget::hidePlotTypeMenuElements()
+{
+  heatmapAct->setVisible(false);
+  surfaceAct->setVisible(false);
+  wireframeAct->setVisible(false);
+  contourAct->setVisible(false);
+  contourfAct->setVisible(false);
+  imshowAct->setVisible(false);
+  lineAct->setVisible(false);
+  scatterAct->setVisible(false);
+  volumeAct->setVisible(false);
+  isosurfaceAct->setVisible(false);
+  plot3Act->setVisible(false);
+  trisurfAct->setVisible(false);
+  tricontAct->setVisible(false);
+  scatter3Act->setVisible(false);
+  histogramAct->setVisible(false);
+  barplotAct->setVisible(false);
+  stairsAct->setVisible(false);
+  stemAct->setVisible(false);
+  shadeAct->setVisible(false);
+  hexbinAct->setVisible(false);
+  polarLineAct->setVisible(false);
+  polarScatterAct->setVisible(false);
+}
+
+QAction *GRPlotWidget::getPdfAct()
+{
+  return PdfAct;
+}
+
+QAction *GRPlotWidget::getPngAct()
+{
+  return PngAct;
+}
+
+QAction *GRPlotWidget::getJpegAct()
+{
+  return JpegAct;
+}
+
+QAction *GRPlotWidget::getSvgAct()
+{
+  return SvgAct;
+}
+
+QAction *GRPlotWidget::getPlot3Act()
+{
+  return plot3Act;
+}
+
+QAction *GRPlotWidget::getTrisurfAct()
+{
+  return trisurfAct;
+}
+
+QAction *GRPlotWidget::getTricontAct()
+{
+  return tricontAct;
+}
+
+QAction *GRPlotWidget::getScatter3Act()
+{
+  return scatter3Act;
+}
+
+QAction *GRPlotWidget::getHistogramAct()
+{
+  return histogramAct;
+}
+
+QAction *GRPlotWidget::getBarplotAct()
+{
+  return barplotAct;
+}
+
+QAction *GRPlotWidget::getStairsAct()
+{
+  return stairsAct;
+}
+
+QAction *GRPlotWidget::getStemAct()
+{
+  return stemAct;
+}
+
+QAction *GRPlotWidget::getShadeAct()
+{
+  return shadeAct;
+}
+
+QAction *GRPlotWidget::getHexbinAct()
+{
+  return hexbinAct;
+}
+
+QAction *GRPlotWidget::getPolarLineAct()
+{
+  return polarLineAct;
+}
+
+QAction *GRPlotWidget::getPolarScatterAct()
+{
+  return polarScatterAct;
+}
+
+QAction *GRPlotWidget::getLineAct()
+{
+  return lineAct;
+}
+
+QAction *GRPlotWidget::getScatterAct()
+{
+  return scatterAct;
+}
+
+QAction *GRPlotWidget::getVolumeAct()
+{
+  return volumeAct;
+}
+
+QAction *GRPlotWidget::getIsosurfaceAct()
+{
+  return isosurfaceAct;
+}
+
+QAction *GRPlotWidget::getHeatmapAct()
+{
+  return heatmapAct;
+}
+
+QAction *GRPlotWidget::getSurfaceAct()
+{
+  return surfaceAct;
+}
+
+QAction *GRPlotWidget::getWireframeAct()
+{
+  return wireframeAct;
+}
+
+QAction *GRPlotWidget::getContourAct()
+{
+  return contourAct;
+}
+
+QAction *GRPlotWidget::getImshowAct()
+{
+  return imshowAct;
+}
+
+QAction *GRPlotWidget::getContourfAct()
+{
+  return contourfAct;
+}
+
+QAction *GRPlotWidget::getSumAct()
+{
+  return sumAct;
+}
+
+QAction *GRPlotWidget::getMaxAct()
+{
+  return maxAct;
+}
+
+QAction *GRPlotWidget::getMarginalHeatmapAllAct()
+{
+  return marginalheatmapAllAct;
+}
+
+QAction *GRPlotWidget::getMarginalHeatmapLineAct()
+{
+  return marginalheatmapLineAct;
+}
+
+QAction *GRPlotWidget::getMovableModeAct()
+{
+  return moveableModeAct;
+}
+
+QAction *GRPlotWidget::getEditorAct()
+{
+  return editor_action;
+}
+
+QAction *GRPlotWidget::getSaveFileAct()
+{
+  return save_file_action;
+}
+
+QAction *GRPlotWidget::getLoadFileAct()
+{
+  return load_file_action;
+}
+
+QAction *GRPlotWidget::getShowContainerAct()
+{
+  return show_container_action;
+}
+
+QAction *GRPlotWidget::getShowBoundingBoxesAct()
+{
+  return show_bounding_boxes_action;
+}
+
+QAction *GRPlotWidget::getAddElementAct()
+{
+  return add_element_action;
+}
+
+QAction *GRPlotWidget::getShowContextAct()
+{
+  return show_context_action;
+}
+
+QAction *GRPlotWidget::getAddContextAct()
+{
+  return add_context_action;
+}
+
+QAction *GRPlotWidget::getAddGRplotDataContextAct()
+{
+  return add_grplot_data_context;
+}
+
+QAction *GRPlotWidget::getGenerateLinearContextAct()
+{
+  return generate_linear_context_action;
+}
+
+QTextStream *GRPlotWidget::getTestCommandsStream()
+{
+  return test_commands_stream;
+}
+
+QAction *GRPlotWidget::getHideAlgoMenuAct()
+{
+  return hide_algo_menu_act;
+}
+
+QAction *GRPlotWidget::getShowAlgoMenuAct()
+{
+  return show_algo_menu_act;
+}
+
+QAction *GRPlotWidget::getHideMarginalSubMenuAct()
+{
+  return hide_marginal_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowMarginalSubMenuAct()
+{
+  return show_marginal_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getHideConfigurationMenuAct()
+{
+  return hide_configuration_menu_act;
+}
+
+QAction *GRPlotWidget::getShowConfigurationMenuAct()
+{
+  return show_configuration_menu_act;
+}
+
+QAction *GRPlotWidget::getAddSeperatorAct()
+{
+  return add_seperator_act;
 }

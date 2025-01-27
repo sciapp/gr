@@ -35,6 +35,7 @@ class GRPlotWidget : public QWidget
 
 public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
+  explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool tree_update = true);
   std::shared_ptr<GRM::Document> get_schema_tree();
@@ -57,6 +58,56 @@ public:
   void setTreeUpdate(bool status);
   void editElementAccepted();
   void set_referenced_elements(std::vector<Bounding_object> referenced_elements);
+
+  QAction *getPdfAct();
+  QAction *getPngAct();
+  QAction *getJpegAct();
+  QAction *getSvgAct();
+  QAction *getPlot3Act();
+  QAction *getTrisurfAct();
+  QAction *getTricontAct();
+  QAction *getScatter3Act();
+  QAction *getHistogramAct();
+  QAction *getBarplotAct();
+  QAction *getStairsAct();
+  QAction *getStemAct();
+  QAction *getShadeAct();
+  QAction *getHexbinAct();
+  QAction *getPolarLineAct();
+  QAction *getPolarScatterAct();
+  QAction *getLineAct();
+  QAction *getScatterAct();
+  QAction *getVolumeAct();
+  QAction *getIsosurfaceAct();
+  QAction *getHeatmapAct();
+  QAction *getSurfaceAct();
+  QAction *getWireframeAct();
+  QAction *getContourAct();
+  QAction *getImshowAct();
+  QAction *getContourfAct();
+  QAction *getSumAct();
+  QAction *getMaxAct();
+  QAction *getMarginalHeatmapAllAct();
+  QAction *getMarginalHeatmapLineAct();
+  QAction *getMovableModeAct();
+  QAction *getEditorAct();
+  QAction *getSaveFileAct();
+  QAction *getLoadFileAct();
+  QAction *getShowContainerAct();
+  QAction *getShowBoundingBoxesAct();
+  QAction *getAddElementAct();
+  QAction *getShowContextAct();
+  QAction *getAddContextAct();
+  QAction *getAddGRplotDataContextAct();
+  QAction *getGenerateLinearContextAct();
+  QTextStream *getTestCommandsStream();
+  QAction *getHideAlgoMenuAct();
+  QAction *getShowAlgoMenuAct();
+  QAction *getHideMarginalSubMenuAct();
+  QAction *getShowMarginalSubMenuAct();
+  QAction *getHideConfigurationMenuAct();
+  QAction *getShowConfigurationMenuAct();
+  QAction *getAddSeperatorAct();
 
 protected:
   virtual void draw();
@@ -228,9 +279,6 @@ private:
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
 
-  QMenuBar *menu;
-  QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
-  QMenu *file_menu, *configuration_menu, *context_menu, *add_context_data;
   QAction *marginalheatmapAllAct, *marginalheatmapLineAct;
   QAction *sumAct, *maxAct;
   QAction *lineAct, *scatterAct;
@@ -245,6 +293,8 @@ private:
       *add_element_action;
   QAction *moveableModeAct;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
+  QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
+      *hide_configuration_menu_act, *show_configuration_menu_act, *add_seperator_act;
   QCursor *csr;
 
   void reset_pixmap();
@@ -256,6 +306,8 @@ private:
   QSize sizeHint() const override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
+  void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
+  void hidePlotTypeMenuElements();
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

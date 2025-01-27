@@ -1045,6 +1045,49 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
   add_library(GR::qt6gr ALIAS qt6gr)
 endif()
 
+if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+  add_library(
+    grplotWidget SHARED
+    lib/grm/grplot/gredit/AddElementWidget.cpp
+    lib/grm/grplot/gredit/Bounding_logic.cpp
+    lib/grm/grplot/gredit/Bounding_object.cpp
+    lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+    lib/grm/grplot/gredit/EditElementWidget.cpp
+    lib/grm/grplot/gredit/TableWidget.cpp
+    lib/grm/grplot/gredit/TreeWidget.cpp
+    lib/grm/grplot/grplot_widget.cxx
+    lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
+    lib/grm/grplot/qtterm/receiver_thread.cpp
+    lib/grm/grplot/util.cxx
+  )
+  target_link_libraries(grplotWidget PUBLIC GR::GRM)
+  target_link_libraries(grplotWidget PUBLIC GR::GR)
+  target_link_libraries(grplotWidget PUBLIC Qt6::Core Qt6::Widgets)
+  target_include_directories(grplotWidget INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget>)
+  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(grplotWidget PRIVATE -fno-exceptions)
+  endif()
+  target_compile_definitions(grplotWidget PRIVATE GRDIR="${GR_DIRECTORY}")
+  target_compile_options(grplotWidget PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(grplotWidget PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
+  if(GR_MANUAL_MOC_AND_RCC)
+    set_target_properties(grplotWidget PROPERTIES AUTOMOC OFF AUTORCC OFF)
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT6_MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.cxx
+    )
+    target_sources(grplotWidget PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx)
+  else()
+    set_target_properties(grplotWidget PROPERTIES AUTOMOC ON AUTORCC ON)
+    target_sources(grplotWidget PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx)
+  endif()
+  add_library(GR::grplotWidget ALIAS grplotWidget)
+endif()
+
 string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
@@ -1511,6 +1554,15 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
+  if(TARGET grplotWidget)
+    install(
+      TARGETS grplotWidget
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
   install(
     EXPORT GRTargets
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
@@ -1600,6 +1652,13 @@ if(GR_INSTALL)
       BUNDLE DESTINATION Applications
     )
   endif()
+  if(TARGET grplotWidget)
+    install(
+      TARGETS grplotWidget
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
+    )
+  endif()
   if(TARGET grplot)
     install(
       TARGETS grplot
@@ -1619,6 +1678,15 @@ if(GR_INSTALL)
      OR TARGET qt6gr
   )
     install(FILES lib/gr/qtgr/grwidget.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  endif()
+  if(TARGET grplotWidget)
+    install(FILES lib/grm/grplot/grplot_widget.hxx lib/grm/grplot/util.hxx
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget
+    )
+    file(GLOB GREDIT_HEADERS "lib/grm/grplot/gredit/*.h")
+    install(FILES ${GREDIT_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget/gredit)
+    file(GLOB QTTERM_HEADERS "lib/grm/grplot/qtterm/*.h")
+    install(FILES ${QTTERM_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget/qtterm)
   endif()
   install(
     DIRECTORY lib/gks/fonts
