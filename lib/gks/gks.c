@@ -3402,6 +3402,32 @@ void gks_cancel_bbox_callback(void)
     gks_report_error(GKS_CANCEL_BBOX_CALLBACK, 5);
 }
 
+void gks_set_background(void)
+{
+  if (state >= GKS_K_WSAC)
+    {
+      /* call the device driver link routine */
+      gks_ddlk(SET_BACKGROUND, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(SET_BACKGROUND, 5);
+}
+
+void gks_clear_background(void)
+{
+  if (state >= GKS_K_WSAC)
+    {
+      /* call the device driver link routine */
+      gks_ddlk(CLEAR_BACKGROUND, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(CLEAR_BACKGROUND, 5);
+}
+
 void gks_draw_image(double x, double y, double scalex, double scaley, int width, int height, int *data)
 {
   if (state >= GKS_K_WSAC)

@@ -12922,6 +12922,30 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
   gks_inq_bbox(&errind, xmin, xmax, ymin, ymax);
 }
 
+void gr_setbackground()
+{
+  int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
+  regenflag |= GKS_K_WRITE_PAGE_FLAG;
+
+  check_autoinit;
+
+  gks_set_background();
+
+  foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
+}
+
+void gr_clearbackground()
+{
+  int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
+  regenflag |= GKS_K_WRITE_PAGE_FLAG;
+
+  check_autoinit;
+
+  gks_clear_background();
+
+  foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
+}
+
 double gr_precision(void)
 {
   /* check_autoinit is intentionally not called here, because
