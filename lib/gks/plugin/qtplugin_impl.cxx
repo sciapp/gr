@@ -109,6 +109,7 @@ typedef struct ws_state_list_t
   gks_display_list_t dl;
   QWidget *widget;
   QPixmap *pixmap;
+  QPixmap *bg;
   QPixmap *selection;
   QPainter *painter;
   int state, wtype;
@@ -1725,6 +1726,16 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();
       break;
+
+    case SET_BACKGROUND:
+      if (p->bg != NULL) delete p->bg;
+      p->bg = new QPixmap(p->pixmap->copy());
+      break;
+
+    case CLEAR_BACKGROUND:
+      if (p->bg != NULL) delete p->bg;
+      p->bg = NULL;
+      break;
     }
 }
 
@@ -1765,6 +1776,13 @@ static void interp(char *str)
 
   s = str;
 
+  if (p->bg != NULL)
+    {
+      if (gkss->cntnr != 0) set_clip_rect(0);
+      p->painter->drawPixmap(QPoint(0, 0), *p->bg);
+      if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
+    }
+
   RESOLVE(len, int, sizeof(int));
   while (*len)
     {
@@ -1784,7 +1802,7 @@ static void initialize_data()
 {
   int i;
 
-  p->pixmap = p->selection = NULL;
+  p->pixmap = p->bg = p->selection = NULL;
   p->font = new QFont();
 
   p->points = new QPolygonF(MAX_POINTS);

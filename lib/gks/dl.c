@@ -431,6 +431,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       break;
 
     case 261: /* cancel bbox callback */
+    case 262: /* set background */
+    case 263: /* clear background */
 
       len = 2 * sizeof(int);
       if (d->nbytes + len >= d->size) reallocate(d, len);
@@ -585,6 +587,8 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
 
     case 251: /* end selection */
+    case 262: /* set background */
+    case 263: /* clear background */
       break;
 
     case 252: /* move selection */

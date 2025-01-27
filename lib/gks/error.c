@@ -296,6 +296,18 @@ const char *gks_function_name(int routine)
     case 254:
       name = "INQ_BBOX";
       break;
+    case 260:
+      name = "SET_BBOX_CALLBACK";
+      break;
+    case 261:
+      name = "CANCEL_BBOX_CALLBACK";
+      break;
+    case 262:
+      name = "SET_BACKGROUND";
+      break;
+    case 263:
+      name = "CLEAR_BACKGROUND";
+      break;
     default:
       name = "?";
     }
