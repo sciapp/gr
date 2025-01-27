@@ -244,6 +244,11 @@ static void resize_window(void)
           p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
           p->pixmap->fill(Qt::white);
+          if (p->bg)
+            {
+              delete p->bg;
+              p->bg = new QPixmap(p->pixmap->copy());
+            }
 
           p->painter = new QPainter(p->pixmap);
           p->painter->setClipRect(0, 0, p->width, p->height);
@@ -1728,12 +1733,12 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case SET_BACKGROUND:
-      if (p->bg != NULL) delete p->bg;
+      if (p->bg) delete p->bg;
       p->bg = new QPixmap(p->pixmap->copy());
       break;
 
     case CLEAR_BACKGROUND:
-      if (p->bg != NULL) delete p->bg;
+      if (p->bg) delete p->bg;
       p->bg = NULL;
       break;
     }
@@ -1776,7 +1781,7 @@ static void interp(char *str)
 
   s = str;
 
-  if (p->bg != NULL)
+  if (p->bg)
     {
       if (gkss->cntnr != 0) set_clip_rect(0);
       p->painter->drawPixmap(QPoint(0, 0), *p->bg);
@@ -1843,6 +1848,8 @@ static void release_data()
   delete p->polygon;
   delete p->points;
   delete p->font;
+  if (p->pixmap) delete p->pixmap;
+  if (p->bg) delete p->bg;
   delete p;
 }
 
