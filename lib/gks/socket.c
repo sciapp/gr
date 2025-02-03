@@ -65,9 +65,9 @@ static int is_running = 0;
 
 static int wsa_initialized = 0;
 
-#define CMD_LINE_LEN (32767 + 10)
+#define CMD_LINE_LEN (32767 + 14)
 /*
- * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd /c ""'
+ * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd.exe /c ""'
  */
 
 static DWORD WINAPI gksqt_thread(LPVOID parm)
@@ -77,7 +77,7 @@ static DWORD WINAPI gksqt_thread(LPVOID parm)
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", cmd);
+  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd.exe /c \"%ls\"", cmd);
 
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
