@@ -38,6 +38,7 @@ static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
 static bool disable_movable_xform = false;
 static bool ctrl_key_mode = false;
+static bool mouse_move_triggert = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -1122,6 +1123,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       redraw_pixmap = false;
 
       if (treewidget != nullptr && tree_update) treewidget->updateData(grm_get_document_root());
+      if (mouse_move_triggert) collectTooltips();
       emit pixmapRedrawn();
     }
 
@@ -1357,6 +1359,7 @@ void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 
 void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
+  mouse_move_triggert = true;
   amount_scrolled = 0;
 
   if (enable_editor)
