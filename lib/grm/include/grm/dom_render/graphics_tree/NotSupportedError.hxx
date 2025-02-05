@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT NotSupportedError : public std::logic_error
+class NotSupportedError : public std::logic_error
 {
 public:
   explicit NotSupportedError(const std::string &what_arg) : std::logic_error(what_arg) {}

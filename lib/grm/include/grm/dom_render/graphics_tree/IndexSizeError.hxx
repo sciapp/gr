@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT IndexSizeError : public std::logic_error
+class IndexSizeError : public std::logic_error
 {
 public:
   explicit IndexSizeError(const std::string &what_arg) : std::logic_error(what_arg) {}
