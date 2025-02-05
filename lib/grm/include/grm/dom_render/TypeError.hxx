@@ -7,6 +7,6 @@
 class TypeError : public std::logic_error
 {
 public:
-  EXPORT explicit TypeError(const std::string &what_arg) : std::logic_error(what_arg) {}
+  explicit TypeError(const std::string &what_arg) : std::logic_error(what_arg) {}
 };
 #endif // GRENDER_TYPEERROR_HXX
