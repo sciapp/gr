@@ -103,7 +103,7 @@ typedef enum
   GR_COLOR_BORDER = 1 << 4
 } gr_color_type_t;
 
-enum class EXPORT CoordinateSpace
+enum class CoordinateSpace
 {
   WC,
   NDC

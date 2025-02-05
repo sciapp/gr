@@ -1045,7 +1045,10 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
   add_library(GR::qt6gr ALIAS qt6gr)
 endif()
 
-if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+if(Qt6Widgets_FOUND
+   AND Qt6Core_FOUND
+   AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+)
   add_library(
     grplotWidget SHARED
     lib/grm/grplot/gredit/AddElementWidget.cpp
@@ -1064,10 +1067,10 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
   target_link_libraries(grplotWidget PUBLIC GR::GR)
   target_link_libraries(grplotWidget PUBLIC Qt6::Core Qt6::Widgets)
   target_include_directories(grplotWidget INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget>)
-  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
-    target_compile_options(grplotWidget PRIVATE -fno-exceptions)
-  endif()
   target_compile_definitions(grplotWidget PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(NOT TARGET XercesC::XercesC)
+    target_compile_definitions(grplotWidget PRIVATE NO_XERCES_C)
+  endif()
   target_compile_options(grplotWidget PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(grplotWidget PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
   if(GR_MANUAL_MOC_AND_RCC)
