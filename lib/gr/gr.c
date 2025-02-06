@@ -15865,10 +15865,6 @@ void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-  if (wtype == 381)
-    {
-      gks_update_ws(wkid, GKS_K_PERFORM_FLAG);
-    }
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
 }
 

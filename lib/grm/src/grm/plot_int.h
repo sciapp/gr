@@ -144,7 +144,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args);
 err_t plot_marginal_heatmap(grm_args_t *subplot_args);
 err_t plot_wireframe(grm_args_t *subplot_args);
 err_t plot_surface(grm_args_t *subplot_args);
-err_t plot_plot3(grm_args_t *subplot_args);
+err_t plot_line3(grm_args_t *subplot_args);
 err_t plot_scatter3(grm_args_t *subplot_args);
 err_t plot_imshow(grm_args_t *subplot_args);
 err_t plot_isosurface(grm_args_t *subplot_args);

@@ -359,7 +359,7 @@ err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
 static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
-                                     double xshift, double yshift, bool is_movable)
+                                     int xshift, int yshift, bool is_movable)
 {
   double x_with_shift, y_with_shift, x_ndc, y_ndc;
   double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
@@ -377,7 +377,9 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "side_region",
                                                        "marginal_heatmap_plot",
                                                        "legend",
-                                                       "axis"};
+                                                       "axis",
+                                                       "side_plot_region",
+                                                       "text_region"};
   auto render = grm_get_render();
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
@@ -771,7 +773,7 @@ int grm_input_(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -806,7 +808,7 @@ int grm_input_(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -879,7 +881,7 @@ int grm_input_(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
 
-              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
@@ -1067,7 +1069,7 @@ int grm_is3d(const int x, const int y)
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
   if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
-                                        "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
+                                        "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       return 1;
     }

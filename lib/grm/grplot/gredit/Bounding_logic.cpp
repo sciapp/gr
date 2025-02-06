@@ -3,9 +3,16 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <grm.h>
 
 bool bounding_object_compare_function(const Bounding_object &i, const Bounding_object &j)
 {
+  int i_index = 1, j_index = 1;
+  if (i.get_ref()->hasAttribute("z_index") && static_cast<int>(i.get_ref()->getAttribute("z_index")) < 0)
+    i_index = abs(static_cast<int>(i.get_ref()->getAttribute("z_index")));
+  if (j.get_ref()->hasAttribute("z_index") && static_cast<int>(j.get_ref()->getAttribute("z_index")) < 0)
+    j_index = abs(static_cast<int>(j.get_ref()->getAttribute("z_index")));
+
   if (abs(i.boundingRect().width() * i.boundingRect().height() - j.boundingRect().width() * j.boundingRect().height()) <
       1e-8)
     {
@@ -19,13 +26,10 @@ bool bounding_object_compare_function(const Bounding_object &i, const Bounding_o
 
       idist = sqrt(pow(((ixmax + ixmin) / 2 - camx), 2) + pow(((iymax + iymin) / 2 - camy), 2));
       jdist = sqrt(pow(((jxmax + jxmin) / 2 - camx), 2) + pow(((jymax + jymin) / 2 - camy), 2));
-      return idist < jdist;
+      return idist * i_index < jdist * j_index;
     }
-  else
-    {
-      return i.boundingRect().width() * i.boundingRect().height() <
-             j.boundingRect().width() * j.boundingRect().height();
-    }
+  return i.boundingRect().width() * i.boundingRect().height() * i_index <
+         j.boundingRect().width() * j.boundingRect().height() * j_index;
 }
 
 std::vector<Bounding_object> Bounding_logic::get_bounding_objects_at_point(int x, int y)

@@ -20,6 +20,7 @@ private:
   QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
   QMenu *file_menu, *configuration_menu, *context_menu, *add_context_data;
   QMenu *marginal_sub_menu;
+  bool listen_mode, test_mode;
 
 private slots:
   void hideAlgoMenu();
