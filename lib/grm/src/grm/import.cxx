@@ -99,10 +99,11 @@ static std::map<std::string, const char *> key_to_types{
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<std::string> kind_types = {
-    "barplot",       "contour",    "contourf",   "heatmap",          "hexbin",     "hist",          "histogram",
-    "imshow",        "isosurface", "line",       "marginal_heatmap", "polar_line", "polar_heatmap", "polar_histogram",
-    "polar_scatter", "pie",        "plot3",      "scatter",          "scatter3",   "shade",         "surface",
-    "stem",          "stairs",     "tricontour", "trisurface",       "quiver",     "volume",        "wireframe"};
+    "barplot",    "contour",       "contourf",        "heatmap",       "hexbin",   "hist",
+    "histogram",  "imshow",        "isosurface",      "line",          "line3",    "marginal_heatmap",
+    "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "pie",      "plot3",
+    "scatter",    "scatter3",      "shade",           "surface",       "stem",     "stairs",
+    "tricontour", "trisurface",    "quiver",          "volume",        "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -637,7 +638,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       if (file_args->file_path != "-" && !file_exists(file_args->file_path))
         {
-          fprintf(stderr, "File not found (%s)\n", file_args->file_path.c_str());
+          fprintf(stderr, "File not found or missing (%s)\n", file_args->file_path.c_str());
           return 0;
         }
 
@@ -1095,7 +1096,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(plot[plot_i], "c", "nD", n, data.data());
           grm_args_push(plot[plot_i], "c_dims", "nI", 3, dims.data());
         }
-      else if (str_equals_any(kind, "plot3", "scatter3", "tricontour", "trisurface") ||
+      else if (str_equals_any(kind, "line3", "scatter3", "tricontour", "trisurface") ||
                (strcmp(kind, "scatter") == 0 && scatter_with_z))
         {
           double min_x, max_x, min_y, max_y, min_z, max_z;
@@ -2180,7 +2181,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
-  if (kind == "hist") kind = "histogram";
+  if (kind == "hist")
+    kind = "histogram";
+  else if (kind == "plot3")
+    kind = "line3";
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;
 }

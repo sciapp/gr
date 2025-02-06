@@ -86,6 +86,7 @@
 #define SCIENTIFIC_FORMAT_OPTION 2
 #define PLOT_DEFAULT_MODEL 0
 #define ERRORBAR_DEFAULT_STYLE 0
+#define PLOT_DEFAULT_ADDITIONAL_AXIS_WIDTH 0.03
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
