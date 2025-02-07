@@ -85,7 +85,7 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
             }
         }
       item->getRef()->setAttribute("_selected", !selected_status);
-      grplot_widget->redraw(false);
+      grplot_widget->redraw(false, false);
     }
 
   if (item->getRef() != nullptr)
@@ -132,7 +132,7 @@ void TreeWidget::mousePressEvent(QMouseEvent *event)
 {
   QTreeView::mousePressEvent(event);
   findSelectedItem(plotTree);
-  grplot_widget->redraw(false);
+  grplot_widget->redraw(false, false);
 }
 
 void TreeWidget::mouseReleaseEvent(QMouseEvent *event)
