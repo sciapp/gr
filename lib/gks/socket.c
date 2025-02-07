@@ -70,23 +70,39 @@ static int wsa_initialized = 0;
  * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd.exe /c ""'
  */
 
+#define BUFFER_LEN 255
+
 static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
   wchar_t *cmd = (char *)parm;
   wchar_t w_cmd_line[CMD_LINE_LEN];
+  wchar_t buffer[BUFFER_LEN];
+  wchar_t *currentDirectory = NULL;
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
   StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd.exe /c \"%ls\"", cmd);
 
+  if (!GetEnvironmentVariableW(L"WSLENV", buffer, BUFFER_LEN))
+    {
+      GetWindowsDirectoryW(buffer, BUFFER_LEN);
+      currentDirectory = buffer;
+    }
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
   ZeroMemory(&processInformation, sizeof(processInformation));
 
   is_running = 1;
-  CreateProcessW(NULL, w_cmd_line, NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW | DETACHED_PROCESS,
-                 NULL, NULL, &startupInfo, &processInformation);
-  WaitForSingleObject(processInformation.hThread, INFINITE);
+  if (!CreateProcessW(NULL, w_cmd_line, NULL, NULL, FALSE,
+                      CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW | DETACHED_PROCESS, NULL, currentDirectory,
+                      &startupInfo, &processInformation))
+    {
+      fprintf(stderr, "CreateProcessW failed (%d).\n", GetLastError());
+    }
+  else
+    {
+      WaitForSingleObject(processInformation.hThread, INFINITE);
+    }
   is_running = 0;
 
   CloseHandle(processInformation.hProcess);
