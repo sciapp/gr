@@ -231,6 +231,7 @@ static void resize_window(void)
   p->nominal_size = min(p->width, p->height) / 500.0;
   if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
+#ifndef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (p->pixmap)
     {
       if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
@@ -247,13 +248,14 @@ static void resize_window(void)
           if (p->bg)
             {
               delete p->bg;
-              p->bg = new QPixmap(p->pixmap->copy());
+              p->bg = new QPixmap(*p->pixmap);
             }
 
           p->painter = new QPainter(p->pixmap);
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
+#endif
 }
 
 static void set_xform(void)
@@ -1733,13 +1735,19 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case SET_BACKGROUND:
-      if (p->bg) delete p->bg;
-      p->bg = new QPixmap(p->pixmap->copy());
+      if (p->pixmap)
+        {
+          if (p->bg) delete p->bg;
+          p->bg = new QPixmap(*p->pixmap);
+        }
       break;
 
     case CLEAR_BACKGROUND:
-      if (p->bg) delete p->bg;
-      p->bg = NULL;
+      if (p->bg)
+        {
+          delete p->bg;
+          p->bg = NULL;
+        }
       break;
     }
 }
@@ -1848,7 +1856,11 @@ static void release_data()
   delete p->polygon;
   delete p->points;
   delete p->font;
+#ifndef QT_PLUGIN_USED_AS_PLUGIN_CODE
+  /* The pixmap is only owned if the code is not compiled as plugin. In plugin mode, the pixmap is only a non-owning
+   * pointer to the underlying paint device of the painter object. */
   if (p->pixmap) delete p->pixmap;
+#endif
   if (p->bg) delete p->bg;
   delete p;
 }
@@ -1890,6 +1902,13 @@ static int get_paint_device(void)
           p->widget = NULL;
           device = p->painter->device();
         }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
+      QPixmap *pixmap = dynamic_cast<QPixmap *>(p->painter->device());
+      if (pixmap != NULL)
+        {
+          p->pixmap = pixmap;
+        }
+#endif
     }
   else
     {
@@ -1960,6 +1979,7 @@ static void inqdspsize(double *mwidth, double *mheight, int *width, int *height)
 #endif
 }
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
 void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
                           int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
@@ -2055,9 +2075,11 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
     gks_dl_write_item(&p->dl, fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                       gkss);
 }
+#endif
 
 #else
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
 #define QT_NAME_STRING "Qt"
 
 void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
@@ -2086,5 +2108,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       if (c_arr != nullptr) c_arr[0] = '\0';
     }
 }
+
+#endif
 
 #endif
