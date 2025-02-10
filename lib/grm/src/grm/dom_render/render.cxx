@@ -16751,6 +16751,18 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       if (element->localName() == "plot")
         {
+          if (active_figure->querySelectors("plot[_active=\"1\"]") != nullptr &&
+              element->parentElement()->parentElement()->localName() == "layout_grid" && redraw_ws)
+            {
+              auto viewport_x_min = static_cast<double>(element->getAttribute("viewport_x_min"));
+              auto viewport_x_max = static_cast<double>(element->getAttribute("viewport_x_max"));
+              auto viewport_y_min = static_cast<double>(element->getAttribute("viewport_y_min"));
+              auto viewport_y_max = static_cast<double>(element->getAttribute("viewport_y_max"));
+              int color[1] = {0};
+              gr_selntran(0);
+              gr_cellarray(viewport_x_min, viewport_x_max, viewport_y_min, viewport_y_max, 1, 1, 1, 1, 1, 1, color);
+              gr_selntran(1);
+            }
           std::shared_ptr<GRM::Element> central_region_parent = element;
           processPlot(element, context);
           if (static_cast<std::string>(element->getAttribute("_kind")) == "marginal_heatmap")
@@ -16947,6 +16959,9 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
       for (const auto &child : element->children())
         {
           if (child->localName() == "figure" && !static_cast<int>(child->getAttribute("active"))) continue;
+          if (child->localName() == "plot" && active_figure->querySelectors("plot[_active=\"1\"]") != nullptr &&
+              (!child->hasAttribute("_active") || !static_cast<int>(child->getAttribute("_active"))))
+            continue;
           renderHelper(child, context);
         }
     }
@@ -21905,7 +21920,19 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
 void renderCaller()
 {
   if (global_root && static_cast<int>(global_root->getAttribute("_modified")) && automatic_update)
-    global_render->process_tree();
+    {
+      auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
+      if (active_figure != nullptr)
+        {
+          automatic_update = false;
+          for (const auto &plot : active_figure->querySelectorsAll("plot[_active=\"1\"]"))
+            {
+              plot->removeAttribute("_active");
+            }
+          automatic_update = true;
+        }
+      global_render->process_tree();
+    }
 }
 
 void GRM::Render::setActiveFigure(const std::shared_ptr<GRM::Element> &element)
