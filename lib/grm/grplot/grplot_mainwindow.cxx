@@ -3,15 +3,12 @@
 #include "grplot_mainwindow.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
-const unsigned int WIDTH = 600;
-const unsigned int HEIGHT = 450;
 
-static QString test_commands_file_path = "";
-
-GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
+GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height, bool listen_mode, bool test_mode,
+                                   QString test_commands_file_path, bool help_mode)
+    : QMainWindow(), grplot_widget_(nullptr)
 {
-  int width = WIDTH, height = HEIGHT;
-  if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+  if (help_mode)
     {
       auto *w = new QWidget(this);
       std::string kind;
@@ -32,77 +29,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
             fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
         }
       setCentralWidget(message);
-      resize(WIDTH, HEIGHT);
+      resize(width, height);
     }
   else
     {
-      listen_mode = false;
-      test_mode = false;
-
-      // parse the -- attributes
-      for (int i = 1; i <= argc; i++)
-        {
-          if (strcmp(argv[i], "--size") == 0)
-            {
-              if (argc > i + 1)
-                {
-                  std::vector<std::string> strings;
-                  std::string size;
-                  auto s = argv[i + 1];
-                  std::istringstream size_stream(s);
-                  while (getline(size_stream, size, ','))
-                    {
-                      strings.push_back(size);
-                    }
-                  if (!strings.empty() && strings.size() == 2)
-                    {
-                      width = stoi(strings[0]);
-                      height = stoi(strings[1]);
-                    }
-                  else
-                    {
-                      fprintf(stderr, "Given size is invalid, use default size (%d,%d).\n", WIDTH, HEIGHT);
-                      argv += i;
-                      argc -= i;
-                      break;
-                    }
-                  i += 1;
-                }
-              else
-                {
-                  fprintf(stderr, "No size given after \"--size\" parameter, use default size (%d, %d).\n", WIDTH,
-                          HEIGHT);
-                }
-            }
-          else if (strcmp(argv[i], "--listen") == 0)
-            {
-              listen_mode = true;
-            }
-          else if (strcmp(argv[i], "--test") == 0)
-            {
-              if (argc > i + 1)
-                {
-                  test_commands_file_path = argv[i + 1];
-                  test_mode = true;
-                  i += 1;
-                }
-              else
-                {
-                  fprintf(stderr, "No test commands file given after \"--test\" parameter");
-                }
-            }
-          else
-            {
-              argv += (i - 1);
-              argc -= (i - 1);
-              break;
-            }
-          if (argc <= 2)
-            {
-              fprintf(stderr, "Not enough commandline arguments, missing atleast datafile or listen mode\n");
-              exit(0);
-            }
-        }
       grplot_widget_ = new GRPlotWidget(this, argc, argv, listen_mode, test_mode, test_commands_file_path);
       setCentralWidget(grplot_widget_);
       grplot_widget_->resize(width, height);
@@ -124,7 +54,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
         }
     }
 
-  if (grplot_widget_)
+  if (grplot_widget_ && !listen_mode && !test_mode && !grplot_widget_->getTestCommandsStream() && !help_mode)
     {
       menu = menuBar();
       file_menu = new QMenu("&File");
@@ -181,13 +111,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
               &GRPlotMainWindow::showConfigurationMenu);
       connect(grplot_widget_->getAddSeperatorAct(), &QAction::triggered, this, &GRPlotMainWindow::addSeperator);
 
-      if (!listen_mode && !test_mode && !grplot_widget_->getTestCommandsStream())
-        {
-          menu->addMenu(file_menu);
-          menu->addMenu(type);
-          menu->addMenu(algo);
-          menu->addMenu(modi_menu);
-        }
+      menu->addMenu(file_menu);
+      menu->addMenu(type);
+      menu->addMenu(algo);
+      menu->addMenu(modi_menu);
 
       if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
         {
@@ -208,12 +135,9 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
           add_context_data->addAction(grplot_widget_->getGenerateLinearContextAct());
 
           configuration_menu->menuAction()->setVisible(false);
-          if (!test_mode && !grplot_widget_->getTestCommandsStream())
-            {
-              menu->addMenu(editor_menu);
-              menu->addMenu(context_menu);
-              context_menu->addMenu(add_context_data);
-            }
+          menu->addMenu(editor_menu);
+          menu->addMenu(context_menu);
+          context_menu->addMenu(add_context_data);
         }
     }
 }

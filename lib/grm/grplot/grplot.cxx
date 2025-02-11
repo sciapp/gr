@@ -10,9 +10,16 @@
 #include "grplot_mainwindow.hxx"
 #include "util.hxx"
 
+const unsigned int WIDTH = 600;
+const unsigned int HEIGHT = 450;
+
+static QString test_commands_file_path = "";
+
 int main(int argc, char **argv)
 {
-  int pass = 0;
+  bool pass = false, listen_mode = false, test_mode = false, help_mode = false;
+  int width = WIDTH, height = HEIGHT;
+
   // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
   try
     {
@@ -36,24 +43,85 @@ int main(int argc, char **argv)
 
   if (argc > 1)
     {
-      /* help page should be shown */
-      if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+      for (int i = 1; i < argc; i++) // parse the -- attributes
         {
-#ifdef _WIN32
-          std::wstringstream pathStream;
-          pathStream << util::getEnvVar(L"GRDIR", L"" GRDIR)
-#else
-          std::stringstream pathStream;
-          pathStream << util::getEnvVar("GRDIR", GRDIR)
-#endif
-                     << "/share/doc/grplot/grplot.man.md";
-
-          if (!util::fileExists(pathStream.str()))
+          if (strcmp(argv[i], "--size") == 0)
             {
-              fprintf(stderr, "Helpfile not found\n");
+              if (argc > i + 2)
+                {
+                  std::vector<std::string> strings;
+                  std::string size;
+                  auto s = argv[i + 1];
+                  std::istringstream size_stream(s);
+                  while (getline(size_stream, size, ','))
+                    {
+                      strings.push_back(size);
+                    }
+                  if (!strings.empty() && strings.size() == 2)
+                    {
+                      width = stoi(strings[0]);
+                      height = stoi(strings[1]);
+                      i += 1;
+                    }
+                  else
+                    {
+                      fprintf(stderr, "Given size is invalid, use default size (%d,%d).\n", WIDTH, HEIGHT);
+                    }
+                }
+              else
+                {
+                  fprintf(stderr, "No size given after \"--size\" parameter, use default size (%d, %d).\n", WIDTH,
+                          HEIGHT);
+                }
+            }
+          else if (strcmp(argv[i], "--listen") == 0)
+            {
+              listen_mode = true;
+            }
+          else if (strcmp(argv[i], "--test") == 0)
+            {
+              if (argc > i + 2 && !util::startsWith(argv[i + 1], "--"))
+                {
+                  test_commands_file_path = argv[i + 1];
+                  test_mode = true;
+                  i += 1;
+                }
+              else
+                {
+                  fprintf(stderr, "No test commands file given after \"--test\" parameter.\n");
+                }
+            }
+          else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) /* help page should be shown */
+            {
+#ifdef _WIN32
+              std::wstringstream pathStream;
+              pathStream << util::getEnvVar(L"GRDIR", L"" GRDIR)
+#else
+              std::stringstream pathStream;
+              pathStream << util::getEnvVar("GRDIR", GRDIR)
+#endif
+                         << "/share/doc/grplot/grplot.man.md";
+
+              if (!util::fileExists(pathStream.str()))
+                {
+                  fprintf(stderr, "Helpfile not found\n");
+                  return 1;
+                }
+              pass = true;
+              help_mode = true;
+              i += 1;
+            }
+          else
+            {
+              argv += (i - 1);
+              argc -= (i - 1);
+              break;
+            }
+          if (argc <= 2 && !listen_mode && !help_mode)
+            {
+              fprintf(stderr, "Not enough command line arguments: specify an input file or the \"--listen\" option.\n");
               return 1;
             }
-          pass = 1;
         }
     }
   else
@@ -62,22 +130,13 @@ int main(int argc, char **argv)
       return 0;
     }
 
-  if (!pass && getenv("GKS_WSTYPE") != nullptr)
-    {
-      return (grm_plot_from_file(argc, argv) != 1);
-    }
-  else
-    {
-      QApplication app(argc, argv);
-      GRPlotMainWindow window(argc, argv);
+  if (!pass && getenv("GKS_WSTYPE") != nullptr) return (grm_plot_from_file(argc, argv) != 1);
 
-      if (strcmp(argv[1], "--listen") != 0)
-        {
-          window.show();
-        }
+  QApplication app(argc, argv);
+  GRPlotMainWindow window(argc, argv, width, height, listen_mode, test_mode, test_commands_file_path, help_mode);
 
-      return app.exec();
-    }
+  if (!listen_mode) window.show();
+  return app.exec();
 }
 #else
 #include <iostream>
