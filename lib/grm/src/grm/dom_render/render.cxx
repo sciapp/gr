@@ -17040,6 +17040,13 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
                                                    (aspect_ratio > 1 ? aspect_ratio : 1.0));
               elem_bbox_ymax = height * (1.0 - static_cast<double>(element->getAttribute("viewport_y_max")) *
                                                    (aspect_ratio > 1 ? aspect_ratio : 1.0));
+
+              if (elem_bbox_ymin > elem_bbox_ymax)
+                {
+                  auto tmp = elem_bbox_ymin;
+                  elem_bbox_ymin = elem_bbox_ymax;
+                  elem_bbox_ymax = tmp;
+                }
             }
 
           element->setAttribute("_bbox_x_min", elem_bbox_xmin);
