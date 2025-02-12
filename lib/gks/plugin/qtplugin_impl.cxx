@@ -1785,15 +1785,32 @@ static void dl_render_function(int fctid, int dx, int dy, int dimx, int *ia, int
 static void interp(char *str)
 {
   char *s;
-  int sp = 0, *len;
+  int sp = 0, *len = NULL;
 
   s = str;
 
   if (p->bg)
     {
-      if (gkss->cntnr != 0) set_clip_rect(0);
-      p->painter->drawPixmap(QPoint(0, 0), *p->bg);
-      if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
+      int *fctid = NULL;
+      // see `purge` in `dl.c` for preserved fctids (+ `2` for openws)
+      const std::vector<int> leading_ignored_fctids = {2, 48, 54, 55};
+      while (true)
+        {
+          RESOLVE(len, int, sizeof(int));
+          if (*len == 0) break;
+          RESOLVE(fctid, int, sizeof(int));
+          if (std::find(leading_ignored_fctids.begin(), leading_ignored_fctids.end(), *fctid) ==
+              leading_ignored_fctids.end())
+            break;
+          sp += *len - 2 * sizeof(int);
+        }
+      if (*fctid != CLEAR_BACKGROUND && *fctid != SET_BACKGROUND)
+        {
+          if (gkss->cntnr != 0) set_clip_rect(0);
+          p->painter->drawPixmap(QPoint(0, 0), *p->bg);
+          if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
+        }
+      sp = 0;
     }
 
   RESOLVE(len, int, sizeof(int));
