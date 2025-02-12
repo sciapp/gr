@@ -1137,7 +1137,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   // Todo: only trigger this method in non multiplot case where 1 plot has different series when not all elements has to
   // be processed to figure out which kinds are all used
   auto global_root = grm_get_document_root();
-  if (global_root->querySelectors("layout_grid") == nullptr)
+  if (!in_listen_mode && global_root->querySelectors("layout_grid") == nullptr)
     adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot"));
   if (!tooltips.empty() && !enable_editor)
     {
