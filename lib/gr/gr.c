@@ -12934,10 +12934,13 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
 
 void gr_setbackground()
 {
+  int clearflag = double_buf ? GKS_K_CLEAR_CONDITIONALLY : GKS_K_CLEAR_ALWAYS;
   int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
   regenflag |= GKS_K_WRITE_PAGE_FLAG;
 
   check_autoinit;
+
+  foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
   gks_set_background();
 
@@ -12946,10 +12949,13 @@ void gr_setbackground()
 
 void gr_clearbackground()
 {
+  int clearflag = double_buf ? GKS_K_CLEAR_CONDITIONALLY : GKS_K_CLEAR_ALWAYS;
   int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
   regenflag |= GKS_K_WRITE_PAGE_FLAG;
 
   check_autoinit;
+
+  foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
   gks_clear_background();
 

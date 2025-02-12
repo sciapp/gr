@@ -38,6 +38,8 @@ static std::vector<Bounding_object> cur_moved;
 static bool disable_movable_xform = false;
 static bool ctrl_key_mode = false;
 static bool mouse_move_triggert = false;
+static std::weak_ptr<GRM::Element> previous_active_plot;
+static bool active_plot_changed = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -76,7 +78,7 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, bool test_mode,
                            QString test_commands)
-    : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
+    : QWidget(parent), pixmap(), redraw_pixmap(RedrawType::none), args_(nullptr), rubberBand(nullptr)
 {
   args_ = grm_args_new();
 
@@ -368,7 +370,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 }
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
-    : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
+    : QWidget(parent), pixmap(), redraw_pixmap(RedrawType::none), args_(nullptr), rubberBand(nullptr)
 {
   args_ = args;
 
@@ -1003,9 +1005,9 @@ void GRPlotWidget::draw()
   called_at_least_once = true;
 }
 
-void GRPlotWidget::redraw(bool update_tree)
+void GRPlotWidget::redraw(bool full_redraw, bool update_tree)
 {
-  redraw_pixmap = true;
+  redraw_pixmap = full_redraw ? RedrawType::full : RedrawType::partial;
   tree_update = update_tree;
 
   update();
@@ -1100,10 +1102,10 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
     {
       pixmap = QPixmap(needed_pixmap_size);
       pixmap.setDevicePixelRatio(this->devicePixelRatioF());
-      redraw_pixmap = true;
+      redraw_pixmap = RedrawType::full;
     }
 
-  if (redraw_pixmap)
+  if (redraw_pixmap == RedrawType::partial || redraw_pixmap == RedrawType::full)
     {
 #ifdef _WIN32
       addresses << "GKS_CONID=";
@@ -1114,15 +1116,44 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
 #else
       setenv("GKS_CONID", addresses.str().c_str(), 1);
 #endif
-
       painter.begin(&pixmap);
-
+      auto global_root = grm_get_document_root();
+      auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
+      auto is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
+      if (is_multiplot)
+        {
+          if (redraw_pixmap == RedrawType::partial)
+            {
+              // A partial redraw was requested, but if no plot is marked as active, we need to redraw the whole figure
+              auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
+              if (active_figure->querySelectors("layout_grid") == nullptr ||
+                  active_figure->querySelectors("plot[_active=\"1\"]") == nullptr)
+                redraw_pixmap = RedrawType::full;
+            }
+          if (redraw_pixmap == RedrawType::full)
+            {
+              auto render = grm_get_render();
+              bool auto_update;
+              render->getAutoUpdate(&auto_update);
+              render->setAutoUpdate(false);
+              for (const auto &plot : active_figure->querySelectorsAll("plot[_active=\"1\"]"))
+                {
+                  plot->removeAttribute("_active");
+                }
+              render->setAutoUpdate(auto_update);
+              previous_active_plot.reset();
+              gr_clearbackground();
+            }
+          else if (active_plot_changed)
+            {
+              gr_setbackground();
+            }
+        }
+      active_plot_changed = false;
       painter.fillRect(0, 0, width(), height(), QColor("white"));
-      painter.save();
       draw();
-      painter.restore();
       painter.end();
-      redraw_pixmap = false;
+      redraw_pixmap = RedrawType::none;
 
       if (treewidget != nullptr && tree_update) treewidget->updateData(grm_get_document_root());
       if (mouse_move_triggert) collectTooltips();
@@ -1394,20 +1425,49 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     }
   else
     {
+      int mouse_x, mouse_y;
+      double x, y;
+      int width = this->size().width(), height = this->size().height();
+      getMousePos(event, &mouse_x, &mouse_y);
+
+      GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+      auto max_width_height = std::max(width, height);
+      x = (double)mouse_x / max_width_height;
+      y = (double)(height - mouse_y) / max_width_height;
+
+      auto global_root = grm_get_document_root();
+      auto plot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
+      if (plot_element && global_root->querySelectors("figure[active=\"1\"]")->querySelectors("layout_grid"))
+        {
+          auto render = grm_get_render();
+          bool auto_update;
+          render->getAutoUpdate(&auto_update);
+          render->setAutoUpdate(false);
+          auto previous_active_plot_locked = previous_active_plot.lock();
+          if (previous_active_plot_locked == nullptr || previous_active_plot_locked != plot_element)
+            {
+              plot_element->setAttribute("_active", true);
+              active_plot_changed = true;
+            }
+          if (previous_active_plot_locked != nullptr && previous_active_plot_locked != plot_element)
+            {
+              previous_active_plot_locked->removeAttribute("_active");
+            }
+          previous_active_plot = plot_element;
+          render->setAutoUpdate(auto_update);
+        }
       if (mouseState.mode == MouseState::Mode::boxzoom)
         {
           rubberBand->setGeometry(QRect(mouseState.pressed, event->pos()).normalized());
         }
       else if (mouseState.mode == MouseState::Mode::pan)
         {
-          int x, y;
-          getMousePos(event, &x, &y);
           grm_args_t *args = grm_args_new();
 
           grm_args_push(args, "x", "i", mouseState.anchor.x());
           grm_args_push(args, "y", "i", mouseState.anchor.y());
-          grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
-          grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
+          grm_args_push(args, "x_shift", "i", mouse_x - mouseState.anchor.x());
+          grm_args_push(args, "y_shift", "i", mouse_y - mouseState.anchor.y());
 
           grm_input(args);
           grm_args_delete(args);
@@ -1417,18 +1477,16 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else if (mouseState.mode == MouseState::Mode::movable_xform)
         {
-          int x, y;
-          getMousePos(event, &x, &y);
           grm_args_t *args = grm_args_new();
 
           grm_args_push(args, "x", "i", mouseState.anchor.x());
           grm_args_push(args, "y", "i", mouseState.anchor.y());
-          grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
-          grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
+          grm_args_push(args, "x_shift", "i", mouse_x - mouseState.anchor.x());
+          grm_args_push(args, "y_shift", "i", mouse_y - mouseState.anchor.y());
           if (disable_movable_xform) grm_args_push(args, "disable_movable_trans", "i", disable_movable_xform);
 
           /* get the correct cursor and sets it */
-          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+          int cursor_state = grm_get_hover_mode(mouse_x, mouse_y, disable_movable_xform);
           grm_args_push(args, "movable_state", "i", cursor_state);
 
           grm_input(args);
@@ -1440,19 +1498,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       else
         {
           std::string kind;
-          int mouse_x, mouse_y;
-          double x, y;
-          int width = this->size().width(), height = this->size().height();
-          getMousePos(event, &mouse_x, &mouse_y);
           collectTooltips();
-
-          GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
-          auto max_width_height = std::max(width, height);
-          x = (double)mouse_x / max_width_height;
-          y = (double)(height - mouse_y) / max_width_height;
-
-          auto global_root = grm_get_document_root();
-          auto plot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
           if (plot_element)
             {
               kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
@@ -2418,7 +2464,7 @@ void GRPlotWidget::leaveEvent(QEvent *event)
 
 void GRPlotWidget::reset_pixmap()
 {
-  redraw_pixmap = true;
+  redraw_pixmap = RedrawType::full;
   current_selection = nullptr;
   for (const auto &selection : current_selections)
     {

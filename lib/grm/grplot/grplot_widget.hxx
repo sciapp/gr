@@ -38,7 +38,7 @@ public:
                         QString test_commands = "");
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
-  void redraw(bool tree_update = true);
+  void redraw(bool full_redraw = false, bool tree_update = true);
   std::shared_ptr<GRM::Document> get_schema_tree();
   void set_selected_parent(Bounding_object *parent);
   Bounding_object *get_selected_parent();
@@ -191,6 +191,13 @@ private:
     QPoint anchor;
   };
 
+  enum class RedrawType
+  {
+    none,
+    partial,
+    full,
+  };
+
   class TooltipWrapper
   {
   public:
@@ -257,7 +264,7 @@ private:
 
   bool in_listen_mode = false;
   QPixmap pixmap;
-  bool redraw_pixmap;
+  RedrawType redraw_pixmap;
   grm_args_t *args_;
   MouseState mouseState;
   QRubberBand *rubberBand;
