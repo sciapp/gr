@@ -5839,7 +5839,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       processFlip(element->parentElement());
     }
   tick_size *= tick_orientation;
-  axis_t axis = {min_val, max_val, tick, org, pos, major_count, 0, nullptr, tick_size, 0, nullptr, NAN, 1};
+  axis_t axis = {min_val, max_val, tick, org, pos, major_count, 0, nullptr, tick_size, 0, nullptr, NAN, 1, 0};
   if (axis_type == "x")
     gr_axis('X', &axis);
   else if (axis_type == "y")
@@ -6730,7 +6730,7 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   gr_inqscale(&options);
   if (options & GR_OPTION_Z_LOG || z_log)
     {
-      axis_t axis = {c_min, c_max, 2, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
+      axis_t axis = {c_min, c_max, 2, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1, 0};
       if (location == "top" || location == "bottom")
         gr_axis('X', &axis);
       else
@@ -6795,7 +6795,7 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   else
     {
       double c_tick = autoTick(c_min, c_max);
-      axis_t axis = {c_min, c_max, c_tick, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
+      axis_t axis = {c_min, c_max, c_tick, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1, 0};
       if (location == "top" || location == "bottom")
         gr_axis('X', &axis);
       else
@@ -9670,7 +9670,7 @@ static void processGridLine(const std::shared_ptr<GRM::Element> &element, const 
   auto is_major = static_cast<int>(element->getAttribute("is_major"));
 
   tick_t g = {value, is_major};
-  axis_t grid = {min_val, max_val, tick, org, pos, major_count, 1, &g, 0.0, 0, nullptr, NAN, false};
+  axis_t grid = {min_val, max_val, tick, org, pos, major_count, 1, &g, 0.0, 0, nullptr, NAN, false, 0};
   if (redraw_ws && !hide && (coordinate_system_type == "2d" || axis_elem->parentElement()->localName() == "colorbar"))
     {
       if (axis_type == "x")
@@ -14986,8 +14986,8 @@ static void processTick(const std::shared_ptr<GRM::Element> &element, const std:
   adjustValueForNonStandardAxis(plot_parent, &value, location);
 
   tick_t t = {value, is_major};
-  axis_t drawn_tick = {min_val, max_val, tick,      org,  pos, major_count, 1, &t, tick_size * tick_orientation,
-                       0,       nullptr, label_pos, false};
+  axis_t drawn_tick = {min_val, max_val, tick,      org,   pos, major_count, 1, &t, tick_size * tick_orientation,
+                       0,       nullptr, label_pos, false, 0};
   if (redraw_ws && !hide && (coordinate_system_type == "2d" || axis_elem->parentElement()->localName() == "colorbar"))
     {
       mask = mirrored_axis ? 2 : 1;

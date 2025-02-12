@@ -206,6 +206,7 @@ typedef struct
   tick_label_t *tick_labels;
   double label_position;
   int draw_axis_line;
+  int label_orientation;
 } axis_t;
 
 #define GR_AXES_SIMPLE_AXES (1 << 0)
