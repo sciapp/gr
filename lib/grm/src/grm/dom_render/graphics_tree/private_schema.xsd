@@ -43,6 +43,7 @@
     <xs:element name="layout_grid">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
         </xs:complexType>
     </xs:element>
 
@@ -69,6 +70,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_active" type="xs:integer"/>
             <xs:attribute name="_bottom_window_xform_a" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_b" type="xs:double"/>
@@ -97,6 +99,7 @@
             <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_selected_for_menu" type="xs:integer"/>
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a_org" type="xs:double"/>
@@ -571,8 +574,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of plot3 -->
-    <xs:element name="series_plot3">
+    <!-- definition of line3 -->
+    <xs:element name="series_line3">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>

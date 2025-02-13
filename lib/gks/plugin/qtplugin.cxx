@@ -14,5 +14,6 @@
 
 #define QT_NAME_STRING "Qt4"
 #define QT_PLUGIN_ENTRY_NAME gks_qtplugin
+#define QT_PLUGIN_USED_AS_PLUGIN_CODE 1
 
 #include "qtplugin_impl.cxx"

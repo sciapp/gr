@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT NotFoundError : public std::logic_error
+class NotFoundError : public std::logic_error
 {
 public:
   explicit NotFoundError(const std::string &what_arg) : std::logic_error(what_arg) {}

@@ -206,6 +206,7 @@ typedef struct
   tick_label_t *tick_labels;
   double label_position;
   int draw_axis_line;
+  int label_orientation;
 } axis_t;
 
 #define GR_AXES_SIMPLE_AXES (1 << 0)
@@ -365,6 +366,8 @@ DLLEXPORT void gr_cancelbboxcallback(void);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);
+DLLEXPORT void gr_setbackground(void);
+DLLEXPORT void gr_clearbackground(void);
 DLLEXPORT double gr_precision(void);
 DLLEXPORT int gr_text_maxsize(void);
 DLLEXPORT void gr_setregenflags(int);

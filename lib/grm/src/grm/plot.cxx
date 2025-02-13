@@ -205,7 +205,7 @@ static string_map_entry_t kind_to_fmt[] = {
     {"contour", "xyzc"},       {"contourf", "xyzc"},
     {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
     {"surface", "xyzc"},       {"wireframe", "xyzc"},
-    {"plot3", "xyzc"},         {"scatter", "xyzc"},
+    {"line3", "xyzc"},         {"scatter", "xyzc"},
     {"scatter3", "xyzc"},      {"quiver", "xyuv"},
     {"heatmap", "xyzc"},       {"histogram", "x"},
     {"barplot", "y"},          {"isosurface", "c"},
@@ -233,7 +233,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"marginal_heatmap", plot_marginal_heatmap},
                                                {"wireframe", plot_wireframe},
                                                {"surface", plot_surface},
-                                               {"plot3", plot_plot3},
+                                               {"line3", plot_line3},
                                                {"scatter3", plot_scatter3},
                                                {"imshow", plot_imshow},
                                                {"isosurface", plot_isosurface},
@@ -1124,6 +1124,11 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
       kind = "histogram";
       grm_args_push(subplot_args, "kind", "s", kind);
     }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      kind = "line3";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
@@ -1356,6 +1361,11 @@ void plot_process_window(grm_args_t *subplot_args)
       kind = "histogram";
       grm_args_push(subplot_args, "kind", "s", kind);
     }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      kind = "line3";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   auto plot = strcmp(kind, "marginal_heatmap") != 0 ? central_region->parentElement()
                                                     : central_region->parentElement()->parentElement();
   if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
@@ -1365,7 +1375,7 @@ void plot_process_window(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) plot->setAttribute("y_flip", y_flip);
   if (grm_args_values(subplot_args, "z_flip", "i", &z_flip)) plot->setAttribute("z_flip", z_flip);
 
-  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume"))
     {
       plot->setAttribute("adjust_z_lim", true);
       global_render->setSpace3d(central_region, 30.0, 0.0);
@@ -1404,6 +1414,11 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   if (strcmp(kind, "hist") == 0)
     {
       kind = "histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      kind = "line3";
       grm_args_push(subplot_args, "kind", "s", kind);
     }
   group->setAttribute("_kind", kind);
@@ -2909,7 +2924,7 @@ err_t plot_surface(grm_args_t *subplot_args)
   return error;
 }
 
-err_t plot_plot3(grm_args_t *subplot_args)
+err_t plot_line3(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
@@ -2920,7 +2935,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
-      auto subGroup = global_render->createSeries("plot3");
+      auto subGroup = global_render->createSeries("line3");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3791,7 +3806,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   group->setAttribute("x_grid", x_grid);
   group->setAttribute("y_grid", y_grid);
 
-  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);
@@ -6379,6 +6394,11 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   if (strcmp(kind, "hist") == 0)
     {
       kind = (char *)"histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      kind = (char *)"line3";
       grm_args_push(subplot_args, "kind", "s", kind);
     }
   group->setAttribute("_kind", kind);

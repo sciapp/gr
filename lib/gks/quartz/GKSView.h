@@ -29,6 +29,8 @@ typedef struct
 - (void)setDisplayList:(id)display_list;
 - (void)close;
 
+- (void)setNeedsDisplayAfterResize;
+
 - (void)setWinID:(int)winid;
 - (int)getWinID;
 

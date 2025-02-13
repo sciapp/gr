@@ -5324,16 +5324,21 @@ void gr_axis(char which, axis_t *axis)
       if (is_nan(axis->position)) axis->position = y_min;
       if (is_nan(axis->label_position))
         {
-          tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
-          axis->label_position = y_log(y_lin(axis->position) + 3 * tick);
-          if (y_lin(axis->position) <= 0.5 * (y_lin(wn[2] + y_lin(wn[3]))))
+          if (axis->label_orientation == 0)
             {
-              if (tick > 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+              axis->label_orientation = (y_lin(axis->position) <= 0.5 * (y_lin(wn[2] + y_lin(wn[3])))) ? -1 : 1;
+            }
+          tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
+          axis->label_position = y_lin(axis->position);
+          if (axis->label_orientation < 0)
+            {
+              axis->label_position += tick < 0 ? 3 * tick : -tick;
             }
           else
             {
-              if (tick < 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+              axis->label_position += tick > 0 ? 3 * tick : -tick;
             }
+          axis->label_position = y_log(axis->label_position);
         }
     }
   else if (which == 'Y')
@@ -5346,16 +5351,21 @@ void gr_axis(char which, axis_t *axis)
       if (is_nan(axis->position)) axis->position = x_min;
       if (is_nan(axis->label_position))
         {
-          tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
-          axis->label_position = x_log(x_lin(axis->position) + 3 * tick);
-          if (x_lin(axis->position) <= 0.5 * (x_lin(wn[0] + x_lin(wn[1]))))
+          if (axis->label_orientation == 0)
             {
-              if (tick > 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+              axis->label_orientation = (x_lin(axis->position) <= 0.5 * (x_lin(wn[0] + x_lin(wn[1])))) ? -1 : 1;
+            }
+          tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
+          axis->label_position = x_lin(axis->position);
+          if (axis->label_orientation < 0)
+            {
+              axis->label_position += tick < 0 ? 3 * tick : -tick;
             }
           else
             {
-              if (tick < 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+              axis->label_position += tick > 0 ? 3 * tick : -tick;
             }
+          axis->label_position = x_log(axis->label_position);
         }
     }
 
@@ -5548,14 +5558,14 @@ static void draw_axis(char which, axis_t *axis, int pass)
 
               if (which == 'X')
                 {
-                  if (axis->position <= wn[2])
+                  if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
                     gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
                   else
                     gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
                 }
               else
                 {
-                  if (axis->position <= wn[0])
+                  if ((axis->position <= wn[0] && axis->label_orientation == 0) || axis->label_orientation < 0)
                     gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
                   else
                     gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
@@ -12922,6 +12932,36 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
   gks_inq_bbox(&errind, xmin, xmax, ymin, ymax);
 }
 
+void gr_setbackground()
+{
+  int clearflag = double_buf ? GKS_K_CLEAR_CONDITIONALLY : GKS_K_CLEAR_ALWAYS;
+  int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
+  regenflag |= GKS_K_WRITE_PAGE_FLAG;
+
+  check_autoinit;
+
+  foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
+
+  gks_set_background();
+
+  foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
+}
+
+void gr_clearbackground()
+{
+  int clearflag = double_buf ? GKS_K_CLEAR_CONDITIONALLY : GKS_K_CLEAR_ALWAYS;
+  int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
+  regenflag |= GKS_K_WRITE_PAGE_FLAG;
+
+  check_autoinit;
+
+  foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
+
+  gks_clear_background();
+
+  foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
+}
+
 double gr_precision(void)
 {
   /* check_autoinit is intentionally not called here, because
@@ -15841,10 +15881,6 @@ void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-  if (wtype == 381)
-    {
-      gks_update_ws(wkid, GKS_K_PERFORM_FLAG);
-    }
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
 }
 

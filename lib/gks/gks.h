@@ -678,6 +678,9 @@ DLLEXPORT void gks_resize_selection(int kind, double x, double y);
 DLLEXPORT void gks_set_bbox_callback(int id, void (*callback)(int, double, double, double, double));
 DLLEXPORT void gks_cancel_bbox_callback(void);
 
+DLLEXPORT void gks_set_background(void);
+DLLEXPORT void gks_clear_background(void);
+
 DLLEXPORT void gks_inq_bbox(int *errind, double *xmin, double *xmax, double *ymin, double *ymax);
 DLLEXPORT void gks_inq_text_slant(int *errind, double *slant);
 
