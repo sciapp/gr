@@ -13,7 +13,11 @@ EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QW
 void EditElementWidget::AttributeEditEvent()
 {
   auto current_selection = grplot_widget->get_current_selection();
-  if (current_selection == nullptr) return;
+  if (current_selection == nullptr || *current_selection == nullptr)
+    {
+      this->close();
+      return;
+    }
 
   if (this->layout() != nullptr)
     {
