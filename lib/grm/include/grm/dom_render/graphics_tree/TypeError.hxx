@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT TypeError : public std::logic_error
+class TypeError : public std::logic_error
 {
 public:
   explicit TypeError(const std::string &what_arg) : std::logic_error(what_arg) {}
