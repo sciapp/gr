@@ -1126,8 +1126,9 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
             {
               // A partial redraw was requested, but if no plot is marked as active, we need to redraw the whole figure
               auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
-              if (active_figure->querySelectors("layout_grid") == nullptr ||
-                  active_figure->querySelectors("plot[_active=\"1\"]") == nullptr)
+              if ((active_figure->querySelectors("layout_grid") == nullptr ||
+                   active_figure->querySelectors("plot[_active=\"1\"]") == nullptr) &&
+                  (active_figure->querySelectors("plot[_active_through_update=\"1\"]") == nullptr))
                 redraw_pixmap = RedrawType::full;
             }
           if (redraw_pixmap == RedrawType::full)
@@ -1144,7 +1145,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               previous_active_plot.reset();
               gr_clearbackground();
             }
-          else if (active_plot_changed)
+          else if (active_plot_changed ||
+                   active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr)
             {
               gr_setbackground();
             }
@@ -1152,6 +1154,23 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       active_plot_changed = false;
       painter.fillRect(0, 0, width(), height(), QColor("white"));
       draw();
+
+      active_figure = global_root->querySelectors("figure[active=\"1\"]");
+      is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
+      if (is_multiplot && active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr)
+        {
+          gr_setbackground();
+          auto render = grm_get_render();
+          bool auto_update;
+          render->getAutoUpdate(&auto_update);
+          render->setAutoUpdate(false);
+          for (const auto &plot : active_figure->querySelectorsAll("plot[_active_through_update=\"1\"]"))
+            {
+              plot->removeAttribute("_active_through_update");
+            }
+          render->setAutoUpdate(auto_update);
+        }
+
       painter.end();
       redraw_pixmap = RedrawType::none;
 
@@ -3159,7 +3178,14 @@ void GRPlotWidget::editElementAccepted()
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
-  reset_pixmap();
+
+  current_selection = nullptr;
+  for (const auto &selection : current_selections)
+    {
+      selection->get_ref()->setAttribute("_selected", 0);
+    }
+  current_selections.clear();
+  redraw();
 }
 
 void GRPlotWidget::set_referenced_elements(std::vector<Bounding_object> referenced_elements)

@@ -71,6 +71,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_active" type="xs:integer"/>
+            <xs:attribute name="_active_through_update" type="xs:integer"/>
             <xs:attribute name="_bottom_window_xform_a" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_b" type="xs:double"/>
