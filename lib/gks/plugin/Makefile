@@ -32,7 +32,7 @@ ifneq ($(QT4_QMAKE),false)
      QT4LIBS = -L$(QT4LIBDIR) -lQtGui -lQtCore
 ifeq ($(UNAME),Darwin)
 ifneq ($(QT4INC),)
-     QT4INC += -mmacosx-version-min=10.15
+     QT4INC += -std=c++11 -mmacosx-version-min=10.15
 endif
 else
 	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)"
