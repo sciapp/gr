@@ -132,7 +132,7 @@ void GKSWidget::paintEvent(QPaintEvent *)
     {
       QPainter painter(this);
       p = widget_state_list;
-      p->pixmap->fill(Qt::white);
+      if (!dl_contains_only_background_fctid(dl)) p->pixmap->fill(Qt::white);
       interp(dl);
       painter.drawPixmap(0, 0, *(p->pixmap));
       if (p->memory_plugin_wstype)
