@@ -473,8 +473,14 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
 static void getPlotParent(std::shared_ptr<GRM::Element> &element)
 {
   auto plot_parent = element;
+  if (str_equals_any(plot_parent->localName(), "root", "figure", "layout_grid", "layout_grid_element", "draw_graphics"))
+    {
+      element = nullptr;
+      return;
+    }
   while (plot_parent->localName() != "plot")
     {
+      if (plot_parent->parentElement() == nullptr) break;
       plot_parent = plot_parent->parentElement();
     }
   element = plot_parent;
@@ -16751,7 +16757,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       if (element->localName() == "plot")
         {
-          if (active_figure->querySelectors("plot[_active=\"1\"]") != nullptr &&
+          if ((active_figure->querySelectors("plot[_active=\"1\"]") != nullptr ||
+               active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr) &&
               element->parentElement()->parentElement()->localName() == "layout_grid" && redraw_ws)
             {
               auto viewport_x_min = static_cast<double>(element->getAttribute("viewport_x_min"));
@@ -16959,8 +16966,12 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
       for (const auto &child : element->children())
         {
           if (child->localName() == "figure" && !static_cast<int>(child->getAttribute("active"))) continue;
-          if (child->localName() == "plot" && active_figure->querySelectors("plot[_active=\"1\"]") != nullptr &&
-              (!child->hasAttribute("_active") || !static_cast<int>(child->getAttribute("_active"))))
+          if (child->localName() == "plot" &&
+              (active_figure->querySelectors("plot[_active=\"1\"]") != nullptr ||
+               active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr) &&
+              ((!child->hasAttribute("_active") || !static_cast<int>(child->getAttribute("_active"))) &&
+               ((!child->hasAttribute("_active_through_update") ||
+                 !static_cast<int>(child->getAttribute("_active_through_update"))))))
             continue;
           renderHelper(child, context);
         }
@@ -20531,6 +20542,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   if (!plot->querySelectors("colorbar")) side_plot->append(colorbar);
                 }
             }
+          if (plot_parent != nullptr && plot_parent->parentElement()->localName() != "figure")
+            {
+              plot_parent->setAttribute("_active_through_update", true);
+            }
         }
       else
         {
@@ -21916,6 +21931,26 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                     }
                 }
             }
+
+          auto plot_parent = element;
+          getPlotParent(plot_parent);
+          if (plot_parent != nullptr && plot_parent->parentElement() != nullptr &&
+              plot_parent->parentElement()->localName() != "figure")
+            {
+              plot_parent->setAttribute("_active_through_update", true);
+            }
+          else if (plot_parent == nullptr)
+            {
+              if (active_figure != nullptr)
+                {
+                  automatic_update = false;
+                  for (const auto &plot : active_figure->querySelectorsAll("plot[_active=\"1\"]"))
+                    {
+                      plot->removeAttribute("_active");
+                    }
+                  automatic_update = true;
+                }
+            }
         }
       global_root->setAttribute("_modified", true);
 
@@ -21929,15 +21964,6 @@ void renderCaller()
   if (global_root && static_cast<int>(global_root->getAttribute("_modified")) && automatic_update)
     {
       auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
-      if (active_figure != nullptr)
-        {
-          automatic_update = false;
-          for (const auto &plot : active_figure->querySelectorsAll("plot[_active=\"1\"]"))
-            {
-              plot->removeAttribute("_active");
-            }
-          automatic_update = true;
-        }
       global_render->process_tree();
     }
 }
