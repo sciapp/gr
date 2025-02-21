@@ -34,5 +34,3 @@ moc_*.cpp
 moc_*.h
 qrc_*.cpp
 clion-build/
-lib/grm/test/public_api/grm/snoop/diff_images/
-lib/grm/test/public_api/grm/snoop/snoop.jl

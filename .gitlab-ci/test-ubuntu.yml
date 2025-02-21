@@ -48,40 +48,6 @@ ubuntu-cmake-self-contained-test-grplot:
     - test_result/
     when: on_failure
 
-ubuntu-cmake-self-contained-test-snoop:
-  stage: test
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
-  rules:
-  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
-    when: never
-  - if: '$GR_REBUILD_REFERENCE'
-    when: never
-  - when: on_success
-  needs:
-  - ubuntu-cmake-self-contained-debug
-  variables:
-    JULIA_VERSION: 1.8.5
-  before_script:
-  - apt-get update && apt-get install -y curl
-  - curl -fLO "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
-  - tar -C/usr/local --strip=1 -xf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
-  - julia -e "using Pkg; Pkg.add(\"Images\")"
-  - julia -e "using Pkg; Pkg.add(name=\"GR\", rev=\"master\")"
-  script:
-  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
-  - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
-  - export LIBC_RAND_DIRPATH=`pwd`
-  - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
-  - export GRM_VALIDATE=yes
-  - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
-      mv lib/grm/test/public_api/grm/snoop/diff_images ./;
-      exit 1;
-    }
-  artifacts:
-    paths:
-    - diff_images
-    when: on_failure
-
 ubuntu-cmake-self-contained-test-grm-internal:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
