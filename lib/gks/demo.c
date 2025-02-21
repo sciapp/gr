@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
   else
     {
       gks_update_ws(2, GKS_K_PERFORM_FLAG | GKS_K_WRITE_PAGE_FLAG);
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
       puts("Press RETURN to continue ...");
       getchar();
 

@@ -4,30 +4,18 @@ freebsd-self-contained:
   tags:
   - libvirt
   script:
-  - sudo mkdir /usr/local/gr
-  - sudo chown administrator:administrator /usr/local/gr
   - export CPATH="/usr/local/include"
   - export LIBRARY_PATH="/usr/local/lib"
-  - gmake self GRDIR=/usr/local/gr MAKE=gmake
-  - mkdir artifacts
-  - cp lib/gks/demo artifacts/gksdemo
-  - cp lib/gks/qt/gksqt artifacts/gksqt
-  - cp lib/grm/grplot/grplot artifacts/grplot
-  - mkdir -p artifacts/share/doc/grplot
-  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
-  - mkdir -p artifacts/share/licenses/GR
-  - cp LICENSE.md artifacts/share/licenses/GR/
-  - mkdir -p artifacts/share/xml/GRM
-  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
-  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
-  - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - cp -r lib/grm/include/grm artifacts/include/
-  - mv artifacts artifacts-freebsd13
+  - gmake -C 3rdparty default extras GRDIR=/usr/local/gr MAKE=gmake
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="$(pwd)/install" cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-freebsd13
   artifacts:
     expire_in: 1 week
     paths:

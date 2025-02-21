@@ -2,13 +2,13 @@ gr-test-update-prepare:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   needs:
-  - job: ubuntu-cmake-self-contained-test-c
+  - job: ubuntu-self-contained-test-c
     artifacts: true
     optional: true
-  - job: ubuntu-cmake-self-contained-test-cpp
+  - job: ubuntu-self-contained-test-cpp
     artifacts: true
     optional: true
-  - job: ubuntu-cmake-self-contained-test-grplot
+  - job: ubuntu-self-contained-test-grplot
     artifacts: true
     optional: true
   - job: emscripten-test
