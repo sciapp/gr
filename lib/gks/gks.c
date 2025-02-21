@@ -180,7 +180,7 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
             }
           ptr = &ws->ptr;
 
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
           if (s->debug)
             fprintf(stdout, "[DEBUG:GKS] dispatch %s function to %s driver (wtype: %d)\n", gks_function_name(fctid),
                     ws->name, ws->wtype);
@@ -3127,7 +3127,7 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
 
       switch (ws->wtype)
         {
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
         case 381:
           gks_qt_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
           break;
@@ -3190,7 +3190,7 @@ void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *button
 
       switch (ws->wtype)
         {
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
         case 400:
           gks_quartz_plugin(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
           *x = f_arr_1[0];

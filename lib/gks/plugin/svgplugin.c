@@ -1601,7 +1601,7 @@ static void write_page(void)
     }
 }
 
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 void gks_svgplugin(
 #else
 void gks_drv_js(
