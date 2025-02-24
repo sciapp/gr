@@ -558,10 +558,8 @@ int grm_input_(const grm_args_t *input_args)
           double viewport[4];
           auto central_region = subplot_element->querySelectors("central_region");
           auto coordinate_system = subplot_element->querySelectors("coordinate_system");
-          viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-          viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-          viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-          viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+          if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+            throw NotFoundError("Central region doesn't have a viewport but it should.\n");
 
           gr_savestate();
           kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
@@ -625,10 +623,7 @@ int grm_input_(const grm_args_t *input_args)
                 {
                   if (elem->hasAttribute("scale"))
                     {
-                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                       gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                    static_cast<double>(central_region->getAttribute("window_x_max")),
                                    static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -850,10 +845,7 @@ int grm_input_(const grm_args_t *input_args)
                 {
                   if (elem->hasAttribute("scale"))
                     {
-                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                       gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                    static_cast<double>(central_region->getAttribute("window_x_max")),
                                    static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -962,10 +954,7 @@ int grm_input_(const grm_args_t *input_args)
                     {
                       if (elem->hasAttribute("scale"))
                         {
-                          gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                         static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                         static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                         static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                          gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                           gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                        static_cast<double>(central_region->getAttribute("window_x_max")),
                                        static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -1096,10 +1085,8 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   ws_window[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_max"));
   ws_window[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_min"));
   ws_window[3] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_max"));
-  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+  if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+    throw NotFoundError("Central region doesn't have a viewport but it should.\n");
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
   *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (ws_window[1] - ws_window[0]));
@@ -1346,10 +1333,10 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   GRM::Render::processWindow(central_region);
   if (central_region->hasAttribute("viewport_x_min"))
     {
-      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+      double viewport[4];
+      if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+        throw NotFoundError("Central region doesn't have a viewport but it should.\n");
+      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     }
   if (central_region->hasAttribute("window_x_min") && kind != "pie")
     {
@@ -1435,9 +1422,9 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
       min_y = height - min_y * max_width_height;
 
       /* calculate the circle */
-      radius = (max_x - min_x) / 2.0;
-      center_x = (int)(max_x - radius);
-      center_y = (int)(max_y - radius);
+      radius = 0.5 * (max_x - min_x);
+      center_x = (int)(max_x + min_x) / 2;
+      center_y = (int)(max_y + min_y) / 2;
 
       auto current_series = subplot_element->querySelectorsAll("series_pie")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));

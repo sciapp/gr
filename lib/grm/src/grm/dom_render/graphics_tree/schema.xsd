@@ -119,6 +119,7 @@
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="adjust_x_lim" type="xs:integer" use="required"/>
             <xs:attribute name="adjust_y_lim" type="xs:integer" use="required"/>
             <xs:attribute name="adjust_z_lim" type="xs:integer"/>
@@ -324,7 +325,7 @@
                 <xs:element ref="theta_axes" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
-            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="angle_ticks" type="xs:integer"/>
             <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="hide" type="xs:integer"/>
@@ -370,6 +371,7 @@
             <xs:attribute name="adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="axis_type" type="xs:string" use="required"/> <!-- X or Y -->
             <xs:attribute name="draw_grid" type="xs:integer"/>
+            <xs:attribute name="label_orientation" type="xs:integer"/>
             <xs:attribute name="label_pos" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>

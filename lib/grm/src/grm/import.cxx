@@ -691,9 +691,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           fprintf(stderr, "File is empty\n");
           return 0;
         }
-      if (cols != labels.size())
+      if (cols + x_data.size() + error_data.size() != labels.size())
         {
-          fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n", cols, labels.size());
+          fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n",
+                  cols + x_data.size() + error_data.size(), labels.size());
         }
 
       series.resize(cols);
@@ -1051,7 +1052,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   else if (std::find(y_data.begin(), y_data.end(), col) != y_data.end())
                     {
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
-                      if (!labels.empty() && labels.size() > y_cnt) labels_c.push_back(labels[y_cnt].c_str());
+                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
                       y_cnt += 1;
@@ -1494,7 +1495,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     }
                   else if (std::find(y_data.begin(), y_data.end(), col) != y_data.end())
                     {
-                      if (!labels.empty() && labels.size() > y_cnt) labels_c.push_back(labels[y_cnt].c_str());
+                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
                       /* for histogram */
                       grm_args_push(series[y_cnt], "weights", "nD", rows, file_data[depth][col].data());

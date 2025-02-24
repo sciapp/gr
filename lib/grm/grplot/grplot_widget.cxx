@@ -2459,14 +2459,19 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
         {
           int width, height;
           double mwidth, mheight;
+          double vp_x_min, vp_x_max, vp_y_min, vp_y_max;
           GRM::Render::getFigureSize(&width, &height, &mwidth, &mheight);
           auto aspect_r = mwidth / mheight;
-          auto vp_xmin = static_cast<double>(plot_elem->getAttribute("viewport_x_min")) * width;
-          auto vp_xmax = static_cast<double>(plot_elem->getAttribute("viewport_x_max")) * width;
-          auto vp_ymin = static_cast<double>(plot_elem->getAttribute("viewport_y_min")) * aspect_r * height;
-          auto vp_ymax = static_cast<double>(plot_elem->getAttribute("viewport_y_max")) * aspect_r * height;
 
-          painter.drawRect(vp_xmin, std::max(0.0, height - vp_ymax), abs(vp_xmax - vp_xmin), abs(vp_ymax - vp_ymin));
+          if (!GRM::Render::getViewport(plot_elem, &vp_x_min, &vp_x_max, &vp_y_min, &vp_y_max))
+            throw NotFoundError(plot_elem->localName() + " doesn't have a viewport but it should.\n");
+          vp_x_min *= width;
+          vp_x_max *= width;
+          vp_y_min *= aspect_r * height;
+          vp_y_max *= aspect_r * height;
+
+          painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
+                           abs(vp_y_max - vp_y_min));
         }
     }
 }

@@ -7004,10 +7004,8 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
     {
       double viewport[4];
       auto central_region = element->querySelectors("central_region");
-      viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-      viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-      viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-      viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+      if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+        throw NotFoundError("Central region doesn't have a viewport but it should.\n");
       if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3]) return element;
     }
   if (element->localName() == "layout_grid" || element->localName() == "layout_grid_element")
@@ -7123,10 +7121,8 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   if (subplot_element == nullptr) return 0;
 
   auto central_region = subplot_element->querySelectors("central_region");
-  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+  if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+    throw NotFoundError("Central region doesn't have a viewport but it should.\n");
   wswindow[0] = static_cast<double>(edit_figure->getAttribute("ws_window_x_min"));
   wswindow[1] = static_cast<double>(edit_figure->getAttribute("ws_window_x_max"));
   wswindow[2] = static_cast<double>(edit_figure->getAttribute("ws_window_y_min"));

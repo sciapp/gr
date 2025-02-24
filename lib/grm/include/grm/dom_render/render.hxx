@@ -547,6 +547,9 @@ public:
 
   int getAxisId();
 
+  static bool getViewport(const std::shared_ptr<GRM::Element> &element, double *xmin, double *xmax, double *ymin,
+                          double *ymax);
+
   std::shared_ptr<Context> getRenderContext();
 
   void render();                                           // render doc and render context

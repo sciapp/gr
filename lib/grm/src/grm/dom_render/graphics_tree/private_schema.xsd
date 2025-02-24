@@ -139,10 +139,14 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_bottom_axis_border" type="xs:double"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_left_axis_border" type="xs:double"/>
+            <xs:attribute name="_right_axis_border" type="xs:double"/>
             <xs:attribute name="_skip_calculations" type="xs:integer"/>
             <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
+            <xs:attribute name="_top_axis_border" type="xs:double"/>
             <xs:attribute name="_zoomed" type="xs:int"/>
         </xs:complexType>
     </xs:element>
@@ -185,6 +189,7 @@
     <xs:element name="coordinate_system">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
         </xs:complexType>
