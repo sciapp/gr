@@ -13,49 +13,50 @@ extern "C" {
 
 /* ========================= datatypes ============================================================================== */
 
-/* ------------------------- grid ----------------------------------------------------------------------------------- */
+/* ------------------------- grm_grid_t ----------------------------------------------------------------------------- */
 
-struct _grid_t;
-typedef struct _grid_t grid_t;
+struct _grm_grid_t;
+typedef struct grm_grid grm_grid_t;
 
-/* ------------------------- element -------------------------------------------------------------------------------- */
+/* ------------------------- grm_element_t -------------------------------------------------------------------------- */
 
-struct _element_t;
-typedef struct _element_t element_t;
+struct _grm_element_t;
+typedef struct grm_element grm_element_t;
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- grid ----------------------------------------------------------------------------------- */
 
-EXPORT err_t grid_new(int nrows, int ncols, grid_t **a_grid);
-EXPORT void grid_print(const grid_t *grid);
-EXPORT err_t grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid);
-EXPORT err_t grid_setElementArgs(int row, int col, grm_args_t *subplot_args, grid_t *a_grid);
-EXPORT err_t grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element,
-                                  grid_t *a_grid);
-EXPORT err_t grid_setElementArgsSlice(int rowStart, int rowStop, int colStart, int colStop, grm_args_t *subplot_args,
-                                      grid_t *a_grid);
-EXPORT err_t grid_getElement(int row, int col, grid_t *a_grid, element_t **a_element);
-EXPORT err_t grid_ensureCellIsGrid(int row, int col, grid_t *a_grid);
-EXPORT err_t grid_ensureCellsAreGrid(int rowStart, int rowStop, int colStart, int colStop, grid_t *a_grid);
-EXPORT void grid_finalize(grid_t *a_grid);
-EXPORT void grid_delete(const grid_t *grid);
-EXPORT void trim(grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_new(int nrows, int ncols, grm_grid_t **a_grid);
+GRM_EXPORT void grm_grid_print(const grm_grid_t *grid);
+GRM_EXPORT grm_error_t grm_grid_set_element(int row, int col, grm_element_t *a_element, grm_grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_set_element_args(int row, int col, grm_args_t *subplot_args, grm_grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_set_element_slice(int row_start, int row_stop, int col_start, int col_stop,
+                                                  grm_element_t *a_element, grm_grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_set_element_args_slice(int row_start, int row_stop, int col_start, int col_stop,
+                                                       grm_args_t *subplot_args, grm_grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_get_element(int row, int col, grm_grid_t *a_grid, grm_element_t **a_element);
+GRM_EXPORT grm_error_t grm_grid_ensure_cell_is_grid(int row, int col, grm_grid_t *a_grid);
+GRM_EXPORT grm_error_t grm_grid_ensure_cells_are_grid(int row_start, int row_stop, int col_start, int col_stop,
+                                                      grm_grid_t *a_grid);
+GRM_EXPORT void grm_grid_finalize(grm_grid_t *a_grid);
+GRM_EXPORT void grm_grid_delete(const grm_grid_t *grid);
+GRM_EXPORT void grm_trim(grm_grid_t *a_grid);
 
 /* ------------------------- element -------------------------------------------------------------------------------- */
 
-EXPORT err_t element_new(element_t **a_element);
-EXPORT err_t element_setAbsHeight(element_t *a_element, double height);
-EXPORT err_t element_setAbsHeightPxl(element_t *a_element, int height);
-EXPORT err_t element_setRelativeHeight(element_t *a_element, double height);
-EXPORT err_t element_setAbsWidth(element_t *a_element, double width);
-EXPORT err_t element_setAbsWidthPxl(element_t *a_element, int width);
-EXPORT err_t element_setRelativeWidth(element_t *a_element, double width);
-EXPORT err_t element_setAspectRatio(element_t *a_element, double ar);
-EXPORT void element_setFitParentsHeight(element_t *a_element, int fitParentsHeight);
-EXPORT void element_setFitParentsWidth(element_t *a_element, int fitParentsWidth);
+GRM_EXPORT grm_error_t grm_element_new(grm_element_t **a_element);
+GRM_EXPORT grm_error_t grm_element_set_abs_height(grm_element_t *a_element, double height);
+GRM_EXPORT grm_error_t grm_element_set_abs_height_pxl(grm_element_t *a_element, int height);
+GRM_EXPORT grm_error_t grm_element_set_relative_height(grm_element_t *a_element, double height);
+GRM_EXPORT grm_error_t grm_element_set_abs_width(grm_element_t *a_element, double width);
+GRM_EXPORT grm_error_t grm_element_set_abs_width_pxl(grm_element_t *a_element, int width);
+GRM_EXPORT grm_error_t grm_element_set_relative_width(grm_element_t *a_element, double width);
+GRM_EXPORT grm_error_t grm_element_set_aspect_ratio(grm_element_t *a_element, double ar);
+GRM_EXPORT void grm_element_set_fit_parents_height(grm_element_t *a_element, int fit_parents_height);
+GRM_EXPORT void grm_element_set_fit_parents_width(grm_element_t *a_element, int fit_parents_width);
 
-EXPORT void element_getSubplot(element_t *a_element, double **subplot);
+GRM_EXPORT void grm_element_get_subplot(grm_element_t *a_element, double **subplot);
 
 #ifdef __cplusplus
 }

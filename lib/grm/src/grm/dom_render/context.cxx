@@ -33,34 +33,34 @@ GRM::Context::Inner::Inner(const Context &context, std::string key)
 bool GRM::Context::Inner::intUsed()
 {
   /*!
-   * This function is used for checking if the tableInt map of GRM::Context contains a value for GRM::Context::Inner's
+   * This function is used for checking if the table_int map of GRM::Context contains a value for GRM::Context::Inner's
    * key
    *
-   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableInt
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::table_int
    */
-  return context->tableInt.find(key) != context->tableInt.end();
+  return context->table_int.find(key) != context->table_int.end();
 }
 
 bool GRM::Context::Inner::doubleUsed()
 {
   /*!
-   * This function is used for checking if the tableDouble map of GRM::Context contains a value for
+   * This function is used for checking if the table_double map of GRM::Context contains a value for
    * GRM::Context::Inner's key
    *
-   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableDouble
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::table_double
    */
-  return context->tableDouble.find(key) != context->tableDouble.end();
+  return context->table_double.find(key) != context->table_double.end();
 }
 
 bool GRM::Context::Inner::stringUsed()
 {
   /*!
-   * This function is used for checking if the tableString map of GRM::Context contains a value for
+   * This function is used for checking if the table_string map of GRM::Context contains a value for
    * GRM::Context::Inner's key
    *
-   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableString
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::table_string
    */
-  return context->tableString.find(key) != context->tableString.end();
+  return context->table_string.find(key) != context->table_string.end();
 }
 
 
@@ -68,36 +68,24 @@ GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<double> vec)
 {
   /*!
    * Overloaded operator= for GRM::Context::Inner assigning std::vector<double>
-   * Stores the vector in GRM::Context::tableDouble with GRM::Context::Inner's key
+   * Stores the vector in GRM::Context::table_double with GRM::Context::Inner's key
    * Throws a TypeError if the GRM::Context::Inner key is already used by other GRM::Context tableTYPES
    */
-  if (intUsed() || stringUsed())
-    {
-      throw TypeError("Wrong Type: std::vector<double> expected\n");
-    }
-  else
-    {
-      context->tableDouble[key] = std::move(vec);
-      return *this;
-    }
+  if (intUsed() || stringUsed()) throw TypeError("Wrong Type: std::vector<double> expected\n");
+  context->table_double[key] = std::move(vec);
+  return *this;
 }
 
 GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<int> vec)
 {
   /*!
    * Overloaded operator= for GRM::Context::Inner assigning std::vector<int>
-   * Stores the vector in GRM::Context::tableInt with GRM::Context::Inner's key
+   * Stores the vector in GRM::Context::table_int with GRM::Context::Inner's key
    * Throws a TypeError if the GRM::Context::Inner key is already used by other GRM::Context tableTYPES
    */
-  if (doubleUsed() || stringUsed())
-    {
-      throw TypeError("Wrong type: std::vector<int> expected\n");
-    }
-  else
-    {
-      context->tableInt[key] = std::move(vec);
-      return *this;
-    }
+  if (doubleUsed() || stringUsed()) throw TypeError("Wrong type: std::vector<int> expected\n");
+  context->table_int[key] = std::move(vec);
+  return *this;
 }
 
 
@@ -105,18 +93,12 @@ GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<std::string> vec
 {
   /*!
    * Overloaded operator= for GRM::Context::Inner assigning std::vector<std::string>
-   * Stores the vector in GRM::Context::tableString with GRM::Context::Inner's key
+   * Stores the vector in GRM::Context::table_string with GRM::Context::Inner's key
    * Throws a TypeError if the GRM::Context::Inner is already used by other GRM::Context tableTYPES
    */
-  if (intUsed() || doubleUsed())
-    {
-      throw TypeError("Wrong type: std::vector<std::string> expected\n");
-    }
-  else
-    {
-      context->tableString[key] = std::move(vec);
-      return *this;
-    }
+  if (intUsed() || doubleUsed()) throw TypeError("Wrong type: std::vector<std::string> expected\n");
+  context->table_string[key] = std::move(vec);
+  return *this;
 }
 
 
@@ -126,12 +108,9 @@ GRM::Context::Inner::operator std::vector<int> &()
    * Overloaded operator std::vector<int>& used for converting GRM::Context::Inner to std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_int with Inner's key
    */
-  if (context->tableInt.find(key) != context->tableInt.end())
-    {
-      return context->tableInt[key];
-    }
+  if (context->table_int.find(key) != context->table_int.end()) return context->table_int[key];
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -142,12 +121,9 @@ GRM::Context::Inner::operator const std::vector<int> &() const
    * The const overloaded operator std::vector<int>& used for converting GRM::Context::Inner to const std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_int with Inner's key
    */
-  if (context->tableInt.find(key) != context->tableInt.end())
-    {
-      return context->tableInt[key];
-    }
+  if (context->table_int.find(key) != context->table_int.end()) return context->table_int[key];
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -158,12 +134,9 @@ GRM::Context::Inner::operator std::vector<double> &()
    * Overloaded operator std::vector<double>& used for converting GRM::Context::Inner to std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_double with Inner's key
    */
-  if (context->tableDouble.find(key) != context->tableDouble.end())
-    {
-      return context->tableDouble[key];
-    }
+  if (context->table_double.find(key) != context->table_double.end()) return context->table_double[key];
   std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -174,12 +147,9 @@ GRM::Context::Inner::operator const std::vector<double> &() const
    * The const overloaded operator std::vector<double>& used for converting GRM::Context::Inner to std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_double with Inner's key
    */
-  if (context->tableDouble.find(key) != context->tableDouble.end())
-    {
-      return context->tableDouble[key];
-    }
+  if (context->table_double.find(key) != context->table_double.end()) return context->table_double[key];
   std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -190,12 +160,9 @@ GRM::Context::Inner::operator std::vector<std::string> &()
    * Overloaded operator std::vector<std::string>& used for converting GRM::Context::Inner to std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableString with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_string with Inner's key
    */
-  if (context->tableString.find(key) != context->tableString.end())
-    {
-      return context->tableString[key];
-    }
+  if (context->table_string.find(key) != context->table_string.end()) return context->table_string[key];
   std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -206,12 +173,9 @@ GRM::Context::Inner::operator const std::vector<std::string> &() const
    * The const overloaded operator std::vector<std::string>& used for converting GRM::Context::Inner to std::vector
    * This operator is used in GRM::get
    *
-   * Throws a NotFoundError if there is no vector found in tableString with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_string with Inner's key
    */
-  if (context->tableString.find(key) != context->tableString.end())
-    {
-      return context->tableString[key];
-    }
+  if (context->table_string.find(key) != context->table_string.end()) return context->table_string[key];
   std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -222,12 +186,9 @@ GRM::Context::Inner::operator std::vector<int> *()
    * Overloaded operator std::vector<int>* used for converting GRM::Context::Inner to a std::vector pointer
    * This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_int with Inner's key
    */
-  if (context->tableInt.find(key) != context->tableInt.end())
-    {
-      return &context->tableInt[key];
-    }
+  if (context->table_int.find(key) != context->table_int.end()) return &context->table_int[key];
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -238,12 +199,9 @@ GRM::Context::Inner::operator const std::vector<int> *() const
    * The const overloaded operator std::vector<int>* used for converting GRM::Context::Inner to a std::vector pointer
    * This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_int with Inner's key
    */
-  if (context->tableInt.find(key) != context->tableInt.end())
-    {
-      return &context->tableInt[key];
-    }
+  if (context->table_int.find(key) != context->table_int.end()) return &context->table_int[key];
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -255,12 +213,9 @@ GRM::Context::Inner::operator std::vector<double> *()
    * Overloaded operator std::vector<double>* used for converting GRM::Context::Inner to a std::vector pointer
    * This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_double with Inner's key
    */
-  if (context->tableDouble.find(key) != context->tableDouble.end())
-    {
-      return &context->tableDouble[key];
-    }
+  if (context->table_double.find(key) != context->table_double.end()) return &context->table_double[key];
   std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -271,12 +226,9 @@ GRM::Context::Inner::operator const std::vector<double> *() const
    * The const overloaded operator std::vector<double>* used for converting GRM::Context::Inner to a std::vector pointer
    * This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_double with Inner's key
    */
-  if (context->tableDouble.find(key) != context->tableDouble.end())
-    {
-      return &context->tableDouble[key];
-    }
+  if (context->table_double.find(key) != context->table_double.end()) return &context->table_double[key];
   std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -287,12 +239,9 @@ GRM::Context::Inner::operator std::vector<std::string> *()
    * Overloaded operator std::vector<std::string>* used for converting GRM::Context::Inner to a std::vector pointer
    * This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableString with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_string with Inner's key
    */
-  if (context->tableString.find(key) != context->tableString.end())
-    {
-      return &context->tableString[key];
-    }
+  if (context->table_string.find(key) != context->table_string.end()) return &context->table_string[key];
   std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
@@ -303,54 +252,51 @@ GRM::Context::Inner::operator const std::vector<std::string> *() const
    * Const overloaded operator std::vector<std::string>* used for converting GRM::Context::Inner to a std::vector
    * pointer This operator is used in GRM::get_if
    *
-   * Throws a NotFoundError if there is no vector found in tableString with Inner's key
+   * Throws a NotFoundError if there is no vector found in table_string with Inner's key
    */
-  if (context->tableString.find(key) != context->tableString.end())
-    {
-      return &context->tableString[key];
-    }
+  if (context->table_string.find(key) != context->table_string.end()) return &context->table_string[key];
   std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
-void GRM::Context::Inner::delete_key(const std::string &context_key)
+void GRM::Context::Inner::deleteKey(const std::string &context_key)
 {
   bool erased = false;
-  if (context->tableString.find(context_key) != context->tableString.end())
+  if (context->table_string.find(context_key) != context->table_string.end())
     {
-      context->tableString.erase(context_key);
+      context->table_string.erase(context_key);
       erased = true;
     }
-  if (context->tableDouble.find(context_key) != context->tableDouble.end())
+  if (context->table_double.find(context_key) != context->table_double.end())
     {
-      context->tableDouble.erase(context_key);
+      context->table_double.erase(context_key);
       erased = true;
     }
-  if (context->tableInt.find(context_key) != context->tableInt.end())
+  if (context->table_int.find(context_key) != context->table_int.end())
     {
-      context->tableInt.erase(context_key);
+      context->table_int.erase(context_key);
       erased = true;
     }
-  if (erased) context->referenceNumberOfKeys.erase(context_key);
+  if (erased) context->reference_number_of_keys.erase(context_key);
 }
 
-void GRM::Context::Inner::decrement_key(const std::string &context_key)
+void GRM::Context::Inner::decrementKey(const std::string &context_key)
 {
-  context->referenceNumberOfKeys[context_key] -= 1;
-  if (context->referenceNumberOfKeys[context_key] <= 0) delete_key(context_key);
+  context->reference_number_of_keys[context_key] -= 1;
+  if (context->reference_number_of_keys[context_key] <= 0) deleteKey(context_key);
 }
 
-void GRM::Context::Inner::increment_key(const std::string &context_key)
+void GRM::Context::Inner::incrementKey(const std::string &context_key)
 {
-  context->referenceNumberOfKeys[context_key] += 1;
+  context->reference_number_of_keys[context_key] += 1;
 }
 
-void GRM::Context::Inner::use_context_key(const std::string &context_key, const std::string &old_key)
+void GRM::Context::Inner::useContextKey(const std::string &context_key, const std::string &old_key)
 {
   if (context_key != old_key)
     {
-      if (!old_key.empty()) decrement_key(old_key);
-      increment_key(context_key);
+      if (!old_key.empty()) decrementKey(old_key);
+      incrementKey(context_key);
     }
 }
 
@@ -383,18 +329,18 @@ const GRM::Context::Inner GRM::Context::operator[](const std::string &str) const
  * \param[in] is_end_iterator Set this to true if an end iterator shall be created.
  */
 GRM::Context::Iterator::Iterator(Context &context, bool is_end_iterator)
-    : context_(context), table_double_it_(context.tableDouble.begin()), table_int_it_(context.tableInt.begin()),
-      table_string_it_(context.tableString.begin()), current_it_(table_double_it_)
+    : context_(context), table_double_it_(context.table_double.begin()), table_int_it_(context.table_int.begin()),
+      table_string_it_(context.table_string.begin()), current_it_(table_double_it_)
 {
   if (is_end_iterator)
     {
-      table_double_it_ = context.tableDouble.end();
-      table_int_it_ = context.tableInt.end();
-      table_string_it_ = context.tableString.end();
+      table_double_it_ = context.table_double.end();
+      table_int_it_ = context.table_int.end();
+      table_string_it_ = context.table_string.end();
     }
   else
     {
-      current_it_ = next_iterator();
+      current_it_ = nextIterator();
     }
 };
 
@@ -418,7 +364,7 @@ GRM::Context::Iterator::reference GRM::Context::Iterator::operator*()
 GRM::Context::Iterator &GRM::Context::Iterator::operator++()
 {
   std::visit([](auto &&it) { ++it.get(); }, current_it_);
-  current_it_ = next_iterator();
+  current_it_ = nextIterator();
   return *this;
 }
 
@@ -469,32 +415,19 @@ bool GRM::operator!=(const GRM::Context::Iterator &a, const GRM::Context::Iterat
 std::variant<std::reference_wrapper<std::map<std::string, std::vector<double>>::iterator>,
              std::reference_wrapper<std::map<std::string, std::vector<int>>::iterator>,
              std::reference_wrapper<std::map<std::string, std::vector<std::string>>::iterator>>
-GRM::Context::Iterator::next_iterator()
+GRM::Context::Iterator::nextIterator()
 {
   auto is_it_lt = [](const auto &it_a, const auto &it_b, const auto &it_a_end, const auto &it_b_end) {
-    if (it_a != it_a_end && it_b != it_b_end)
-      {
-        return it_a->first < it_b->first;
-      }
-    else
-      {
-        return it_a != it_a_end && it_b == it_b_end;
-      }
+    if (it_a != it_a_end && it_b != it_b_end) return it_a->first < it_b->first;
+    return it_a != it_a_end && it_b == it_b_end;
   };
 
-  if (is_it_lt(table_double_it_, table_int_it_, context_.tableDouble.end(), context_.tableInt.end()) &&
-      is_it_lt(table_double_it_, table_string_it_, context_.tableDouble.end(), context_.tableString.end()))
-    {
-      return table_double_it_;
-    }
-  else if (is_it_lt(table_int_it_, table_string_it_, context_.tableInt.end(), context_.tableString.end()))
-    {
-      return table_int_it_;
-    }
-  else
-    {
-      return table_string_it_;
-    }
+  if (is_it_lt(table_double_it_, table_int_it_, context_.table_double.end(), context_.table_int.end()) &&
+      is_it_lt(table_double_it_, table_string_it_, context_.table_double.end(), context_.table_string.end()))
+    return table_double_it_;
+  if (is_it_lt(table_int_it_, table_string_it_, context_.table_int.end(), context_.table_string.end()))
+    return table_int_it_;
+  return table_string_it_;
 }
 
 /*!

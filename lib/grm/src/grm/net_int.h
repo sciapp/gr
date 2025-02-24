@@ -7,7 +7,14 @@ extern "C" {
 
 /* ######################### includes ############################################################################### */
 
-#include "grm/error.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#else
+#include <netinet/in.h>
+#endif
+
+#include "error_int.h"
 #include "memwriter_int.h"
 #include <grm/net.h>
 
@@ -31,16 +38,16 @@ extern "C" {
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-struct _net_handle_t;
-typedef struct _net_handle_t net_handle_t;
+struct NetHandle;
+typedef struct NetHandle NetHandle;
 
-typedef err_t (*recv_callback_t)(net_handle_t *);
-typedef err_t (*send_callback_t)(net_handle_t *);
-typedef const char *(*custom_recv_callback_t)(const char *, unsigned int);
-typedef int (*custom_send_callback_t)(const char *, unsigned int, const char *);
-typedef err_t (*finalize_callback_t)(net_handle_t *);
+typedef grm_error_t (*RecvCallback)(NetHandle *);
+typedef grm_error_t (*SendCallback)(NetHandle *);
+typedef const char *(*CustomRecvCallback)(const char *, unsigned int);
+typedef int (*CustomSendCallback)(const char *, unsigned int, const char *);
+typedef grm_error_t (*FinalizeCallback)(NetHandle *);
 
-struct _net_handle_t
+struct NetHandle
 {
   int is_receiver;
   union
@@ -56,15 +63,15 @@ struct _net_handle_t
        * must be definied in both union parts in the same order
        * -> these attributes can be accessed with both receiver and sender structs
        */
-      memwriter_t *memwriter;
+      Memwriter *memwriter;
       size_t message_size;
-      recv_callback_t recv;
-      send_callback_t send;
+      RecvCallback recv;
+      SendCallback send;
       union
       {
         struct
         {
-          custom_recv_callback_t recv;
+          CustomRecvCallback recv;
           const char *name;
           unsigned int id;
         } custom;
@@ -77,15 +84,15 @@ struct _net_handle_t
     } receiver;
     struct
     {
-      memwriter_t *memwriter;
+      Memwriter *memwriter;
       size_t message_size;
-      recv_callback_t recv;
-      send_callback_t send;
+      RecvCallback recv;
+      SendCallback send;
       union
       {
         struct
         {
-          custom_send_callback_t send;
+          CustomSendCallback send;
           const char *name;
           unsigned int id;
         } custom;
@@ -97,31 +104,31 @@ struct _net_handle_t
       } comm;
     } sender;
   } sender_receiver;
-  finalize_callback_t finalize;
+  FinalizeCallback finalize;
 };
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-static err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
-static err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                                      const char *(*custom_recv)(const char *, unsigned int));
-static err_t receiver_finalize_for_socket(net_handle_t *handle);
-static err_t receiver_finalize_for_custom(net_handle_t *handle);
-static err_t receiver_recv_for_socket(net_handle_t *handle);
-static err_t receiver_recv_for_custom(net_handle_t *handle);
+static grm_error_t receiverInitForSocket(NetHandle *handle, const char *hostname, unsigned int port);
+static grm_error_t receiverInitForCustom(NetHandle *handle, const char *name, unsigned int id,
+                                         const char *(*custom_recv)(const char *, unsigned int));
+static grm_error_t receiverFinalizeForSocket(NetHandle *handle);
+static grm_error_t receiverFinalizeForCustom(NetHandle *handle);
+static grm_error_t receiverRecvForSocket(NetHandle *handle);
+static grm_error_t receiverRecvForCustom(NetHandle *handle);
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-static err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
-static err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                                    int (*custom_send)(const char *, unsigned int, const char *));
-static err_t sender_finalize_for_socket(net_handle_t *handle);
-static err_t sender_finalize_for_custom(net_handle_t *handle);
-static err_t sender_send_for_socket(net_handle_t *handle);
-static err_t sender_send_for_custom(net_handle_t *handle);
+static grm_error_t senderInitForSocket(NetHandle *handle, const char *hostname, unsigned int port);
+static grm_error_t senderInitForCustom(NetHandle *handle, const char *name, unsigned int id,
+                                       int (*custom_send)(const char *, unsigned int, const char *));
+static grm_error_t senderFinalizeForSocket(NetHandle *handle);
+static grm_error_t senderFinalizeForCustom(NetHandle *handle);
+static grm_error_t senderSendForSocket(NetHandle *handle);
+static grm_error_t senderSendForCustom(NetHandle *handle);
 
 
 #ifdef __cplusplus

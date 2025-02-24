@@ -18,7 +18,7 @@ extern "C" {
 
 /* ------------------------- tooltip list --------------------------------------------------------------------------- */
 
-DECLARE_LIST_TYPE(tooltip, grm_tooltip_info_t *)
+DECLARE_LIST_TYPE(Tooltip, grm_tooltip_info_t *)
 
 #undef DECLARE_LIST_TYPE
 
@@ -38,16 +38,16 @@ DECLARE_LIST_TYPE(tooltip, grm_tooltip_info_t *)
 
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
-err_t get_tooltips(const int mouse_x, const int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
-                   bool accumulated = false);
-int grm_input_(const grm_args_t *input_args);
+grm_error_t getTooltips(const int mouse_x, const int mouse_y,
+                        grm_error_t (*tooltip_callback)(int, int, grm_tooltip_info_t *), bool accumulated = false);
+int input(const grm_args_t *input_args);
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- tooltip list --------------------------------------------------------------------------- */
 
-DECLARE_LIST_METHODS(tooltip)
+DECLARE_LIST_METHODS(Tooltip, tooltip)
 
 #undef DECLARE_LIST_METHODS
 

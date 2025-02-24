@@ -12,7 +12,7 @@ extern "C" {
 #include <sys/types.h>
 
 #include <grm/args.h>
-#include "grm/error.h"
+#include "error_int.h"
 #include "util_int.h"
 
 #if defined(_MSC_VER)
@@ -26,7 +26,7 @@ typedef SSIZE_T ssize_t;
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-struct _arg_private_t
+struct _grm_arg_private_t
 {
   unsigned int reference_count;
 };
@@ -34,7 +34,7 @@ struct _arg_private_t
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-struct _argparse_state_t
+struct ArgparseState
 {
   va_list *vl;
   const void *in_buffer;
@@ -47,40 +47,41 @@ struct _argparse_state_t
   ssize_t next_array_length;
   int dataslot_count;
 };
-typedef struct _argparse_state_t argparse_state_t;
+typedef struct ArgparseState ArgparseState;
 
-typedef void (*read_param_t)(argparse_state_t *);
-typedef void *(*copy_value_t)(void *);
-typedef void (*delete_value_t)(void *);
+typedef void (*ReadParam)(ArgparseState *);
+typedef void *(*CopyValue)(void *);
+typedef void (*DeleteValue)(void *);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-struct _args_node_t
+struct ArgsNode
 {
-  arg_t *arg;
-  struct _args_node_t *next;
+  grm_arg_t *arg;
+  struct ArgsNode *next;
 };
+typedef struct ArgsNode ArgsNode;
 
 struct _grm_args_t
 {
-  args_node_t *kwargs_head;
-  args_node_t *kwargs_tail;
+  ArgsNode *kwargs_head;
+  ArgsNode *kwargs_tail;
   unsigned int count;
 };
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
 
-struct _args_iterator_private_t
+struct _grm_args_iterator_private_t
 {
-  const args_node_t *next_node;
-  const args_node_t *end;
+  const ArgsNode *next_node;
+  const ArgsNode *end;
 };
 
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
-struct _args_value_iterator_private_t
+struct _grm_args_value_iterator_private_t
 {
   void *value_buffer;
   const char *value_format;
@@ -91,100 +92,101 @@ struct _args_value_iterator_private_t
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding, char **new_format);
-void argparse_read_int(argparse_state_t *state);
-void argparse_read_double(argparse_state_t *state);
-void argparse_read_char(argparse_state_t *state);
-void argparse_read_string(argparse_state_t *state);
-void argparse_read_default_array_length(argparse_state_t *state);
-void argparse_read_char_array(argparse_state_t *state, int store_array_length);
-void argparse_init_static_variables(void);
-size_t argparse_calculate_needed_buffer_size(const char *format, int apply_padding);
-size_t argparse_calculate_needed_padding(void *buffer, char current_format);
-void argparse_read_next_option(argparse_state_t *state, char **format);
-const char *argparse_skip_option(const char *format);
-char *argparse_convert_to_array(argparse_state_t *state);
+void *argparseReadParams(const char *format, const void *buffer, va_list *vl, int apply_padding, char **new_format);
+void argparseReadInt(ArgparseState *state);
+void argparseReadDouble(ArgparseState *state);
+void argparseReadChar(ArgparseState *state);
+void argparseReadString(ArgparseState *state);
+void argparseReadDefaultArrayLength(ArgparseState *state);
+void argparseReadCharArray(ArgparseState *state, int store_array_length);
+void argparseInitStaticVariables(void);
+size_t argparseCalculateNeededBufferSize(const char *format, int apply_padding);
+size_t argparseCalculateNeededPadding(void *buffer, char current_format);
+void argparseReadNextOption(ArgparseState *state, char **format);
+const char *argparseSkipOption(const char *format);
+char *argparseConvertToArray(ArgparseState *state);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding);
-int args_validate_format_string(const char *format);
-const char *args_skip_option(const char *format);
-void args_copy_format_string_for_arg(char *dst, const char *format);
-void args_copy_format_string_for_parsing(char *dst, const char *format);
-int args_check_format_compatibility(const arg_t *arg, const char *compatible_format);
-void args_decrease_arg_reference_count(args_node_t *args_node);
+grm_arg_t *argsCreateArgs(const char *key, const char *value_format, const void *buffer, va_list *vl,
+                          int apply_padding);
+int argsValidateFormatString(const char *format);
+const char *argsSkipOption(const char *format);
+void argsCopyFormatStringForArg(char *dst, const char *format);
+void argsCopyFormatStringForParsing(char *dst, const char *format);
+int argsCheckFormatCompatibility(const grm_arg_t *arg, const char *compatible_format);
+void argsDecreaseArgReferenceCount(ArgsNode *args_node);
 
 
 /* ------------------------- value copy ----------------------------------------------------------------------------- */
 
-void *copy_value(char format, void *value_ptr);
+void *copyValue(char format, void *value_ptr);
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-err_t arg_increase_array(arg_t *arg, size_t increment);
+grm_error_t argIncreaseArray(grm_arg_t *arg, size_t increment);
 
-int arg_first_value(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length);
-#define arg_first_value(arg, first_value_format, first_value, array_length) \
-  arg_first_value(arg, first_value_format, (void *)first_value, array_length)
-int arg_values(const arg_t *arg, const char *expected_format, ...);
-int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl);
+int argFirstValue(const grm_arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length);
+#define argFirstValue(arg, first_value_format, first_value, array_length) \
+  argFirstValue(arg, first_value_format, (void *)first_value, array_length)
+int argValues(const grm_arg_t *arg, const char *expected_format, ...);
+int argValuesVl(const grm_arg_t *arg, const char *expected_format, va_list *vl);
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-void args_init(grm_args_t *args);
-void args_finalize(grm_args_t *args);
+void argsInit(grm_args_t *args);
+void argsFinalize(grm_args_t *args);
 
-grm_args_t *args_flatcopy(const grm_args_t *args) UNUSED;
-grm_args_t *args_copy(const grm_args_t *copy_args);
-grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys);
+grm_args_t *argsFlatCopy(const grm_args_t *args) UNUSED;
+grm_args_t *argsCopy(const grm_args_t *copy_args);
+grm_args_t *argsCopyExtended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys);
 
-err_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
-                       int apply_padding);
-err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
-err_t args_push_arg(grm_args_t *args, arg_t *arg);
-err_t args_update_many(grm_args_t *args, const grm_args_t *update_args) UNUSED;
-err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys);
-err_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                             va_list *vl, int apply_padding);
-err_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...);
-err_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                          int apply_padding) UNUSED;
-err_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
+grm_error_t argsPushCommon(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
+                           int apply_padding);
+grm_error_t argsPushVl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
+grm_error_t argsPushArg(grm_args_t *args, grm_arg_t *arg);
+grm_error_t argsUpdateMany(grm_args_t *args, const grm_args_t *update_args) UNUSED;
+grm_error_t argsMerge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys);
+grm_error_t argsSetDefaultCommon(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                 va_list *vl, int apply_padding);
+grm_error_t argsSetDefault(grm_args_t *args, const char *key, const char *value_format, ...);
+grm_error_t argsSetDefaultBuf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                              int apply_padding) UNUSED;
+grm_error_t argsSetDefaultVl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
 
-void args_clear(grm_args_t *args, const char **exclude_keys);
+void argsClear(grm_args_t *args, const char **exclude_keys);
 
-err_t args_increase_array(grm_args_t *args, const char *key, size_t increment) UNUSED;
+grm_error_t argsIncreaseArray(grm_args_t *args, const char *key, size_t increment) UNUSED;
 
-unsigned int args_count(const grm_args_t *args) UNUSED;
+unsigned int argsCount(const grm_args_t *args) UNUSED;
 
-arg_t *args_at(const grm_args_t *args, const char *keyword);
+grm_arg_t *argsAt(const grm_args_t *args, const char *keyword);
 
-args_node_t *args_find_node(const grm_args_t *args, const char *keyword);
-int args_find_previous_node(const grm_args_t *args, const char *keyword, args_node_t **previous_node);
+ArgsNode *argsFindNode(const grm_args_t *args, const char *keyword);
+int argsFindPreviousNode(const grm_args_t *args, const char *keyword, ArgsNode **previous_node);
 
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
 
-grm_args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end);
-void args_iterator_init(grm_args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end);
-void args_iterator_delete(grm_args_iterator_t *args_iterator);
-void args_iterator_finalize(grm_args_iterator_t *args_iterator);
-arg_t *args_iterator_next(grm_args_iterator_t *args_iterator);
+grm_args_iterator_t *argsIteratorNew(const ArgsNode *begin, const ArgsNode *end);
+void argsIteratorInit(grm_args_iterator_t *args_iterator, const ArgsNode *begin, const ArgsNode *end);
+void argsIteratorDelete(grm_args_iterator_t *args_iterator);
+void argsIteratorFinalize(grm_args_iterator_t *args_iterator);
+grm_arg_t *argsIteratorNext(grm_args_iterator_t *args_iterator);
 
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
-grm_args_value_iterator_t *args_value_iterator_new(const arg_t *arg);
-void args_value_iterator_init(grm_args_value_iterator_t *args_value_iterator, const arg_t *arg);
-void args_value_iterator_delete(grm_args_value_iterator_t *args_value_iterator);
-void args_value_iterator_finalize(grm_args_value_iterator_t *args_value_iterator);
+grm_args_value_iterator_t *argsValueIteratorNew(const grm_arg_t *arg);
+void argsValueIteratorInit(grm_args_value_iterator_t *args_value_iterator, const grm_arg_t *arg);
+void argsValueIteratorDelete(grm_args_value_iterator_t *args_value_iterator);
+void argsValueIteratorFinalize(grm_args_value_iterator_t *args_value_iterator);
 
-void *args_value_iterator_next(grm_args_value_iterator_t *args_value_iterator);
+void *argsValueIteratorNext(grm_args_value_iterator_t *args_value_iterator);
 
 
 #ifdef __cplusplus

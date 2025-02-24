@@ -13,16 +13,16 @@
 
 /* ----------------------- string-to-double map --------------------------------------------------------------------- */
 
-DEFINE_MAP_METHODS(double)
+DEFINE_MAP_METHODS(Double, double)
 
-int double_map_value_copy(double *copy, const double value)
+int doubleMapValueCopy(double *copy, const double value)
 {
   *copy = value;
 
   return 1;
 }
 
-void double_map_value_delete(double value UNUSED) {}
+void doubleMapValueDelete(double value UNUSED) {}
 
 
 #undef DEFINE_MAP_METHODS

@@ -13,18 +13,18 @@
 
 /* ------------------------ size_t list ----------------------------------------------------------------------------- */
 
-DEFINE_LIST_METHODS(size_t)
+DEFINE_LIST_METHODS(SizeT, sizeT)
 
-err_t size_t_list_entry_copy(size_t_list_entry_t *copy, size_t_list_const_entry_t entry)
+grm_error_t sizeTListEntryCopy(SizeTListEntry *copy, SizeTListConstEntry entry)
 {
   *copy = entry;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t size_t_list_entry_delete(size_t_list_entry_t entry)
+grm_error_t sizeTListEntryDelete(SizeTListEntry entry)
 {
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 

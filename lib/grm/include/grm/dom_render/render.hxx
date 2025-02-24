@@ -92,6 +92,7 @@
 
 #define PLOT_CUSTOM_COLOR_INDEX 979
 
+
 /* ========================= Enums ================================================================================== */
 
 typedef enum
@@ -102,7 +103,7 @@ typedef enum
   GR_COLOR_FILL = GR_SPEC_COLOR,
   GR_COLOR_TEXT = 1 << 3,
   GR_COLOR_BORDER = 1 << 4
-} gr_color_type_t;
+} GRColorType;
 
 enum class CoordinateSpace
 {
@@ -112,66 +113,69 @@ enum class CoordinateSpace
 
 /* ========================= cast functions ========================================================================= */
 
-EXPORT int algorithmStringToInt(const std::string &algorithm_str);
-EXPORT int colormapStringToInt(const std::string &colormap_str);
-EXPORT int fillIntStyleStringToInt(const std::string &fillintstyle_str);
-EXPORT int fillStyleStringToInt(const std::string &fillstyle_str);
-EXPORT int fontStringToInt(const std::string &font_str);
-EXPORT int fontPrecisionStringToInt(const std::string &font_precision_str);
-EXPORT int lineTypeStringToInt(const std::string &line_type_str);
-EXPORT int locationStringToInt(const std::string &location_str);
-EXPORT int xAxisLocationStringToInt(const std::string &location_str);
-EXPORT int yAxisLocationStringToInt(const std::string &location_str);
-EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
-EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
-EXPORT int modelStringToInt(const std::string &model_str);
-EXPORT int scientificFormatStringToInt(const std::string &scientific_format_str);
-EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
-EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
-EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
-EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
-EXPORT int errorBarStyleStringToInt(const std::string &error_bar_stylr_str);
-EXPORT int clipRegionStringToInt(const std::string &error_bar_stylr_str);
-EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str);
+namespace GRM
+{
 
-EXPORT std::string algorithmIntToString(int algorithm);
-EXPORT std::string colormapIntToString(int colormap);
-EXPORT std::string fillIntStyleIntToString(int fillintstyle);
-EXPORT std::string fillStyleIntToString(int fillstyle);
-EXPORT std::string fontIntToString(int font);
-EXPORT std::string fontPrecisionIntToString(int font_precision);
-EXPORT std::string lineTypeIntToString(int line_type);
-EXPORT std::string locationIntToString(int location);
-EXPORT std::string xAxisLocationIntToString(int location);
-EXPORT std::string yAxisLocationIntToString(int location);
-EXPORT std::string markerTypeIntToString(int marker_type);
-EXPORT std::string projectionTypeIntToString(int projection_type);
-EXPORT std::string modelIntToString(int model);
-EXPORT std::string scientificFormatIntToString(int scientific_format);
-EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
-EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
-EXPORT std::string textEncodingIntToString(int text_encoding);
-EXPORT std::string tickOrientationIntToString(int tick_orientation);
-EXPORT std::string errorBarStyleIntToString(int error_bar_style);
-EXPORT std::string clipRegionIntToString(int error_bar_style);
-EXPORT std::string resampleMethodIntToString(int error_bar_style);
+GRM_EXPORT int algorithmStringToInt(const std::string &algorithm_str);
+GRM_EXPORT int colormapStringToInt(const std::string &colormap_str);
+GRM_EXPORT int fillIntStyleStringToInt(const std::string &fillintstyle_str);
+GRM_EXPORT int fillStyleStringToInt(const std::string &fillstyle_str);
+GRM_EXPORT int fontStringToInt(const std::string &font_str);
+GRM_EXPORT int fontPrecisionStringToInt(const std::string &font_precision_str);
+GRM_EXPORT int lineTypeStringToInt(const std::string &line_type_str);
+GRM_EXPORT int locationStringToInt(const std::string &location_str);
+GRM_EXPORT int xAxisLocationStringToInt(const std::string &location_str);
+GRM_EXPORT int yAxisLocationStringToInt(const std::string &location_str);
+GRM_EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
+GRM_EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
+GRM_EXPORT int modelStringToInt(const std::string &model_str);
+GRM_EXPORT int scientificFormatStringToInt(const std::string &scientific_format_str);
+GRM_EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
+GRM_EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
+GRM_EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
+GRM_EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
+GRM_EXPORT int errorBarStyleStringToInt(const std::string &error_bar_stylr_str);
+GRM_EXPORT int clipRegionStringToInt(const std::string &error_bar_stylr_str);
+GRM_EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str);
 
-EXPORT std::vector<std::string> getSizeUnits();
-EXPORT std::vector<std::string> getColormaps();
-EXPORT std::vector<std::string> getFonts();
-EXPORT std::vector<std::string> getFontPrecisions();
-EXPORT std::vector<std::string> getLineTypes();
-EXPORT std::vector<std::string> getLocations();
-EXPORT std::vector<std::string> getXAxisLocations();
-EXPORT std::vector<std::string> getYAxisLocations();
-EXPORT std::vector<std::string> getMarkerTypes();
-EXPORT std::vector<std::string> getTextAlignHorizontal();
-EXPORT std::vector<std::string> getTextAlignVertical();
-EXPORT std::vector<std::string> getAlgorithm();
-EXPORT std::vector<std::string> getModel();
-EXPORT std::vector<std::string> getContextAttributes();
+GRM_EXPORT std::string algorithmIntToString(int algorithm);
+GRM_EXPORT std::string colormapIntToString(int colormap);
+GRM_EXPORT std::string fillIntStyleIntToString(int fillintstyle);
+GRM_EXPORT std::string fillStyleIntToString(int fillstyle);
+GRM_EXPORT std::string fontIntToString(int font);
+GRM_EXPORT std::string fontPrecisionIntToString(int font_precision);
+GRM_EXPORT std::string lineTypeIntToString(int line_type);
+GRM_EXPORT std::string locationIntToString(int location);
+GRM_EXPORT std::string xAxisLocationIntToString(int location);
+GRM_EXPORT std::string yAxisLocationIntToString(int location);
+GRM_EXPORT std::string markerTypeIntToString(int marker_type);
+GRM_EXPORT std::string projectionTypeIntToString(int projection_type);
+GRM_EXPORT std::string modelIntToString(int model);
+GRM_EXPORT std::string scientificFormatIntToString(int scientific_format);
+GRM_EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
+GRM_EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
+GRM_EXPORT std::string textEncodingIntToString(int text_encoding);
+GRM_EXPORT std::string tickOrientationIntToString(int tick_orientation);
+GRM_EXPORT std::string errorBarStyleIntToString(int error_bar_style);
+GRM_EXPORT std::string clipRegionIntToString(int error_bar_style);
+GRM_EXPORT std::string resampleMethodIntToString(int error_bar_style);
 
-EXPORT void addValidContextKey(std::string key);
+GRM_EXPORT std::vector<std::string> getSizeUnits();
+GRM_EXPORT std::vector<std::string> getColormaps();
+GRM_EXPORT std::vector<std::string> getFonts();
+GRM_EXPORT std::vector<std::string> getFontPrecisions();
+GRM_EXPORT std::vector<std::string> getLineTypes();
+GRM_EXPORT std::vector<std::string> getLocations();
+GRM_EXPORT std::vector<std::string> getXAxisLocations();
+GRM_EXPORT std::vector<std::string> getYAxisLocations();
+GRM_EXPORT std::vector<std::string> getMarkerTypes();
+GRM_EXPORT std::vector<std::string> getTextAlignHorizontal();
+GRM_EXPORT std::vector<std::string> getTextAlignVertical();
+GRM_EXPORT std::vector<std::string> getAlgorithm();
+GRM_EXPORT std::vector<std::string> getModel();
+GRM_EXPORT std::vector<std::string> getContextAttributes();
+
+GRM_EXPORT void addValidContextKey(std::string key);
 
 /* ========================= classes ================================================================================ */
 
@@ -180,31 +184,28 @@ class PushDrawableToZQueue
 {
 public:
   PushDrawableToZQueue(
-      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction);
-  void operator()(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+      std::function<void(const std::shared_ptr<Element> &, const std::shared_ptr<Context> &)> draw_function);
+  void operator()(const std::shared_ptr<Element> &element, const std::shared_ptr<Context> &context);
 
 private:
-  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction;
+  std::function<void(const std::shared_ptr<Element> &, const std::shared_ptr<Context> &)> draw_function;
 };
 
-EXPORT void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
-                         const std::string &value);
-EXPORT void renderCaller();
-EXPORT void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
-                                   const GRM::Value &old_value);
-EXPORT void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element);
-EXPORT void cleanupElement(GRM::Element &element);
+GRM_EXPORT void updateFilter(const std::shared_ptr<Element> &element, const std::string &attr,
+                             const std::string &value);
+GRM_EXPORT void renderCaller();
+GRM_EXPORT void updateContextAttribute(const std::shared_ptr<Element> &element, const std::string &attr,
+                                       const Value &old_value);
+GRM_EXPORT void deleteContextAttribute(const std::shared_ptr<Element> &element);
+GRM_EXPORT void cleanupElement(Element &element);
 
-namespace GRM
-{
-
-class EXPORT Render : public Document
+class GRM_EXPORT Render : public Document
 {
   /*!
-   * The GRM::Render class is used for creating or modifying elements that can also be processed by this class
+   * The Render class is used for creating or modifying elements that can also be processed by this class
    * to create plots etc.
    *
-   * GRM::Render has an std::shared_ptr GRM::Context as a private member for storing certain datatypes
+   * Render has an std::shared_ptr Context as a private member for storing certain datatypes
    */
 
 public:
@@ -212,210 +213,209 @@ public:
 
   static std::shared_ptr<Render> createRender();
 
-  std::shared_ptr<GRM::Element> createPlot(int plotId, const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createPlot(int plot_id, const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createCentralRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createCentralRegion(const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
-                                            const std::shared_ptr<Context> &extContext = nullptr, int marker_type = 0,
-                                            double marker_size = 0.0, int marker_colorind = 0,
-                                            const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                            const std::shared_ptr<Context> &ext_context = nullptr, int marker_type = 0,
+                                            double marker_size = 0.0, int marker_color_ind = 0,
+                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolymarker(double x, double y, int marker_type = 0, double marker_size = 0.0,
                                             int marker_colorind = 0,
-                                            const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolyline(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,
-                                          const std::shared_ptr<Context> &extContext = nullptr, int line_type = 0,
+                                          const std::shared_ptr<Context> &ext_context = nullptr, int line_type = 0,
                                           double line_width = 0.0, int line_colorind = 0,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolyline(double x1, double x2, double y1, double y2, int line_type = 0,
                                           double line_width = 0.0, int line_colorind = 0,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createText(double x, double y, const std::string &text,
                                       CoordinateSpace space = CoordinateSpace::NDC,
-                                      const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                      const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,
-                                          const std::shared_ptr<Context> &extContext = nullptr, int fillintstyle = 0,
+                                          const std::shared_ptr<Context> &ext_context = nullptr, int fillintstyle = 0,
                                           int fillstyle = 0, int fillcolorind = -1,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createCellArray(double xmin, double xmax, double ymin, double ymax, int dimx, int dimy,
                                            int scol, int srow, int ncol, int nrow, const std::string &color_key,
                                            std::optional<std::vector<int>> color,
-                                           const std::shared_ptr<Context> &extContext = nullptr,
-                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                           const std::shared_ptr<Context> &ext_context = nullptr,
+                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createNonUniformPolarCellArray(
       double x_org, double y_org, const std::string &phi_key, std::optional<std::vector<double>> phi,
       const std::string &r_key, std::optional<std::vector<double>> r, int dimphi, int dimr, int scol, int srow,
       int ncol, int nrow, const std::string &color_key, std::optional<std::vector<int>> color,
-      const std::shared_ptr<Context> &extContext = nullptr, const std::shared_ptr<GRM::Element> &extElement = nullptr);
+      const std::shared_ptr<Context> &ext_context = nullptr, const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolarCellArray(double x_org, double y_org, double phimin, double phimax, double rmin,
                                                 double rmax, int dimphi, int dimr, int scol, int srow, int ncol,
                                                 int nrow, const std::string &color_key,
                                                 std::optional<std::vector<int>> color,
-                                                const std::shared_ptr<Context> &extContext = nullptr,
-                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                                const std::shared_ptr<Context> &ext_context = nullptr,
+                                                const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxis(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createEmptyAxis(const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createAxis(double min_val, double max_val, double tick, double org, double pos,
                                       int major_count, int num_ticks, int num_tick_labels, double tick_size,
                                       int tick_orientation, double label_pos,
-                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                      const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createTickGroup(int is_major, const std::string &tick_label, double value, double width,
-                                           const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createTick(int is_major, double value,
-                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                      const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createGridLine(int is_major, double value,
-                                          const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
                                         const std::string &specs_key, std::optional<std::vector<std::string>> specs,
-                                        const std::shared_ptr<GRM::Context> &extContext = nullptr,
-                                        const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                        const std::shared_ptr<Context> &ext_context = nullptr,
+                                        const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPieLegend(const std::string &labels_key,
                                            std::optional<std::vector<std::string>> labels,
-                                           const std::shared_ptr<GRM::Context> &extContext = nullptr,
-                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                           const std::shared_ptr<Context> &ext_context = nullptr,
+                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createPieSegment(const double start_angle, const double end_angle,
-                                                 const std::string &text, const int color_index,
-                                                 const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createPieSegment(const double start_angle, const double end_angle, const std::string &text,
+                                            const int color_index,
+                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createBar(const double x1, const double x2, const double y1, const double y2,
-                                          const int bar_color_index, const int edge_color_index,
-                                          const std::string &bar_color_rgb = "", const std::string &edge_color_rgb = "",
-                                          const double linewidth = -1, const std::string &text = "",
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createBar(const double x1, const double x2, const double y1, const double y2,
+                                     const int bar_color_index, const int edge_color_index,
+                                     const std::string &bar_color_rgb = "", const std::string &edge_color_rgb = "",
+                                     const double linewidth = -1, const std::string &text = "",
+                                     const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 
   std::shared_ptr<Element> createDrawImage(double xmin, double ymin, double xmax, double ymax, int width, int height,
                                            const std::string &data_key, std::optional<std::vector<int>> data, int model,
-                                           const std::shared_ptr<Context> &extContext = nullptr,
-                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                           const std::shared_ptr<Context> &ext_context = nullptr,
+                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createDrawArc(double xmin, double xmax, double ymin, double ymax, double start_angle,
-                                         double end_angle, const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                         double end_angle, const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createFillArc(double xmin, double xmax, double ymin, double ymax, double a1, double a2,
                                          int fillintstyle = 0, int fillstyle = 0, int fillcolorind = -1,
-                                         const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                         const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createDrawRect(double xmin, double xmax, double ymin, double ymax,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createFillRect(double xmin, double xmax, double ymin, double ymax, int fillintstyle = 0,
                                           int fillstyle = 0, int fillcolorind = -1,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y,
                                         const std::string &u_key, std::optional<std::vector<double>> u,
                                         const std::string &v_key, std::optional<std::vector<double>> v, int color,
-                                        const std::shared_ptr<Context> &extContext = nullptr);
+                                        const std::shared_ptr<Context> &ext_context = nullptr);
 
   std::shared_ptr<Element> createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y,
-                                        const std::shared_ptr<Context> &extContext = nullptr);
+                                        const std::shared_ptr<Context> &ext_context = nullptr);
 
-  std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &extContext = nullptr,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &ext_context = nullptr,
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createNonUniformCellArray(const std::string &x_key, std::optional<std::vector<double>> x,
                                                      const std::string &y_key, std::optional<std::vector<double>> y,
                                                      int dimx, int dimy, int scol, int srow, int ncol, int nrow,
                                                      const std::string &color_key,
                                                      std::optional<std::vector<int>> color,
-                                                     const std::shared_ptr<Context> &extContext = nullptr,
-                                                     const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                                     const std::shared_ptr<Context> &ext_context = nullptr,
+                                                     const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z,
-                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                        const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
-                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
+                                             const std::shared_ptr<Element> &ext_element = nullptr);
 
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation,
-                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                        const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation,
-                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createEmptyAxes3d(int tick_orientation,
+                                             const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
                                             const std::string &z_key, std::optional<std::vector<double>> z,
-                                            const std::shared_ptr<Context> &extContext = nullptr,
-                                            const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                            const std::shared_ptr<Context> &ext_context = nullptr,
+                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolymarker3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                               const std::string &y_key, std::optional<std::vector<double>> y,
                                               const std::string &z_key, std::optional<std::vector<double>> z,
-                                              const std::shared_ptr<Context> &extContext = nullptr,
-                                              const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                              const std::shared_ptr<Context> &ext_context = nullptr,
+                                              const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createDrawGraphics(const std::string &data_key, std::optional<std::vector<int>> data,
-                                              const std::shared_ptr<Context> &extContext = nullptr,
-                                              const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                              const std::shared_ptr<Context> &ext_context = nullptr,
+                                              const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
                                             const std::string &py_key, std::optional<std::vector<double>> py,
                                             const std::string &pz_key, std::optional<std::vector<double>> pz,
-                                            const std::shared_ptr<Context> &extContext = nullptr);
+                                            const std::shared_ptr<Context> &ext_context = nullptr);
 
-  std::shared_ptr<Element> createTitles3d(const std::string &xlabel, const std::string &ylabel,
-                                          const std::string &zlabel,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createTitles3d(const std::string &x_label, const std::string &y_label,
+                                          const std::string &z_label,
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
+  std::shared_ptr<Element> createLayoutGrid(const Grid &grid);
 
-  std::shared_ptr<Element> createLayoutGridElement(const grm::GridElement &gridElement, const grm::Slice &slice);
+  std::shared_ptr<Element> createLayoutGridElement(const GridElement &grid_element, const Slice &slice);
 
   std::shared_ptr<Element> createIsoSurfaceRenderElement(int drawable_type);
 
-  std::shared_ptr<GRM::Element> createPanzoom(double x, double y, double xzoom, double yzoom);
+  std::shared_ptr<Element> createPanzoom(double x, double y, double xzoom, double yzoom);
 
   std::shared_ptr<Element> createPolarBar(double count, int class_nr,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createErrorBar(double error_bar_x, double error_bar_y_min, double error_bar_y_max,
-                                          int color_error_bar,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          int color_error_bar, const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createIntegral(double int_lim_low, double int_lim_high,
-                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createSideRegion(const std::string &location,
-                                            const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createTextRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createTextRegion(const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createSidePlotRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createSidePlotRegion(const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createRhoAxes(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createRhoAxes(const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createThetaAxes(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createThetaAxes(const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createAngleLine(double x, double y, const std::string &angle_label,
-                                           const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createArcGridLine(double value, const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createArcGridLine(double value, const std::shared_ptr<Element> &ext_element = nullptr);
 
   //! Modifierfunctions
 
@@ -423,10 +423,10 @@ public:
 
   //! next 2 functions -> store color indices vec or color rgb values
   void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
-                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &extContext = nullptr);
+                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_rgb_values_key,
-                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &extContext = nullptr);
+                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &ext_context = nullptr);
 
   //! only keys -> reusing stored context vectors
   void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
@@ -448,31 +448,32 @@ public:
   void setMarkerType(const std::shared_ptr<Element> &element, int type);
 
   void setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                     std::optional<std::vector<int>> types, const std::shared_ptr<Context> &extContext = nullptr);
+                     std::optional<std::vector<int>> types, const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setMarkerSize(const std::shared_ptr<Element> &element, const std::string &sizes_key,
-                     std::optional<std::vector<double>> sizes, const std::shared_ptr<Context> &extContext = nullptr);
+                     std::optional<std::vector<double>> sizes, const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setMarkerSize(const std::shared_ptr<Element> &element, double size);
 
   void setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
                          std::optional<std::vector<int>> colorinds,
-                         const std::shared_ptr<Context> &extContext = nullptr);
+                         const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setMarkerColorInd(const std::shared_ptr<Element> &element, int color);
 
   void setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                   std::optional<std::vector<int>> types, const std::shared_ptr<Context> &extContext = nullptr);
+                   std::optional<std::vector<int>> types, const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setLineType(const std::shared_ptr<Element> &element, int type);
 
   void setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
-                    std::optional<std::vector<double>> widths, const std::shared_ptr<Context> &extContext = nullptr);
+                    std::optional<std::vector<double>> widths, const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setLineWidth(const std::shared_ptr<Element> &element, double width);
 
   void setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                       std::optional<std::vector<int>> colorinds, const std::shared_ptr<Context> &extContext = nullptr);
+                       std::optional<std::vector<int>> colorinds,
+                       const std::shared_ptr<Context> &ext_context = nullptr);
 
   void setLineColorInd(const std::shared_ptr<Element> &element, int color);
 
@@ -522,53 +523,53 @@ public:
 
   void setPlot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
+  void setOriginPosition(const std::shared_ptr<Element> &element, const std::string &x_org_pos,
                          const std::string &y_org_pos);
 
-  void setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
+  void setOriginPosition3d(const std::shared_ptr<Element> &element, const std::string &x_org_pos,
                            const std::string &y_org_pos, const std::string &z_org_pos);
 
-  void setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
-                             double specular, double specular_power);
+  void setGR3LightParameters(const std::shared_ptr<Element> &element, double ambient, double diffuse, double specular,
+                             double specular_power);
 
   static void setAutoUpdate(bool update);
 
-  void setActiveFigure(const std::shared_ptr<GRM::Element> &element);
+  void setActiveFigure(const std::shared_ptr<Element> &element);
 
   /* ------------------------------- getter functions ----------------------------------------------------------------*/
 
-  std::shared_ptr<GRM::Element> getActiveFigure();
+  std::shared_ptr<Element> getActiveFigure();
 
   static void getAutoUpdate(bool *update);
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
-  std::map<int, std::map<double, std::map<std::string, GRM::Value>>> *getTickModificationMap();
+  std::map<int, std::map<double, std::map<std::string, Value>>> *getTickModificationMap();
 
   int getAxisId();
 
-  static bool getViewport(const std::shared_ptr<GRM::Element> &element, double *xmin, double *xmax, double *ymin,
+  static bool getViewport(const std::shared_ptr<Element> &element, double *xmin, double *xmax, double *ymin,
                           double *ymax);
 
   std::shared_ptr<Context> getRenderContext();
 
-  void render();                                           // render doc and render context
-  void render(const std::shared_ptr<Context> &extContext); // render doc and external context
-  void render(const std::shared_ptr<Document> &document);  // external doc and render context
+  void render();                                            // render doc and render context
+  void render(const std::shared_ptr<Context> &ext_context); // render doc and external context
+  void render(const std::shared_ptr<Document> &document);   // external doc and render context
   static void render(const std::shared_ptr<Document> &document,
-                     const std::shared_ptr<Context> &extContext); // external doc and external context; could be static
-  void process_tree();
+                     const std::shared_ptr<Context> &ext_context); // external doc and external context; could be static
+  void processTree();
   static void finalize();
   std::shared_ptr<Context> getContext();
 
-  static void processViewport(const std::shared_ptr<GRM::Element> &elem);
-  static void calculateCharHeight(const std::shared_ptr<GRM::Element> &elem);
-  static void processLimits(const std::shared_ptr<GRM::Element> &elem);
-  static void processWindow(const std::shared_ptr<GRM::Element> &elem);
-  static void processScale(const std::shared_ptr<GRM::Element> &elem);
-  static void processAttributes(const std::shared_ptr<GRM::Element> &element);
+  static void processViewport(const std::shared_ptr<Element> &elem);
+  static void calculateCharHeight(const std::shared_ptr<Element> &elem);
+  static void processLimits(const std::shared_ptr<Element> &elem);
+  static void processWindow(const std::shared_ptr<Element> &elem);
+  static void processScale(const std::shared_ptr<Element> &elem);
+  static void processAttributes(const std::shared_ptr<Element> &element);
   static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
-                                                       const std::string &attributeName);
+                                                       const std::string &attribute_name);
 
 
 private:

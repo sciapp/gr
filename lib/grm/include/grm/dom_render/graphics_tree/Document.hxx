@@ -13,7 +13,7 @@ namespace GRM
 class Element;
 class Comment;
 
-class EXPORT Document : public Node
+class GRM_EXPORT Document : public Node
 {
 public:
   static std::shared_ptr<Document> createDocument();
@@ -23,17 +23,17 @@ public:
 
   std::shared_ptr<const Element> documentElement() const;
 
-  std::shared_ptr<Element> createElement(const std::string &localName);
+  std::shared_ptr<Element> createElement(const std::string &local_name);
 
   std::shared_ptr<Comment> createComment(const std::string &data);
 
-  std::vector<std::shared_ptr<Element>> getElementsByTagName(const std::string &qualifiedName);
+  std::vector<std::shared_ptr<Element>> getElementsByTagName(const std::string &qualified_name);
 
-  std::vector<std::shared_ptr<const Element>> getElementsByTagName(const std::string &qualifiedName) const;
+  std::vector<std::shared_ptr<const Element>> getElementsByTagName(const std::string &qualified_name) const;
 
-  std::vector<std::shared_ptr<Element>> getElementsByClassName(const std::string &classNames);
+  std::vector<std::shared_ptr<Element>> getElementsByClassName(const std::string &class_names);
 
-  std::vector<std::shared_ptr<const Element>> getElementsByClassName(const std::string &classNames) const;
+  std::vector<std::shared_ptr<const Element>> getElementsByClassName(const std::string &class_names) const;
 
   std::shared_ptr<Element> getElementById(const std::string &id);
 
@@ -88,17 +88,17 @@ public:
   std::string nodeName() const override;
 
   void setUpdateFct(void (*ren)(),
-                    void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+                    void (*upt)(const std::shared_ptr<Element> &, const std::string &, const std::string &));
   void getUpdateFct(void (**ren)(),
-                    void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+                    void (**upt)(const std::shared_ptr<Element> &, const std::string &, const std::string &));
 
-  void setContextFct(void (*del)(const std::shared_ptr<GRM::Element> &),
-                     void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &));
-  void getContextFct(void (**del)(const std::shared_ptr<GRM::Element> &),
-                     void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &));
+  void setContextFct(void (*del)(const std::shared_ptr<Element> &),
+                     void (*upt)(const std::shared_ptr<Element> &, const std::string &, const Value &));
+  void getContextFct(void (**del)(const std::shared_ptr<Element> &),
+                     void (**upt)(const std::shared_ptr<Element> &, const std::string &, const Value &));
 
-  void setElementCleanupFct(void (*cleanup)(GRM::Element &));
-  void (*getElementCleanupFct())(GRM::Element &);
+  void setElementCleanupFct(void (*cleanup)(Element &));
+  void (*getElementCleanupFct())(Element &);
 
 protected:
   Document();
@@ -109,7 +109,7 @@ private:
   std::shared_ptr<Document> shared();
 };
 
-EXPORT std::shared_ptr<Document> createDocument();
+GRM_EXPORT std::shared_ptr<Document> createDocument();
 } // namespace GRM
 
 #endif

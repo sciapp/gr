@@ -2,7 +2,7 @@
 
 #include <stdarg.h>
 
-#include "grm/error.h"
+#include "error_int.h"
 
 
 /* ######################### internal interface ##################################################################### */
@@ -11,14 +11,14 @@
 
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
-const char *error_names[] = {ENUM_ELEMENTS(STRING_ARRAY_VALUE, STRING_ARRAY_VALUE)};
+const char *grm_error_names[] = {GRM_ERROR_ENUM_ELEMENTS(GRM_STRING_ARRAY_VALUE, GRM_STRING_ARRAY_VALUE)};
 
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-void debug_printf(const char *format, ...)
+void debugPrintf(const char *format, ...)
 {
   va_list vl;
   va_start(vl, format);
@@ -28,7 +28,7 @@ void debug_printf(const char *format, ...)
 #endif
 
 
-#undef ENUM_ELEMENTS
-#undef ENUM_VALUE
-#undef ENUM_LAST_VALUE
-#undef STRING_ARRAY_VALUE
+#undef GRM_ERROR_ENUM_ELEMENTS
+#undef GRM_ENUM_VALUE
+#undef GRM_ENUM_LAST_VALUE
+#undef GRM_STRING_ARRAY_VALUE

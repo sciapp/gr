@@ -1,6 +1,6 @@
 #ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED
 #define GRPLOT_MAIN_WINDOW_H_INCLUDED
-#include "grplot_widget.hxx"
+#include "grplotWidget.hxx"
 
 #include <QMainWindow>
 #include <QTextBrowser>

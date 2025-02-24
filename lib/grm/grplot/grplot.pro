@@ -11,8 +11,8 @@ DEFINES += GRDIR=\\\"$(GRDIR)\\\"
 QMAKE_CXXFLAGS += -std=c++17 $$(XERCESCDEFS) $$(EXTRA_CXXFLAGS)
 QMAKE_LFLAGS += $$(EXTRA_LDFLAGS)
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.15
-HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx gredit/Bounding_logic.h gredit/Bounding_object.h gredit/CustomTreeWidgetItem.h gredit/TreeWidget.h gredit/AddElementWidget.h gredit/TableWidget.h gredit/EditElementWidget.h qtterm/grm_args_t_wrapper.h qtterm/receiver_thread.h
-SOURCES += grplot_widget.cxx grplot.cxx grplot_mainwindow.cxx util.cxx gredit/Bounding_logic.cpp gredit/Bounding_object.cpp gredit/CustomTreeWidgetItem.cpp gredit/TreeWidget.cpp gredit/AddElementWidget.cpp gredit/TableWidget.cpp gredit/EditElementWidget.cpp qtterm/grm_args_t_wrapper.cpp qtterm/receiver_thread.cpp
+HEADERS += grplotWidget.hxx grplotMainwindow.hxx util.hxx gredit/BoundingLogic.hxx gredit/BoundingObject.hxx gredit/CustomTreeWidgetItem.hxx gredit/TreeWidget.hxx gredit/AddElementWidget.hxx gredit/TableWidget.hxx gredit/EditElementWidget.hxx qtterm/ArgsWrapper.hxx qtterm/Receiver.hxx
+SOURCES += grplotWidget.cxx grplot.cxx grplotMainwindow.cxx util.cxx gredit/BoundingLogic.cpp gredit/BoundingObject.cpp gredit/CustomTreeWidgetItem.cpp gredit/TreeWidget.cpp gredit/AddElementWidget.cpp gredit/TableWidget.cpp gredit/EditElementWidget.cpp qtterm/ArgsWrapper.cpp qtterm/Receiver.cpp
 INCLUDEPATH += ../include ../../gr
 if (macx) {
     if (exists(../libGRM.dylib)) {

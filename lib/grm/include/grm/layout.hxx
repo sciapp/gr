@@ -10,13 +10,13 @@
 #include "args.h"
 #include "error.h"
 
-namespace grm
+namespace GRM
 {
 
-class EXPORT Slice
+class GRM_EXPORT Slice
 {
 public:
-  Slice(int rowStart, int rowStop, int colStart, int colStop);
+  Slice(int row_start, int row_stop, int col_start, int col_stop);
   Slice *copy();
   bool isPositive();
   bool isForward();
@@ -28,12 +28,12 @@ public:
   friend class Grid;
 };
 
-class EXPORT GridElement
+class GRM_EXPORT GridElement
 {
 public:
   GridElement();
-  GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
-              int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
+  GridElement(double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl, int fit_parents_height,
+              int fit_parents_width, double relative_height, double relative_width, double aspect_ratio);
   virtual ~GridElement();
   virtual void finalizePlot();
   virtual bool isGrid();
@@ -45,8 +45,8 @@ public:
   void setAbsWidthPxl(int width);
   void setRelativeWidth(double width);
   void setAspectRatio(double ar);
-  void setFitParentsHeight(bool fitParentsHeight);
-  void setFitParentsWidth(bool fitParentsWidth);
+  void setFitParentsHeight(bool fit_parents_height);
+  void setFitParentsWidth(bool fit_parents_width);
   double *getPlot();
   grm_args_t *plot_args = nullptr;
 
@@ -74,13 +74,14 @@ public:
   std::shared_ptr<GRM::Element> element_in_dom = nullptr;
 };
 
-class EXPORT Grid : public GridElement
+class GRM_EXPORT Grid : public GridElement
 {
 
 public:
-  Grid(int nrows, int ncols);
-  Grid(int nrows, int ncols, double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
-       int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
+  Grid(int n_rows, int n_cols);
+  Grid(int n_rows, int n_cols, double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl,
+       int fit_parents_height, int fit_parents_width, double relative_height, double relative_width,
+       double aspect_ratio);
   ~Grid();
   void setElement(int row, int col, GridElement *element);
   void setElement(int row, int col, grm_args_t *args);
@@ -103,12 +104,12 @@ public:
 
 private:
   std::vector<std::vector<GridElement *>> rows;
-  std::unordered_map<GridElement *, Slice *> elementToPosition;
-  int nrows;
-  int ncols;
+  std::unordered_map<GridElement *, Slice *> element_to_position;
+  int n_rows;
+  int n_cols;
   void upsize(int nrows, int ncols);
 };
 
-} // namespace grm
+} // namespace GRM
 
 #endif /* ifndef LAYOUT_HPP_INCLUDED */

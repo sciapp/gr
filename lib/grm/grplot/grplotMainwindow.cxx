@@ -1,6 +1,6 @@
 #include <sstream>
 #include <iostream>
-#include "grplot_mainwindow.hxx"
+#include "grplotMainwindow.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
 

@@ -45,10 +45,7 @@ GRM::Value::Type GRM::Value::type() const
 
 bool GRM::Value::operator==(const GRM::Value &other) const
 {
-  if (m_type != other.m_type)
-    {
-      return false;
-    }
+  if (m_type != other.m_type) return false;
   switch (m_type)
     {
     case Type::UNDEFINED:
@@ -75,14 +72,8 @@ GRM::Value::operator int() const
       {
         char *end = nullptr;
         long result = std::strtol(m_string_value.c_str(), &end, 10);
-        if (end != m_string_value.c_str() + m_string_value.size())
-          {
-            return 0;
-          }
-        if (result > std::numeric_limits<int>::max() || result < std::numeric_limits<int>::min())
-          {
-            return 0;
-          }
+        if (end != m_string_value.c_str() + m_string_value.size()) return 0;
+        if (result > std::numeric_limits<int>::max() || result < std::numeric_limits<int>::min()) return 0;
         return static_cast<int>(result);
       }
     default:
@@ -95,10 +86,7 @@ GRM::Value::operator double() const
   switch (m_type)
     {
     case Type::INT:
-      if (static_cast<int>(static_cast<double>(m_int_value)) != m_int_value)
-        {
-          return 0;
-        }
+      if (static_cast<int>(static_cast<double>(m_int_value)) != m_int_value) return 0;
       return m_int_value;
     case Type::DOUBLE:
       return m_double_value;
@@ -106,10 +94,7 @@ GRM::Value::operator double() const
       {
         char *end = nullptr;
         double result = std::strtod(m_string_value.c_str(), &end);
-        if (end == m_string_value.c_str() + m_string_value.size())
-          {
-            return result;
-          }
+        if (end == m_string_value.c_str() + m_string_value.size()) return result;
         return 0;
       }
     default:
