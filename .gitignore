@@ -13,6 +13,7 @@
 *.app
 *.dylib
 *.o
+*.exe
 *.pc
 *.pkg
 *.so
