@@ -23,7 +23,6 @@
 
 /* ------------------------- dump ----------------------------------------------------------------------------------- */
 
-#ifndef NDEBUG
 void grm_dump(const grm_args_t *args, FILE *f)
 {
 #define BUFFER_LEN 200
@@ -314,6 +313,79 @@ char *grm_dump_json_str(void)
   return "";
 }
 
+char *grm_dump_html(char *plot_id)
+{
+  return grm_dump_html_args(plot_id, active_plot_args);
+}
+
+char *grm_dump_html_args(char *plot_id, grm_args_t *args)
+{
+  static Memwriter *memwriter = NULL, *memwriter2 = NULL;
+  char *result;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriterNew();
+    }
+  if (memwriter2 == NULL)
+    {
+      memwriter2 = memwriterNew();
+    }
+  toJsonWriteArgs(memwriter, args);
+  if (!toJsonIsComplete())
+    {
+      memwriterDelete(memwriter);
+      memwriter = NULL;
+      memwriterDelete(memwriter2);
+      memwriter2 = NULL;
+      return "";
+    }
+  memwriterPutc(memwriter, '\0');
+
+  memwriterPrintf(memwriter2, "<div id=\"jsterm-display-%s\"></div>\n", plot_id);
+  memwriterPuts(memwriter2, "<script type=\"text/javascript\">\n"
+                            "if (typeof jsterm === \"undefined\") {\n"
+                            "  var jsterm = null;\n"
+                            "}\n"
+                            "function run_on_start(data, display) {\n"
+                            "  if (typeof JSTerm === \"undefined\") {\n"
+                            "    setTimeout(function() {run_on_start(data, display)}, 100);\n"
+                            "    return;\n"
+                            "  }\n"
+                            "  if (jsterm === null) {\n"
+                            "    jsterm = new JSTerm(true);\n"
+                            "  }\n"
+                            "  jsterm.draw({\n"
+                            "    \"json\": data,\n"
+                            "    \"display\": display\n"
+                            "  })\n"
+                            "}\n"
+                            "run_on_start(");
+  toJsonStringifyStringValue(memwriter2, memwriterBuf(memwriter));
+  if (toJsonIsComplete())
+    {
+      memwriterDelete(memwriter);
+      memwriter = NULL;
+
+      memwriterPrintf(memwriter2, ", '%s');\n</script>", plot_id);
+      memwriterPutc(memwriter2, '\0');
+      size_t slen = memwriterSize(memwriter2);
+      result = malloc(slen + 1);
+      memcpy(result, memwriterBuf(memwriter2), slen);
+      result[slen] = '\0';
+
+      memwriterDelete(memwriter2);
+      memwriter2 = NULL;
+
+      return result;
+    }
+  memwriterDelete(memwriter);
+  memwriter = NULL;
+  memwriterDelete(memwriter2);
+  memwriter2 = NULL;
+  return "";
+}
+
 void grm_dump_bson(const grm_args_t *args, FILE *f)
 {
   static Memwriter *memwriter = NULL;
@@ -346,4 +418,3 @@ void grm_dump_bson(const grm_args_t *args, FILE *f)
       memwriter = NULL;
     }
 }
-#endif
