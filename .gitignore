@@ -8,6 +8,7 @@
 !.gitlab-ci
 !.gitlab-ci.yml
 !.setup_cmakeformat.sh
+!/lib/grm/.clang-tidy-naming
 *.a
 *.app
 *.dylib
