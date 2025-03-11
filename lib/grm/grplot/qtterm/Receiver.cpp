@@ -1,4 +1,4 @@
-#include "receiver_thread.h"
+#include "Receiver.hxx"
 
 Receiver::Receiver()
 {
@@ -33,7 +33,7 @@ void Receiver::dataProcessed()
 
 void Receiver::receiveData()
 {
-  grm_args_t_wrapper args;
+  ArgsWrapper args;
   bool received_data = false;
 
   /*
@@ -61,8 +61,8 @@ void Receiver::receiveData()
             }
         }
 
-      args.set_wrapper(grm_recv(grm_receiver_handle_, nullptr));
-      if (args.get_wrapper() != nullptr)
+      args.setWrapper(grm_recv(grm_receiver_handle_, nullptr));
+      if (args.getWrapper() != nullptr)
         {
           received_data = true;
         }

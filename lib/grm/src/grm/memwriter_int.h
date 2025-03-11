@@ -9,7 +9,7 @@ extern "C" {
 
 #include <stdlib.h>
 
-#include "grm/error.h"
+#include "error_int.h"
 #include "util_int.h"
 
 /* ######################### internal interface ##################################################################### */
@@ -29,34 +29,34 @@ extern "C" {
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
 
-struct _memwriter_t
+struct Memwriter
 {
   char *buf;
   size_t size;
   size_t capacity;
 };
-typedef struct _memwriter_t memwriter_t;
+typedef struct Memwriter Memwriter;
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
 
-memwriter_t *memwriter_new(void);
-void memwriter_delete(memwriter_t *memwriter);
-void memwriter_clear(memwriter_t *memwriter);
-err_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str);
-err_t memwriter_erase(memwriter_t *memwriter, int index, int count);
-err_t memwriter_insert(memwriter_t *memwriter, int index, const char *str) UNUSED;
-err_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment);
-err_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size);
-err_t memwriter_printf(memwriter_t *memwriter, const char *format, ...);
-err_t memwriter_puts(memwriter_t *memwriter, const char *s);
-err_t memwriter_puts_with_len(memwriter_t *memwriter, char *s, size_t length);
-err_t memwriter_memcpy(memwriter_t *memwriter, const void *source, size_t num);
-err_t memwriter_memcpy_rev_chunks(memwriter_t *memwriter, const void *source, size_t num, int chunk_size);
-err_t memwriter_putc(memwriter_t *memwriter, char c);
-char *memwriter_buf(const memwriter_t *memwriter);
-size_t memwriter_size(const memwriter_t *memwriter);
+Memwriter *memwriterNew(void);
+void memwriterDelete(Memwriter *memwriter);
+void memwriterClear(Memwriter *memwriter);
+grm_error_t memwriterReplace(Memwriter *memwriter, int index, int count, const char *replacement_str);
+grm_error_t memwriterErase(Memwriter *memwriter, int index, int count);
+grm_error_t memwriterInsert(Memwriter *memwriter, int index, const char *str) UNUSED;
+grm_error_t memwriterEnlargeBuf(Memwriter *memwriter, size_t size_increment);
+grm_error_t memwriterEnsureBuf(Memwriter *memwriter, size_t needed_additional_size);
+grm_error_t memwriterPrintf(Memwriter *memwriter, const char *format, ...);
+grm_error_t memwriterPuts(Memwriter *memwriter, const char *s);
+grm_error_t memwriterPutsWithLen(Memwriter *memwriter, char *s, size_t length);
+grm_error_t memwriterMemcpy(Memwriter *memwriter, const void *source, size_t num);
+grm_error_t memwriterMemcpyRevChunks(Memwriter *memwriter, const void *source, size_t num, int chunk_size);
+grm_error_t memwriterPutc(Memwriter *memwriter, char c);
+char *memwriterBuf(const Memwriter *memwriter);
+size_t memwriterSize(const Memwriter *memwriter);
 
 
 #ifdef __cplusplus

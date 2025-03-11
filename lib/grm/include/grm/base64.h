@@ -14,8 +14,8 @@ extern "C" {
 
 /* ######################### public interface ####################################################################### */
 
-EXPORT char *grm_base64_decode(char *dst, const char *src, size_t *dst_len, int *was_successful);
-EXPORT char *grm_base64_encode(char *dst, const char *src, size_t src_len, int *was_successful);
+GRM_EXPORT char *grm_base64_decode(char *dst, const char *src, size_t *dst_len, int *was_successful);
+GRM_EXPORT char *grm_base64_encode(char *dst, const char *src, size_t src_len, int *was_successful);
 
 #ifdef __cplusplus
 }

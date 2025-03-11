@@ -16,23 +16,20 @@
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-DEFINE_MAP_METHODS(string)
+DEFINE_MAP_METHODS(String, string)
 
-int string_map_value_copy(const char **copy, const char *value)
+int stringMapValueCopy(const char **copy, const char *value)
 {
-  char *_copy;
+  char *tmp_copy;
 
-  _copy = gks_strdup(value);
-  if (_copy == NULL)
-    {
-      return 0;
-    }
-  *copy = _copy;
+  tmp_copy = gks_strdup(value);
+  if (tmp_copy == NULL) return 0;
+  *copy = tmp_copy;
 
   return 1;
 }
 
-void string_map_value_delete(const char *value)
+void stringMapValueDelete(const char *value)
 {
   free((void *)value);
 }

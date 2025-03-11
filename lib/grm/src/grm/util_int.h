@@ -28,10 +28,10 @@ extern "C" {
 #endif
 #endif
 
-#define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
+#define isStringDelimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
 
-#ifndef array_size
-#define array_size(a) ((sizeof(a) / sizeof(*(a))))
+#ifndef arraySize
+#define arraySize(a) ((sizeof(a) / sizeof(*(a))))
 #endif
 
 #ifndef INFINITY
@@ -45,63 +45,62 @@ extern "C" {
 #define grm_static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
 
 /* test macros which can be used like `assert` */
-#define return_error_if(condition, error_value)                                                    \
-  do                                                                                               \
-    {                                                                                              \
-      if (condition)                                                                               \
-        {                                                                                          \
-          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, error_names[error_value])); \
-          return (error_value);                                                                    \
-        }                                                                                          \
-    }                                                                                              \
-  while (0)
-#define return_if_error return_error_if((error) != ERROR_NONE, (error))
-#define goto_if(condition, goto_label) \
-  do                                   \
-    {                                  \
-      if (condition)                   \
-        {                              \
-          goto goto_label;             \
-        }                              \
-    }                                  \
-  while (0)
-#define cleanup_if(condition) goto_if((condition), cleanup)
-#define error_cleanup_if(condition) goto_if((condition), error_cleanup)
-#define goto_if_error(goto_label)                                                          \
-  do                                                                                       \
-    {                                                                                      \
-      if ((error) != ERROR_NONE)                                                           \
-        {                                                                                  \
-          logger((stderr, "Got error \"%d\" (\"%s\")!\n", (error), error_names[(error)])); \
-          goto goto_label;                                                                 \
-        }                                                                                  \
-    }                                                                                      \
-  while (0)
-#define cleanup_if_error goto_if_error(cleanup)
-#define error_cleanup_if_error goto_if_error(error_cleanup)
-#define goto_and_set_error_if(condition, error_value, goto_label)                                      \
+#define returnErrorIf(condition, error_value)                                                          \
   do                                                                                                   \
     {                                                                                                  \
       if (condition)                                                                                   \
         {                                                                                              \
-          error = (error_value);                                                                       \
-          if (error == ERROR_MALLOC)                                                                   \
-            {                                                                                          \
-              debug_print_malloc_error();                                                              \
-            }                                                                                          \
-          else                                                                                         \
-            {                                                                                          \
-              logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, error_names[error_value])); \
-            }                                                                                          \
-          goto goto_label;                                                                             \
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, grm_error_names[error_value])); \
+          return (error_value);                                                                        \
         }                                                                                              \
     }                                                                                                  \
   while (0)
-#define cleanup_and_set_error_if(condition, error_value) goto_and_set_error_if((condition), (error_value), cleanup)
-#define error_cleanup_and_set_error_if(condition, error_value) \
-  goto_and_set_error_if((condition), (error_value), error_cleanup)
-#define cleanup_and_set_error(error_value) goto_and_set_error_if(1, (error_value), cleanup)
-#define error_cleanup_and_set_error(error_value) goto_and_set_error_if(1, (error_value), error_cleanup)
+#define returnIfError returnErrorIf((error) != GRM_ERROR_NONE, (error))
+#define gotoIf(condition, goto_label) \
+  do                                  \
+    {                                 \
+      if (condition)                  \
+        {                             \
+          goto goto_label;            \
+        }                             \
+    }                                 \
+  while (0)
+#define cleanupIf(condition) gotoIf((condition), cleanup)
+#define errorCleanupIf(condition) gotoIf((condition), error_cleanup)
+#define gotoIfError(goto_label)                                                                \
+  do                                                                                           \
+    {                                                                                          \
+      if ((error) != GRM_ERROR_NONE)                                                           \
+        {                                                                                      \
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", (error), grm_error_names[(error)])); \
+          goto goto_label;                                                                     \
+        }                                                                                      \
+    }                                                                                          \
+  while (0)
+#define cleanupIfError gotoIfError(cleanup)
+#define errorCleanupIfError gotoIfError(error_cleanup)
+#define gotoAndSetErrorIf(condition, error_value, goto_label)                                              \
+  do                                                                                                       \
+    {                                                                                                      \
+      if (condition)                                                                                       \
+        {                                                                                                  \
+          error = (error_value);                                                                           \
+          if (error == GRM_ERROR_MALLOC)                                                                   \
+            {                                                                                              \
+              debugPrintMallocError();                                                                     \
+            }                                                                                              \
+          else                                                                                             \
+            {                                                                                              \
+              logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, grm_error_names[error_value])); \
+            }                                                                                              \
+          goto goto_label;                                                                                 \
+        }                                                                                                  \
+    }                                                                                                      \
+  while (0)
+#define cleanupAndSetErrorIf(condition, error_value) gotoAndSetErrorIf((condition), (error_value), cleanup)
+#define errorCleanupAndSetErrorIf(condition, error_value) gotoAndSetErrorIf((condition), (error_value), error_cleanup)
+#define cleanupAndSetError(error_value) gotoAndSetErrorIf(1, (error_value), cleanup)
+#define errorCleanupAndSetError(error_value) gotoAndSetErrorIf(1, (error_value), error_cleanup)
 
 #if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))) || defined(__clang__)
 #define MAYBE_UNUSED __attribute__((unused))
@@ -125,33 +124,33 @@ extern "C" {
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-void bin_data(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
-const char *create_tmp_dir(void);
-int delete_tmp_dir(void);
-void linspace(double start, double end, unsigned int n, double *x);
-size_t djb2_hash(const char *str);
-int is_equidistant_array(unsigned int length, const double *x);
-int is_int_number(const char *str);
-int str_to_uint(const char *str, unsigned int *value_ptr);
-int int_equals_any(int number, unsigned int n, ...);
+void binData(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
+const char *createTmpDir(void);
+int deleteTmpDir(void);
+void linSpace(double start, double end, unsigned int n, double *x);
+size_t djb2Hash(const char *str);
+int isEquidistantArray(unsigned int length, const double *x);
+int isIntNumber(const char *str);
+int strToUint(const char *str, unsigned int *value_ptr);
+int intEqualsAny(int number, unsigned int n, ...);
 #ifndef __cplusplus
 /* C++ code shall use the C++ version in `utilcpp_int.hxx` */
-int str_equals_any(const char *str, ...);
+int strEqualsAny(const char *str, ...);
 #endif
-int str_equals_any_in_array(const char *str, const char **str_array);
-int uppercase_count(const char *str);
-char *str_filter(const char *str, const char *filter_chars);
-int is_homogenous_string_of_char(const char *str, char c);
-const char *private_name(const char *public_name);
-unsigned long next_or_equal_power2(unsigned long num);
-int is_env_variable_enabled(const char *env_variable_name);
-int file_exists(const char *file_path);
-char *get_env_variable(const char *name);
-char *get_gr_dir(void);
-char *get_tmp_directory(void);
+int strEqualsAnyInArray(const char *str, const char **str_array);
+int upperCaseCount(const char *str);
+char *strFilter(const char *str, const char *filter_chars);
+int isHomogenousStringOfChar(const char *str, char c);
+const char *privateName(const char *public_name);
+unsigned long nextOrEqualPower2(unsigned long num);
+int isEnvVariableEnabled(const char *env_variable_name);
+int fileExists(const char *file_path);
+char *getEnvVariable(const char *name);
+char *getGrDir(void);
+char *getTmpDirectory(void);
 #ifdef _WIN32
-char *convert_wstring_to_utf8(const wchar_t *wstring);
-wchar_t *convert_utf8_to_wstring(const char *utf8_bytes);
+char *convertWstringToUtf8(const wchar_t *wstring);
+wchar_t *convertUtf8ToWstring(const char *utf8_bytes);
 #endif
 
 #ifdef __cplusplus

@@ -12,15 +12,15 @@
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-typedef const char *const_char_p;
-DECLARE_MAP_TYPE(string, const_char_p)
+typedef const char *ConstCharP;
+DECLARE_MAP_TYPE(String, ConstCharP)
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-DECLARE_MAP_METHODS(string)
+DECLARE_MAP_METHODS(String, string)
 
 
 #undef DECLARE_MAP_TYPE

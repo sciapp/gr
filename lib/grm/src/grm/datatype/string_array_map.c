@@ -16,12 +16,12 @@
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-DEFINE_MAP_METHODS(string_array)
+DEFINE_MAP_METHODS(StringArray, stringArray)
 
-int string_array_map_value_copy(char ***copy, const char **value)
+int stringArrayMapValueCopy(char ***copy, const char **value)
 {
   size_t entry_length;
-  char **_copy = NULL;
+  char **tmp_copy = NULL;
   const char **entry;
   char **copy_entry;
 
@@ -31,45 +31,38 @@ int string_array_map_value_copy(char ***copy, const char **value)
       ++entry_length;
     }
 
-  _copy = calloc(entry_length + 1, sizeof(char *));
-  if (_copy == NULL)
-    {
-      goto cleanup;
-    }
+  tmp_copy = calloc(entry_length + 1, sizeof(char *));
+  if (tmp_copy == NULL) goto cleanup;
 
   entry = value;
-  copy_entry = _copy;
+  copy_entry = tmp_copy;
   while (*entry != NULL)
     {
       *copy_entry = gks_strdup(*entry);
-      if (*copy_entry == NULL)
-        {
-          goto cleanup;
-        }
+      if (*copy_entry == NULL) goto cleanup;
       ++entry;
       ++copy_entry;
     }
-
-  *copy = _copy;
+  *copy = tmp_copy;
 
   return 1;
 
 cleanup:
-  if (_copy != NULL)
+  if (tmp_copy != NULL)
     {
-      copy_entry = _copy;
+      copy_entry = tmp_copy;
       while (*copy_entry != NULL)
         {
           free(*copy_entry);
           ++copy_entry;
         }
-      free(_copy);
+      free(tmp_copy);
     }
 
   return 0;
 }
 
-void string_array_map_value_delete(char **value)
+void stringArrayMapValueDelete(char **value)
 {
   char **entry;
 
@@ -83,10 +76,9 @@ void string_array_map_value_delete(char **value)
   free(value);
 }
 
-string_array_map_t *string_array_map_new_from_string_split(size_t count, const string_map_entry_t *entries,
-                                                           char split_char)
+StringArrayMap *stringArrayMapNewFromStringSplit(size_t count, const StringMapEntry *entries, char split_char)
 {
-  string_array_map_t *map = NULL;
+  StringArrayMap *map = NULL;
   char *split_string = NULL;
   char *current_char_ptr;
   char **string_array = NULL;
@@ -94,33 +86,21 @@ string_array_map_t *string_array_map_new_from_string_split(size_t count, const s
   size_t array_length;
   size_t i;
 
-  map = string_array_map_new(count);
-  if (map == NULL)
-    {
-      goto cleanup;
-    }
+  map = stringArrayMapNew(count);
+  if (map == NULL) goto cleanup;
   for (i = 0; i < count; ++i)
     {
       split_string = gks_strdup(entries[i].value);
-      if (split_string == NULL)
-        {
-          goto cleanup;
-        }
+      if (split_string == NULL) goto cleanup;
       array_length = 1;
       current_char_ptr = split_string;
       while (*current_char_ptr != '\0')
         {
-          if (*current_char_ptr == split_char)
-            {
-              ++array_length;
-            }
+          if (*current_char_ptr == split_char) ++array_length;
           ++current_char_ptr;
         }
       string_array = calloc(array_length + 1, sizeof(char *));
-      if (string_array == NULL)
-        {
-          goto cleanup;
-        }
+      if (string_array == NULL) goto cleanup;
       current_array_entry = string_array;
       *current_array_entry = split_string;
       ++current_array_entry;
@@ -136,10 +116,7 @@ string_array_map_t *string_array_map_new_from_string_split(size_t count, const s
           ++current_char_ptr;
         }
       *current_array_entry = NULL;
-      if (!string_array_map_insert(map, entries[i].key, (const char **)string_array))
-        {
-          goto cleanup;
-        }
+      if (!stringArrayMapInsert(map, entries[i].key, (const char **)string_array)) goto cleanup;
       free(split_string);
       free(string_array);
     }
@@ -147,18 +124,9 @@ string_array_map_t *string_array_map_new_from_string_split(size_t count, const s
   return map;
 
 cleanup:
-  if (map == NULL)
-    {
-      string_array_map_delete(map);
-    }
-  if (split_string != NULL)
-    {
-      free(split_string);
-    }
-  if (string_array != NULL)
-    {
-      free(string_array);
-    }
+  if (map == NULL) stringArrayMapDelete(map);
+  if (split_string != NULL) free(split_string);
+  if (string_array != NULL) free(string_array);
 
   return NULL;
 }

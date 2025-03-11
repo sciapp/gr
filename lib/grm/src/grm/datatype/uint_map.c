@@ -13,16 +13,16 @@
 
 /* ------------------------- string-to-uint map --------------------------------------------------------------------- */
 
-DEFINE_MAP_METHODS(uint)
+DEFINE_MAP_METHODS(Uint, uint)
 
-int uint_map_value_copy(unsigned int *copy, const unsigned int value)
+int uintMapValueCopy(unsigned int *copy, const unsigned int value)
 {
   *copy = value;
 
   return 1;
 }
 
-void uint_map_value_delete(unsigned int value UNUSED) {}
+void uintMapValueDelete(unsigned int value UNUSED) {}
 
 
 #undef DEFINE_MAP_METHODS

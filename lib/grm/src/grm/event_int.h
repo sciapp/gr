@@ -8,7 +8,7 @@ extern "C" {
 /* ######################### includes ############################################################################### */
 
 #include "datatype/template/list_int.h"
-#include "grm/error.h"
+#include "error_int.h"
 #include <grm/event.h>
 
 
@@ -18,13 +18,13 @@ extern "C" {
 
 /* ------------------------- event handling ------------------------------------------------------------------------- */
 
-DECLARE_LIST_TYPE(event, grm_event_t *)
+DECLARE_LIST_TYPE(Event, grm_event_t *)
 
 typedef struct
 {
-  event_reflist_t *queue;
+  EventReflist *queue;
   grm_event_callback_t *event_callbacks;
-} event_queue_t;
+} EventQueue;
 
 #undef DECLARE_LIST_TYPE
 
@@ -32,32 +32,32 @@ typedef struct
 
 /* ------------------------- event handling ------------------------------------------------------------------------- */
 
-int process_events(void);
+int processEvents(void);
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- event handling ------------------------------------------------------------------------- */
 
-DECLARE_LIST_METHODS(event)
+DECLARE_LIST_METHODS(Event, event)
 
-event_queue_t *event_queue_new(void);
-void event_queue_delete(event_queue_t *queue);
+EventQueue *eventQueueNew(void);
+void eventQueueDelete(EventQueue *queue);
 
-void event_queue_register(event_queue_t *queue, grm_event_type_t type, grm_event_callback_t callback);
-void event_queue_unregister(event_queue_t *queue, grm_event_type_t type);
+void eventQueueRegister(EventQueue *queue, grm_event_type_t type, grm_event_callback_t callback);
+void eventQueueUnregister(EventQueue *queue, grm_event_type_t type);
 
-int event_queue_process_next(event_queue_t *queue);
-int event_queue_process_all(event_queue_t *queue);
+int eventQueueProcessNext(EventQueue *queue);
+int eventQueueProcessAll(EventQueue *queue);
 
-err_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
-err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
-err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
-err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
-err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string);
-err_t event_queue_enqueue_integral_update_event(event_queue_t *queue, double int_lim_low, double int_lim_high);
+grm_error_t eventQueueEnqueueNewPlotEvent(EventQueue *queue, int plot_id);
+grm_error_t eventQueueEnqueueUpdatePlotEvent(EventQueue *queue, int plot_id);
+grm_error_t eventQueueEnqueueSizeEvent(EventQueue *queue, int plot_id, int width, int height);
+grm_error_t eventQueueEnqueueMergeEndEvent(EventQueue *queue, const char *identificator);
+grm_error_t eventQueueEnqueueRequestEvent(EventQueue *queue, const char *request_string);
+grm_error_t eventQueueEnqueueIntegralUpdateEvent(EventQueue *queue, double int_lim_low, double int_lim_high);
 
-void event_queue_discard_all_of_type(event_queue_t *queue, grm_event_type_t type);
+void eventQueueDiscardAllOfType(EventQueue *queue, grm_event_type_t type);
 
 #undef DECLARE_LIST_METHODS
 

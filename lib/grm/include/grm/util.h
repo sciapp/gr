@@ -19,27 +19,27 @@ extern "C" {
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #ifdef GR_STATIC_LIB
-#define EXPORT
+#define GRM_EXPORT
 #else
 #if defined _WIN32 || defined __CYGWIN__ || defined __MINGW32__
 #ifdef BUILDING_DLL
 #ifdef __GNUC__
-#define EXPORT __attribute__((dllexport))
+#define GRM_EXPORT __attribute__((dllexport))
 #else
-#define EXPORT __declspec(dllexport)
+#define GRM_EXPORT __declspec(dllexport)
 #endif
 #else
 #ifdef __GNUC__
-#define EXPORT __attribute__((dllimport))
+#define GRM_EXPORT __attribute__((dllimport))
 #else
-#define EXPORT __declspec(dllimport)
+#define GRM_EXPORT __declspec(dllimport)
 #endif
 #endif
 #else
 #if __GNUC__ >= 4
-#define EXPORT __attribute__((visibility("default")))
+#define GRM_EXPORT __attribute__((visibility("default")))
 #else
-#define EXPORT
+#define GRM_EXPORT
 #endif
 #endif
 #endif
@@ -50,7 +50,7 @@ extern "C" {
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #if !defined(NDEBUG) && defined(EMSCRIPTEN)
-EXPORT FILE *grm_get_stdout(void);
+GRM_EXPORT FILE *grm_get_stdout(void);
 #endif
 
 

@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <grm/error.h>
+#include <grm/error_int.h>
 #include <grm/util_int.h>
 
 
@@ -16,57 +16,57 @@
 /* ------------------------- generic list --------------------------------------------------------------------------- */
 
 #undef DECLARE_LIST_TYPE
-#define DECLARE_LIST_TYPE(prefix, entry_type)                                                                          \
-  typedef entry_type prefix##_list_entry_t;                                                                            \
-  typedef const entry_type prefix##_list_const_entry_t;                                                                \
-  typedef err_t (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_const_entry_t);              \
-  typedef err_t (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                           \
+#define DECLARE_LIST_TYPE(type_prefix, entry_type)                                                                     \
+  typedef entry_type type_prefix##ListEntry;                                                                           \
+  typedef const entry_type type_prefix##ListConstEntry;                                                                \
+  typedef grm_error_t (*type_prefix##ListEntryCopyFunc)(type_prefix##ListEntry *, type_prefix##ListConstEntry);        \
+  typedef grm_error_t (*type_prefix##ListEntryDeleteFunc)(type_prefix##ListEntry);                                     \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
-    prefix##_list_entry_copy_func_t entry_copy;                                                                        \
-    prefix##_list_entry_delete_func_t entry_delete;                                                                    \
-  } prefix##_list_vtable_t;                                                                                            \
+    type_prefix##ListEntryCopyFunc entry_copy;                                                                         \
+    type_prefix##ListEntryDeleteFunc entry_delete;                                                                     \
+  } type_prefix##ListVtable;                                                                                           \
                                                                                                                        \
-  typedef struct _##prefix##_list_node_t                                                                               \
+  typedef struct type_prefix##ListNode                                                                                 \
   {                                                                                                                    \
-    prefix##_list_entry_t entry;                                                                                       \
-    struct _##prefix##_list_node_t *next;                                                                              \
-  } prefix##_list_node_t;                                                                                              \
+    type_prefix##ListEntry entry;                                                                                      \
+    struct type_prefix##ListNode *next;                                                                                \
+  } type_prefix##ListNode;                                                                                             \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
-    const prefix##_list_vtable_t *vt;                                                                                  \
-    prefix##_list_node_t *head;                                                                                        \
-    prefix##_list_node_t *tail;                                                                                        \
+    const type_prefix##ListVtable *vt;                                                                                 \
+    type_prefix##ListNode *head;                                                                                       \
+    type_prefix##ListNode *tail;                                                                                       \
     size_t size;                                                                                                       \
-  } prefix##_list_t;                                                                                                   \
+  } type_prefix##List;                                                                                                 \
                                                                                                                        \
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
-  typedef entry_type prefix##_reflist_entry_t;                                                                         \
-  typedef err_t (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);           \
-  typedef err_t (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                     \
+  typedef entry_type type_prefix##ReflistEntry;                                                                        \
+  typedef grm_error_t (*type_prefix##ReflistEntryCopyFunc)(type_prefix##ReflistEntry *, type_prefix##ReflistEntry);    \
+  typedef grm_error_t (*type_prefix##ReflistEntryDeleteFunc)(type_prefix##ReflistEntry);                               \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
-    prefix##_reflist_entry_copy_func_t entry_copy;                                                                     \
-    prefix##_reflist_entry_delete_func_t entry_delete;                                                                 \
-  } prefix##_reflist_vtable_t;                                                                                         \
+    type_prefix##ReflistEntryCopyFunc entry_copy;                                                                      \
+    type_prefix##ReflistEntryDeleteFunc entry_delete;                                                                  \
+  } type_prefix##ReflistVtable;                                                                                        \
                                                                                                                        \
-  typedef struct _##prefix##_reflist_node_t                                                                            \
+  typedef struct type_prefix##ReflistNode                                                                              \
   {                                                                                                                    \
-    prefix##_reflist_entry_t entry;                                                                                    \
-    struct _##prefix##_reflist_node_t *next;                                                                           \
-  } prefix##_reflist_node_t;                                                                                           \
+    type_prefix##ReflistEntry entry;                                                                                   \
+    struct type_prefix##ReflistNode *next;                                                                             \
+  } type_prefix##ReflistNode;                                                                                          \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
-    const prefix##_reflist_vtable_t *vt;                                                                               \
-    prefix##_reflist_node_t *head;                                                                                     \
-    prefix##_reflist_node_t *tail;                                                                                     \
+    const type_prefix##ReflistVtable *vt;                                                                              \
+    type_prefix##ReflistNode *head;                                                                                    \
+    type_prefix##ReflistNode *tail;                                                                                    \
     size_t size;                                                                                                       \
-  } prefix##_reflist_t;
+  } type_prefix##Reflist;
 
 
 /* ========================= methods ================================================================================ */
@@ -74,55 +74,57 @@
 /* ------------------------- generic list --------------------------------------------------------------------------- */
 
 #undef DECLARE_LIST_METHODS
-#define DECLARE_LIST_METHODS(prefix)                                                                                   \
-  prefix##_list_t *prefix##_list_new(void);                                                                            \
-  void prefix##_list_delete(prefix##_list_t *list);                                                                    \
+#define DECLARE_LIST_METHODS(type_prefix, method_prefix)                                                               \
+  type_prefix##List *method_prefix##ListNew(void);                                                                     \
+  void method_prefix##ListDelete(type_prefix##List *list);                                                             \
                                                                                                                        \
-  err_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry);                            \
-  err_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry);                             \
+  grm_error_t method_prefix##ListPushFront(type_prefix##List *list, type_prefix##ListConstEntry entry);                \
+  grm_error_t method_prefix##ListPushBack(type_prefix##List *list, type_prefix##ListConstEntry entry);                 \
                                                                                                                        \
-  prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list);                                                \
-  prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list);                                                 \
+  type_prefix##ListEntry method_prefix##ListPopFront(type_prefix##List *list);                                         \
+  type_prefix##ListEntry method_prefix##ListPopBack(type_prefix##List *list);                                          \
                                                                                                                        \
-  err_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry);                                  \
-  prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list);                                                      \
+  grm_error_t method_prefix##ListPush(type_prefix##List *list, type_prefix##ListConstEntry entry);                     \
+  type_prefix##ListEntry method_prefix##ListPop(type_prefix##List *list);                                              \
                                                                                                                        \
-  err_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry);                               \
-  prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list);                                                  \
+  grm_error_t method_prefix##ListEnqueue(type_prefix##List *list, type_prefix##ListConstEntry entry);                  \
+  type_prefix##ListEntry method_prefix##ListDequeue(type_prefix##List *list);                                          \
                                                                                                                        \
-  int prefix##_list_empty(prefix##_list_t *list);                                                                      \
+  int method_prefix##ListEmpty(type_prefix##List *list);                                                               \
                                                                                                                        \
-  err_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_const_entry_t entry);                      \
-  err_t prefix##_list_entry_delete(prefix##_list_entry_t entry);                                                       \
+  grm_error_t method_prefix##ListEntryCopy(type_prefix##ListEntry *copy, type_prefix##ListConstEntry entry);           \
+  grm_error_t method_prefix##ListEntryDelete(type_prefix##ListEntry entry);                                            \
                                                                                                                        \
-  int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,                  \
-                                       prefix##_list_node_t **previous_node);                                          \
+  int method_prefix##ListFindPreviousNode(const type_prefix##List *list, const type_prefix##ListNode *node,            \
+                                          type_prefix##ListNode **previous_node);                                      \
                                                                                                                        \
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
-  prefix##_reflist_t *prefix##_reflist_new(void) MAYBE_UNUSED;                                                         \
-  void prefix##_reflist_delete(prefix##_reflist_t *list) MAYBE_UNUSED;                                                 \
-  void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list) MAYBE_UNUSED;                                    \
+  type_prefix##Reflist *method_prefix##ReflistNew(void) MAYBE_UNUSED;                                                  \
+  void method_prefix##ReflistDelete(type_prefix##Reflist *list) MAYBE_UNUSED;                                          \
+  void method_prefix##ReflistDeleteWithEntries(type_prefix##Reflist *list) MAYBE_UNUSED;                               \
                                                                                                                        \
-  err_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;            \
-  err_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;             \
+  grm_error_t method_prefix##ReflistPushFront(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)             \
+      MAYBE_UNUSED;                                                                                                    \
+  grm_error_t method_prefix##ReflistPushBack(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)              \
+      MAYBE_UNUSED;                                                                                                    \
                                                                                                                        \
-  prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list) MAYBE_UNUSED;                          \
-  prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list) MAYBE_UNUSED;                           \
+  type_prefix##ReflistEntry method_prefix##ReflistPopFront(type_prefix##Reflist *list) MAYBE_UNUSED;                   \
+  type_prefix##ReflistEntry method_prefix##ReflistPopBack(type_prefix##Reflist *list) MAYBE_UNUSED;                    \
                                                                                                                        \
-  err_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;                  \
-  prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list) MAYBE_UNUSED;                                \
+  grm_error_t method_prefix##ReflistPush(type_prefix##Reflist *list, type_prefix##ReflistEntry entry) MAYBE_UNUSED;    \
+  type_prefix##ReflistEntry method_prefix##ReflistPop(type_prefix##Reflist *list) MAYBE_UNUSED;                        \
                                                                                                                        \
-  err_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;               \
-  prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list) MAYBE_UNUSED;                            \
+  grm_error_t method_prefix##ReflistEnqueue(type_prefix##Reflist *list, type_prefix##ReflistEntry entry) MAYBE_UNUSED; \
+  type_prefix##ReflistEntry method_prefix##ReflistDequeue(type_prefix##Reflist *list) MAYBE_UNUSED;                    \
                                                                                                                        \
-  int prefix##_reflist_empty(prefix##_reflist_t *list) MAYBE_UNUSED;                                                   \
+  int method_prefix##ReflistEmpty(type_prefix##Reflist *list) MAYBE_UNUSED;                                            \
                                                                                                                        \
-  err_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, const prefix##_reflist_entry_t entry);             \
-  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry);                                                 \
+  grm_error_t method_prefix##ReflistEntryCopy(type_prefix##ReflistEntry *copy, const type_prefix##ReflistEntry entry); \
+  grm_error_t method_prefix##ReflistEntryDelete(type_prefix##ReflistEntry entry);                                      \
                                                                                                                        \
-  int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,         \
-                                          prefix##_reflist_node_t **previous_node) MAYBE_UNUSED;
+  int method_prefix##ReflistFindPreviousNode(const type_prefix##Reflist *list, const type_prefix##ReflistNode *node,   \
+                                             type_prefix##ReflistNode **previous_node) MAYBE_UNUSED;
 
 
 /* ######################### implementation ######################################################################### */
@@ -132,20 +134,17 @@
 /* ------------------------- generic list --------------------------------------------------------------------------- */
 
 #undef DEFINE_LIST_METHODS
-#define DEFINE_LIST_METHODS(prefix)                                                                                    \
-  prefix##_list_t *prefix##_list_new(void)                                                                             \
+#define DEFINE_LIST_METHODS(type_prefix, method_prefix)                                                                \
+  type_prefix##List *method_prefix##ListNew(void)                                                                      \
   {                                                                                                                    \
-    static const prefix##_list_vtable_t vt = {                                                                         \
-        prefix##_list_entry_copy,                                                                                      \
-        prefix##_list_entry_delete,                                                                                    \
+    static const type_prefix##ListVtable vt = {                                                                        \
+        method_prefix##ListEntryCopy,                                                                                  \
+        method_prefix##ListEntryDelete,                                                                                \
     };                                                                                                                 \
-    prefix##_list_t *list;                                                                                             \
+    type_prefix##List *list;                                                                                           \
                                                                                                                        \
-    list = malloc(sizeof(prefix##_list_t));                                                                            \
-    if (list == NULL)                                                                                                  \
-      {                                                                                                                \
-        return NULL;                                                                                                   \
-      }                                                                                                                \
+    list = malloc(sizeof(type_prefix##List));                                                                          \
+    if (list == NULL) return NULL;                                                                                     \
     list->vt = &vt;                                                                                                    \
     list->head = NULL;                                                                                                 \
     list->tail = NULL;                                                                                                 \
@@ -154,10 +153,10 @@
     return list;                                                                                                       \
   }                                                                                                                    \
                                                                                                                        \
-  void prefix##_list_delete(prefix##_list_t *list)                                                                     \
+  void method_prefix##ListDelete(type_prefix##List *list)                                                              \
   {                                                                                                                    \
-    prefix##_list_node_t *current_list_node;                                                                           \
-    prefix##_list_node_t *next_list_node;                                                                              \
+    type_prefix##ListNode *current_list_node;                                                                          \
+    type_prefix##ListNode *next_list_node;                                                                             \
                                                                                                                        \
     current_list_node = list->head;                                                                                    \
     while (current_list_node != NULL)                                                                                  \
@@ -170,39 +169,36 @@
     free(list);                                                                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry)                             \
+  grm_error_t method_prefix##ListPushFront(type_prefix##List *list, type_prefix##ListConstEntry entry)                 \
   {                                                                                                                    \
-    prefix##_list_node_t *new_list_node;                                                                               \
-    err_t error = ERROR_NONE;                                                                                          \
+    type_prefix##ListNode *new_list_node;                                                                              \
+    grm_error_t error = GRM_ERROR_NONE;                                                                                \
                                                                                                                        \
-    new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
-    error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
+    new_list_node = malloc(sizeof(type_prefix##ListNode));                                                             \
+    errorCleanupAndSetErrorIf(new_list_node == NULL, GRM_ERROR_MALLOC);                                                \
     error = list->vt->entry_copy(&new_list_node->entry, entry);                                                        \
-    error_cleanup_if_error;                                                                                            \
+    errorCleanupIfError;                                                                                               \
     new_list_node->next = list->head;                                                                                  \
     list->head = new_list_node;                                                                                        \
-    if (list->tail == NULL)                                                                                            \
-      {                                                                                                                \
-        list->tail = new_list_node;                                                                                    \
-      }                                                                                                                \
+    if (list->tail == NULL) list->tail = new_list_node;                                                                \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return ERROR_NONE;                                                                                                 \
+    return GRM_ERROR_NONE;                                                                                             \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
     return error;                                                                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry)                              \
+  grm_error_t method_prefix##ListPushBack(type_prefix##List *list, type_prefix##ListConstEntry entry)                  \
   {                                                                                                                    \
-    prefix##_list_node_t *new_list_node;                                                                               \
-    err_t error = ERROR_NONE;                                                                                          \
+    type_prefix##ListNode *new_list_node;                                                                              \
+    grm_error_t error = GRM_ERROR_NONE;                                                                                \
                                                                                                                        \
-    new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
-    error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
+    new_list_node = malloc(sizeof(type_prefix##ListNode));                                                             \
+    errorCleanupAndSetErrorIf(new_list_node == NULL, GRM_ERROR_MALLOC);                                                \
     error = list->vt->entry_copy(&new_list_node->entry, entry);                                                        \
-    error_cleanup_if_error;                                                                                            \
+    errorCleanupIfError;                                                                                               \
     new_list_node->next = NULL;                                                                                        \
     if (list->head == NULL)                                                                                            \
       {                                                                                                                \
@@ -215,25 +211,22 @@
     list->tail = new_list_node;                                                                                        \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return ERROR_NONE;                                                                                                 \
+    return GRM_ERROR_NONE;                                                                                             \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
     return error;                                                                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list)                                                 \
+  type_prefix##ListEntry method_prefix##ListPopFront(type_prefix##List *list)                                          \
   {                                                                                                                    \
-    prefix##_list_node_t *front_node;                                                                                  \
-    prefix##_list_entry_t front_entry;                                                                                 \
+    type_prefix##ListNode *front_node;                                                                                 \
+    type_prefix##ListEntry front_entry;                                                                                \
                                                                                                                        \
     assert(list->head != NULL);                                                                                        \
     front_node = list->head;                                                                                           \
     list->head = list->head->next;                                                                                     \
-    if (list->tail == front_node)                                                                                      \
-      {                                                                                                                \
-        list->tail = NULL;                                                                                             \
-      }                                                                                                                \
+    if (list->tail == front_node) list->tail = NULL;                                                                   \
     front_entry = front_node->entry;                                                                                   \
     free(front_node);                                                                                                  \
     --(list->size);                                                                                                    \
@@ -241,15 +234,15 @@
     return front_entry;                                                                                                \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list)                                                  \
+  type_prefix##ListEntry method_prefix##ListPopBack(type_prefix##List *list)                                           \
   {                                                                                                                    \
-    prefix##_list_node_t *last_node;                                                                                   \
-    prefix##_list_node_t *next_to_last_node = NULL;                                                                    \
-    prefix##_list_entry_t last_entry;                                                                                  \
+    type_prefix##ListNode *last_node;                                                                                  \
+    type_prefix##ListNode *next_to_last_node = NULL;                                                                   \
+    type_prefix##ListEntry last_entry;                                                                                 \
                                                                                                                        \
     assert(list->tail != NULL);                                                                                        \
     last_node = list->tail;                                                                                            \
-    prefix##_list_find_previous_node(list, last_node, &next_to_last_node);                                             \
+    method_prefix##ListFindPreviousNode(list, last_node, &next_to_last_node);                                          \
     if (next_to_last_node == NULL)                                                                                     \
       {                                                                                                                \
         list->head = list->tail = NULL;                                                                                \
@@ -266,27 +259,30 @@
     return last_entry;                                                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                   \
+  grm_error_t method_prefix##ListPush(type_prefix##List *list, type_prefix##ListConstEntry entry)                      \
   {                                                                                                                    \
-    return prefix##_list_push_front(list, entry);                                                                      \
+    return method_prefix##ListPushFront(list, entry);                                                                  \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list) { return prefix##_list_pop_front(list); }             \
+  type_prefix##ListEntry method_prefix##ListPop(type_prefix##List *list) { return method_prefix##ListPopFront(list); } \
                                                                                                                        \
-  err_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                \
+  grm_error_t method_prefix##ListEnqueue(type_prefix##List *list, type_prefix##ListConstEntry entry)                   \
   {                                                                                                                    \
-    return prefix##_list_push_back(list, entry);                                                                       \
+    return method_prefix##ListPushBack(list, entry);                                                                   \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list) { return prefix##_list_pop_front(list); }         \
-                                                                                                                       \
-  int prefix##_list_empty(prefix##_list_t *list) { return list->size == 0; }                                           \
-                                                                                                                       \
-  int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,                  \
-                                       prefix##_list_node_t **previous_node)                                           \
+  type_prefix##ListEntry method_prefix##ListDequeue(type_prefix##List *list)                                           \
   {                                                                                                                    \
-    prefix##_list_node_t *prev_node;                                                                                   \
-    prefix##_list_node_t *current_node;                                                                                \
+    return method_prefix##ListPopFront(list);                                                                          \
+  }                                                                                                                    \
+                                                                                                                       \
+  int method_prefix##ListEmpty(type_prefix##List *list) { return list->size == 0; }                                    \
+                                                                                                                       \
+  int method_prefix##ListFindPreviousNode(const type_prefix##List *list, const type_prefix##ListNode *node,            \
+                                          type_prefix##ListNode **previous_node)                                       \
+  {                                                                                                                    \
+    type_prefix##ListNode *prev_node;                                                                                  \
+    type_prefix##ListNode *current_node;                                                                               \
                                                                                                                        \
     prev_node = NULL;                                                                                                  \
     current_node = list->head;                                                                                         \
@@ -294,10 +290,7 @@
       {                                                                                                                \
         if (current_node == node)                                                                                      \
           {                                                                                                            \
-            if (previous_node != NULL)                                                                                 \
-              {                                                                                                        \
-                *previous_node = prev_node;                                                                            \
-              }                                                                                                        \
+            if (previous_node != NULL) *previous_node = prev_node;                                                     \
             return 1;                                                                                                  \
           }                                                                                                            \
         prev_node = current_node;                                                                                      \
@@ -309,92 +302,98 @@
                                                                                                                        \
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
-  prefix##_reflist_t *prefix##_reflist_new(void)                                                                       \
+  type_prefix##Reflist *method_prefix##ReflistNew(void)                                                                \
   {                                                                                                                    \
-    static const prefix##_reflist_vtable_t vt = {                                                                      \
-        prefix##_reflist_entry_copy,                                                                                   \
-        prefix##_reflist_entry_delete,                                                                                 \
+    static const type_prefix##ReflistVtable vt = {                                                                     \
+        method_prefix##ReflistEntryCopy,                                                                               \
+        method_prefix##ReflistEntryDelete,                                                                             \
     };                                                                                                                 \
-    prefix##_reflist_t *list;                                                                                          \
+    type_prefix##Reflist *list;                                                                                        \
                                                                                                                        \
-    list = (prefix##_reflist_t *)prefix##_list_new();                                                                  \
+    list = (type_prefix##Reflist *)method_prefix##ListNew();                                                           \
     list->vt = &vt;                                                                                                    \
                                                                                                                        \
     return list;                                                                                                       \
   }                                                                                                                    \
                                                                                                                        \
-  void prefix##_reflist_delete(prefix##_reflist_t *list) { prefix##_list_delete((prefix##_list_t *)list); }            \
-                                                                                                                       \
-  void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list)                                                  \
+  void method_prefix##ReflistDelete(type_prefix##Reflist *list)                                                        \
   {                                                                                                                    \
-    prefix##_reflist_node_t *current_reflist_node;                                                                     \
-    prefix##_reflist_node_t *next_reflist_node;                                                                        \
+    method_prefix##ListDelete((type_prefix##List *)list);                                                              \
+  }                                                                                                                    \
+                                                                                                                       \
+  void method_prefix##ReflistDeleteWithEntries(type_prefix##Reflist *list)                                             \
+  {                                                                                                                    \
+    type_prefix##ReflistNode *current_reflist_node;                                                                    \
+    type_prefix##ReflistNode *next_reflist_node;                                                                       \
                                                                                                                        \
     current_reflist_node = list->head;                                                                                 \
     while (current_reflist_node != NULL)                                                                               \
       {                                                                                                                \
         next_reflist_node = current_reflist_node->next;                                                                \
-        prefix##_list_entry_delete((prefix##_list_entry_t)current_reflist_node->entry);                                \
+        method_prefix##ListEntryDelete((type_prefix##ListEntry)current_reflist_node->entry);                           \
         free(current_reflist_node);                                                                                    \
         current_reflist_node = next_reflist_node;                                                                      \
       }                                                                                                                \
     free(list);                                                                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                          \
+  grm_error_t method_prefix##ReflistPushFront(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)             \
   {                                                                                                                    \
-    return prefix##_list_push_front((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                            \
+    return method_prefix##ListPushFront((type_prefix##List *)list, (type_prefix##ListEntry)entry);                     \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                           \
+  grm_error_t method_prefix##ReflistPushBack(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)              \
   {                                                                                                                    \
-    return prefix##_list_push_back((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                             \
+    return method_prefix##ListPushBack((type_prefix##List *)list, (type_prefix##ListEntry)entry);                      \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list)                                        \
+  type_prefix##ReflistEntry method_prefix##ReflistPopFront(type_prefix##Reflist *list)                                 \
   {                                                                                                                    \
-    return prefix##_list_pop_front((prefix##_list_t *)list);                                                           \
+    return method_prefix##ListPopFront((type_prefix##List *)list);                                                     \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list)                                         \
+  type_prefix##ReflistEntry method_prefix##ReflistPopBack(type_prefix##Reflist *list)                                  \
   {                                                                                                                    \
-    return prefix##_list_pop_back((prefix##_list_t *)list);                                                            \
+    return method_prefix##ListPopBack((type_prefix##List *)list);                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                                \
+  grm_error_t method_prefix##ReflistPush(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)                  \
   {                                                                                                                    \
-    return prefix##_list_push((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                                  \
+    return method_prefix##ListPush((type_prefix##List *)list, (type_prefix##ListEntry)entry);                          \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list)                                              \
+  type_prefix##ReflistEntry method_prefix##ReflistPop(type_prefix##Reflist *list)                                      \
   {                                                                                                                    \
-    return prefix##_list_pop((prefix##_list_t *)list);                                                                 \
+    return method_prefix##ListPop((type_prefix##List *)list);                                                          \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                             \
+  grm_error_t method_prefix##ReflistEnqueue(type_prefix##Reflist *list, type_prefix##ReflistEntry entry)               \
   {                                                                                                                    \
-    return prefix##_list_enqueue((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                               \
+    return method_prefix##ListEnqueue((type_prefix##List *)list, (type_prefix##ListEntry)entry);                       \
   }                                                                                                                    \
                                                                                                                        \
-  prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list)                                          \
+  type_prefix##ReflistEntry method_prefix##ReflistDequeue(type_prefix##Reflist *list)                                  \
   {                                                                                                                    \
-    return prefix##_list_dequeue((prefix##_list_t *)list);                                                             \
+    return method_prefix##ListDequeue((type_prefix##List *)list);                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  int prefix##_reflist_empty(prefix##_reflist_t *list) { return prefix##_list_empty((prefix##_list_t *)list); }        \
-                                                                                                                       \
-                                                                                                                       \
-  int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,         \
-                                          prefix##_reflist_node_t **previous_node)                                     \
+  int method_prefix##ReflistEmpty(type_prefix##Reflist *list)                                                          \
   {                                                                                                                    \
-    return prefix##_list_find_previous_node((prefix##_list_t *)list, (prefix##_list_node_t *)node,                     \
-                                            (prefix##_list_node_t **)previous_node);                                   \
+    return method_prefix##ListEmpty((type_prefix##List *)list);                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry)                    \
+                                                                                                                       \
+  int method_prefix##ReflistFindPreviousNode(const type_prefix##Reflist *list, const type_prefix##ReflistNode *node,   \
+                                             type_prefix##ReflistNode **previous_node)                                 \
+  {                                                                                                                    \
+    return method_prefix##ListFindPreviousNode((type_prefix##List *)list, (type_prefix##ListNode *)node,               \
+                                               (type_prefix##ListNode **)previous_node);                               \
+  }                                                                                                                    \
+                                                                                                                       \
+  grm_error_t method_prefix##ReflistEntryCopy(type_prefix##ReflistEntry *copy, type_prefix##ReflistEntry entry)        \
   {                                                                                                                    \
     *copy = entry;                                                                                                     \
-    return ERROR_NONE;                                                                                                 \
+    return GRM_ERROR_NONE;                                                                                             \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return ERROR_NONE; }
+  grm_error_t method_prefix##ReflistEntryDelete(type_prefix##ReflistEntry entry UNUSED) { return GRM_ERROR_NONE; }

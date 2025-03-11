@@ -12,9 +12,9 @@
 #include <QAction>
 #include <vector>
 #include "grm.h"
-#include "Bounding_object.h"
+#include "BoundingObject.hxx"
 class AddElementWidget;
-#include "../grplot_widget.hxx"
+#include "../grplotWidget.hxx"
 
 
 class AddElementWidget : public QWidget
@@ -32,11 +32,11 @@ private slots:
 
 private:
   GRPlotWidget *grplot_widget;
-  QComboBox *addElementComboBox;
-  QComboBox *selectParentComboBox;
-  QGridLayout *addElementLayout;
-  QGroupBox *addAttributesGroup;
-  std::vector<Bounding_object> parent_vec;
+  QComboBox *add_element_combo_box;
+  QComboBox *select_parent_combo_box;
+  QGridLayout *add_element_layout;
+  QGroupBox *add_attributes_group;
+  std::vector<BoundingObject> parent_vec;
   std::vector<std::string> attribute_name_vec;
   std::vector<std::string> attribute_type_vec;
   QList<QWidget *> fields;

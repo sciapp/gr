@@ -48,16 +48,9 @@ There are more key-value parameters. These parameters only effect specific plot 
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
-The valid container parameters are `error`, `ind_bar_color`, `ind_edge_color`, `ind_edge_width`.
+The valid container parameter is `error`.
 
-Each parameter container can contain one or more of the following parameters:
-
-1. `downwards_cap_color`: only available for `error`
-2. `error_bar_color`: only available for `error`
-3. `indices`: only available for `ind_bar_color`, `ind_edge_color`, `ind_edge_width`
-4. `rgb`: only available for `ind_bar_color`, `ind_edge_color`
-5. `upwards_cap_color`: only available for `error`
-6. `width`: only available for `ind_edge_width`
+The parameter container can contain one or more of the following parameters: `downwards_cap_color`, `error_bar_color`, `upwards_cap_color`.
 
 Container parameters follow a different syntax than normal parameters. The parameters inside the container are enclosed by `{` `}`. If more than one parameter is given to the container each of the key-value pairs is enclosed by `{` `}` while the parameters are seperated by `,` without whitespace characters.
 
@@ -76,7 +69,7 @@ cat <data-file> | grplot -
 This is an advanced example for a command line, where container parameters are set:
 
 ```shell
-../../../../lib/grm/grplot/data/test.dat kind:barplot ind_edge_width:2,{{indices:2},{width:5.0},{indices:1},{width:8.0}} error:{error_bar_color:4}
+../../../../lib/grm/grplot/data/test.dat kind:barplot error:{error_bar_color:4}
 ```
 
 If wanted the plot can be exported as a `pdf`, `png`, `jpeg` or `svg` file using the interactive menu. Alternatively these files can directly be created from console line if the environment variable `GKS_WSTYPE` is set.
@@ -126,7 +119,7 @@ Values are seperated through commas (`,`), e.g. `3, 5`.
 The next line after the header may contain the column labels. If the data does not have a label a blank line can be used instead. Data items are separated with a tab character (`\t`). Depending on the plot type the data is interpreted differently. The following list shows how the data is treated for different plot types.
 
 1. `contour`, `contourf`, `heatmap`, `imshow`, `marginal_heatmap`, `surface`, `wireframe`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `x_range` and `y_range`. If the x- or y-values are non-linear this can not be handled by the previous explained data-format. For that there is another format which allows to define the x-, y- and z-values. Each values will stand in a different column while the x- and y-values will loop so that all columns have the same amount of rows. The x-values has to change first. To use this option the parameter flag `xyz_file` with the value of `1` can be used.
-2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter every 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which columns include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. 
+2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter every 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which columns include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
 4. `line3`, `scatter`, `scatter3`, `tricontour`, `trisurface`: Three columns with data are expected, representing the x-, y- and z-data.
 5. `barplot`, `histogram`, `stem`, `stairs`: One or more columns are expected. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
@@ -155,10 +148,10 @@ The expected data is one column representing the y-data.
 
 Possible parameters for the bar plot are:
 
-1. `bar_color`: This parameter defines the color of all bars inside the plot except of those which are referred with `ind_bar_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represent the RGB value of the color. If the parameter isn't set the bars will have the color with index 989 (dark blue).
+1. `bar_color`: This parameter defines the color of all bars inside the plot. The value of this parameter can either be an integer which represents a color index or three doubles which represent the RGB value of the color. If the parameter isn't set the bars will have the color with index 989 (dark blue).
 2. `bar_width`: This parameter defines the width of all bars inside the plot. Depending on the specified width the bars may overlap. The value of this parameter is a double number where its default is 0.8.
-3. `edge_color`: This parameter defines the color of all edges inside the plot except of those which are referred with `ind_edge_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represents the RGB value of the color. If the parameter isn't set the edges will have the color with index 1 (black).
-4. `edge_width`: This parameter defines the width of all edges inside the plot except those which are referred with `ind_edge_width`. The value of this parameter is a double number where its default is 1.0.
+3. `edge_color`: This parameter defines the color of all edges inside the plot. The value of this parameter can either be an integer which represents a color index or three doubles which represents the RGB value of the color. If the parameter isn't set the edges will have the color with index 1 (black).
+4. `edge_width`: This parameter defines the width of all edges inside the plot. The value of this parameter is a double number where its default is 1.0.
 5. `error`: With this parameter the relative error of each bar can be displayed. The values for this parameter are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars as an integer. If no color is given an error is raised.
     - `downwards_cap_color`: Defines the downwards cap color of the error bars as an integer.
@@ -169,32 +162,11 @@ Possible parameters for the bar plot are:
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
 6. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
-7. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
-    - `indices`: The index number of the bar, which color should be changed.
-    - `rgb`: The new color for the specified bar. The value has to be three doubles or integer which represents the RGB value.
-
-   The syntax of this parameter is:
-
-   `ind_bar_color:`number_of_bars`,{{indices:`first_bar_index`},{rgb:`r1,g1,b1`}`,...`}`
-8. `ind_edge_color`: With this parameter the color of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
-    - `indices`: The index number of the edge, which color should be changed.
-    - `rgb`: The new color for the specified edge. The value has to be three doubles or integer which represents the RGB value.
-
-   The syntax of this parameter is:
-
-   `ind_edge_color:`number_of_edges`,{{indices:`first_edge_index`},{rgb:`r1,g1,b1`}`,...`}`
-9. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
-    - `indices`: The index number of the edge, which width should be changed.
-    - `width`: The new width for the specified edge. The value of this parameter has to be an integer or double.
-
-   The syntax of this parameter is:
-
-   `ind_edge_width:`number_of_edges`,{{indices:`first_edge_index`},{width:`first_edge_width`}`,...`}`
-10. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
+7. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
-11. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
+8. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
@@ -312,7 +284,7 @@ Possible parameters for the line plot are:
 
 2. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
 3. `int_limits_high`: This parameter defines the upper limits of all integrals.
-   
+
     The syntax for this parameter is:
 
    `int_limits_high:`number_of_elements`,`elem_1`,`elem_2`,`...
