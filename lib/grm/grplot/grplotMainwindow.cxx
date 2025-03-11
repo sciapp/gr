@@ -1,5 +1,6 @@
 #include <sstream>
 #include <iostream>
+#include <QTimer>
 #include "grplotMainwindow.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
@@ -52,6 +53,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
         {
           resize(width, height);
         }
+    }
+  if (test_mode && grplot_widget_->getTestCommandsStream())
+    {
+      QTimer::singleShot(100, grplot_widget_, &GRPlotWidget::processTestCommandsFile);
     }
 
   if (grplot_widget_ && !listen_mode && !test_mode && !grplot_widget_->getTestCommandsStream() && !help_mode)

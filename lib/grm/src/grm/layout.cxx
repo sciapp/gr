@@ -34,7 +34,7 @@ bool Slice::isForward()
 
 GridElement::GridElement()
 {
-  plot = new double[4];
+  plot = new double[4]{0.0, 0.0, 0.0, 0.0};
 };
 
 GridElement::GridElement(double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl,
@@ -50,7 +50,7 @@ GridElement::GridElement(double abs_height, double abs_width, int abs_height_pxl
   setAbsWidthPxl(abs_width_pxl);
   setRelativeHeight(relative_height);
   setRelativeWidth(relative_width);
-  plot = new double[4];
+  plot = new double[4]{0.0, 0.0, 0.0, 0.0};
 }
 
 GridElement::~GridElement() {}

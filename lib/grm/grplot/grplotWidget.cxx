@@ -40,6 +40,7 @@ static bool ctrl_key_mode = false;
 static bool mouse_move_triggert = false;
 static std::weak_ptr<GRM::Element> previous_active_plot;
 static bool active_plot_changed = false;
+static bool draw_called_at_least_once = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -234,13 +235,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
     }
   else
     {
+      grm_args_push(args_, "keep_aspect_ratio", "i", 1);
+      if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
       if (test_mode)
         {
           test_commands_file = new QFile(test_commands);
           if (test_commands_file->open(QIODevice::ReadOnly))
             {
               test_commands_stream = new QTextStream(test_commands_file);
-              QTimer::singleShot(1000, this, &GRPlotWidget::processTestCommandsFile);
             }
           else
             {
@@ -248,8 +250,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
               QApplication::quit();
             }
         }
-      grm_args_push(args_, "keep_aspect_ratio", "i", 1);
-      if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
 
       heatmap_act = new QAction(tr("&Heatmap"), this);
       connect(heatmap_act, &QAction::triggered, this, &GRPlotWidget::heatmap);
@@ -980,7 +980,6 @@ void GRPlotWidget::attributeEditEvent()
 
 void GRPlotWidget::draw()
 {
-  static bool called_at_least_once = false;
   if (!file_export.empty())
     {
       std::string kind;
@@ -996,7 +995,7 @@ void GRPlotWidget::draw()
       grm_export(file);
     }
   bool was_successful;
-  if (!called_at_least_once || in_listen_mode)
+  if (!draw_called_at_least_once || in_listen_mode)
     {
       /* Call `grm_plot` at least once to initialize the internal argument container structure,
        * but use `grm_render` afterwards, so the graphics tree is not deleted every time. */
@@ -1007,7 +1006,7 @@ void GRPlotWidget::draw()
       was_successful = grm_render();
     }
   assert(was_successful);
-  called_at_least_once = true;
+  draw_called_at_least_once = true;
 }
 
 void GRPlotWidget::redraw(bool full_redraw, bool update_tree)
@@ -2814,6 +2813,11 @@ Qt::KeyboardModifiers GRPlotWidget::queryKeyboardModifiers()
 
 void GRPlotWidget::processTestCommandsFile()
 {
+  if (!draw_called_at_least_once)
+    {
+      QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+      return;
+    }
   while (test_commands_stream && !test_commands_stream->atEnd())
     {
       QString line = test_commands_stream->readLine();
@@ -2845,7 +2849,8 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   elem->setAttribute(words[n - 2].toUtf8().constData(), words[n - 1].toUtf8().constData());
                 }
-              auto value = words[n - 1].toUtf8().constData();
+              auto val_utf8 = words[n - 1].toUtf8();
+              auto value = val_utf8.constData();
               if (strcmp(value, "hist") == 0) value = "histogram";
               if (strcmp(value, "plot3") == 0) value = "line3";
 
