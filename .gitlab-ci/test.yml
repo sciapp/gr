@@ -124,6 +124,8 @@ clang-tidy-check:
   - cmake
       -S .
       -B build
+      -DCMAKE_C_COMPILER=clang
+      -DCMAKE_CXX_COMPILER=clang++
       -DCMAKE_BUILD_TYPE=Debug
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       -DGR_USE_BUNDLED_LIBRARIES=OFF
@@ -137,6 +139,40 @@ clang-tidy-check:
       TERM=ansi
       clang-tidy
         -p build
+        --use-color
+        "${file}"
+      || clang_tidy_failed=1;
+    done < <(git diff "${ancestor}" --name-only --diff-filter=ACMR);
+    exit ${clang_tidy_failed}
+
+grm-naming-check:
+  stage: test
+  needs: []
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/clang-tidy-check
+  before_script:
+  - git remote add upstream "https://gitlab-ci-token:${CI_JOB_TOKEN}@iffgit.fz-juelich.de/Scientific-IT-Systems/gr.git"
+  - git fetch upstream
+  script:
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_C_COMPILER=clang
+      -DCMAKE_CXX_COMPILER=clang++
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - clang_tidy_failed=0;
+    ancestor=$(git merge-base upstream/develop HEAD);
+    [[ "${ancestor}" != "$(git rev-parse HEAD)" ]] || ancestor="HEAD~";
+    while IFS= read -r file; do
+      [[ "${file}" =~ ^lib/grm/.*\.(c|cpp|cxx|h|hpp|hxx)$ ]] || continue;
+      [[ ! "${file}" =~ ^lib/grm/test/.*$ ]] || continue;
+      [[ ! "${file}" =~ ^lib/grm/grplot/qtterm/sender/.*$ ]] || continue;
+      echo "Processing ${file}...";
+      TERM=ansi
+      clang-tidy
+        -p build
+        --config-file lib/grm/.clang-tidy-naming
         --use-color
         "${file}"
       || clang_tidy_failed=1;
