@@ -217,8 +217,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       receiver->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-      ::size_callback = [this](auto &&tmp) { size_callback(std::forward<decltype(tmp)>(tmp)); };
-      ::cmd_callback = [this](auto &&tmp) { cmd_callback(std::forward<decltype(tmp)>(tmp)); };
+      ::size_callback = [this](auto &&tmp) { sizeCallback(std::forward<decltype(tmp)>(tmp)); };
+      ::cmd_callback = [this](auto &&tmp) { cmdCallback(std::forward<decltype(tmp)>(tmp)); };
 #else
       ::size_callback = std::bind(&GRPlotWidget::sizeCallback, this, std::placeholders::_1);
       ::cmd_callback = std::bind(&GRPlotWidget::cmdCallback, this, std::placeholders::_1);
