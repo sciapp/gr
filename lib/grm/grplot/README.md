@@ -44,7 +44,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_colormap`, `x_columns` `x_flip`, `y_bins`, `y_colormap`, `y_columns`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `levels`, `line_spec`, `location`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `phi_lim`, `resample_method`, `r_lim`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `title`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_colormap`, `x_columns` `x_flip`, `x_grid`, `x_label`, `x_lim`, `x_log`, `x_range`, `y_bins`, `y_colormap`, `y_columns`, `y_label`, `y_flip`, `y_grid`, `y_labels`, `y_lim`, `y_log`, `y_range`, `z_grid`, `z_label`, `z_lim`, `z_log`, `z_range`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -96,23 +96,20 @@ grplot --plot <data-file-1> <parameter-file-1> --plot <data-file-2> <parameter-f
 
 ## Data file
 
-These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. Important to know is that the parameters which can stand in these files doesn't belong to a specific plot. They are atleast valid for all 2D or 3D plots for example. The first lines of teh datafile define parameters just like the `title` and have the following pattern:
+These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. Important to know is that the parameters which can stand in these files will always applied if possible unless they get overwritten by the commandline parameters. For the datafile all parameters from the commandline are valid except `file`. The parameters in the header file follow a slightly different format then those on the commandline. Thy start always with a `#` followed by the key-value pair which could include whitespaces in contrast to the commandline ones:
 
 ```text
 # key : value
 ```
 
-Valid keys are:
+For example the start of the header could look like this:
 
-1. `title`: sets the title of the plot
-2. `x_label`, `y_label`, `z_label`: set the label for the respective axis
-3. `resample_method`: defines how the data is resampled if needed
-4. `location`: defines where the legend should be drawn
-5. `x_log`, `y_log`, `z_log`: defines whether the respective axis is plotted logarithmic. These options only work if the data respects the definition of the logarithmic function.
-6. `x_grid`, `y_grid`, `z_grid`: defines the grid for the respective axis
-7. `phi_lim`, `r_lim`: defines which part of the specific polar axis should be displayed
-8. `x_lim`, `y_lim`, `z_lim`: defines which part of the respective axis should be displayed
-9. `x_range`, `y_range`, `z_range`: defines the range of the values on the respective axis
+```text
+# title : This is an example
+# x_label : x
+# y_label : f(x)
+# x_range : 2, 5
+```
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 

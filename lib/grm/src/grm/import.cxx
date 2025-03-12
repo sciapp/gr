@@ -127,6 +127,7 @@ static int use_bins = 0;
 static int equal_up_and_down_error = 0;
 static int xye_file = 0;
 static int xyz_file = 0;
+static bool default_kind_used = false;
 
 /* ========================= functions ============================================================================== */
 
@@ -218,7 +219,8 @@ grm_error_t parseColumns(std::list<int> *columns, const char *colms)
 grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
                          std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
                          std::vector<std::string> &labels, grm_args_t *args, const char *colms, const char *x_colms,
-                         const char *y_colms, const char *e_colms, PlotRange *ranges)
+                         const char *y_colms, const char *e_colms, PlotRange *ranges,
+                         grm_special_axis_series_t *special_axis_series)
 {
   std::string line;
   std::string token;
@@ -247,92 +249,46 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
       /* the line defines a grm container parameter */
       if (line[0] == '#')
         {
-          std::string key, value;
+          std::string key, value, tmp_value;
           std::stringstream ss(line);
 
           /* read the key-value pairs from the file and redirect them to grm if possible */
-          for (size_t col = 0; std::getline(ss, token, ':') && token.length(); col++)
+          std::getline(ss, token);
+          size_t pos = token.find("#");
+          token = token.substr(pos + 1, token.size() - 1);
+          pos = token.find(":");
+          if (pos != std::string::npos)
+            {
+              key = trim(token.substr(0, pos));
+              tmp_value = trim(token.substr(pos + 1, token.size() - 1));
+              if (key == "error")
+                {
+                  std::size_t found = tmp_value.find_first_of(":{}");
+                  while (found != std::string::npos)
+                    {
+                      std::string tmp = std::string(trim(tmp_value.substr(0, found)));
+                      tmp_value =
+                          tmp + tmp_value[found] + std::string(trim(tmp_value.substr(found + 1, token.size() - 1)));
+                      found = tmp_value.find_first_of(":{}", tmp.size() + 1);
+                    }
+                }
+            }
+
+          /* if there are multiple values seperated with a ',' read and trim those to create the commandline value */
+          std::stringstream sv(tmp_value);
+          for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
             {
               if (col == 0)
                 {
-                  key = trim(token.substr(1, token.length() - 1));
+                  value = trim(token);
                 }
               else
                 {
-                  value = trim(token);
+                  value += "," + std::string(trim(token));
                 }
             }
-          if (strEqualsAny(key, "title", "x_label", "y_label", "z_label", "resample_method") && args != nullptr)
-            {
-              const char *tmp;
-              if (!grm_args_values(args, key.c_str(), "s", &tmp)) grm_args_push(args, key.c_str(), "s", value.c_str());
-            }
-          else if (strEqualsAny(key, "location", "x_log", "y_log", "z_log", "x_grid", "y_grid", "z_grid") &&
-                   args != nullptr)
-            {
-              try
-                {
-                  int tmp;
-                  if (!grm_args_values(args, key.c_str(), "i", &tmp))
-                    grm_args_push(args, key.c_str(), "i", std::stoi(value));
-                }
-              catch (std::invalid_argument &e)
-                {
-                  fprintf(stderr, "Invalid argument for plot parameter (%s:%s) in line %i\n", key.c_str(),
-                          value.c_str(), linecount);
-                  return GRM_ERROR_PARSE_INT;
-                }
-            }
-          else if (strEqualsAny(key, "phi_lim", "r_lim", "x_lim", "y_lim", "z_lim", "x_range", "y_range", "z_range") &&
-                   args != nullptr)
-            {
-              std::stringstream sv(value);
-              std::string value1, value2;
-              double tmp1, tmp2;
-              int ret_val;
 
-              for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
-                {
-                  if (col == 0)
-                    {
-                      value1 = trim(token);
-                    }
-                  else
-                    {
-                      value2 = trim(token);
-                    }
-                }
-              try
-                {
-                  ret_val = grm_args_values(args, key.c_str(), "dd", &tmp1, &tmp2);
-                  if (!ret_val) grm_args_push(args, key.c_str(), "dd", std::stod(value1), std::stod(value2));
-                }
-              catch (std::invalid_argument &e)
-                {
-                  fprintf(stderr, "Invalid argument for plot parameter (%s:%s,%s) in line %i\n", key.c_str(),
-                          value1.c_str(), value2.c_str(), linecount);
-                  return GRM_ERROR_PARSE_DOUBLE;
-                }
-              if (!ret_val)
-                {
-                  if (strcmp(key.c_str(), "x_range") == 0)
-                    {
-                      ranges->xmin = std::stod(value1);
-                      ranges->xmax = std::stod(value2);
-                    }
-                  else if (strcmp(key.c_str(), "y_range") == 0)
-                    {
-                      ranges->ymin = std::stod(value1);
-                      ranges->ymax = std::stod(value2);
-                    }
-                  else if (strcmp(key.c_str(), "z_range") == 0)
-                    {
-                      ranges->zmin = std::stod(value1);
-                      ranges->zmax = std::stod(value2);
-                    }
-                }
-            }
-          else if (x_columns.empty() && key == "x_columns")
+          if (x_columns.empty() && key == "x_columns")
             {
               if ((error = parseColumns(&x_columns, value.c_str())) != GRM_ERROR_NONE) return error;
             }
@@ -344,10 +300,14 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
             {
               if ((error = parseColumns(&e_columns, value.c_str())) != GRM_ERROR_NONE) return error;
             }
+          else if (columns.empty() && key == "columns")
+            {
+              if ((error = parseColumns(&columns, colms)) != GRM_ERROR_NONE) return error;
+            }
           else
             {
-              fprintf(stderr, "Unknown key:value pair (%s:%s) in line %i\n", key.c_str(), value.c_str(), linecount);
-              /* TODO: extend these if more key values pairs are needed */
+              /* use key + ":" + value to create a token which is similar to a commandline key:value pair */
+              singleTokenConverter(key + ":" + value, args, ranges, special_axis_series, linecount);
             }
         }
       else /* the line contains the labels for the plot */
@@ -356,7 +316,7 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
           std::string split_label;
           for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
             {
-              if (std::find(columns.begin(), columns.end(), col) != columns.end() || columns.empty())
+              if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() || columns.empty())
                 {
                   if (std::find(token.begin(), token.end(), '"') != token.end() && split_label.empty())
                     {
@@ -402,13 +362,13 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
         }
       for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
-          if (std::find(columns.begin(), columns.end(), col) != columns.end() ||
+          if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() ||
               (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
               (columns.empty() && (!use_bins || col > 0)))
             {
-              if ((row == 0 && (col == use_bins || col == columns.front())) ||
-                  (depth_change && (col == use_bins || col == columns.front())) ||
-                  (start_with_nan && (col == use_bins || col == columns.front())))
+              if ((row == 0 && (col == use_bins || col + 1 == columns.front())) ||
+                  (depth_change && (col == use_bins || col + 1 == columns.front())) ||
+                  (start_with_nan && (col == use_bins || col + 1 == columns.front())))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }
@@ -439,14 +399,14 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
                   return GRM_ERROR_PARSE_DOUBLE;
                 }
               if (row == 0 && !x_columns.empty() &&
-                  std::find(x_columns.begin(), x_columns.end(), col) != x_columns.end())
-                x_data.emplace_back(cnt);
+                  std::find(x_columns.begin(), x_columns.end(), col + 1) != x_columns.end())
+                x_data.emplace_back(cnt + 1);
               if (row == 0 && !y_columns.empty() &&
-                  std::find(y_columns.begin(), y_columns.end(), col) != y_columns.end())
-                y_data.emplace_back(cnt);
+                  std::find(y_columns.begin(), y_columns.end(), col + 1) != y_columns.end())
+                y_data.emplace_back(cnt + 1);
               if (row == 0 && !e_columns.empty() &&
-                  std::find(e_columns.begin(), e_columns.end(), col) != e_columns.end())
-                error_data.emplace_back(cnt);
+                  std::find(e_columns.begin(), e_columns.end(), col + 1) != e_columns.end())
+                error_data.emplace_back(cnt + 1);
               cnt += 1;
             }
           else if (use_bins && col == 0)
@@ -629,6 +589,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       error_data.clear();
       file_args = grm_file_args_new();
       plot[plot_i] = grm_args_new();
+      default_kind_used = false;
       if (!convertInputstreamIntoArgs(plot[plot_i], file_args, end - start, reinterpret_cast<char **>(tmp.data()),
                                       &ranges, special_axis_series))
         return 0;
@@ -651,17 +612,24 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (xye_file)
         {
           file_args->file_x_columns.clear();
-          file_args->file_x_columns = "0";
+          file_args->file_x_columns = "1";
           file_args->file_y_columns.clear();
-          file_args->file_y_columns = "1";
+          file_args->file_y_columns = "2";
           file_args->file_error_columns.clear();
-          file_args->file_error_columns = equal_up_and_down_error ? "2" : "2,3";
+          file_args->file_error_columns = equal_up_and_down_error ? "3" : "3,4";
         }
       if (readDataFile(file_args->file_path, file_data, x_data, y_data, error_data, labels, plot[plot_i],
                        file_args->file_columns.c_str(), file_args->file_x_columns.c_str(),
-                       file_args->file_y_columns.c_str(), file_args->file_error_columns.c_str(), &ranges))
+                       file_args->file_y_columns.c_str(), file_args->file_error_columns.c_str(), &ranges,
+                       special_axis_series))
         {
           return 0;
+        }
+
+      if (default_kind_used)
+        {
+          grm_args_values(plot[plot_i], "kind", "s", &kind);
+          if (plot_num == 1) grm_args_push(args, "kind", "s", kind);
         }
 
       // convert grm_special_axis_series_t entries into int vector
@@ -886,8 +854,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               double min_val = INFINITY, max_val = -INFINITY;
               for (col = 0; col < cols - err; col++)
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
-                  if (std::find(error_data.begin(), error_data.end(), col) != error_data.end()) continue;
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
                   min_val = std::min<double>(
                       min_val,
                       *std::min_element(
@@ -902,8 +870,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
               for (col = 0; col < cols; ++col)
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
-                  if (std::find(error_data.begin(), error_data.end(), col) != error_data.end()) continue;
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
                   for (row = 0; row < rows; row++)
                     {
                       file_data[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
@@ -971,16 +939,16 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                             {
                               if (equal_up_and_down_error)
                                 {
-                                  errors_up[i] = file_data[depth][error_col][i];
-                                  errors_down[i] = file_data[depth][error_col][i];
+                                  errors_up[i] = file_data[depth][error_col - 1][i];
+                                  errors_down[i] = file_data[depth][error_col - 1][i];
                                 }
                               else if (cnt % 2 == 0)
                                 {
-                                  errors_up[i] = file_data[depth][error_col][i];
+                                  errors_up[i] = file_data[depth][error_col - 1][i];
                                 }
                               else if (cnt % 2 != 0)
                                 {
-                                  errors_down[i] = file_data[depth][error_col][i];
+                                  errors_down[i] = file_data[depth][error_col - 1][i];
                                 }
                             }
                           if (cnt % 2 != 0 || equal_up_and_down_error)
@@ -1035,7 +1003,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end())
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
                     {
                       int error_bar_style;
                       grm_args_push(series[x_cnt], "x", "nD", rows, file_data[depth][col].data());
@@ -1051,7 +1019,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         grm_args_push(series[x_cnt], "error_bar_style", "i", error_bar_style);
                       x_cnt += 1;
                     }
-                  else if (std::find(y_data.begin(), y_data.end(), col) != y_data.end())
+                  else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     {
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
                       if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
@@ -1060,14 +1028,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       y_cnt += 1;
                     }
                   else if (!equal_up_and_down_error && error != nullptr &&
-                           std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col) ==
+                           std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col + 1) ==
                                filtered_error_columns.end())
                     {
                       grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
                       err_cnt += 1;
                     }
                   else if (equal_up_and_down_error &&
-                           std::find(error_data.begin(), error_data.end(), col) != error_data.end())
+                           std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end())
                     {
                       grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
                       err_cnt += 1;
@@ -1282,16 +1250,16 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                                 {
                                   if (equal_up_and_down_error)
                                     {
-                                      errors_up[i] = file_data[depth][error_col][i];
-                                      errors_down[i] = file_data[depth][error_col][i];
+                                      errors_up[i] = file_data[depth][error_col - 1][i];
+                                      errors_down[i] = file_data[depth][error_col - 1][i];
                                     }
                                   else if (cnt % 2 == 0)
                                     {
-                                      errors_up[i] = file_data[depth][error_col][i];
+                                      errors_up[i] = file_data[depth][error_col - 1][i];
                                     }
                                   else if (cnt % 2 != 0)
                                     {
-                                      errors_down[i] = file_data[depth][error_col][i];
+                                      errors_down[i] = file_data[depth][error_col - 1][i];
                                     }
                                 }
                               if (cnt % 2 != 0 || equal_up_and_down_error)
@@ -1342,10 +1310,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   double x_min = INFINITY, x_max = -INFINITY;
                   for (col = 0; col < x_data.size(); col++)
                     {
-                      xmin = *std::min_element(std::begin(file_data[depth][x_data[col]]),
-                                               std::end(file_data[depth][x_data[col]]));
-                      xmax = *std::max_element(std::begin(file_data[depth][x_data[col]]),
-                                               std::end(file_data[depth][x_data[col]]));
+                      xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                               std::end(file_data[depth][x_data[col] - 1]));
+                      xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                               std::end(file_data[depth][x_data[col] - 1]));
                       x_min = grm_min(x_min, xmin);
                       x_max = grm_max(x_max, xmax);
                       if (!x_data.empty() && col < series_num) grm_args_push(series[col], "x_range", "dd", xmin, xmax);
@@ -1362,18 +1330,18 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   xmax = -INFINITY;
                   for (col = 0; col < x_data.size(); ++col)
                     {
-                      xmin = grm_min(xmin, *std::min_element(std::begin(file_data[depth][x_data[col]]),
-                                                             std::end(file_data[depth][x_data[col]])));
-                      xmax = grm_max(xmax, *std::max_element(std::begin(file_data[depth][x_data[col]]),
-                                                             std::end(file_data[depth][x_data[col]])));
+                      xmin = grm_min(xmin, *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                             std::end(file_data[depth][x_data[col] - 1])));
+                      xmax = grm_max(xmax, *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                             std::end(file_data[depth][x_data[col] - 1])));
                     }
                   for (col = 0; col < x_data.size(); ++col)
                     {
                       for (row = 0; row < rows; row++)
                         {
-                          file_data[depth][x_data[col]][row] =
+                          file_data[depth][x_data[col] - 1][row] =
                               ranges.xmin + (ranges.xmax - ranges.xmin) / (xmax - xmin) *
-                                                ((double)file_data[depth][x_data[col]][row] - xmin);
+                                                ((double)file_data[depth][x_data[col] - 1][row] - xmin);
                         }
                     }
                   // special case for barplot and histogram cause the x-values and bar_width gets calculated via
@@ -1383,10 +1351,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     {
                       for (col = 0; col < x_data.size(); ++col)
                         {
-                          xmin = *std::min_element(std::begin(file_data[depth][x_data[col]]),
-                                                   std::end(file_data[depth][x_data[col]]));
-                          xmax = *std::max_element(std::begin(file_data[depth][x_data[col]]),
-                                                   std::end(file_data[depth][x_data[col]]));
+                          xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                   std::end(file_data[depth][x_data[col] - 1]));
+                          xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                   std::end(file_data[depth][x_data[col] - 1]));
                           if (col < series_num) grm_args_push(series[col], "x_range", "dd", xmin, xmax);
                         }
                     }
@@ -1412,7 +1380,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   y_max = grm_max(y_max, ymax);
                   if (cols - err == series_num)
                     grm_args_push(series[col], "y_range", "dd", ymin, ymax);
-                  else if (std::find(y_data.begin(), y_data.end(), col) != y_data.end())
+                  else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     grm_args_push(series[tmp_cnt++], "y_range", "dd", ymin, ymax);
                 }
               adjustRanges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, y_min), y_max);
@@ -1429,8 +1397,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               ymax = -INFINITY;
               for (col = 0; col < cols; ++col)
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
-                  if (std::find(error_data.begin(), error_data.end(), col) != error_data.end()) continue;
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
                   ymin = grm_min(
                       ymin,
                       *std::min_element(
@@ -1445,8 +1413,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               if (strEqualsAny(kind, "barplot", "histogram", "stem")) ymin = grm_min(ymin, 0);
               for (col = 0; col < cols; ++col)
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
-                  if (std::find(error_data.begin(), error_data.end(), col) != error_data.end()) continue;
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
                   for (row = 0; row < rows; ++row)
                     {
                       file_data[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) *
@@ -1487,7 +1455,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  if (std::find(x_data.begin(), x_data.end(), col) != x_data.end())
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
                     {
                       int error_bar_style;
                       if (grm_args_values(plot[plot_i], "error_bar_style", "i", &error_bar_style))
@@ -1503,7 +1471,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         }
                       x_cnt += 1;
                     }
-                  else if (std::find(y_data.begin(), y_data.end(), col) != y_data.end())
+                  else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     {
                       if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
@@ -1518,14 +1486,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       y_cnt += 1;
                     }
                   else if (!equal_up_and_down_error && strEqualsAny(kind, "barplot", "histogram") && error != nullptr &&
-                           std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col) ==
+                           std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col + 1) ==
                                filtered_error_columns.end())
                     {
                       grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
                       err_cnt += 1;
                     }
                   else if (equal_up_and_down_error &&
-                           std::find(error_data.begin(), error_data.end(), col) != error_data.end())
+                           std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end())
                     {
                       grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
                       err_cnt += 1;
@@ -1749,8 +1717,11 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
   std::vector<std::string> labels;
   PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
   std::shared_ptr<GRM::Element> root = grm_get_document_root();
+  grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
 
-  if (readDataFile(path, file_data, x_data, y_data, error_data, labels, nullptr, "", "", "", "", &ranges)) return 0;
+  if (readDataFile(path, file_data, x_data, y_data, error_data, labels, nullptr, "", "", "", "", &ranges,
+                   special_axis_series))
+    return 0;
 
   if (!file_data.empty())
     {
@@ -1820,17 +1791,356 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ input stream parser ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
+std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange *ranges,
+                                 grm_special_axis_series_t *special_axis_series, int line_count)
+{
+  size_t found_key_size;
+  std::string delim = ":", found_key, kind = "";
+  size_t pos = token.find(delim);
+
+  if (startsWith(token, "bottom:"))
+    {
+      if (special_axis_series->bottom.empty()) special_axis_series->bottom = token.substr(7, token.length() - 1);
+    }
+  else if (startsWith(token, "left:"))
+    {
+      if (special_axis_series->left.empty()) special_axis_series->left = token.substr(5, token.length() - 1);
+    }
+  else if (startsWith(token, "right:"))
+    {
+      if (special_axis_series->right.empty()) special_axis_series->right = token.substr(6, token.length() - 1);
+    }
+  else if (startsWith(token, "top:"))
+    {
+      if (special_axis_series->top.empty()) special_axis_series->top = token.substr(4, token.length() - 1);
+    }
+  else if (startsWith(token, "twin_x:"))
+    {
+      if (special_axis_series->twin_x.empty()) special_axis_series->twin_x = token.substr(7, token.length() - 1);
+    }
+  else if (startsWith(token, "twin_y:"))
+    {
+      if (special_axis_series->twin_y.empty()) special_axis_series->twin_y = token.substr(7, token.length() - 1);
+    }
+  else if (pos != std::string::npos)
+    {
+      found_key = token.substr(0, pos);
+      found_key_size = found_key.size();
+      /* replace the key if a known alias exists */
+      if (auto search_alias = key_alias.find(found_key); search_alias != key_alias.end())
+        {
+          found_key = search_alias->second;
+        }
+      if (auto search = key_to_types.find(found_key); search != key_to_types.end())
+        {
+          std::string value = token.substr(found_key_size + 1, token.length() - 1);
+          /* special case for kind, for following exception */
+          if (strcmp(found_key.c_str(), "kind") == 0)
+            {
+              kind = token.substr(found_key_size + 1, token.length() - 1);
+              if (std::find(kind_types.begin(), kind_types.end(), kind) != kind_types.end())
+                {
+                  char *tmp;
+                  if (!grm_args_values(args, "kind", "s", &tmp) || default_kind_used)
+                    grm_args_push(args, "kind", "s", kind.c_str());
+                }
+              return kind;
+            }
+
+          if (value.length() == 0)
+            {
+              fprintf(stderr, "Parameter %s will be ignored. No data given\n", search->first.c_str());
+              return kind;
+            }
+
+          /* parameter is a container */
+          if (auto container_search = container_params.find(found_key); container_search != container_params.end())
+            {
+              int num = 1;
+              int num_of_parameter = 0;
+              size_t pos_a, pos_b;
+              int container_arr;
+              int ind = 0;
+
+              if ((container_arr = (pos_a = value.find(',')) < (pos_b = value.find('{'))) &&
+                  strcmp(container_search->second, "nA") == 0)
+                {
+                  num = stoi(value.substr(0, pos_a));
+                  value.erase(0, pos_a + 1);
+                }
+              else
+                {
+                  container_search->second = "a";
+                }
+              std::vector<grm_args_t *> new_args(num);
+              for (num_of_parameter = 0; num_of_parameter < num; num_of_parameter++)
+                {
+                  new_args[num_of_parameter] = grm_args_new();
+                }
+              num_of_parameter = 0;
+
+              /* fill the container */
+              size_t pos_begin = value.find('{');
+              while ((pos = value.find('}')) != std::string::npos)
+                {
+                  std::string arg = value.substr(pos_begin + 1, pos - 1);
+                  if (startsWith(arg, "{"))
+                    {
+                      arg = arg.substr(1, arg.length());
+                    }
+                  else if (endsWith(arg, "}"))
+                    {
+                      arg = arg.substr(0, arg.length() - 1);
+                    }
+                  size_t key_pos = arg.find(delim);
+                  if (key_pos != std::string::npos)
+                    {
+                      found_key = arg.substr(0, key_pos);
+                      found_key_size = found_key.size();
+                      if (auto con = container_to_types.find(found_key); con != container_to_types.end())
+                        {
+                          std::string container_value = arg.substr(found_key_size + 1, arg.length() - 1);
+
+                          /* sometimes a parameter can be given by different types, the if makes sure the
+                           * correct one is used */
+                          if ((pos_a = value.find(',')) < (pos_b = value.find('}')) &&
+                              (strEqualsAny(con->second, "i", "d")))
+                            {
+                              if (con.operator++()->second != NULL) con = con.operator++();
+                            }
+                          try
+                            {
+                              if (strcmp(con->second, "d") == 0)
+                                {
+                                  grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                std::stod(container_value));
+                                }
+                              else if (strcmp(con->second, "i") == 0)
+                                {
+                                  grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                std::stoi(container_value));
+                                }
+                              else if (strcmp(search->second, "dd") == 0)
+                                {
+                                  std::string x, y;
+                                  parseParameterDD(&value, &search->first, &x, &y);
+                                  grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
+                                                std::stod(y));
+                                  if (search->first == "x_range")
+                                    {
+                                      ranges->xmin = std::stod(x);
+                                      ranges->xmax = std::stod(y);
+                                    }
+                                  else if (search->first == "y_range")
+                                    {
+                                      ranges->ymin = std::stod(x);
+                                      ranges->ymax = std::stod(y);
+                                    }
+                                  else if (search->first == "z_range")
+                                    {
+                                      ranges->zmin = std::stod(x);
+                                      ranges->zmax = std::stod(y);
+                                    }
+                                }
+                              else if (strcmp(con->second, "ddd") == 0)
+                                {
+                                  std::string r, g, b;
+                                  parseParameterDDD(&container_value, &con->first, &r, &g, &b);
+                                  grm_args_push(new_args[ind], con->first.c_str(), con->second, std::stod(r),
+                                                std::stod(g), std::stod(b));
+                                }
+                              else if ((pos_a = value.find(',')) != std::string::npos && strcmp(con->second, "nI") == 0)
+                                {
+                                  size_t con_pos = container_value.find(',');
+                                  std::string param_num = container_value.substr(0, con_pos);
+                                  std::vector<int> values(std::stoi(param_num));
+                                  int no_err = parseParameterNI(&container_value, &con->first, &values);
+                                  if (no_err)
+                                    {
+                                      grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                    std::stoi(param_num), values.data());
+                                    }
+                                }
+                              num_of_parameter += 1;
+                              if (num_of_parameter % 2 == 0) ind += 1;
+                            }
+                          catch (std::invalid_argument &e)
+                            {
+                              fprintf(stderr, "Invalid argument for %s parameter (%s).\n", con->first.c_str(),
+                                      container_value.c_str());
+                            }
+                        }
+                    }
+                  value.erase(0, pos + 2);
+                }
+              if (container_arr && strcmp(container_search->second, "nA") == 0 && num_of_parameter == num * 2)
+                {
+                  grm_args_t *tmp;
+                  if (!grm_args_values(args, container_search->first.c_str(), container_search->second, &tmp))
+                    grm_args_push(args, container_search->first.c_str(), container_search->second, num,
+                                  new_args.data());
+                }
+              else if (num_of_parameter == 2 || strcmp(container_search->first.c_str(), "error") == 0)
+                {
+                  grm_args_t *tmp;
+                  if (!grm_args_values(args, container_search->first.c_str(), container_search->second, &tmp))
+                    grm_args_push(args, container_search->first.c_str(), container_search->second, new_args[0]);
+                }
+              else
+                {
+                  fprintf(stderr, "Not enough data for %s parameter\n", container_search->first.c_str());
+                }
+            }
+          size_t pos_a;
+          /* sometimes a parameter can be given by different types, the 'if' makes sure the correct one is used
+           */
+          if ((pos_a = value.find(',')) != std::string::npos && (strEqualsAny(search->second, "i", "d", "s")))
+            {
+              if (search.operator++()->second != NULL) search = search.operator++();
+            }
+
+          /* different types */
+          if (strcmp(search->second, "s") == 0)
+            {
+              char *tmp;
+              if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
+                grm_args_push(args, search->first.c_str(), search->second, value.c_str());
+            }
+          else
+            {
+              try
+                {
+                  if (strcmp(search->second, "i") == 0)
+                    {
+                      /* special case for scatter plot, to decide how the read data gets interpreted */
+                      if (strcmp(search->first.c_str(), "scatter_z") == 0)
+                        {
+                          scatter_with_z = std::stoi(value);
+                        }
+                      else if (strcmp(search->first.c_str(), "use_bins") == 0)
+                        {
+                          use_bins = std::stoi(value);
+                          if (use_bins) xyz_file = 0;
+                        }
+                      else if (strcmp(search->first.c_str(), "equal_up_and_down_error") == 0)
+                        {
+                          equal_up_and_down_error = std::stoi(value);
+                        }
+                      else if (strcmp(search->first.c_str(), "xye_file") == 0)
+                        {
+                          xye_file = std::stoi(value);
+                        }
+                      else if (strcmp(search->first.c_str(), "xyz_file") == 0)
+                        {
+                          xyz_file = std::stoi(value);
+                          if (xyz_file) use_bins = 0;
+                        }
+                      else
+                        {
+                          int tmp;
+                          if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
+                            grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
+                        }
+                    }
+                  else if (strcmp(search->second, "d") == 0)
+                    {
+                      double tmp;
+                      if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
+                        grm_args_push(args, search->first.c_str(), search->second, std::stod(value));
+                    }
+                  else if (strcmp(search->second, "dd") == 0)
+                    {
+                      double tmp1, tmp2;
+                      std::string x, y;
+                      parseParameterDD(&value, &search->first, &x, &y);
+                      if (!grm_args_values(args, search->first.c_str(), search->second, &tmp1, &tmp2))
+                        {
+                          grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
+                          if (search->first == "x_range")
+                            {
+                              ranges->xmin = std::stod(x);
+                              ranges->xmax = std::stod(y);
+                            }
+                          else if (search->first == "y_range")
+                            {
+                              ranges->ymin = std::stod(x);
+                              ranges->ymax = std::stod(y);
+                            }
+                          else if (search->first == "z_range")
+                            {
+                              ranges->zmin = std::stod(x);
+                              ranges->zmax = std::stod(y);
+                            }
+                        }
+                    }
+                  else if (strcmp(search->second, "ddd") == 0)
+                    {
+                      double tmp1, tmp2, tmp3;
+                      std::string r, g, b;
+                      parseParameterDDD(&value, &search->first, &r, &g, &b);
+                      if (!grm_args_values(args, search->first.c_str(), search->second, &tmp1, &tmp2, &tmp3))
+                        grm_args_push(args, search->first.c_str(), search->second, std::stod(r), std::stod(g),
+                                      std::stod(b));
+                    }
+                  else if (strcmp(search->second, "nS") == 0)
+                    {
+                      size_t pos = value.find(',');
+                      std::string num = value.substr(0, pos);
+                      std::vector<std::string> values(std::stoi(num));
+                      std::vector<const char *> c_values(std::stoi(num));
+                      int no_err = parseParameterNS(&value, &search->first, &values);
+                      if (no_err)
+                        {
+                          grm_args_t *tmp;
+                          int ci;
+                          for (ci = 0; ci < std::stoi(num); ci++)
+                            {
+                              c_values[ci] = values[ci].c_str();
+                            }
+                          if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
+                            grm_args_push(args, search->first.c_str(), search->second, std::stoi(num), c_values.data());
+                        }
+                    }
+                  else if (strcmp(search->second, "nD") == 0)
+                    {
+                      grm_args_t *tmp;
+                      size_t pos = value.find(',');
+                      std::string num = value.substr(0, pos);
+                      std::vector<double> values(std::stoi(num));
+                      int no_err = parseParameterND(&value, &search->first, &values);
+                      if (no_err)
+                        {
+                          if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
+                            grm_args_push(args, search->first.c_str(), search->second, std::stoi(num), values.data());
+                        }
+                    }
+                }
+              catch (std::invalid_argument &e)
+                {
+                  fprintf(stderr, "Invalid argument for %s parameter (%s).\n", search->first.c_str(), value.c_str());
+                }
+            }
+        }
+      else
+        {
+          if (line_count != -1)
+            fprintf(stderr, "Unknown key:value pair (%s) in line %i\n", token.c_str(), line_count);
+          else
+            fprintf(stderr, "Unknown key:value pair in parameters (%s)\n", token.c_str());
+        }
+    }
+  return kind;
+}
+
 int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv, PlotRange *ranges,
                                grm_special_axis_series_t *special_axis_series)
 {
-  int i;
-  std::string token, found_key;
-  size_t found_key_size;
-  std::string delim = ":", kind = "line", optional_file;
+  std::string token, delim = ":", kind = "line", optional_file;
 
-  for (i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
     {
       token = argv[i];
+
       /* parameter needed for import.cxx are handled differently than grm-parameters */
       if (startsWith(token, "file:"))
         {
@@ -1856,315 +2166,10 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
         {
           file_args->file_error_columns = token.substr(14, token.length() - 1);
         }
-      else if (startsWith(token, "bottom:"))
-        {
-          special_axis_series->bottom = token.substr(7, token.length() - 1);
-        }
-      else if (startsWith(token, "left:"))
-        {
-          special_axis_series->left = token.substr(5, token.length() - 1);
-        }
-      else if (startsWith(token, "right:"))
-        {
-          special_axis_series->right = token.substr(6, token.length() - 1);
-        }
-      else if (startsWith(token, "top:"))
-        {
-          special_axis_series->top = token.substr(4, token.length() - 1);
-        }
-      else if (startsWith(token, "twin_x:"))
-        {
-          special_axis_series->twin_x = token.substr(7, token.length() - 1);
-        }
-      else if (startsWith(token, "twin_y:"))
-        {
-          special_axis_series->twin_y = token.substr(7, token.length() - 1);
-        }
       else
         {
-          size_t pos = token.find(delim);
-          if (pos != std::string::npos)
-            {
-              found_key = token.substr(0, pos);
-              found_key_size = found_key.size();
-              /* replace the key if a known alias exists */
-              if (auto search_alias = key_alias.find(found_key); search_alias != key_alias.end())
-                {
-                  found_key = search_alias->second;
-                }
-              if (auto search = key_to_types.find(found_key); search != key_to_types.end())
-                {
-                  std::string value = token.substr(found_key_size + 1, token.length() - 1);
-                  /* special case for kind, for following exception */
-                  if (strcmp(found_key.c_str(), "kind") == 0)
-                    {
-                      kind = token.substr(found_key_size + 1, token.length() - 1);
-                    }
-
-                  if (value.length() == 0)
-                    {
-                      fprintf(stderr, "Parameter %s will be ignored. No data given\n", search->first.c_str());
-                      continue;
-                    }
-
-                  /* parameter is a container */
-                  if (auto container_search = container_params.find(found_key);
-                      container_search != container_params.end())
-                    {
-                      int num = 1;
-                      int num_of_parameter = 0;
-                      size_t pos_a, pos_b;
-                      int container_arr;
-                      int ind = 0;
-
-                      if ((container_arr = (pos_a = value.find(',')) < (pos_b = value.find('{'))) &&
-                          strcmp(container_search->second, "nA") == 0)
-                        {
-                          num = stoi(value.substr(0, pos_a));
-                          value.erase(0, pos_a + 1);
-                        }
-                      else
-                        {
-                          container_search->second = "a";
-                        }
-                      std::vector<grm_args_t *> new_args(num);
-                      for (num_of_parameter = 0; num_of_parameter < num; num_of_parameter++)
-                        {
-                          new_args[num_of_parameter] = grm_args_new();
-                        }
-                      num_of_parameter = 0;
-
-                      /* fill the container */
-                      size_t pos_begin = value.find('{');
-                      while ((pos = value.find('}')) != std::string::npos)
-                        {
-                          std::string arg = value.substr(pos_begin + 1, pos - 1);
-                          if (startsWith(arg, "{"))
-                            {
-                              arg = arg.substr(1, arg.length());
-                            }
-                          else if (endsWith(arg, "}"))
-                            {
-                              arg = arg.substr(0, arg.length() - 1);
-                            }
-                          size_t key_pos = arg.find(delim);
-                          if (key_pos != std::string::npos)
-                            {
-                              found_key = arg.substr(0, key_pos);
-                              found_key_size = found_key.size();
-                              if (auto con = container_to_types.find(found_key); con != container_to_types.end())
-                                {
-                                  std::string container_value = arg.substr(found_key_size + 1, arg.length() - 1);
-
-                                  /* sometimes a parameter can be given by different types, the if makes sure the
-                                   * correct one is used */
-                                  if ((pos_a = value.find(',')) < (pos_b = value.find('}')) &&
-                                      (strEqualsAny(con->second, "i", "d")))
-                                    {
-                                      if (con.operator++()->second != NULL) con = con.operator++();
-                                    }
-                                  try
-                                    {
-                                      if (strcmp(con->second, "d") == 0)
-                                        {
-                                          grm_args_push(new_args[ind], con->first.c_str(), con->second,
-                                                        std::stod(container_value));
-                                        }
-                                      else if (strcmp(con->second, "i") == 0)
-                                        {
-                                          grm_args_push(new_args[ind], con->first.c_str(), con->second,
-                                                        std::stoi(container_value));
-                                        }
-                                      else if (strcmp(search->second, "dd") == 0)
-                                        {
-                                          std::string x, y;
-                                          parseParameterDD(&value, &search->first, &x, &y);
-                                          grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
-                                                        std::stod(y));
-                                          if (search->first == "x_range")
-                                            {
-                                              ranges->xmin = std::stod(x);
-                                              ranges->xmax = std::stod(y);
-                                            }
-                                          else if (search->first == "y_range")
-                                            {
-                                              ranges->ymin = std::stod(x);
-                                              ranges->ymax = std::stod(y);
-                                            }
-                                          else if (search->first == "z_range")
-                                            {
-                                              ranges->zmin = std::stod(x);
-                                              ranges->zmax = std::stod(y);
-                                            }
-                                        }
-                                      else if (strcmp(con->second, "ddd") == 0)
-                                        {
-                                          std::string r, g, b;
-                                          parseParameterDDD(&container_value, &con->first, &r, &g, &b);
-                                          grm_args_push(new_args[ind], con->first.c_str(), con->second, std::stod(r),
-                                                        std::stod(g), std::stod(b));
-                                        }
-                                      else if ((pos_a = value.find(',')) != std::string::npos &&
-                                               strcmp(con->second, "nI") == 0)
-                                        {
-                                          size_t con_pos = container_value.find(',');
-                                          std::string param_num = container_value.substr(0, con_pos);
-                                          std::vector<int> values(std::stoi(param_num));
-                                          int no_err = parseParameterNI(&container_value, &con->first, &values);
-                                          if (no_err)
-                                            {
-                                              grm_args_push(new_args[ind], con->first.c_str(), con->second,
-                                                            std::stoi(param_num), values.data());
-                                            }
-                                        }
-                                      num_of_parameter += 1;
-                                      if (num_of_parameter % 2 == 0) ind += 1;
-                                    }
-                                  catch (std::invalid_argument &e)
-                                    {
-                                      fprintf(stderr, "Invalid argument for %s parameter (%s).\n", con->first.c_str(),
-                                              container_value.c_str());
-                                    }
-                                }
-                            }
-                          value.erase(0, pos + 2);
-                        }
-                      if (container_arr && strcmp(container_search->second, "nA") == 0 && num_of_parameter == num * 2)
-                        {
-                          grm_args_push(args, container_search->first.c_str(), container_search->second, num,
-                                        new_args.data());
-                        }
-                      else if (num_of_parameter == 2 || strcmp(container_search->first.c_str(), "error") == 0)
-                        {
-                          grm_args_push(args, container_search->first.c_str(), container_search->second, new_args[0]);
-                        }
-                      else
-                        {
-                          fprintf(stderr, "Not enough data for %s parameter\n", container_search->first.c_str());
-                        }
-                    }
-                  size_t pos_a;
-                  /* sometimes a parameter can be given by different types, the 'if' makes sure the correct one is used
-                   */
-                  if ((pos_a = value.find(',')) != std::string::npos && (strEqualsAny(search->second, "i", "d", "s")))
-                    {
-                      if (search.operator++()->second != NULL) search = search.operator++();
-                    }
-
-                  /* different types */
-                  if (strcmp(search->second, "s") == 0)
-                    {
-                      grm_args_push(args, search->first.c_str(), search->second, value.c_str());
-                    }
-                  else
-                    {
-                      try
-                        {
-                          if (strcmp(search->second, "i") == 0)
-                            {
-                              /* special case for scatter plot, to decide how the read data gets interpreted */
-                              if (strcmp(search->first.c_str(), "scatter_z") == 0)
-                                {
-                                  scatter_with_z = std::stoi(value);
-                                }
-                              else if (strcmp(search->first.c_str(), "use_bins") == 0)
-                                {
-                                  use_bins = std::stoi(value);
-                                  if (use_bins) xyz_file = 0;
-                                }
-                              else if (strcmp(search->first.c_str(), "equal_up_and_down_error") == 0)
-                                {
-                                  equal_up_and_down_error = std::stoi(value);
-                                }
-                              else if (strcmp(search->first.c_str(), "xye_file") == 0)
-                                {
-                                  xye_file = std::stoi(value);
-                                }
-                              else if (strcmp(search->first.c_str(), "xyz_file") == 0)
-                                {
-                                  xyz_file = std::stoi(value);
-                                  if (xyz_file) use_bins = 0;
-                                }
-                              else
-                                {
-                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
-                                }
-                            }
-                          else if (strcmp(search->second, "d") == 0)
-                            {
-                              grm_args_push(args, search->first.c_str(), search->second, std::stod(value));
-                            }
-                          else if (strcmp(search->second, "dd") == 0)
-                            {
-                              std::string x, y;
-                              parseParameterDD(&value, &search->first, &x, &y);
-                              grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
-                              if (search->first == "x_range")
-                                {
-                                  ranges->xmin = std::stod(x);
-                                  ranges->xmax = std::stod(y);
-                                }
-                              else if (search->first == "y_range")
-                                {
-                                  ranges->ymin = std::stod(x);
-                                  ranges->ymax = std::stod(y);
-                                }
-                              else if (search->first == "z_range")
-                                {
-                                  ranges->zmin = std::stod(x);
-                                  ranges->zmax = std::stod(y);
-                                }
-                            }
-                          else if (strcmp(search->second, "ddd") == 0)
-                            {
-                              std::string r, g, b;
-                              parseParameterDDD(&value, &search->first, &r, &g, &b);
-                              grm_args_push(args, search->first.c_str(), search->second, std::stod(r), std::stod(g),
-                                            std::stod(b));
-                            }
-                          else if (strcmp(search->second, "nS") == 0)
-                            {
-                              size_t pos = value.find(',');
-                              std::string num = value.substr(0, pos);
-                              std::vector<std::string> values(std::stoi(num));
-                              std::vector<const char *> c_values(std::stoi(num));
-                              int no_err = parseParameterNS(&value, &search->first, &values);
-                              if (no_err)
-                                {
-                                  int ci;
-                                  for (ci = 0; ci < std::stoi(num); ci++)
-                                    {
-                                      c_values[ci] = values[ci].c_str();
-                                    }
-                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
-                                                c_values.data());
-                                }
-                            }
-                          else if (strcmp(search->second, "nD") == 0)
-                            {
-                              size_t pos = value.find(',');
-                              std::string num = value.substr(0, pos);
-                              std::vector<double> values(std::stoi(num));
-                              int no_err = parseParameterND(&value, &search->first, &values);
-                              if (no_err)
-                                {
-                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
-                                                values.data());
-                                }
-                            }
-                        }
-                      catch (std::invalid_argument &e)
-                        {
-                          fprintf(stderr, "Invalid argument for %s parameter (%s).\n", search->first.c_str(),
-                                  value.c_str());
-                        }
-                    }
-                }
-              else
-                {
-                  fprintf(stderr, "Unknown key:value pair in parameters (%s)\n", token.c_str());
-                }
-            }
+          auto tmp_kind = singleTokenConverter(token, args, ranges, special_axis_series);
+          if (std::find(kind_types.begin(), kind_types.end(), tmp_kind) != kind_types.end()) kind = tmp_kind;
         }
     }
 
@@ -2184,6 +2189,7 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
   if (!(std::find(kind_types.begin(), kind_types.end(), kind) != kind_types.end()))
     {
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
+      default_kind_used = true;
       kind = "line";
     }
   if (kind == "hist")
