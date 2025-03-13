@@ -701,14 +701,24 @@ grm_error_t plotMergeArgs(grm_args_t *args, const grm_args_t *merge_args, const 
     }
   /* special case: clear the plot container before usage if
    * - it is the first call of `plotMergeArgs` AND `hold_always` is `0` AND
-   *   - `plot_id` is `1` and `hold_plots` is not set OR
-   *   - `hold_plots` is true and no plot will be appended (`plot_id` > 0)
+   *   - `hold_plots` is `0` OR
+   *   - `hold_plots` is not set AND `plot_id` is `1`
    */
-  if (strcmp(*hierarchy_name_ptr, "figure") == 0 && plot_id > 0 && !hold_always)
+  if (strcmp(*hierarchy_name_ptr, "figure") == 0 && !hold_always)
     {
       int hold_plots_key_available, hold_plots;
-      hold_plots_key_available = grm_args_values(args, "hold_plots", "i", &hold_plots);
-      if (hold_plots_key_available) logger((stderr, "Do%s hold plots\n", hold_plots ? "" : " not"));
+      hold_plots_key_available = grm_args_values(merge_args, "hold_plots", "i", &hold_plots) ||
+                                 grm_args_values(args, "hold_plots", "i", &hold_plots);
+#ifndef NDEBUG
+      if (hold_plots_key_available)
+        {
+          logger((stderr, "Do%s hold plots\n", hold_plots ? "" : " not"));
+          if (grm_args_contains(merge_args, "hold_plots"))
+            logger((stderr, "\"hold_plots\" key read from \"merge_args\"\n"));
+          else
+            logger((stderr, "\"hold_plots\" key read from \"args\"\n"));
+        }
+#endif
       if ((hold_plots_key_available && !hold_plots) || (!hold_plots_key_available && plot_id == 1))
         {
           cleanupAndSetErrorIf(!grm_args_values(args, "plots", "A", &args_array), GRM_ERROR_INTERNAL);
