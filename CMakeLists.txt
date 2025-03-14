@@ -1498,7 +1498,7 @@ if(GR_BUILD_GKSM)
 endif()
 
 if(GR_INSTALL)
-  install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
+  install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/GR)
   install(
     FILES lib/grm/src/grm/dom_render/graphics_tree/schema.xsd
     DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
