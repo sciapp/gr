@@ -423,9 +423,12 @@ static void pdf_close(PDF *p)
   long start_xref;
   int count, object, font, pattern;
   int image, width, height, length, *rgba, alpha;
-  Byte red, green, blue, data[3];
-  int mask_id, filter_id, i;
+  Byte red, green, blue, *data;
+  int mask_id, filter_id, i, j;
   stroke_data_t s;
+  Byte *buffer = NULL;
+  uLong bufferLength;
+  int err;
 
   pdf_printf(p->stream, "%%PDF-1.4\n");
   pdf_printf(p->stream, "%%\344\343\317\322\n");
@@ -569,37 +572,7 @@ static void pdf_close(PDF *p)
       p->content = page->stream;
       pdf_obj(p, page->contents);
       pdf_dict(p);
-
-#ifdef HAVE_ZLIB
-      if (p->compress)
-        {
-          Byte *buffer;
-          uLong length;
-          int err;
-
-          length = p->content->length + 1024;
-          buffer = (Byte *)pdf_calloc((int)length, 1);
-          if ((err = compress(buffer, &length, p->content->buffer, p->content->length)) != Z_OK)
-            {
-              gks_perror("compression failed (err=%d)", err);
-              exit(-1);
-            }
-          free(p->content->buffer);
-
-          p->content->buffer = buffer;
-          p->content->size = p->content->length = length;
-          pdf_printf(p->stream, "/Length %ld\n", p->content->length);
-          pdf_printf(p->stream, "/Filter [/FlateDecode]\n");
-          buffer[p->content->length++] = '\n';
-        }
-      else
-        {
-          pdf_printf(p->stream, "/Length %ld\n", p->content->length);
-        }
-#else
       pdf_printf(p->stream, "/Length %ld\n", p->content->length);
-#endif
-
       pdf_enddict(p);
       pdf_stream(p);
       pdf_memcpy(p->stream, (char *)p->content->buffer, p->content->length);
@@ -655,6 +628,27 @@ static void pdf_close(PDF *p)
       length = width * height;
       rgba = p->image[image]->data;
 
+      data = (Byte *)pdf_calloc(length * 3, 1);
+      for (i = 0, j = 0; i < length; i++)
+        {
+          alpha = (*rgba & 0xff000000) >> 24;
+          rgba++;
+          data[j++] = (Byte)alpha;
+        }
+#ifdef HAVE_ZLIB
+      if (p->compress)
+        {
+          bufferLength = length + 1024;
+          buffer = (Byte *)pdf_calloc((int)bufferLength, 1);
+          if ((err = compress2(buffer, &bufferLength, data, length, 6)) != Z_OK)
+            {
+              gks_perror("compression failed (err=%d)", err);
+              exit(-1);
+            }
+          printf("compress %d => %lu\n", length, bufferLength);
+        }
+#endif
+
       mask_id = pdf_alloc_id(p);
       pdf_obj(p, mask_id);
       pdf_dict(p);
@@ -664,21 +658,52 @@ static void pdf_close(PDF *p)
       pdf_printf(p->stream, "/ColorSpace /DeviceGray\n");
       pdf_printf(p->stream, "/Height %d\n", height);
       pdf_printf(p->stream, "/Width %d\n", width);
-      pdf_printf(p->stream, "/Length %d\n", length);
+      if (buffer != NULL)
+        {
+          pdf_printf(p->stream, "/Length %d\n", bufferLength);
+          pdf_printf(p->stream, "/Filter /FlateDecode\n");
+        }
+      else
+        pdf_printf(p->stream, "/Length %d\n", length);
       pdf_enddict(p);
 
       pdf_stream(p);
-      for (i = 0; i < length; i++)
+      if (buffer != NULL)
         {
-          alpha = (*rgba & 0xff000000) >> 24;
-          rgba++;
-          pdf_memcpy(p->stream, (char *)&alpha, 1);
+          pdf_memcpy(p->stream, (char *)buffer, bufferLength);
+          free(buffer);
+          buffer = NULL;
         }
+      else
+        pdf_memcpy(p->stream, (char *)data, length);
       pdf_printf(p->stream, "\n");
       pdf_endstream(p);
       pdf_endobj(p);
 
       rgba = p->image[image]->data;
+      for (i = 0, j = 0; i < length; i++)
+        {
+          red = (*rgba & 0xff);
+          green = (*rgba & 0xff00) >> 8;
+          blue = (*rgba & 0xff0000) >> 16;
+          rgba++;
+          data[j++] = (Byte)red;
+          data[j++] = (Byte)green;
+          data[j++] = (Byte)blue;
+        }
+#ifdef HAVE_ZLIB
+      if (p->compress)
+        {
+          bufferLength = length * 3 + 1024;
+          buffer = (Byte *)pdf_calloc((int)bufferLength, 1);
+          if ((err = compress2(buffer, &bufferLength, data, length * 3, 6)) != Z_OK)
+            {
+              gks_perror("compression failed (err=%d)", err);
+              exit(-1);
+            }
+          printf("compress %d => %lu\n", length, bufferLength);
+        }
+#endif
 
       pdf_obj(p, p->image[image]->object);
       pdf_dict(p);
@@ -689,24 +714,29 @@ static void pdf_close(PDF *p)
       pdf_printf(p->stream, "/Height %d\n", height);
       pdf_printf(p->stream, "/Width %d\n", width);
       pdf_printf(p->stream, "/SMask %d 0 R\n", mask_id);
-      pdf_printf(p->stream, "/Length %d\n", length * 3);
+      if (buffer != NULL)
+        {
+          pdf_printf(p->stream, "/Length %d\n", bufferLength);
+          pdf_printf(p->stream, "/Filter /FlateDecode\n");
+        }
+      else
+        pdf_printf(p->stream, "/Length %d\n", length * 3);
       pdf_enddict(p);
 
       pdf_stream(p);
-      for (i = 0; i < length; i++)
+      if (buffer != NULL)
         {
-          red = (*rgba & 0xff);
-          green = (*rgba & 0xff00) >> 8;
-          blue = (*rgba & 0xff0000) >> 16;
-          rgba++;
-          data[0] = (Byte)red;
-          data[1] = (Byte)green;
-          data[2] = (Byte)blue;
-          pdf_memcpy(p->stream, (char *)data, 3);
+          pdf_memcpy(p->stream, (char *)buffer, bufferLength);
+          free(buffer);
+          buffer = NULL;
         }
+      else
+        pdf_memcpy(p->stream, (char *)data, length * 3);
       pdf_printf(p->stream, "\n");
       pdf_endstream(p);
       pdf_endobj(p);
+
+      free(data);
     }
 
   start_xref = p->stream->length;
