@@ -645,7 +645,6 @@ static void pdf_close(PDF *p)
               gks_perror("compression failed (err=%d)", err);
               exit(-1);
             }
-          printf("compress %d => %lu\n", length, bufferLength);
         }
 #endif
 
@@ -701,7 +700,6 @@ static void pdf_close(PDF *p)
               gks_perror("compression failed (err=%d)", err);
               exit(-1);
             }
-          printf("compress %d => %lu\n", length, bufferLength);
         }
 #endif
 
