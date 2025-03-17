@@ -147,6 +147,7 @@
             <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
             <xs:attribute name="_top_axis_border" type="xs:double"/>
+            <xs:attribute name="_vp_with_extent" type="xs:double"/>
             <xs:attribute name="_zoomed" type="xs:int"/>
         </xs:complexType>
     </xs:element>
