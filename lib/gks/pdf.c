@@ -484,6 +484,7 @@ static void pdf_close(PDF *p)
   pdf_stream(p);
   pdf_printf(p->stream, "000000ffffff\n");
   pdf_endstream(p);
+  pdf_endobj(p);
   for (pattern = 0; pattern < PATTERNS; pattern++)
     {
       if (p->have_pattern[pattern])
