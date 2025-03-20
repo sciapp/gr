@@ -933,10 +933,24 @@ GR3API int gr3_initSR_(void)
 #ifndef NO_THREADS
   if (context_struct_.init_struct.num_threads == 0)
     {
-      gr3_log_("Number of Threads equals number of cores minus one");
-      context_struct_.num_threads = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < MAX_NUM_THREADS
-                                        ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1
-                                        : MAX_NUM_THREADS;
+      int num_threads = 0;
+      const char *num_threads_env = getenv("GR3_NUM_THREADS");
+      if (num_threads_env != NULL)
+        {
+          num_threads = atoi(num_threads_env);
+        }
+      if (num_threads > 0)
+        {
+          gr3_log_("Number of Threads read from \"GR3_NUM_THREADS\"");
+          context_struct_.num_threads = num_threads;
+        }
+      else
+        {
+          gr3_log_("Number of Threads equals number of cores minus one");
+          context_struct_.num_threads = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < MAX_NUM_THREADS
+                                            ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1
+                                            : MAX_NUM_THREADS;
+        }
     }
   else
     {
