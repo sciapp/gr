@@ -39,6 +39,10 @@ typedef unsigned long uLong;
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifdef HAVE_ZLIB
+#define COMPRESS_CHUNK_SIZE 10485760 /* 10 MiB */
+#endif
+
 #ifndef min
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -120,7 +124,10 @@ typedef struct PDF_image_t
 {
   long object;
   int width, height;
-  int *data;
+  Byte *rgb;
+  uLong rgb_length;
+  Byte *alpha;
+  uLong alpha_length;
 } PDF_image;
 
 typedef struct PDF_page_t
@@ -257,6 +264,118 @@ static void fill_routine(int n, double *px, double *py, int tnr);
 static char buf_array[NO_OF_BUFS][20];
 static int current_buf = 0;
 
+#ifdef HAVE_ZLIB
+static int swap_index(uLong index, uLong width, uLong height, uLong dimx, int swapx, int swapy)
+{
+  int row = index / width;
+  int col = index % width;
+  if (swapx) col = width - col - 1;
+  if (swapy) row = height - row - 1;
+  return row * dimx + col;
+}
+
+int compress_chunkwise2d(Byte **out_buffer, uLong *out_length, const Byte *in_buffer, uLong width, uLong height,
+                         uLong dimx, int swapx, int swapy, const Byte *byte_drop_mask, uLong byte_drop_mask_length)
+{
+  z_stream strm;
+  Byte *compressed_buffer = NULL, *enlarged_buffer = NULL, *in_chunk = NULL;
+  uLong compressed_length = COMPRESS_CHUNK_SIZE, in_chunk_length;
+  uLong in_buffer_pos = 0;
+  const uLong in_length = width * height;
+  const int use_input_chunk = (byte_drop_mask != NULL && byte_drop_mask_length > 0) || swapx || swapy || dimx != width;
+  int initialized_stream = 0;
+  int was_successful = 1;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  int ret = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+  if (ret != Z_OK)
+    {
+      was_successful = 0;
+      goto cleanup;
+    }
+  strm.avail_out = 0;
+  initialized_stream = 1;
+
+  compressed_buffer = malloc(compressed_length);
+  if (compressed_buffer == NULL)
+    {
+      was_successful = 0;
+      goto cleanup;
+    }
+  if (use_input_chunk)
+    {
+      in_chunk_length = COMPRESS_CHUNK_SIZE;
+      in_chunk = malloc(in_chunk_length);
+    }
+  else
+    {
+      strm.avail_in = in_length;
+      strm.next_in = (Byte *)in_buffer;
+    }
+
+  do
+    {
+      if (use_input_chunk)
+        {
+          uLong i;
+          for (i = 0; i < in_chunk_length; i++)
+            {
+              while (byte_drop_mask[swap_index(in_buffer_pos, width, height, dimx, swapx, swapy) %
+                                    byte_drop_mask_length] == 0)
+                {
+                  ++in_buffer_pos;
+                }
+              if (in_buffer_pos >= in_length) break;
+              in_chunk[i] = in_buffer[swap_index(in_buffer_pos, width, height, dimx, swapx, swapy)];
+              ++in_buffer_pos;
+            }
+          strm.avail_in = i;
+          strm.next_in = in_chunk;
+        }
+      while (1)
+        {
+          if (strm.avail_out == 0)
+            {
+              strm.avail_out = COMPRESS_CHUNK_SIZE;
+              strm.next_out = compressed_buffer + compressed_length - COMPRESS_CHUNK_SIZE;
+            }
+
+          ret = deflate(&strm, (use_input_chunk && in_buffer_pos < in_length) ? Z_NO_FLUSH : Z_FINISH);
+
+          if (ret == Z_STREAM_END || strm.avail_out > 0)
+            break;
+          else if (ret == Z_STREAM_ERROR)
+            {
+              was_successful = 0;
+              goto cleanup;
+            }
+
+          compressed_length += COMPRESS_CHUNK_SIZE;
+          if ((enlarged_buffer = realloc(compressed_buffer, compressed_length)) == NULL)
+            {
+              was_successful = 0;
+              goto cleanup;
+            }
+          compressed_buffer = enlarged_buffer;
+        };
+    }
+  while (use_input_chunk && in_buffer_pos < in_length);
+
+  *out_buffer = compressed_buffer;
+  *out_length = compressed_length - strm.avail_out;
+
+cleanup:
+  if (initialized_stream) deflateEnd(&strm);
+  if (!was_successful) free(compressed_buffer);
+  free(in_chunk);
+
+  return was_successful;
+}
+
+#endif
+
 static const char *pdf_double(double f)
 {
   char *buf = buf_array[(current_buf++) % NO_OF_BUFS];
@@ -369,9 +488,13 @@ static void pdf_open(int fd)
   p->preview_fix = (char *)gks_getenv("GKS_PDF_PREVIEW_FIX") != NULL ? 1 : 0;
 }
 
-static PDF_image *pdf_image(PDF *p, int width, int height)
+static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, int swapy, int *image_rgba)
 {
   PDF_image *image;
+#ifdef HAVE_ZLIB
+  const Byte alpha_mask[] = {0x00, 0x00, 0x00, 0xff};
+  const Byte rgb_mask[] = {0xff, 0xff, 0xff, 0x00};
+#endif
 
   if (p->images + 1 >= MAX_IMAGES)
     {
@@ -384,7 +507,38 @@ static PDF_image *pdf_image(PDF *p, int width, int height)
   image->object = pdf_alloc_id(p);
   image->width = width;
   image->height = height;
-  image->data = (int *)pdf_calloc(width * height, sizeof(int));
+
+#ifdef HAVE_ZLIB
+  if (p->compress)
+    {
+      compress_chunkwise2d(&image->rgb, &image->rgb_length, (Byte *)image_rgba, width * sizeof(int), height,
+                           dimx * sizeof(int), swapx, swapy, rgb_mask, sizeof(rgb_mask));
+      compress_chunkwise2d(&image->alpha, &image->alpha_length, (Byte *)image_rgba, width * sizeof(int), height,
+                           dimx * sizeof(int), swapx, swapy, alpha_mask, sizeof(alpha_mask));
+    }
+  else
+#endif
+    {
+      int i, j, iy, ix;
+
+      image->alpha = (Byte *)pdf_calloc(width * height, sizeof(Byte));
+      image->rgb = (Byte *)pdf_calloc(width * height, 3 * sizeof(Byte));
+      image->alpha_length = width * height;
+      image->rgb_length = width * height * 3 * sizeof(Byte);
+
+      for (j = 0; j < height; j++)
+        {
+          iy = swapy ? height - 1 - j : j;
+          for (i = 0; i < width; i++)
+            {
+              ix = swapx ? width - 1 - i : i;
+              image->rgb[3 * (j * width + i) + 0] = (image_rgba[iy * dimx + ix] & 0xff);
+              image->rgb[3 * (j * width + i) + 1] = (image_rgba[iy * dimx + ix] & 0xff00) >> 8;
+              image->rgb[3 * (j * width + i) + 2] = (image_rgba[iy * dimx + ix] & 0xff0000) >> 16;
+              image->alpha[j * width + i] = (image_rgba[iy * dimx + ix] & 0xff000000) >> 24;
+            }
+        }
+    }
 
   return image;
 }
@@ -422,13 +576,11 @@ static void pdf_close(PDF *p)
   struct tm ltime;
   long start_xref;
   int count, object, font, pattern;
-  int image, width, height, length, *rgba, alpha;
-  Byte red, green, blue, *data;
-  int mask_id, filter_id, i, j;
+  int image, width, height, length;
+  Byte *rgb, *alpha;
+  Byte red, green, blue, data[3];
+  int mask_id, filter_id, i;
   stroke_data_t s;
-  Byte *buffer = NULL;
-  uLong bufferLength;
-  int err;
 
   pdf_printf(p->stream, "%%PDF-1.4\n");
   pdf_printf(p->stream, "%%\344\343\317\322\n");
@@ -529,6 +681,7 @@ static void pdf_close(PDF *p)
 
   for (count = 0; count < p->current_page; count++)
     {
+      int alpha;
       PDF_page *page = p->page[count];
 
       pdf_obj(p, page->object);
@@ -626,28 +779,8 @@ static void pdf_close(PDF *p)
     {
       width = p->image[image]->width;
       height = p->image[image]->height;
-      length = width * height;
-      rgba = p->image[image]->data;
-
-      data = (Byte *)pdf_calloc(length * 3, 1);
-      for (i = 0, j = 0; i < length; i++)
-        {
-          alpha = (*rgba & 0xff000000) >> 24;
-          rgba++;
-          data[j++] = (Byte)alpha;
-        }
-#ifdef HAVE_ZLIB
-      if (p->compress)
-        {
-          bufferLength = length + 1024;
-          buffer = (Byte *)pdf_calloc((int)bufferLength, 1);
-          if ((err = compress2(buffer, &bufferLength, data, length, 6)) != Z_OK)
-            {
-              gks_perror("compression failed (err=%d)", err);
-              exit(-1);
-            }
-        }
-#endif
+      rgb = p->image[image]->rgb;
+      alpha = p->image[image]->alpha;
 
       mask_id = pdf_alloc_id(p);
       pdf_obj(p, mask_id);
@@ -658,51 +791,17 @@ static void pdf_close(PDF *p)
       pdf_printf(p->stream, "/ColorSpace /DeviceGray\n");
       pdf_printf(p->stream, "/Height %d\n", height);
       pdf_printf(p->stream, "/Width %d\n", width);
-      if (buffer != NULL)
-        {
-          pdf_printf(p->stream, "/Length %d\n", bufferLength);
-          pdf_printf(p->stream, "/Filter /FlateDecode\n");
-        }
-      else
-        pdf_printf(p->stream, "/Length %d\n", length);
+      pdf_printf(p->stream, "/Length %d\n", p->image[image]->alpha_length);
+#ifdef HAVE_ZLIB
+      if (p->compress) pdf_printf(p->stream, "/Filter /FlateDecode\n");
+#endif
       pdf_enddict(p);
 
       pdf_stream(p);
-      if (buffer != NULL)
-        {
-          pdf_memcpy(p->stream, (char *)buffer, bufferLength);
-          free(buffer);
-          buffer = NULL;
-        }
-      else
-        pdf_memcpy(p->stream, (char *)data, length);
+      pdf_memcpy(p->stream, (char *)alpha, p->image[image]->alpha_length);
       pdf_printf(p->stream, "\n");
       pdf_endstream(p);
       pdf_endobj(p);
-
-      rgba = p->image[image]->data;
-      for (i = 0, j = 0; i < length; i++)
-        {
-          red = (*rgba & 0xff);
-          green = (*rgba & 0xff00) >> 8;
-          blue = (*rgba & 0xff0000) >> 16;
-          rgba++;
-          data[j++] = (Byte)red;
-          data[j++] = (Byte)green;
-          data[j++] = (Byte)blue;
-        }
-#ifdef HAVE_ZLIB
-      if (p->compress)
-        {
-          bufferLength = length * 3 + 1024;
-          buffer = (Byte *)pdf_calloc((int)bufferLength, 1);
-          if ((err = compress2(buffer, &bufferLength, data, length * 3, 6)) != Z_OK)
-            {
-              gks_perror("compression failed (err=%d)", err);
-              exit(-1);
-            }
-        }
-#endif
 
       pdf_obj(p, p->image[image]->object);
       pdf_dict(p);
@@ -713,29 +812,17 @@ static void pdf_close(PDF *p)
       pdf_printf(p->stream, "/Height %d\n", height);
       pdf_printf(p->stream, "/Width %d\n", width);
       pdf_printf(p->stream, "/SMask %d 0 R\n", mask_id);
-      if (buffer != NULL)
-        {
-          pdf_printf(p->stream, "/Length %d\n", bufferLength);
-          pdf_printf(p->stream, "/Filter /FlateDecode\n");
-        }
-      else
-        pdf_printf(p->stream, "/Length %d\n", length * 3);
+      pdf_printf(p->stream, "/Length %d\n", p->image[image]->rgb_length);
+#ifdef HAVE_ZLIB
+      if (p->compress) pdf_printf(p->stream, "/Filter /FlateDecode\n");
+#endif
       pdf_enddict(p);
 
       pdf_stream(p);
-      if (buffer != NULL)
-        {
-          pdf_memcpy(p->stream, (char *)buffer, bufferLength);
-          free(buffer);
-          buffer = NULL;
-        }
-      else
-        pdf_memcpy(p->stream, (char *)data, length * 3);
+      pdf_memcpy(p->stream, (char *)rgb, p->image[image]->rgb_length);
       pdf_printf(p->stream, "\n");
       pdf_endstream(p);
       pdf_endobj(p);
-
-      free(data);
     }
 
   start_xref = p->stream->length;
@@ -1691,18 +1778,8 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     {
       pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
 
-      image = pdf_image(p, dx, dy);
+      image = pdf_image(p, dx, dy, dimx, swapx, swapy, colia);
       p->image[p->images++] = image;
-
-      for (j = 0; j < dy; j++)
-        {
-          iy = swapy ? dy - 1 - j : j;
-          for (i = 0; i < dx; i++)
-            {
-              ix = swapx ? dx - 1 - i : i;
-              image->data[j * dx + i] = colia[iy * dimx + ix];
-            }
-        }
 
       pdf_printf(p->content, "/Im%d Do\n", p->images);
       p->page[p->current_page - 1]->last_image = p->images;
