@@ -42,7 +42,7 @@ ubuntu-cmake-self-contained-test-grplot:
   - export PATH=$GRDIR/bin/:$PATH
   - export TERM=ansi
   - export CLICOLOR_FORCE=1
-  - xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test grplot `pwd`/test_result/
+  - gr_test grplot `pwd`/test_result/
   artifacts:
     paths:
     - test_result/

@@ -49,6 +49,7 @@ public:
   void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
                                         QWidget **line_edit);
   void editElementAccepted();
+  void processTestCommandsFile();
 
   void setSelectedParent(BoundingObject *parent);
   void setCurrentSelection(BoundingObject *current_selection);
@@ -125,7 +126,6 @@ protected:
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void leaveEvent(QEvent *event) override;
   void paint(QPaintDevice *paint_device);
-  void processTestCommandsFile();
   static Qt::KeyboardModifiers queryKeyboardModifiers();
 
 signals:
