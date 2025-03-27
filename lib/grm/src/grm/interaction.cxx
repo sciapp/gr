@@ -1381,7 +1381,7 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
   if (kind == "pie")
     {
       static char output[50];
-      double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
+      double max_x = 0.96, min_x = 0.04, max_y = 0.075, min_y = 0.975;
       int center_x, center_y;
       double radius;
       double start_angle, end_angle, act_angle;
