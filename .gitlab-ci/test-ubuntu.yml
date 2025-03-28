@@ -5,6 +5,7 @@ ubuntu-cmake-self-contained-test-c:
   - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export TERM=ansi
   - export CLICOLOR_FORCE=1
@@ -21,6 +22,7 @@ ubuntu-cmake-self-contained-test-cpp:
   - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export TERM=ansi
   - export CLICOLOR_FORCE=1
@@ -37,6 +39,7 @@ ubuntu-cmake-self-contained-test-grplot:
   - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export LD_LIBRARY_PATH=$GRDIR/lib
   - export PATH=$GRDIR/bin/:$PATH
@@ -55,6 +58,7 @@ ubuntu-cmake-self-contained-test-grm-internal:
   - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GR3_NUM_THREADS=4
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
   - export TERM=ansi
   - export CLICOLOR_FORCE=1
