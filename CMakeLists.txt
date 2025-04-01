@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(GetVersionFromGit)
@@ -12,9 +12,6 @@ project(
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
-
-# Honor `C_VISIBILITY_PRESET hidden` and `CXX_VISIBILITY_PRESET hidden` in static libraries
-cmake_policy(SET CMP0063 NEW)
 
 check_cxx_compiler_flag("-Werror=implicit" ERROR_IMPLICIT_SUPPORTED)
 if(ERROR_IMPLICIT_SUPPORTED)

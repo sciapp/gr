@@ -41,7 +41,17 @@ $(PREFIX)/src/glfw-$(VERSION).tar.gz:
 
 $(PREFIX)/src/glfw-$(VERSION)/CMakeLists.txt: $(PREFIX)/src/glfw-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf glfw-$(VERSION).tar.gz
-	touch $@
+	cd $(PREFIX)/src/glfw-$(VERSION) && \
+	( \
+	echo '--- a/CMakeLists.txt'; \
+	echo '+++ b/CMakeLists.txt'; \
+	echo '@@ -1,4 +1,4 @@'; \
+	echo '-cmake_minimum_required(VERSION 3.0)'; \
+	echo '+cmake_minimum_required(VERSION 3.5)'; \
+	echo; \
+	echo ' project(GLFW VERSION 3.3.3 LANGUAGES C)'; \
+	echo; \
+	) | patch -Np1
 
 $(PREFIX)/build/glfw-$(VERSION)/Makefile: $(PREFIX)/src/glfw-$(VERSION)/CMakeLists.txt $(CMAKE_DEP)
 	mkdir -p $(PREFIX)/build/glfw-$(VERSION)
