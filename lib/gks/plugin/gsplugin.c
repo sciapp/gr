@@ -1278,15 +1278,19 @@ static void query_color(int index, unsigned char **buf, int wtype)
     }
 }
 
-static void rgb2color(int rgb, unsigned char **buf, int wtype)
+static void rgb2color(unsigned int rgb, unsigned char **buf, int wtype)
 {
-  int r, g, b;
+  int r, g, b, a;
   double grey;
 
   r = (rgb & 0xff);
   g = (rgb & 0xff00) >> 8;
   b = (rgb & 0xff0000) >> 16;
-
+  a = (rgb & 0xff000000) >> 24;
+  if (a == 0)
+    {
+      r = g = b = 0xff;
+    }
   if (wtype % 2)
     {
       grey = 0.3 * r / 255.0 + 0.59 * g / 255.0 + 0.11 * b / 255.0;
@@ -1429,7 +1433,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
           if (!true_color)
             query_color(ci, &bufP, wtype);
           else
-            rgb2color(ci, &bufP, wtype);
+            rgb2color((unsigned int)ci, &bufP, wtype);
         }
     }
   LZWEncodeImage(len, buf);
