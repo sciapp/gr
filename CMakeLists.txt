@@ -1302,10 +1302,24 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/util.cxx
     )
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-      target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui grm_static)
+      target_link_libraries(
+        grplot
+        PRIVATE Qt6::Widgets
+                Qt6::Core
+                Qt6::Gui
+                grm_shared
+                gr_shared
+      )
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
     else()
-      target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui grm_static)
+      target_link_libraries(
+        grplot
+        PRIVATE Qt5::Widgets
+                Qt5::Core
+                Qt5::Gui
+                grm_shared
+                gr_shared
+      )
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
     target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
