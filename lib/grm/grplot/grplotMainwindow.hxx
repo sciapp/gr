@@ -18,9 +18,10 @@ public:
 private:
   GRPlotWidget *grplot_widget_;
   QMenuBar *menu;
-  QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
-  QMenu *file_menu, *configuration_menu, *context_menu, *add_context_data;
-  QMenu *marginal_sub_menu;
+  QMenu *file_menu, *export_menu, *editor_menu, *modi_menu, *options_menu;
+  QMenu *configuration_menu, *context_menu, *add_context_data;
+  QMenu *type_sub_menu, *marginal_sub_menu, *algo_sub_menu, *log_sub_menu, *flip_sub_menu, *orientation_sub_menu,
+      *aspect_ratio_sub_menu, *location_sub_menu;
 
 private slots:
   void hideAlgoMenu();
@@ -29,6 +30,12 @@ private slots:
   void showMarginalSubMenu();
   void hideConfigurationMenu();
   void showConfigurationMenu();
+  void hideOrientationSubMenu();
+  void showOrientationSubMenu();
+  void hideAspectRatioSubMenu();
+  void showAspectRatioSubMenu();
+  void hideLocationSubMenu();
+  void showLocationSubMenu();
   void addSeperator();
 };
 

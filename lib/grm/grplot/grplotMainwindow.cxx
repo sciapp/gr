@@ -9,11 +9,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
                                    QString test_commands_file_path, bool help_mode)
     : QMainWindow(), grplot_widget_(nullptr)
 {
-  if (QPixmap(":/colorbars/uniform.png").isNull())
-    {
-      std::cerr << "Could not load example colorbar." << std::endl;
-      exit(1);
-    }
+  bool hide_colormap = false;
+  // there is no colormap or each colormap gets created -> check for 1 colormap is enough
+  if (QPixmap(":preview_images/colormaps/afmhot").isNull()) hide_colormap = true;
+
   if (help_mode)
     {
       auto *w = new QWidget(this);
@@ -69,45 +68,67 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       menu = menuBar();
       file_menu = new QMenu("&File");
       export_menu = file_menu->addMenu("&Export");
-      type = new QMenu("&Plot type");
-      algo = new QMenu("&Algorithm");
       modi_menu = new QMenu("&Modi");
-      marginal_sub_menu = type->addMenu("&Marginal-heatmap");
+      options_menu = new QMenu("&Options");
+      type_sub_menu = options_menu->addMenu("&Plot type");
+      marginal_sub_menu = type_sub_menu->addMenu("&Marginal-heatmap");
+      algo_sub_menu = options_menu->addMenu("&Algorithm");
+      log_sub_menu = options_menu->addMenu("&Logarithm");
+      flip_sub_menu = options_menu->addMenu("&Flip");
+      orientation_sub_menu = options_menu->addMenu("&Orientation");
+      aspect_ratio_sub_menu = options_menu->addMenu("&Aspectratio");
 
       export_menu->addAction(grplot_widget_->getPdfAct());
       export_menu->addAction(grplot_widget_->getPngAct());
       export_menu->addAction(grplot_widget_->getJpegAct());
       export_menu->addAction(grplot_widget_->getSvgAct());
-      type->addAction(grplot_widget_->getLine3Act());
-      type->addAction(grplot_widget_->getTrisurfAct());
-      type->addAction(grplot_widget_->getTricontAct());
-      type->addAction(grplot_widget_->getScatter3Act());
-      type->addAction(grplot_widget_->getHistogramAct());
-      type->addAction(grplot_widget_->getBarplotAct());
-      type->addAction(grplot_widget_->getStairsAct());
-      type->addAction(grplot_widget_->getStemAct());
-      type->addAction(grplot_widget_->getShadeAct());
-      type->addAction(grplot_widget_->getHexbinAct());
-      type->addAction(grplot_widget_->getPolarLineAct());
-      type->addAction(grplot_widget_->getPolarScatterAct());
-      type->addAction(grplot_widget_->getLineAct());
-      type->addAction(grplot_widget_->getScatterAct());
-      type->addAction(grplot_widget_->getVolumeAct());
-      type->addAction(grplot_widget_->getIsosurfaceAct());
-      type->addAction(grplot_widget_->getHeatmapAct());
-      type->addAction(grplot_widget_->getSurfaceAct());
-      type->addAction(grplot_widget_->getWireframeAct());
-      type->addAction(grplot_widget_->getContourAct());
-      type->addAction(grplot_widget_->getImshowAct());
-      type->addAction(grplot_widget_->getContourfAct());
-      algo->addAction(grplot_widget_->getSumAct());
-      algo->addAction(grplot_widget_->getMaxAct());
+      type_sub_menu->addAction(grplot_widget_->getLine3Act());
+      type_sub_menu->addAction(grplot_widget_->getTrisurfAct());
+      type_sub_menu->addAction(grplot_widget_->getTricontAct());
+      type_sub_menu->addAction(grplot_widget_->getScatter3Act());
+      type_sub_menu->addAction(grplot_widget_->getHistogramAct());
+      type_sub_menu->addAction(grplot_widget_->getBarplotAct());
+      type_sub_menu->addAction(grplot_widget_->getStairsAct());
+      type_sub_menu->addAction(grplot_widget_->getStemAct());
+      type_sub_menu->addAction(grplot_widget_->getShadeAct());
+      type_sub_menu->addAction(grplot_widget_->getHexbinAct());
+      type_sub_menu->addAction(grplot_widget_->getPolarLineAct());
+      type_sub_menu->addAction(grplot_widget_->getPolarScatterAct());
+      type_sub_menu->addAction(grplot_widget_->getLineAct());
+      type_sub_menu->addAction(grplot_widget_->getScatterAct());
+      type_sub_menu->addAction(grplot_widget_->getVolumeAct());
+      type_sub_menu->addAction(grplot_widget_->getIsosurfaceAct());
+      type_sub_menu->addAction(grplot_widget_->getHeatmapAct());
+      type_sub_menu->addAction(grplot_widget_->getSurfaceAct());
+      type_sub_menu->addAction(grplot_widget_->getWireframeAct());
+      type_sub_menu->addAction(grplot_widget_->getContourAct());
+      type_sub_menu->addAction(grplot_widget_->getImshowAct());
+      type_sub_menu->addAction(grplot_widget_->getContourfAct());
+      algo_sub_menu->addAction(grplot_widget_->getSumAct());
+      algo_sub_menu->addAction(grplot_widget_->getMaxAct());
       marginal_sub_menu->addAction(grplot_widget_->getMarginalHeatmapAllAct());
       marginal_sub_menu->addAction(grplot_widget_->getMarginalHeatmapLineAct());
       modi_menu->addAction(grplot_widget_->getMovableModeAct());
+      log_sub_menu->addAction(grplot_widget_->getXLogAct());
+      log_sub_menu->addAction(grplot_widget_->getYLogAct());
+      log_sub_menu->addAction(grplot_widget_->getZLogAct());
+      flip_sub_menu->addAction(grplot_widget_->getXFlipAct());
+      flip_sub_menu->addAction(grplot_widget_->getYFlipAct());
+      flip_sub_menu->addAction(grplot_widget_->getZFlipAct());
+      flip_sub_menu->addAction(grplot_widget_->getPhiFlipAct());
+      options_menu->addAction(grplot_widget_->getAccelerateAct());
+      options_menu->addAction(grplot_widget_->getPolarWithPanAct());
+      options_menu->addAction(grplot_widget_->getKeepWindowAct());
+      orientation_sub_menu->addAction(grplot_widget_->getVerticalOrientationAct());
+      orientation_sub_menu->addAction(grplot_widget_->getHorizontalOrientationAct());
+      aspect_ratio_sub_menu->addAction(grplot_widget_->getKeepAspectRatioAct());
+      aspect_ratio_sub_menu->addAction(grplot_widget_->getOnlyQuadraticAspectRatioAct());
+      options_menu->addAction(grplot_widget_->getColormapAct());
 
       marginal_sub_menu->menuAction()->setVisible(false);
-      algo->menuAction()->setVisible(false);
+      algo_sub_menu->menuAction()->setVisible(false);
+      orientation_sub_menu->setVisible(false);
+      if (hide_colormap) grplot_widget_->getColormapAct()->setVisible(false);
 
       connect(grplot_widget_->getHideAlgoMenuAct(), &QAction::triggered, this, &GRPlotMainWindow::hideAlgoMenu);
       connect(grplot_widget_->getShowAlgoMenuAct(), &QAction::triggered, this, &GRPlotMainWindow::showAlgoMenu);
@@ -120,10 +141,17 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       connect(grplot_widget_->getShowConfigurationMenuAct(), &QAction::triggered, this,
               &GRPlotMainWindow::showConfigurationMenu);
       connect(grplot_widget_->getAddSeperatorAct(), &QAction::triggered, this, &GRPlotMainWindow::addSeperator);
+      connect(grplot_widget_->getHideOrientationSubMenuAct(), &QAction::triggered, this,
+              &GRPlotMainWindow::hideOrientationSubMenu);
+      connect(grplot_widget_->getShowOrientationSubMenuAct(), &QAction::triggered, this,
+              &GRPlotMainWindow::showOrientationSubMenu);
+      connect(grplot_widget_->getHideAspectRatioSubMenuAct(), &QAction::triggered, this,
+              &GRPlotMainWindow::hideAspectRatioSubMenu);
+      connect(grplot_widget_->getShowAspectRatioSubMenuAct(), &QAction::triggered, this,
+              &GRPlotMainWindow::showAspectRatioSubMenu);
 
       menu->addMenu(file_menu);
-      menu->addMenu(type);
-      menu->addMenu(algo);
+      menu->addMenu(options_menu);
       menu->addMenu(modi_menu);
 
       if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
@@ -132,6 +160,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           configuration_menu = editor_menu->addMenu(tr("&Show"));
           context_menu = new QMenu("&Data");
           add_context_data = new QMenu("&Add Data-Context");
+          location_sub_menu = options_menu->addMenu("&Location");
 
           editor_menu->addAction(grplot_widget_->getEditorAct());
           file_menu->addAction(grplot_widget_->getSaveFileAct());
@@ -144,10 +173,25 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           add_context_data->addAction(grplot_widget_->getAddGRplotDataContextAct());
           add_context_data->addAction(grplot_widget_->getGenerateLinearContextAct());
 
+          location_sub_menu->addAction(grplot_widget_->getLegendAct());
+          location_sub_menu->addAction(grplot_widget_->getColorbarAct());
+          location_sub_menu->addAction(grplot_widget_->getLeftAxisAct());
+          location_sub_menu->addAction(grplot_widget_->getRightAxisAct());
+          location_sub_menu->addAction(grplot_widget_->getBottomAxisAct());
+          location_sub_menu->addAction(grplot_widget_->getTopAxisAct());
+          location_sub_menu->addAction(grplot_widget_->getTwinXAxisAct());
+          location_sub_menu->addAction(grplot_widget_->getTwinYAxisAct());
+
+          location_sub_menu->menuAction()->setVisible(false);
           configuration_menu->menuAction()->setVisible(false);
           menu->addMenu(editor_menu);
           menu->addMenu(context_menu);
           context_menu->addMenu(add_context_data);
+
+          connect(grplot_widget_->getHideLocationSubMenuAct(), &QAction::triggered, this,
+                  &GRPlotMainWindow::hideLocationSubMenu);
+          connect(grplot_widget_->getShowLocationSubMenuAct(), &QAction::triggered, this,
+                  &GRPlotMainWindow::showLocationSubMenu);
         }
     }
 }
@@ -156,12 +200,12 @@ GRPlotMainWindow::~GRPlotMainWindow() = default;
 
 void GRPlotMainWindow::hideAlgoMenu()
 {
-  algo->menuAction()->setVisible(false);
+  algo_sub_menu->menuAction()->setVisible(false);
 }
 
 void GRPlotMainWindow::showAlgoMenu()
 {
-  algo->menuAction()->setVisible(true);
+  algo_sub_menu->menuAction()->setVisible(true);
 }
 
 void GRPlotMainWindow::hideMarginalSubMenu()
@@ -184,7 +228,37 @@ void GRPlotMainWindow::showConfigurationMenu()
   configuration_menu->menuAction()->setVisible(true);
 }
 
+void GRPlotMainWindow::hideOrientationSubMenu()
+{
+  orientation_sub_menu->menuAction()->setVisible(false);
+}
+
+void GRPlotMainWindow::showOrientationSubMenu()
+{
+  orientation_sub_menu->menuAction()->setVisible(true);
+}
+
+void GRPlotMainWindow::hideAspectRatioSubMenu()
+{
+  aspect_ratio_sub_menu->menuAction()->setVisible(false);
+}
+
+void GRPlotMainWindow::showAspectRatioSubMenu()
+{
+  aspect_ratio_sub_menu->menuAction()->setVisible(true);
+}
+
+void GRPlotMainWindow::hideLocationSubMenu()
+{
+  location_sub_menu->menuAction()->setVisible(false);
+}
+
+void GRPlotMainWindow::showLocationSubMenu()
+{
+  location_sub_menu->menuAction()->setVisible(true);
+}
+
 void GRPlotMainWindow::addSeperator()
 {
-  type->addSeparator();
+  type_sub_menu->addSeparator();
 }

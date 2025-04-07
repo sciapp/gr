@@ -10,8 +10,9 @@ EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QW
 #endif
 }
 
-void EditElementWidget::attributeEditEvent()
+void EditElementWidget::attributeEditEvent(bool highlight_location)
 {
+  QString text_label;
   auto current_selection = grplot_widget->getCurrentSelection();
   if (current_selection == nullptr || *current_selection == nullptr)
     {
@@ -108,8 +109,17 @@ void EditElementWidget::attributeEditEvent()
               ->setText(static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)).c_str());
           ((QLineEdit *)line_edit)->setToolTip(tooltip_string);
         }
-      QString text_label = QString(cur_attr_name.c_str());
-      form->addRow(text_label, line_edit);
+
+      if (highlight_location && cur_attr_name == "location")
+        {
+          text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(cur_attr_name.c_str());
+          form->addRow(text_label, line_edit);
+        }
+      else
+        {
+          text_label = QString(cur_attr_name.c_str());
+          form->addRow(text_label, line_edit);
+        }
 
       labels << text_label;
       fields << line_edit;
@@ -162,8 +172,17 @@ void EditElementWidget::attributeEditEvent()
                       ((QLineEdit *)line_edit)->setToolTip(tooltip_string);
                       ((QLineEdit *)line_edit)->setText("");
                     }
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
-                  form->addRow(text_label, line_edit);
+                  QString text_label;
+                  if (highlight_location && attr_name == "location")
+                    {
+                      text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(attr_name.c_str());
+                      form->addRow(text_label, line_edit);
+                    }
+                  else
+                    {
+                      text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                      form->addRow(text_label, line_edit);
+                    }
 
                   labels << text_label;
                   fields << line_edit;
@@ -297,7 +316,8 @@ void EditElementWidget::accept()
   for (int i = 0; i < labels.count(); i++)
     {
       auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
-      if (util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") &&
+      if ((util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") ||
+           util::startsWith(labels[i].toStdString(), "<span style='color:#0000ff;'>")) &&
           util::endsWith(labels[i].toStdString(), "</span>"))
         {
           labels[i].remove(0, 29);
