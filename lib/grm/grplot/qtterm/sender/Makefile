@@ -1,3 +1,5 @@
+# Replace this with a `CMakeLists.txt`
+
 GRDIR = /usr/local/gr
 INCLUDES = -I$(GRDIR)/include
 CFLAGS = -Wall -g $(INCLUDES)# -fsanitize=address
