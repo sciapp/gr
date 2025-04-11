@@ -3,13 +3,16 @@ arch-self-contained:
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
   script:
   - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DCMAKE_INSTALL_LIBDIR=${CI_PROJECT_DIR}/install/lib
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-arch
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-arch
   artifacts:
     expire_in: 1 week
     paths:
@@ -18,10 +21,14 @@ arch-self-contained:
 arch-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
-  script:
+  before_script:
   - pacman -Sy
   - pacman -S --noconfirm --needed qhull
-  - mkdir build
-  - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-  - make
+  script:
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - cmake --build build

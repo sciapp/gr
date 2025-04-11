@@ -3,17 +3,18 @@ centos7-self-contained:
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-self-contained
   script:
   - source /opt/rh/devtoolset-8/enable
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-centos7
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+      -DCMAKE_INSTALL_LIBDIR="${CI_PROJECT_DIR}/install/lib"
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-centos7
   artifacts:
     expire_in: 1 week
     paths:
@@ -22,37 +23,38 @@ centos7-self-contained:
 centos7-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-system-dependencies
+  before_script:
+  - yum install -y libjpeg-turbo-devel libtiff-devel bzip2-devel # TODO: Put these into the build images
   script:
   - source /opt/rh/devtoolset-8/enable
-  - yum install -y libjpeg-turbo-devel libtiff-devel bzip2-devel
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default TARGETS="qhull"
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
-  - make
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_FIND_ROOT_PATH="${CI_PROJECT_DIR}/3rdparty/build"
+  - cmake --build build
 
 centos7-32bit-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-self-contained
   script:
   - source /opt/gcc-8.5.0/enable
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
-  - tar xf cmake-3.23.0-linux-i386.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
-  - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
-    OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
-    make -C 3rdparty default extras
-  - mkdir build
-  - cd build
+  - make -C 3rdparty default extras
+      THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
+      OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
   - LDFLAGS="-static-libstdc++ -static-libgcc"
-    $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-centos7-32bit
+    cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-centos7-32bit
   artifacts:
     expire_in: 1 week
     paths:
@@ -61,15 +63,16 @@ centos7-32bit-self-contained:
 centos7-32bit-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-system-dependencies
+  before_script:
+  - yum install -y libtiff-devel bzip2-devel
   script:
   - source /opt/gcc-8.5.0/enable
-  - yum install -y libtiff-devel bzip2-devel
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
-  - tar xf cmake-3.23.0-linux-i386.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
   - make -C 3rdparty default TARGETS="qhull"
-  - mkdir build
-  - cd build
   - LDFLAGS="-static-libstdc++ -static-libgcc"
-    $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
-  - make
+    cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_FIND_ROOT_PATH="${CI_PROJECT_DIR}/3rdparty/build"
+  - cmake --build build

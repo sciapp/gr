@@ -2,17 +2,17 @@ debian-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-debian10
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-debian10
   - mv build/preview_images ./grplot-preview-images
   artifacts:
     expire_in: 1 week
@@ -24,71 +24,75 @@ debian-self-contained-aarch64:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
   script:
-  - make -C 3rdparty default extras \
-    HOST=aarch64-linux-gnu \
-    ARCHITECTURE=aarch64 \
-    OS=aarch64-linux-gnu \
-    CC=aarch64-linux-gnu-gcc \
-    CXX=aarch64-linux-gnu-g++ \
-    AR=aarch64-linux-gnu-ar \
-    STRIP=aarch64-linux-gnu-strip \
-    PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config" \
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-aarch64
+  - make -C 3rdparty default extras
+      HOST=aarch64-linux-gnu
+      ARCHITECTURE=aarch64
+      OS=aarch64-linux-gnu
+      CC=aarch64-linux-gnu-gcc
+      CXX=aarch64-linux-gnu-g++
+      AR=aarch64-linux-gnu-ar
+      STRIP=aarch64-linux-gnu-strip
+      PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0"
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake
+      XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config"
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64"
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake
+      -DCMAKE_BUILD_TYPE=Release
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-debian10-aarch64
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian10-aarch64/
+    - artifacts-debian10-aarch64/
 
 debian-self-contained-armhf:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf-cross
   script:
-  - make -C 3rdparty default extras \
-    HOST=arm-linux-gnueabihf \
-    ARCHITECTURE=armhf \
-    OS=arm-linux-gnueabihf \
-    CC=arm-linux-gnueabihf-gcc \
-    CXX=arm-linux-gnueabihf-g++ \
-    AR=arm-linux-gnueabihf-ar \
-    STRIP=arm-linux-gnueabihf-strip \
-    PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=arm-linux-gnueabihf- --arch=armhf --target-os=linux --pkg-config=pkg-config" \
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-armhf
+  - make -C 3rdparty default extras
+      HOST=arm-linux-gnueabihf
+      ARCHITECTURE=armhf
+      OS=arm-linux-gnueabihf
+      CC=arm-linux-gnueabihf-gcc
+      CXX=arm-linux-gnueabihf-g++
+      AR=arm-linux-gnueabihf-ar
+      STRIP=arm-linux-gnueabihf-strip
+      PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0"
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake
+      XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=arm-linux-gnueabihf- --arch=armhf --target-os=linux --pkg-config=pkg-config"
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf"
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake
+      -DCMAKE_BUILD_TYPE=Release
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-debian10-armhf
   artifacts:
     expire_in: 1 week
     paths:
@@ -102,9 +106,6 @@ debian-system-dependencies-armhf:
   before_script:
   - apt-get update
   - apt-get install -y libqhull-dev:armhf
-  - wget -O - "https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz"
-    | tar -C /usr/local --strip-components=1 -xzf -
-  - hash -r
   script:
   - cmake
       -S .
@@ -117,13 +118,14 @@ debian-system-dependencies-armhf:
 debian-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-system-dependencies
-  script:
+  before_script:
   - apt-get update
   - apt-get install -y libqhull-dev libbz2-dev libfreetype6-dev
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-  - make
+  script:
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - cmake --build build

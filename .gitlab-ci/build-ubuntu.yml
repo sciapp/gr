@@ -2,17 +2,17 @@ ubuntu-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-ubuntu2004
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-ubuntu2004
   artifacts:
     expire_in: 1 week
     paths:
@@ -22,18 +22,20 @@ ubuntu-self-contained-debug:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON -DCMAKE_CXX_FLAGS="-D_GLIBCXX_ASSERTIONS"
-  - make
-  - make install
-  - cd ..
-  - install ./build/libGRM_int.so ./install/lib/
-  - mv install artifacts-ubuntu2004
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+      -DGR_BUILD_DEMOS=ON
+      -DCMAKE_CXX_FLAGS="-D_GLIBCXX_ASSERTIONS"
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - install ./build/libGRM_int.so ./install/usr/local/gr/lib/
+  - mv ./install/usr/local/gr artifacts-ubuntu2004
   - mv build/grm_test_internal_api ./
   artifacts:
     expire_in: 1 week
@@ -44,13 +46,14 @@ ubuntu-self-contained-debug:
 ubuntu-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-system-dependencies
-  script:
+  before_script:
   - apt-get update
   - apt-get install -y libqhull-dev libbz2-dev libjpeg-turbo8-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-  - make
+  script:
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - cmake --build build

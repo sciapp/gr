@@ -96,25 +96,26 @@ darwin-self-contained:
       -DCMAKE_INSTALL_PREFIX=/usr/local/gr
       -DGR_USE_BUNDLED_LIBRARIES=ON
   - cmake --build build
-  - DESTDIR="$(pwd)/install" cmake --install build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-aarch64
   - git clean -fdx --exclude=artifacts-darwin-aarch64
   - export MACOSX_DEPLOYMENT_TARGET=11.0
   - make -C 3rdparty default extras
-    ARCHS="-arch x86_64"
-    CC="cc -arch x86_64"
-    CXX="c++ -arch x86_64"
-    CAIRO_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--arch=x86_64 --cc=\"cc -arch x86_64\" --cxx=\"c++ -arch x86_64\" --enable-cross-compile"
-    GLFW_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
-    OGG_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
-    OPENH264_EXTRA_MAKE_FLAGS="ARCH=x86_64"
-    PIXMAN_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
-    THEORA_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin --disable-asm"
-    TIFF_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
-    XERCES_C_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+      ARCHS="-arch x86_64"
+      CC="cc -arch x86_64"
+      CXX="c++ -arch x86_64"
+      CAIRO_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--arch=x86_64 --cc=\"cc -arch x86_64\" --cxx=\"c++ -arch x86_64\" --enable-cross-compile"
+      GLFW_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
+      OGG_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+      OPENH264_EXTRA_MAKE_FLAGS="ARCH=x86_64"
+      PIXMAN_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin --disable-asm"
+      TIFF_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+      XERCES_C_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
   - cmake
       -S .
       -B build
@@ -124,7 +125,8 @@ darwin-self-contained:
       -DCMAKE_TOOLCHAIN_FILE="cmake/x86_64-darwin-clang.cmake"
       -DGR_HOST_DIRECTORY="${CI_PROJECT_DIR}/artifacts-darwin-aarch64"
   - cmake --build build
-  - DESTDIR="$(pwd)/install" cmake --install build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-x86_64
   - merge_artifacts artifacts-darwin-aarch64 artifacts-darwin-x86_64 artifacts-darwin-universal

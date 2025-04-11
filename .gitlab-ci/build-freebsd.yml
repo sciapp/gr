@@ -6,7 +6,9 @@ freebsd-self-contained:
   script:
   - export CPATH="/usr/local/include"
   - export LIBRARY_PATH="/usr/local/lib"
-  - gmake -C 3rdparty default extras GRDIR=/usr/local/gr MAKE=gmake
+  - gmake -C 3rdparty default extras
+      GRDIR=/usr/local/gr
+      MAKE=gmake
   - cmake
       -S .
       -B build
@@ -14,7 +16,8 @@ freebsd-self-contained:
       -DCMAKE_INSTALL_PREFIX=/usr/local/gr
       -DGR_USE_BUNDLED_LIBRARIES=ON
   - cmake --build build
-  - DESTDIR="$(pwd)/install" cmake --install build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
   - mv ./install/usr/local/gr ./artifacts-freebsd13
   artifacts:
     expire_in: 1 week
