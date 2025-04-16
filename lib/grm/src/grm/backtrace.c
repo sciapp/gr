@@ -27,8 +27,8 @@
 /* ========================= functions ============================================================================== */
 
 #ifdef BACKTRACE_AVAILABLE
-static void backtrace_init(void);
-static void backtrace_handler(int sig);
+static void backtraceInit(void);
+static void backtraceHandler(int sig);
 #endif
 
 
@@ -51,7 +51,7 @@ static int signals[] = {SIGABRT, SIGSEGV};
 /* ========================= functions ============================================================================== */
 
 #ifdef BACKTRACE_AVAILABLE
-static const char *get_tmp_directory_no_malloc(void)
+static const char *getTmpDirectoryNoMalloc(void)
 {
   const char *tmp_dir;
   const char *env_vars[] = {
@@ -62,33 +62,27 @@ static const char *get_tmp_directory_no_malloc(void)
   };
   int i;
 
-  for (i = 0; i < array_size(env_vars); ++i)
+  for (i = 0; i < arraySize(env_vars); ++i)
     {
-      if ((tmp_dir = getenv(env_vars[i])) != NULL)
-        {
-          return tmp_dir;
-        }
+      if ((tmp_dir = getenv(env_vars[i])) != NULL) return tmp_dir;
     }
 
   return "/tmp";
 }
 
-void backtrace_init(void)
+void backtraceInit(void)
 {
-  if (is_backtrace_enabled < 0)
-    {
-      is_backtrace_enabled = is_env_variable_enabled(ENABLE_BACKTRACE_ENV_KEY);
-    }
+  if (is_backtrace_enabled < 0) is_backtrace_enabled = isEnvVariableEnabled(ENABLE_BACKTRACE_ENV_KEY);
 }
 
-void backtrace_handler(int sig)
+void backtraceHandler(int sig)
 {
   void *callstack[MAX_CALLSTACK_DEPTH];
   int frames;
   char backtrace_filepath[MAX_FILEPATH_LENGTH];
   int backtrace_fd;
 
-  snprintf(backtrace_filepath, MAX_FILEPATH_LENGTH, "%s/grm_backtrace", get_tmp_directory_no_malloc());
+  snprintf(backtrace_filepath, MAX_FILEPATH_LENGTH, "%s/grm_backtrace", getTmpDirectoryNoMalloc());
   frames = backtrace(callstack, MAX_CALLSTACK_DEPTH);
   backtrace_fd = open(backtrace_filepath, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
   backtrace_symbols_fd(callstack, frames, backtrace_fd);
@@ -115,56 +109,50 @@ void backtrace_handler(int sig)
 
 /* ========================= functions ============================================================================== */
 
-void install_backtrace_handler(void)
+void installBacktraceHandler(void)
 {
 #ifdef BACKTRACE_AVAILABLE
   int i;
 
-  for (i = 0; i < array_size(signals); ++i)
+  for (i = 0; i < arraySize(signals); ++i)
     {
-      signal(signals[i], backtrace_handler);
+      signal(signals[i], backtraceHandler);
     }
 #else
   fprintf(stderr, "Backtrace support not compiled in.\n");
 #endif
 }
 
-void install_backtrace_handler_if_enabled(void)
+void installBacktraceHandlerIfEnabled(void)
 {
 #ifdef BACKTRACE_AVAILABLE
-  if (backtrace_enabled())
-    {
-      install_backtrace_handler();
-    }
+  if (backtraceEnabled()) installBacktraceHandler();
 #endif
 }
 
-void uninstall_backtrace_handler(void)
+void uninstallBacktraceHandler(void)
 {
 #ifdef BACKTRACE_AVAILABLE
   int i;
 
-  for (i = 0; i < array_size(signals); ++i)
+  for (i = 0; i < arraySize(signals); ++i)
     {
       signal(signals[i], SIG_DFL);
     }
 #endif
 }
 
-void uninstall_backtrace_handler_if_enabled(void)
+void uninstallBacktraceHandlerIfEnabled(void)
 {
 #ifdef BACKTRACE_AVAILABLE
-  if (backtrace_enabled())
-    {
-      uninstall_backtrace_handler();
-    }
+  if (backtraceEnabled()) uninstallBacktraceHandler();
 #endif
 }
 
-int backtrace_enabled(void)
+int backtraceEnabled(void)
 {
 #ifdef BACKTRACE_AVAILABLE
-  backtrace_init();
+  backtraceInit();
   return is_backtrace_enabled;
 #else
   return 0;

@@ -78,7 +78,7 @@ diff --color -crB a/movenc.c b/movenc.c
           }
 +     }
 +     if (mov->flags & FF_MOV_FLAG_PIXELDENSITY) {
-+          mov_write_pixeldensity_meta_tag(pb, mov, track, st);
++          mov_write_pixeldensity_meta_tag(pb, mov, track, s);
       }
       mov_write_track_udta_tag(pb, mov, st);
       track->entry = entry_backup;

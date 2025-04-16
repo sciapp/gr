@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.16)
+cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
 
 project(
   grm_test_public_api
@@ -63,5 +63,3 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
                CXX_EXTENSIONS OFF
   )
 endforeach()
-
-add_subdirectory(snoop grm_test_snoop)

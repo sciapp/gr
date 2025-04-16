@@ -25,7 +25,7 @@
 
 /* ========================= static variables ======================================================================= */
 
-static const char base64_decode_table[128] = {
+static const char BASE64_DECODE_TABLE[128] = {
     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
@@ -38,18 +38,18 @@ static const char base64_decode_table[128] = {
     '.',    '/',    '0',    '1',    '2',    '3',    0,      0,      0,      0,      0,
 };
 
-static const char base64_encode_table[64] = {
+static const char BASE64_ENCODE_TABLE[64] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
     'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
     's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
 };
 
-static const char padding_char = '=';
+static const char PADDING_CHAR = '=';
 
 
 /* ========================= functions ============================================================================== */
 
-err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len)
+grm_error_t blockDecode(char dst[3], const char src[4], int block_len, int *decoded_block_len)
 {
   /*
    * Transform the four input characters with the `base64_decode_table` and interpret the result as four 6-bit values.
@@ -63,7 +63,7 @@ err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_b
   grm_static_assert(CHAR_BIT == 8, "A char must consist of 8 bits for this code to work.");
 
   /* Ignore padding characters */
-  while (src[block_len - 1] == padding_char && block_len > 0)
+  while (src[block_len - 1] == PADDING_CHAR && block_len > 0)
     {
       --block_len;
     }
@@ -80,7 +80,7 @@ err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_b
           logger((stderr, "At least two characters are needed for decoding.\n"));
         }
 #endif
-      return ERROR_BASE64_BLOCK_TOO_SHORT;
+      return GRM_ERROR_BASE64_BLOCK_TOO_SHORT;
     }
 
   /*
@@ -117,9 +117,9 @@ err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_b
             src[i] == '+' || src[i] == '/'))
         {
           logger((stderr, "The character \"%c\" is not a valid Base64 input character. Aborting.\n", src[i]));
-          return ERROR_BASE64_INVALID_CHARACTER;
+          return GRM_ERROR_BASE64_INVALID_CHARACTER;
         }
-      lookup_buffer[i] = base64_decode_table[(int)src[i]];
+      lookup_buffer[i] = BASE64_DECODE_TABLE[(int)src[i]];
     }
 
   dst[0] = (lookup_buffer[0] << 2) | (lookup_buffer[1] >> 4);
@@ -132,16 +132,13 @@ err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_b
         }
     }
 
-  if (decoded_block_len != NULL)
-    {
-      *decoded_block_len = block_len - 1;
-    }
+  if (decoded_block_len != NULL) *decoded_block_len = block_len - 1;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 
-err_t block_encode(char dst[4], const char src[3], int block_len)
+grm_error_t blockEncode(char dst[4], const char src[3], int block_len)
 {
   /* Interpret three 8-bit characters as four 6-bit indices for the `base64_encode_table` */
 
@@ -151,7 +148,7 @@ err_t block_encode(char dst[4], const char src[3], int block_len)
   if (block_len < 1)
     {
       logger((stderr, "At least one byte is needed for encoding.\n"));
-      return ERROR_BASE64_BLOCK_TOO_SHORT;
+      return GRM_ERROR_BASE64_BLOCK_TOO_SHORT;
     }
 
   /*
@@ -181,37 +178,37 @@ err_t block_encode(char dst[4], const char src[3], int block_len)
    * The sextet c only gets four bits from y. Fill the missing 2 bits with zeros. Set a padding character for d.
    *
    */
-  dst[0] = base64_encode_table[(((unsigned char)src[0]) >> 2) & '\x3f'];
+  dst[0] = BASE64_ENCODE_TABLE[(((unsigned char)src[0]) >> 2) & '\x3f'];
   if (block_len < 2)
     {
-      dst[1] = base64_encode_table[(((unsigned char)src[0]) << 4) & '\x3f'];
-      dst[2] = dst[3] = padding_char;
+      dst[1] = BASE64_ENCODE_TABLE[(((unsigned char)src[0]) << 4) & '\x3f'];
+      dst[2] = dst[3] = PADDING_CHAR;
     }
   else
     {
-      dst[1] = base64_encode_table[((((unsigned char)src[0]) << 4) | (((unsigned char)src[1]) >> 4)) & '\x3f'];
+      dst[1] = BASE64_ENCODE_TABLE[((((unsigned char)src[0]) << 4) | (((unsigned char)src[1]) >> 4)) & '\x3f'];
       if (block_len < 3)
         {
-          dst[2] = base64_encode_table[(((unsigned char)src[1]) << 2) & '\x3f'];
-          dst[3] = padding_char;
+          dst[2] = BASE64_ENCODE_TABLE[(((unsigned char)src[1]) << 2) & '\x3f'];
+          dst[3] = PADDING_CHAR;
         }
       else
         {
-          dst[2] = base64_encode_table[((((unsigned char)src[1]) << 2) | (((unsigned char)src[2]) >> 6)) & '\x3f'];
-          dst[3] = base64_encode_table[((unsigned char)src[2]) & '\x3f'];
+          dst[2] = BASE64_ENCODE_TABLE[((((unsigned char)src[1]) << 2) | (((unsigned char)src[2]) >> 6)) & '\x3f'];
+          dst[3] = BASE64_ENCODE_TABLE[((unsigned char)src[2]) & '\x3f'];
         }
     }
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 
-char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error)
+char *base64Decode(char *dst, const char *src, size_t *dst_len, grm_error_t *error)
 {
   size_t src_len, max_dst_len;
-  size_t dst_index = 0, src_index;
+  size_t dst_index, src_index;
   int decoded_block_len;
-  err_t _error = ERROR_NONE;
+  grm_error_t err = GRM_ERROR_NONE;
 
   src_len = strlen(src);
 
@@ -226,43 +223,31 @@ char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error)
       if (dst == NULL)
         {
           logger((stderr, "Could not allocate memory for the destination buffer. Aborting.\n"));
-          _error = ERROR_MALLOC;
+          err = GRM_ERROR_MALLOC;
           goto finally;
         }
     }
 
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += decoded_block_len, src_index += 4)
     {
-      _error = block_decode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 4), &decoded_block_len);
-      if (_error != ERROR_NONE)
-        {
-          break;
-        }
+      err = blockDecode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 4), &decoded_block_len);
+      if (err != GRM_ERROR_NONE) break;
     }
-  if (dst_len != NULL)
-    {
-      *dst_len = dst_index;
-    }
+  if (dst_len != NULL) *dst_len = dst_index;
 
 finally:
-  if (dst != NULL)
-    {
-      dst[dst_index] = '\0'; /* Always add a string terminator */
-    }
-  if (error != NULL)
-    {
-      *error = _error;
-    }
+  if (dst != NULL) dst[dst_index] = '\0'; /* Always add a string terminator */
+  if (error != NULL) *error = err;
 
   return dst;
 }
 
 
-char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error)
+char *base64Encode(char *dst, const char *src, size_t src_len, grm_error_t *error)
 {
   size_t dst_len;
-  size_t dst_index = 0, src_index;
-  err_t _error = ERROR_NONE;
+  size_t dst_index, src_index;
+  grm_error_t err = GRM_ERROR_NONE;
 
   /* Always round up to multiple of 4 */
   dst_len = (4 * src_len) / 3;
@@ -275,29 +260,20 @@ char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error)
       if (dst == NULL)
         {
           logger((stderr, "Could not allocate memory for the destination buffer. Aborting.\n"));
-          _error = ERROR_MALLOC;
+          err = GRM_ERROR_MALLOC;
           goto finally;
         }
     }
 
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += 4, src_index += 3)
     {
-      _error = block_encode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 3));
-      if (_error != ERROR_NONE)
-        {
-          break;
-        }
+      err = blockEncode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 3));
+      if (err != GRM_ERROR_NONE) break;
     }
 
 finally:
-  if (dst != NULL)
-    {
-      dst[dst_index] = '\0'; /* Always add a string terminator */
-    }
-  if (error != NULL)
-    {
-      *error = _error;
-    }
+  if (dst != NULL) dst[dst_index] = '\0'; /* Always add a string terminator */
+  if (error != NULL) *error = err;
 
   return dst;
 }
@@ -309,30 +285,24 @@ finally:
 
 char *grm_base64_decode(char *dst, const char *src, size_t *dst_len, int *was_successful)
 {
-  err_t error;
+  grm_error_t error;
   char *decoded_string;
 
-  decoded_string = base64_decode(dst, src, dst_len, &error);
+  decoded_string = base64Decode(dst, src, dst_len, &error);
 
-  if (was_successful != NULL)
-    {
-      *was_successful = error == ERROR_NONE;
-    }
+  if (was_successful != NULL) *was_successful = error == GRM_ERROR_NONE;
 
   return decoded_string;
 }
 
 char *grm_base64_encode(char *dst, const char *src, size_t src_len, int *was_successful)
 {
-  err_t error;
+  grm_error_t error;
   char *encoded_string;
 
-  encoded_string = base64_encode(dst, src, src_len, &error);
+  encoded_string = base64Encode(dst, src, src_len, &error);
 
-  if (was_successful != NULL)
-    {
-      *was_successful = error == ERROR_NONE;
-    }
+  if (was_successful != NULL) *was_successful = error == GRM_ERROR_NONE;
 
   return encoded_string;
 }

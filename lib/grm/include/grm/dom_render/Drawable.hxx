@@ -9,17 +9,17 @@ class Drawable
 {
 public:
   Drawable(
-      const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int grContextId,
-      int zIndex,
-      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction);
+      const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int gr_context_id,
+      int z_index,
+      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> draw_function);
   void draw();
-  int zIndex;
-  int insertionIndex; /* used to order drawables with the same zIndex in the order of insertion */
+  int z_index;
+  int insertion_index; /* used to order drawables with the same zIndex in the order of insertion */
   int getGrContextId() const;
   const std::shared_ptr<GRM::Element> &getElement() const;
 
 private:
-  int grContextId;
+  int gr_context_id;
   const std::shared_ptr<GRM::Element> element;
   const std::shared_ptr<GRM::Context> context;
   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction;

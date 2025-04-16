@@ -21,7 +21,13 @@ darwin-self-contained:
       mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
       mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
       cp /usr/local/qt6/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
-      cp lib/grm/grplot/README.md artifacts/grplot.man.md
+      mkdir -p artifacts/share/doc/grplot
+      cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
+      mkdir -p artifacts/share/licenses/GR
+      cp LICENSE.md artifacts/share/licenses/GR/
+      mkdir -p artifacts/share/xml/GRM
+      cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
+      cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
       cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
       mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
       mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms

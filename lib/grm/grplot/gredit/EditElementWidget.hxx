@@ -14,7 +14,7 @@
 #include <QKeyEvent>
 #include "grm.h"
 class EditElementWidget;
-#include "../grplot_widget.hxx"
+#include "../grplotWidget.hxx"
 
 
 class EditElementWidget : public QWidget
@@ -23,7 +23,7 @@ class EditElementWidget : public QWidget
 public:
   explicit EditElementWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
 
-  void AttributeEditEvent();
+  void attributeEditEvent();
 
 private slots:
   void reject();

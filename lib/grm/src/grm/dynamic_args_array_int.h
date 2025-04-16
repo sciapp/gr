@@ -8,7 +8,7 @@ extern "C" {
 /* ######################### includes ############################################################################### */
 
 #include <grm/args.h>
-#include "grm/error.h"
+#include "error_int.h"
 
 
 /* ######################### internal interface ##################################################################### */
@@ -30,16 +30,16 @@ typedef struct
   grm_args_t **buf;
   size_t size;
   size_t capacity;
-} dynamic_args_array_t;
+} DynamicArgsArray;
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- dynamic args array --------------------------------------------------------------------- */
 
-dynamic_args_array_t *dynamic_args_array_new(void);
-void dynamic_args_array_delete(dynamic_args_array_t *args_array);
-void dynamic_args_array_delete_with_elements(dynamic_args_array_t *args_array);
-err_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, grm_args_t *args);
+DynamicArgsArray *dynamicArgsArrayNew(void);
+void dynamicArgsArrayDelete(DynamicArgsArray *args_array);
+void dynamicArgsArrayDeleteWithElements(DynamicArgsArray *args_array);
+grm_error_t dynamicArgsArrayPushBack(DynamicArgsArray *args_array, grm_args_t *args);
 
 
 #ifdef __cplusplus

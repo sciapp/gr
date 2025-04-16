@@ -5,9 +5,9 @@
 #include <utility>
 
 #include <grm/dom_render/graphics_tree/Element.hxx>
-#include "CustomTreeWidgetItem.h"
+#include "CustomTreeWidgetItem.hxx"
 class TreeWidget;
-#include "../grplot_widget.hxx"
+#include "../grplotWidget.hxx"
 
 
 class TreeWidget : public QTreeWidget
@@ -23,7 +23,7 @@ protected:
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
-  CustomTreeWidgetItem *plotTree;
+  CustomTreeWidgetItem *plot_tree;
 
 private:
   GRPlotWidget *grplot_widget;

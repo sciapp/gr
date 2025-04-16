@@ -3,17 +3,17 @@
 #include "grm/dom_render/render.hxx"
 
 Drawable::Drawable(
-    const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int grContextId,
-    int zIndex,
-    std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction)
-    : grContextId(grContextId), element(element), context(context), drawFunction(drawFunction), zIndex(zIndex)
+    const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int gr_context_id,
+    int z_index,
+    std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> draw_function)
+    : gr_context_id(gr_context_id), element(element), context(context), drawFunction(draw_function), z_index(z_index)
 {
   ;
 }
 
 void Drawable::draw()
 {
-  gr_selectcontext(grContextId);
+  gr_selectcontext(gr_context_id);
   gr_savestate();
   bool old_state;
   GRM::Render::getAutoUpdate(&old_state);
@@ -31,13 +31,11 @@ const std::shared_ptr<GRM::Element> &Drawable::getElement() const
 
 int Drawable::getGrContextId() const
 {
-  return grContextId;
+  return gr_context_id;
 }
 
 bool CompareZIndex::operator()(std::shared_ptr<Drawable> const &lhs, std::shared_ptr<Drawable> const &rhs)
 {
-  if (lhs->zIndex != rhs->zIndex)
-    return lhs->zIndex > rhs->zIndex;
-  else
-    return lhs->insertionIndex > rhs->insertionIndex;
+  if (lhs->z_index != rhs->z_index) return lhs->z_index > rhs->z_index;
+  return lhs->insertion_index > rhs->insertion_index;
 }

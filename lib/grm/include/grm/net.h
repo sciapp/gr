@@ -25,15 +25,15 @@ extern "C" {
 
 /* ------------------------- receiver / sender----------------------------------------------------------------------- */
 
-EXPORT void *grm_open(int is_receiver, const char *name, unsigned int id,
-                      const char *(*custom_recv)(const char *, unsigned int),
-                      int (*custom_send)(const char *, unsigned int, const char *));
-EXPORT grm_args_t *grm_recv(const void *p, grm_args_t *args);
-EXPORT int grm_send(const void *p, const char *data_desc, ...);
-EXPORT int grm_send_buf(const void *p, const char *data_desc, const void *buffer, int apply_padding);
-EXPORT int grm_send_ref(const void *p, const char *key, char format, const void *ref, int len);
-EXPORT int grm_send_args(const void *p, const grm_args_t *args);
-EXPORT void grm_close(const void *p);
+GRM_EXPORT void *grm_open(int is_receiver, const char *name, unsigned int id,
+                          const char *(*custom_recv)(const char *, unsigned int),
+                          int (*custom_send)(const char *, unsigned int, const char *));
+GRM_EXPORT grm_args_t *grm_recv(const void *p, grm_args_t *args);
+GRM_EXPORT int grm_send(const void *p, const char *data_desc, ...);
+GRM_EXPORT int grm_send_buf(const void *p, const char *data_desc, const void *buffer, int apply_padding);
+GRM_EXPORT int grm_send_ref(const void *p, const char *key, char format, const void *ref, int len);
+GRM_EXPORT int grm_send_args(const void *p, const grm_args_t *args);
+GRM_EXPORT void grm_close(const void *p);
 
 
 #ifdef __cplusplus

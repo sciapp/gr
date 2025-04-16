@@ -1,4 +1,4 @@
-#include "TableWidget.h"
+#include "TableWidget.hxx"
 
 #include <QHeaderView>
 #include <QObject>
@@ -40,7 +40,7 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
   // disconnect so that a reread wont trigger applyTableChanges
   disconnect(this, SIGNAL(cellChanged(int, int)), this, SLOT(applyTableChanges(int, int)));
   this->context = context;
-  this->context_attributes = getContextAttributes();
+  this->context_attributes = GRM::getContextAttributes();
 
   context_data = extractContextNames(context);
   this->setColumnCount(this->col_num);
@@ -70,7 +70,7 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
 
 void TableWidget::applyTableChanges(int row, int column)
 {
-  std::string new_value = this->item(row, column)->text().toStdString();
+  auto new_value = this->item(row, column)->text().toStdString();
 
   if (getenv("GRM_DEBUG"))
     fprintf(stderr, "Detected change at (%i/%i) with value '%s'. Old value was '%s'\n", row, column, new_value.c_str(),
@@ -145,14 +145,14 @@ void TableWidget::applyTableChanges(int row, int column)
           auto vec = GRM::get<std::vector<std::string>>((*this->context)[context_key]);
           (*this->context)[new_value] = vec;
         }
-      addValidContextKey(new_value); // add the name to valid keys so it could also be exported and updated
+      GRM::addValidContextKey(new_value); // add the name to valid keys so it could also be exported and updated
 
       // get the plain XML-tree and use the string find option to get attr=value -> use this information to select the
       // tree element and update the value with the new context name
       // all that is needed cause u can't search just for the value with the selector
       auto tree_str = GRM::toXML(
           grm_get_document_root(),
-          GRM::SerializerOptions{std::string(2, ' '), GRM::SerializerOptions::InternalAttributesFormat::Plain});
+          GRM::SerializerOptions{std::string(2, ' '), GRM::SerializerOptions::InternalAttributesFormat::PLAIN});
       std::string token = "=\"" + std::string(context_key) + "\"";
       while (tree_str.find(token) != std::string::npos)
         {
@@ -176,7 +176,7 @@ void TableWidget::applyTableChanges(int row, int column)
               if (static_cast<std::string>(elem->getAttribute(attr)) == std::string(context_key))
                 {
                   elem->setAttribute(attr, new_value);
-                  (*this->context)[context_key].decrement_key(context_key);
+                  (*this->context)[context_key].decrementKey(context_key);
                   break;
                 }
             }
@@ -196,7 +196,7 @@ void TableWidget::showUsagesOfContext(int row, int column)
       // all that is needed cause u can't search just for the value with the selector
       auto tree_str = GRM::toXML(
           grm_get_document_root(),
-          GRM::SerializerOptions{std::string(2, ' '), GRM::SerializerOptions::InternalAttributesFormat::Plain});
+          GRM::SerializerOptions{std::string(2, ' '), GRM::SerializerOptions::InternalAttributesFormat::PLAIN});
       std::string token = "=\"" + std::string(context_ref_name) + "\"";
       while (tree_str.find(token) != std::string::npos)
         {
@@ -214,19 +214,19 @@ void TableWidget::showUsagesOfContext(int row, int column)
             continue;
           for (const auto &elem : grm_get_document_root()->querySelectorsAll("[" + selector_token + "]"))
             {
-              bool skip = false;
               if (static_cast<std::string>(elem->getAttribute(attr)) == std::string(context_ref_name))
                 {
+                  bool skip = false;
                   auto bbox_id = static_cast<int>(elem->getAttribute("_bbox_id"));
                   auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
                   auto bbox_x_max = static_cast<double>(elem->getAttribute("_bbox_x_max"));
                   auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
                   auto bbox_y_max = static_cast<double>(elem->getAttribute("_bbox_y_max"));
-                  const Bounding_object bbox =
-                      Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, elem);
+                  const BoundingObject bbox =
+                      BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, elem);
                   for (const auto &vec_elem : referenced_attributes)
                     {
-                      if (vec_elem.get_ref() == elem)
+                      if (vec_elem.getRef() == elem)
                         {
                           skip = true;
                           break;
@@ -237,7 +237,7 @@ void TableWidget::showUsagesOfContext(int row, int column)
             }
         }
     }
-  this->grplot_widget->set_referenced_elements(this->referenced_attributes);
+  this->grplot_widget->setReferencedElements(this->referenced_attributes);
   this->grplot_widget->redraw();
 }
 

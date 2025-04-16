@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.16)
+cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
 
 project(
   grm_test_internal_api

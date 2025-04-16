@@ -24,6 +24,7 @@ typedef enum
   GRM_EVENT_MERGE_END,
   GRM_EVENT_REQUEST,
   GRM_EVENT_INTEGRAL_UPDATE,
+  /* NOLINTNEXTLINE(readability-identifier-naming) */
   _GRM_EVENT_TYPE_COUNT /* helper entry to store how many different event types exist */
 } grm_event_type_t;
 
@@ -83,8 +84,8 @@ typedef void (*grm_event_callback_t)(const grm_event_t *);
 
 /* ------------------------- event handling ------------------------------------------------------------------------- */
 
-EXPORT int grm_register(grm_event_type_t type, grm_event_callback_t callback);
-EXPORT int grm_unregister(grm_event_type_t type);
+GRM_EXPORT int grm_register(grm_event_type_t type, grm_event_callback_t callback);
+GRM_EXPORT int grm_unregister(grm_event_type_t type);
 
 
 #ifdef __cplusplus

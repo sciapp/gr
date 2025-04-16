@@ -15,7 +15,7 @@ class Element;
 class Document;
 class Selector;
 
-class EXPORT Node : public std::enable_shared_from_this<Node>
+class GRM_EXPORT Node : public std::enable_shared_from_this<Node>
 {
 public:
   enum class Type
@@ -75,11 +75,11 @@ public:
 
   virtual std::shared_ptr<Node> cloneNode(bool deep);
 
-  virtual bool isEqualNode(const std::shared_ptr<const Node> &otherNode) const;
+  virtual bool isEqualNode(const std::shared_ptr<const Node> &other_node) const;
 
-  bool isSameNode(const std::shared_ptr<const Node> &otherNode) const;
+  bool isSameNode(const std::shared_ptr<const Node> &other_node) const;
 
-  bool contains(const std::shared_ptr<const Node> &otherNode) const;
+  bool contains(const std::shared_ptr<const Node> &other_node) const;
 
   std::shared_ptr<Node> insertBefore(std::shared_ptr<Node> node, const std::shared_ptr<Node> &child);
 
@@ -92,51 +92,51 @@ public:
 protected:
   Node(Type type, const std::shared_ptr<Document> &owner_document);
 
-  std::vector<std::shared_ptr<Element>> getElementsByClassName_impl(const std::string &classNames);
+  std::vector<std::shared_ptr<Element>> getElementsByClassNameImpl(const std::string &class_names);
 
-  std::vector<std::shared_ptr<const Element>> getElementsByClassName_impl(const std::string &classNames) const;
+  std::vector<std::shared_ptr<const Element>> getElementsByClassNameImpl(const std::string &class_names) const;
 
   /* ParentNode interface implementations */
-  std::vector<std::shared_ptr<Element>> children_impl();
+  std::vector<std::shared_ptr<Element>> childrenImpl();
 
-  std::vector<std::shared_ptr<const Element>> children_impl() const;
+  std::vector<std::shared_ptr<const Element>> childrenImpl() const;
 
-  std::shared_ptr<Element> firstChildElement_impl();
+  std::shared_ptr<Element> firstChildElementImpl();
 
-  std::shared_ptr<const Element> firstChildElement_impl() const;
+  std::shared_ptr<const Element> firstChildElementImpl() const;
 
-  std::shared_ptr<Element> lastChildElement_impl();
+  std::shared_ptr<Element> lastChildElementImpl();
 
-  std::shared_ptr<const Element> lastChildElement_impl() const;
+  std::shared_ptr<const Element> lastChildElementImpl() const;
 
-  unsigned long childElementCount_impl() const;
+  unsigned long childElementCountImpl() const;
 
-  void prepend_impl(const std::vector<std::shared_ptr<Node>> &nodes);
+  void prependImpl(const std::vector<std::shared_ptr<Node>> &nodes);
 
-  void append_impl(const std::vector<std::shared_ptr<Node>> &nodes);
+  void appendImpl(const std::vector<std::shared_ptr<Node>> &nodes);
 
-  void replaceChildren_impl(const std::vector<std::shared_ptr<Node>> &nodes);
+  void replaceChildrenImpl(const std::vector<std::shared_ptr<Node>> &nodes);
 
-  void querySelectorsAll_impl(const std::shared_ptr<GRM::Selector> &selector,
-                              std::vector<std::shared_ptr<GRM::Element>> &found_elements,
-                              std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
-  void querySelectorsAll_impl(const std::shared_ptr<GRM::Selector> &selector,
-                              std::vector<std::shared_ptr<const GRM::Element>> &found_elements,
-                              std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
+  void querySelectorsAllImpl(const std::shared_ptr<GRM::Selector> &selector,
+                             std::vector<std::shared_ptr<GRM::Element>> &found_elements,
+                             std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
+  void querySelectorsAllImpl(const std::shared_ptr<GRM::Selector> &selector,
+                             std::vector<std::shared_ptr<const GRM::Element>> &found_elements,
+                             std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
   std::shared_ptr<Element>
-  querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
-                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
+  querySelectorsImpl(const std::shared_ptr<GRM::Selector> &selector,
+                     std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
   std::shared_ptr<const Element>
-  querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
-                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
+  querySelectorsImpl(const std::shared_ptr<GRM::Selector> &selector,
+                     std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
 
   // NonDocumentTypeChildNode interface implementations
 
-  std::shared_ptr<Element> previousElementSibling_impl();
-  std::shared_ptr<const Element> previousElementSibling_impl() const;
+  std::shared_ptr<Element> previousElementSiblingImpl();
+  std::shared_ptr<const Element> previousElementSiblingImpl() const;
 
-  std::shared_ptr<Element> nextElementSibling_impl();
-  std::shared_ptr<const Element> nextElementSibling_impl() const;
+  std::shared_ptr<Element> nextElementSiblingImpl();
+  std::shared_ptr<const Element> nextElementSiblingImpl() const;
 
   // virtual functions
 
@@ -144,11 +144,10 @@ protected:
 
   // static functions
 
-  static void set_owner_document_recursive(const std::shared_ptr<Node> &node,
-                                           const std::shared_ptr<Document> &document);
+  static void setOwnerDocumentRecursive(const std::shared_ptr<Node> &node, const std::shared_ptr<Document> &document);
 
-  static bool children_are_equal_recursive(const std::shared_ptr<const Node> &left_node,
-                                           const std::shared_ptr<const Node> &right_node);
+  static bool childrenAreEqualRecursive(const std::shared_ptr<const Node> &left_node,
+                                        const std::shared_ptr<const Node> &right_node);
 
 private:
   std::shared_ptr<Document> nodeDocument();

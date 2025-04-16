@@ -8,10 +8,12 @@
 !.gitlab-ci
 !.gitlab-ci.yml
 !.setup_cmakeformat.sh
+!/lib/grm/.clang-tidy-naming
 *.a
 *.app
 *.dylib
 *.o
+*.exe
 *.pc
 *.pkg
 *.so
@@ -34,5 +36,3 @@ moc_*.cpp
 moc_*.h
 qrc_*.cpp
 clion-build/
-lib/grm/test/public_api/grm/snoop/diff_images/
-lib/grm/test/public_api/grm/snoop/snoop.jl

@@ -7,7 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <QApplication>
-#include "grplot_mainwindow.hxx"
+#include "grplotMainwindow.hxx"
 #include "util.hxx"
 
 const unsigned int WIDTH = 600;
@@ -94,15 +94,15 @@ int main(int argc, char **argv)
           else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) /* help page should be shown */
             {
 #ifdef _WIN32
-              std::wstringstream pathStream;
-              pathStream << util::getEnvVar(L"GRDIR", L"" GRDIR)
+              std::wstringstream path_stream;
+              path_stream << util::getEnvVar(L"GRDIR", L"" GRDIR)
 #else
-              std::stringstream pathStream;
-              pathStream << util::getEnvVar("GRDIR", GRDIR)
+              std::stringstream path_stream;
+              path_stream << util::getEnvVar("GRDIR", GRDIR)
 #endif
-                         << "/share/doc/grplot/grplot.man.md";
+                          << "/share/doc/grplot/grplot.man.md";
 
-              if (!util::fileExists(pathStream.str()))
+              if (!util::fileExists(path_stream.str()))
                 {
                   fprintf(stderr, "Helpfile not found\n");
                   return 1;

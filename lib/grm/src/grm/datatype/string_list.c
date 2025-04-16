@@ -14,26 +14,23 @@
 
 /* ------------------------- string_list ---------------------------------------------------------------------------- */
 
-DEFINE_LIST_METHODS(string)
+DEFINE_LIST_METHODS(String, string)
 
-err_t string_list_entry_copy(string_list_entry_t *copy, const string_list_const_entry_t entry)
+grm_error_t stringListEntryCopy(StringListEntry *copy, const StringListConstEntry entry)
 {
-  string_list_entry_t _copy;
+  StringListEntry tmp_copy;
 
-  _copy = gks_strdup(entry);
-  if (_copy == NULL)
-    {
-      return ERROR_MALLOC;
-    }
-  *copy = _copy;
+  tmp_copy = gks_strdup(entry);
+  if (tmp_copy == NULL) return GRM_ERROR_MALLOC;
+  *copy = tmp_copy;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t string_list_entry_delete(string_list_entry_t entry)
+grm_error_t stringListEntryDelete(StringListEntry entry)
 {
   free(entry);
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 
