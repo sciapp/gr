@@ -2,7 +2,7 @@
 #define RECEIVER_THREAD_H_INCLUDED
 
 #include "grm.h"
-#include "grm_args_t_wrapper.h"
+#include "ArgsWrapper.hxx"
 #include <QThread>
 #include <QDebug>
 
@@ -17,7 +17,7 @@ public:
   void start();
 
 signals:
-  void resultReady(grm_args_t_wrapper args);
+  void resultReady(ArgsWrapper args);
 
 private slots:
   void receiveData();

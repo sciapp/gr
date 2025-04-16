@@ -9,17 +9,17 @@ extern "C" {
 
 #include <stdlib.h>
 
-#include "grm/error.h"
+#include "error_int.h"
 #include <grm/base64.h>
 
 
 /* ######################### internal interface ##################################################################### */
 
-err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len);
-err_t block_encode(char dst[4], const char src[3], int block_len);
+grm_error_t blockDecode(char dst[3], const char src[4], int block_len, int *decoded_block_len);
+grm_error_t blockEncode(char dst[4], const char src[3], int block_len);
 
-char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error);
-char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error);
+char *base64Decode(char *dst, const char *src, size_t *dst_len, grm_error_t *error);
+char *base64Encode(char *dst, const char *src, size_t src_len, grm_error_t *error);
 
 #ifdef __cplusplus
 }

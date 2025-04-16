@@ -71,6 +71,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_active" type="xs:integer"/>
+            <xs:attribute name="_active_through_update" type="xs:integer"/>
             <xs:attribute name="_bottom_window_xform_a" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_bottom_window_xform_b" type="xs:double"/>
@@ -138,10 +139,19 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_before_centering_polar_vp_x_max" type="xs:double"/>
+            <xs:attribute name="_before_centering_polar_vp_x_min" type="xs:double"/>
+            <xs:attribute name="_before_centering_polar_vp_y_max" type="xs:double"/>
+            <xs:attribute name="_before_centering_polar_vp_y_min" type="xs:double"/>
+            <xs:attribute name="_bottom_axis_border" type="xs:double"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_left_axis_border" type="xs:double"/>
+            <xs:attribute name="_right_axis_border" type="xs:double"/>
             <xs:attribute name="_skip_calculations" type="xs:integer"/>
             <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
+            <xs:attribute name="_top_axis_border" type="xs:double"/>
+            <xs:attribute name="_vp_with_extent" type="xs:double"/>
             <xs:attribute name="_zoomed" type="xs:int"/>
         </xs:complexType>
     </xs:element>
@@ -153,6 +163,7 @@
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_offset" type="xs:double"/>
             <xs:attribute name="_width_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -164,6 +175,7 @@
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_offset" type="xs:double"/>
             <xs:attribute name="_width_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -184,6 +196,7 @@
     <xs:element name="coordinate_system">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
         </xs:complexType>
@@ -396,6 +409,7 @@
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_max_char_height_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_offset" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

@@ -108,7 +108,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
                           TransparencyVector *transparency_buffer, int alpha_mode, float *alphas);
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
-                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float sum, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
                       float diffuse_str, float specular_str, float specular_exp,
                       TransparencyVector *transparency_buffer, int alpha_mode, float *alphas);
 static void color_pixel(unsigned char *pixels, float *depth_buffer, TransparencyVector *transparency_buffer,
@@ -933,10 +933,24 @@ GR3API int gr3_initSR_(void)
 #ifndef NO_THREADS
   if (context_struct_.init_struct.num_threads == 0)
     {
-      gr3_log_("Number of Threads equals number of cores minus one");
-      context_struct_.num_threads = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < MAX_NUM_THREADS
-                                        ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1
-                                        : MAX_NUM_THREADS;
+      int num_threads = 0;
+      const char *num_threads_env = getenv("GR3_NUM_THREADS");
+      if (num_threads_env != NULL)
+        {
+          num_threads = atoi(num_threads_env);
+        }
+      if (num_threads > 0)
+        {
+          gr3_log_("Number of Threads read from \"GR3_NUM_THREADS\"");
+          context_struct_.num_threads = num_threads;
+        }
+      else
+        {
+          gr3_log_("Number of Threads equals number of cores minus one");
+          context_struct_.num_threads = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < MAX_NUM_THREADS
+                                            ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1
+                                            : MAX_NUM_THREADS;
+        }
     }
   else
     {
@@ -1638,7 +1652,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
   float curx1 = 0;
   float curx2 = v_fp_sorted[0]->x + (scanlineY - v_fp_sorted[0]->y) * invslope_long;
   int curx, dif, first_x = 0;
-  float w0 = 0, w1 = 0, w2 = 0, sum_inv = 0;
+  float w0 = 0, w1 = 0, w2 = 0, sum = 0;
   int lim = (int)v_fp_sorted[2]->y > height - 1 ? height - 1 : (int)v_fp_sorted[2]->y;
   for (scanlineY = starty; scanlineY <= lim; scanlineY++)
     {
@@ -1685,7 +1699,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
               w0 = triangle_surface_2d(B12, -A12, v_fp[1]->y, v_fp[1]->x, scanlineY, first_x);
               w1 = triangle_surface_2d(B20, -A20, v_fp[2]->y, v_fp[2]->x, scanlineY, first_x);
               w2 = triangle_surface_2d(B01, -A01, v_fp[0]->y, v_fp[0]->x, scanlineY, first_x);
-              sum_inv = 1 / (w0 + w1 + w2);
+              sum = w0 + w1 + w2;
             }
           else
             {
@@ -1693,7 +1707,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
               w0 = triangle_surface_2d(B12, -A12, v_fp[1]->y, v_fp[1]->x, scanlineY, first_x);
               w1 = triangle_surface_2d(B20, -A20, v_fp[2]->y, v_fp[2]->x, scanlineY, first_x);
               w2 = triangle_surface_2d(B01, -A01, v_fp[0]->y, v_fp[0]->x, scanlineY, first_x);
-              sum_inv = 1 / (w0 + w1 + w2);
+              sum = w0 + w1 + w2;
             }
         }
       if (left_pointing)
@@ -1704,7 +1718,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx2, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
+                    sum, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
                     transparency_buffer, alpha_mode, alphas);
         }
       else
@@ -1715,7 +1729,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx1, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
+                    sum, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
                     transparency_buffer, alpha_mode, alphas);
         }
       first_x = curx;
@@ -1733,7 +1747,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
  */
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
-                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float sum, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
                       float diffuse_str, float specular_str, float specular_exp,
                       TransparencyVector *transparency_buffer, int alpha_mode, float *alphas)
 {
@@ -1757,7 +1771,7 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
           return;
         }
 #endif
-      depth = (w0 * v_fp[0]->z + w1 * v_fp[1]->z + w2 * v_fp[2]->z) * sum_inv;
+      depth = sum / (w0 / v_fp[0]->z + w1 / v_fp[1]->z + w2 / v_fp[2]->z);
       if ((context_struct_.use_transparency || depth < dep_buf[y * width + x]) && depth >= 0 && depth <= 1)
         {
           int discard = 0;

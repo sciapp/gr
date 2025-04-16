@@ -12,14 +12,14 @@
 
 /* ------------------------- string-to-double map ------------------------------------------------------------------- */
 
-DECLARE_MAP_TYPE(double, double)
+DECLARE_MAP_TYPE(Double, double)
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- string-to-double map ------------------------------------------------------------------- */
 
-DECLARE_MAP_METHODS(double)
+DECLARE_MAP_METHODS(Double, double)
 
 
 #undef DECLARE_MAP_TYPE

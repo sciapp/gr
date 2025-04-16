@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "grm/error.h"
+#include "error_int.h"
 #include "memwriter_int.h"
 
 
@@ -17,21 +17,21 @@
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
 
-memwriter_t *memwriter_new()
+Memwriter *memwriterNew()
 {
-  memwriter_t *memwriter;
+  Memwriter *memwriter;
 
-  memwriter = malloc(sizeof(memwriter_t));
+  memwriter = malloc(sizeof(Memwriter));
   if (memwriter == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
   memwriter->buf = malloc(MEMWRITER_INITIAL_SIZE);
   if (memwriter->buf == NULL)
     {
       free(memwriter);
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
   memwriter->size = 0;
@@ -40,7 +40,7 @@ memwriter_t *memwriter_new()
   return memwriter;
 }
 
-void memwriter_delete(memwriter_t *memwriter)
+void memwriterDelete(Memwriter *memwriter)
 {
   if (memwriter != NULL)
     {
@@ -49,19 +49,19 @@ void memwriter_delete(memwriter_t *memwriter)
     }
 }
 
-void memwriter_clear(memwriter_t *memwriter)
+void memwriterClear(Memwriter *memwriter)
 {
   memwriter->size = 0;
   *memwriter->buf = '\0';
 }
 
-err_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str)
+grm_error_t memwriterReplace(Memwriter *memwriter, int index, int count, const char *replacement_str)
 {
   int replacement_str_len = (replacement_str != NULL) ? strlen(replacement_str) : 0;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   if ((replacement_str_len > count) &&
-      (error = memwriter_ensure_buf(memwriter, replacement_str_len - count)) != ERROR_NONE)
+      (error = memwriterEnsureBuf(memwriter, replacement_str_len - count)) != GRM_ERROR_NONE)
     {
       return error;
     }
@@ -70,26 +70,23 @@ err_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char
       memmove(memwriter->buf + index + replacement_str_len, memwriter->buf + index + count,
               memwriter->size - (index + count));
     }
-  if (replacement_str != NULL)
-    {
-      memcpy(memwriter->buf + index, replacement_str, replacement_str_len);
-    }
+  if (replacement_str != NULL) memcpy(memwriter->buf + index, replacement_str, replacement_str_len);
   memwriter->size += replacement_str_len - count;
 
   return error;
 }
 
-err_t memwriter_erase(memwriter_t *memwriter, int index, int count)
+grm_error_t memwriterErase(Memwriter *memwriter, int index, int count)
 {
-  return memwriter_replace(memwriter, index, count, NULL);
+  return memwriterReplace(memwriter, index, count, NULL);
 }
 
-err_t memwriter_insert(memwriter_t *memwriter, int index, const char *str)
+grm_error_t memwriterInsert(Memwriter *memwriter, int index, const char *str)
 {
-  return memwriter_replace(memwriter, index, 0, str);
+  return memwriterReplace(memwriter, index, 0, str);
 }
 
-err_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment)
+grm_error_t memwriterEnlargeBuf(Memwriter *memwriter, size_t size_increment)
 {
   void *new_buf;
 
@@ -114,34 +111,34 @@ err_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment)
         }
       else
         {
-          size_increment = next_or_equal_power2(memwriter->capacity + size_increment) - memwriter->capacity;
+          size_increment = nextOrEqualPower2(memwriter->capacity + size_increment) - memwriter->capacity;
         }
     }
   new_buf = realloc(memwriter->buf, memwriter->capacity + size_increment);
   if (new_buf == NULL)
     {
-      debug_print_malloc_error();
-      return ERROR_MALLOC;
+      debugPrintMallocError();
+      return GRM_ERROR_MALLOC;
     }
   memwriter->buf = new_buf;
   memwriter->capacity += size_increment;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size)
+grm_error_t memwriterEnsureBuf(Memwriter *memwriter, size_t needed_additional_size)
 {
   if (memwriter->size + needed_additional_size > memwriter->capacity)
     {
-      return memwriter_enlarge_buf(memwriter, memwriter->size + needed_additional_size - memwriter->capacity);
+      return memwriterEnlargeBuf(memwriter, memwriter->size + needed_additional_size - memwriter->capacity);
     }
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
+grm_error_t memwriterPrintf(Memwriter *memwriter, const char *format, ...)
 {
   va_list vl;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   while (1)
     {
@@ -149,74 +146,60 @@ err_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
       va_start(vl, format);
       chars_needed = vsnprintf(&memwriter->buf[memwriter->size], memwriter->capacity - memwriter->size, format, vl);
       va_end(vl);
-      if (chars_needed < 0)
-        {
-          return ERROR_INTERNAL;
-        }
+      if (chars_needed < 0) return GRM_ERROR_INTERNAL;
       /* we need one more char because `vsnprintf` does exclude the trailing '\0' character in its calculations */
       if ((size_t)chars_needed < (memwriter->capacity - memwriter->size))
         {
           memwriter->size += chars_needed;
           break;
         }
-      if ((error = memwriter_ensure_buf(memwriter, chars_needed + 1)) != ERROR_NONE)
-        {
-          break;
-        }
+      if ((error = memwriterEnsureBuf(memwriter, chars_needed + 1)) != GRM_ERROR_NONE) break;
     }
 
   return error;
 }
 
-err_t memwriter_puts(memwriter_t *memwriter, const char *s)
+grm_error_t memwriterPuts(Memwriter *memwriter, const char *s)
 {
-  return memwriter_printf(memwriter, "%s", s);
+  return memwriterPrintf(memwriter, "%s", s);
 }
 
-err_t memwriter_puts_with_len(memwriter_t *memwriter, char *s, size_t length)
+grm_error_t memwriterPutsWithLen(Memwriter *memwriter, char *s, size_t length)
 {
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   while (length > 0)
     {
-      if ((error = memwriter_putc(memwriter, *(s++))) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(memwriter, *(s++))) != GRM_ERROR_NONE) return error;
       --length;
     }
 
   return error;
 }
 
-err_t memwriter_putc(memwriter_t *memwriter, char c)
+grm_error_t memwriterPutc(Memwriter *memwriter, char c)
 {
-  return memwriter_printf(memwriter, "%c", c);
+  return memwriterPrintf(memwriter, "%c", c);
 }
 
-err_t memwriter_memcpy(memwriter_t *memwriter, const void *source, size_t num)
+grm_error_t memwriterMemcpy(Memwriter *memwriter, const void *source, size_t num)
 {
-  err_t error = ERROR_NONE;
-
-  memwriter_ensure_buf(memwriter, num);
+  memwriterEnsureBuf(memwriter, num);
 
   memcpy(&memwriter->buf[memwriter->size], source, num);
 
   memwriter->size += num;
 
-  return error;
+  return GRM_ERROR_NONE;
 }
 
-err_t memwriter_memcpy_rev_chunks(memwriter_t *memwriter, const void *source, size_t num, int chunk_size)
+grm_error_t memwriterMemcpyRevChunks(Memwriter *memwriter, const void *source, size_t num, int chunk_size)
 {
-  err_t error = ERROR_NONE;
-
-  memwriter_ensure_buf(memwriter, num);
+  memwriterEnsureBuf(memwriter, num);
 
   char *d = &memwriter->buf[memwriter->size];
   const char *s = source;
-  int i;
-  int j;
+  int i, j;
 
   for (i = 0; i < num; i += chunk_size)
     {
@@ -228,15 +211,15 @@ err_t memwriter_memcpy_rev_chunks(memwriter_t *memwriter, const void *source, si
 
   memwriter->size += num;
 
-  return error;
+  return GRM_ERROR_NONE;
 }
 
-char *memwriter_buf(const memwriter_t *memwriter)
+char *memwriterBuf(const Memwriter *memwriter)
 {
   return memwriter->buf;
 }
 
-size_t memwriter_size(const memwriter_t *memwriter)
+size_t memwriterSize(const Memwriter *memwriter)
 {
   return memwriter->size;
 }

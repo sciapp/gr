@@ -8,6 +8,7 @@
 #include <cmath>
 #include "grm/base64_int.h"
 #include "grm/bson_int.h"
+#include "grm/error_int.h"
 #include "grm/memwriter_int.h"
 #include "grm/utilcpp_int.hxx"
 
@@ -82,17 +83,14 @@ elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &e
       if (original_attribute_name == "name" ||
           (attribute_filter && !(*attribute_filter)(original_attribute_name, *element, new_attribute_name)))
         continue;
-      if (new_attribute_name)
-        {
-          attribute_name = *new_attribute_name;
-        }
-      if (starts_with(attribute_name.get(), "_"))
+      if (new_attribute_name) attribute_name = *new_attribute_name;
+      if (startsWith(attribute_name.get(), "_"))
         {
           switch (options.internal_attribute_format)
             {
-            case GRM::SerializerOptions::InternalAttributesFormat::None:
+            case GRM::SerializerOptions::InternalAttributesFormat::NONE:
               continue;
-            case GRM::SerializerOptions::InternalAttributesFormat::Obfuscated:
+            case GRM::SerializerOptions::InternalAttributesFormat::OBFUSCATED:
               internal_attributes[attribute_name.get()] = element->getAttribute(original_attribute_name);
               continue;
             default:
@@ -124,15 +122,12 @@ elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &e
           os << " " << attribute_name.get() << "=\"" << escapeXMLAttribute(value) << "\"";
         }
     }
-  if (options.internal_attribute_format == GRM::SerializerOptions::InternalAttributesFormat::Obfuscated &&
+  if (options.internal_attribute_format == GRM::SerializerOptions::InternalAttributesFormat::OBFUSCATED &&
       !internal_attributes.empty())
     {
-      auto memwriter = std::unique_ptr<memwriter_t, void (*)(memwriter_t *)>(memwriter_new(), memwriter_delete);
-      if (!memwriter)
-        {
-          throw std::bad_alloc();
-        }
-      tobson_write(memwriter.get(), "o(");
+      auto memwriter = std::unique_ptr<Memwriter, void (*)(Memwriter *)>(memwriterNew(), memwriterDelete);
+      if (!memwriter) throw std::bad_alloc();
+      toBsonWrite(memwriter.get(), "o(");
       for (const auto &attribute : internal_attributes)
         {
           std::stringstream format_stream;
@@ -141,29 +136,29 @@ elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &e
             {
             case GRM::Value::Type::DOUBLE:
               format_stream << ":d";
-              tobson_write(memwriter.get(), format_stream.str().c_str(), static_cast<double>(attribute.second));
+              toBsonWrite(memwriter.get(), format_stream.str().c_str(), static_cast<double>(attribute.second));
               break;
             case GRM::Value::Type::INT:
               format_stream << ":i";
-              tobson_write(memwriter.get(), format_stream.str().c_str(), static_cast<int>(attribute.second));
+              toBsonWrite(memwriter.get(), format_stream.str().c_str(), static_cast<int>(attribute.second));
               break;
             case GRM::Value::Type::STRING:
               format_stream << ":s";
-              tobson_write(memwriter.get(), format_stream.str().c_str(),
-                           static_cast<std::string>(attribute.second).c_str());
+              toBsonWrite(memwriter.get(), format_stream.str().c_str(),
+                          static_cast<std::string>(attribute.second).c_str());
               break;
             default:
               break;
             }
         }
-      tobson_write(memwriter.get(), ")");
-      err_t error = ERROR_NONE;
+      toBsonWrite(memwriter.get(), ")");
+      grm_error_t error = GRM_ERROR_NONE;
       auto base64_encoded_cstr = std::unique_ptr<char, void (*)(void *)>(
-          base64_encode(nullptr, memwriter_buf(memwriter.get()), memwriter_size(memwriter.get()), &error), std::free);
-      if (error != ERROR_NONE)
+          base64Encode(nullptr, memwriterBuf(memwriter.get()), memwriterSize(memwriter.get()), &error), std::free);
+      if (error != GRM_ERROR_NONE)
         {
-          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
-          throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
+          throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + grm_error_names[error] + "\")!");
         }
       os << " internal=\"" << base64_encoded_cstr.get() << "\"";
     }
@@ -222,48 +217,33 @@ std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::
                                                         std::optional<std::string> &new_attribute_name)>>
                            attribute_filter)
 {
-  if (!node)
-    {
-      throw TypeError("node is null");
-    }
+  if (!node) throw TypeError("node is null");
   std::stringstream os;
   nodeToXML(os, node, options, "", attribute_filter);
   return os.str();
 }
 
-std::string GRM::tolower(std::string string)
+std::string GRM::toLower(std::string string)
 {
-  for (char &c : string)
-    {
-      c = static_cast<char>(std::tolower(c));
-    }
+  for (char &c : string) c = static_cast<char>(std::tolower(c));
   return string;
 }
 
-std::string GRM::toupper(std::string string)
+std::string GRM::toUpper(std::string string)
 {
-  for (char &c : string)
-    {
-      c = static_cast<char>(std::toupper(c));
-    }
+  for (char &c : string) c = static_cast<char>(std::toupper(c));
   return string;
 }
 
 std::vector<std::string> GRM::split(const std::string &string, const std::string &token)
 {
   std::vector<std::string> results;
-  if (string.empty())
-    {
-      return {};
-    }
+  if (string.empty()) return {};
   if (token.empty())
     {
       for (const auto &character : string)
         {
-          if (character)
-            {
-              results.push_back({character});
-            }
+          if (character) results.push_back({character});
         }
       return results;
     }
@@ -272,10 +252,7 @@ std::vector<std::string> GRM::split(const std::string &string, const std::string
     {
       auto token_position = string.find(token, search_start_position);
       results.push_back(string.substr(search_start_position, token_position - search_start_position));
-      if (token_position == std::string::npos)
-        {
-          break;
-        }
+      if (token_position == std::string::npos) break;
       search_start_position = token_position + token.size();
     }
   while (search_start_position <= string.size());
@@ -284,10 +261,7 @@ std::vector<std::string> GRM::split(const std::string &string, const std::string
 
 std::string GRM::strip(const std::string &string)
 {
-  if (string.empty())
-    {
-      return string;
-    }
+  if (string.empty()) return string;
   std::string::size_type left_start;
   std::string::size_type right_start;
   for (left_start = 0; left_start < string.size() && std::isspace(string[left_start]); ++left_start)
@@ -303,9 +277,7 @@ bool GRM::Selector::matchElement(
 {
   auto element_ptr = std::dynamic_pointer_cast<const Element>(element.shared_from_this()).get();
   if (match_map.find(std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}) != match_map.end())
-    {
-      return match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}];
-    }
+    return match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}];
   bool result = doMatchElement(element, match_map);
   match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}] = result;
   return result;
@@ -316,22 +288,16 @@ bool GRM::Selector::matchElement(
  *
  * \param[in] x A vector that should be normalized
  */
-void GRM::normalize_vec(std::vector<double> x, std::vector<double> *normalized_x)
+void GRM::normalizeVec(std::vector<double> x, std::vector<double> *normalized_x)
 {
   double sum;
   int n = size(x);
   unsigned int i;
 
   sum = 0.0;
-  for (i = 0; i < n; ++i)
-    {
-      sum += x[i];
-    }
+  for (i = 0; i < n; ++i) sum += x[i];
 
-  for (i = 0; i < n; ++i)
-    {
-      normalized_x[0][i] = x[i] / sum;
-    }
+  for (i = 0; i < n; ++i) normalized_x[0][i] = x[i] / sum;
 }
 
 /*!
@@ -339,7 +305,7 @@ void GRM::normalize_vec(std::vector<double> x, std::vector<double> *normalized_x
  * All values are converted to unsigned integers. It is guaranteed that
  * the sum of all values is always `sum` (rounding errors are handled).
  */
-void GRM::normalize_vec_int(std::vector<double> x, std::vector<unsigned int> *normalized_x, unsigned int sum)
+void GRM::normalizeVecInt(std::vector<double> x, std::vector<unsigned int> *normalized_x, unsigned int sum)
 {
   double sum_x;
   unsigned int actual_sum;
@@ -352,21 +318,12 @@ void GRM::normalize_vec_int(std::vector<double> x, std::vector<unsigned int> *no
   int n = size(x);
 
   sum_x = 0.0;
-  for (i = 0; i < n; ++i)
-    {
-      sum_x += x[i];
-    }
+  for (i = 0; i < n; ++i) sum_x += x[i];
 
-  for (i = 0; i < n; ++i)
-    {
-      normalized_x[0][i] = (int)((x[i] * sum / sum_x) + 0.5);
-    }
+  for (i = 0; i < n; ++i) normalized_x[0][i] = (int)((x[i] * sum / sum_x) + 0.5);
 
   actual_sum = 0;
-  for (i = 0; i < n; ++i)
-    {
-      actual_sum += normalized_x[0][i];
-    }
+  for (i = 0; i < n; ++i) actual_sum += normalized_x[0][i];
   rounding_error = sum - actual_sum;
 
   if (rounding_error != 0)
@@ -407,16 +364,10 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_part_selectors.empty())
-      {
-        return false;
-      }
+    if (m_part_selectors.empty()) return false;
     for (const auto &parsed_selector : m_part_selectors)
       {
-        if (!parsed_selector->matchElement(element, match_map))
-          {
-            return false;
-          }
+        if (!parsed_selector->matchElement(element, match_map)) return false;
       }
     return true;
   }
@@ -436,16 +387,10 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_part_selectors.empty())
-      {
-        return false;
-      }
+    if (m_part_selectors.empty()) return false;
     for (const auto &parsed_selector : m_part_selectors)
       {
-        if (parsed_selector->matchElement(element, match_map))
-          {
-            return true;
-          }
+        if (parsed_selector->matchElement(element, match_map)) return true;
       }
     return false;
   }
@@ -466,13 +411,10 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    bool conditional_selector_matched = false;
     for (auto ancestor = element.parentElement(); ancestor; ancestor = ancestor->parentElement())
       {
         if (m_ancestor_selector->matchElement(*ancestor, match_map))
-          {
-            return m_local_selector->matchElement(element, match_map);
-          }
+          return m_local_selector->matchElement(element, match_map);
       }
     return false;
   }
@@ -493,12 +435,8 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    bool conditional_selector_matched = false;
     auto parent = element.parentElement();
-    if (!parent)
-      {
-        return false;
-      }
+    if (!parent) return false;
     return m_parent_selector->matchElement(*parent, match_map) && m_local_selector->matchElement(element, match_map);
   }
 
@@ -519,18 +457,12 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    bool conditional_selector_matched = false;
     auto parent = element.parentElement();
-    if (!parent)
-      {
-        return false;
-      }
+    if (!parent) return false;
     for (auto sibling = element.previousElementSibling(); sibling; sibling = element.previousElementSibling())
       {
         if (m_sibling_selector->matchElement(*sibling, match_map))
-          {
-            return m_local_selector->matchElement(element, match_map);
-          }
+          return m_local_selector->matchElement(element, match_map);
       }
     return false;
   }
@@ -599,10 +531,7 @@ protected:
     std::string local_name = element.localName();
     for (const auto &other_element : elements)
       {
-        if (other_element != element.shared_from_this() && other_element->localName() == local_name)
-          {
-            return false;
-          }
+        if (other_element != element.shared_from_this() && other_element->localName() == local_name) return false;
       }
     return true;
   }
@@ -620,32 +549,14 @@ protected:
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     auto elements = this->elements(element);
-    if (elements.empty())
-      {
-        return false;
-      }
+    if (elements.empty()) return false;
     auto element_it = std::find(elements.begin(), elements.end(), element.shared_from_this());
-    if (element_it == elements.end())
-      {
-        return false;
-      }
+    if (element_it == elements.end()) return false;
     long element_index = static_cast<long>(element_it - elements.begin() + 1);
-    if (m_reverse)
-      {
-        element_index = static_cast<long>(elements.size()) + 1 - element_index;
-      }
-    if (m_factor > 0)
-      {
-        return element_index % m_factor == m_offset;
-      }
-    else if (m_factor < 0)
-      {
-        return element_index <= m_offset;
-      }
-    else
-      {
-        return element_index == m_offset;
-      }
+    if (m_reverse) element_index = static_cast<long>(elements.size()) + 1 - element_index;
+    if (m_factor > 0) return element_index % m_factor == m_offset;
+    if (m_factor < 0) return element_index <= m_offset;
+    return element_index == m_offset;
   }
 
   virtual std::vector<std::shared_ptr<const Element>> elements(const GRM::Element &element) const = 0;
@@ -664,18 +575,10 @@ protected:
   std::vector<std::shared_ptr<const Element>> elements(const GRM::Element &element) const override
   {
     auto parent_element = element.parentElement();
-    if (parent_element)
-      {
-        return parent_element->children();
-      }
-    else if (element.parentNode() && element.parentNode() == element.ownerDocument())
-      {
-        return element.ownerDocument()->children();
-      }
-    else
-      {
-        return {};
-      }
+    if (parent_element) return parent_element->children();
+    if (element.parentNode() && element.parentNode() == element.ownerDocument())
+      return element.ownerDocument()->children();
+    return {};
   }
 };
 class NthOfTypeSelector : public NthOfSelector
@@ -712,7 +615,7 @@ protected:
 class TagSelector : public Selector
 {
 public:
-  explicit TagSelector(const std::string &tag_name) : m_local_name(GRM::tolower(tag_name)) {}
+  explicit TagSelector(const std::string &tag_name) : m_local_name(GRM::toLower(tag_name)) {}
 
 protected:
   bool doMatchElement(const GRM::Element &element,
@@ -727,7 +630,7 @@ private:
 class HasAttributeSelector : public Selector
 {
 public:
-  explicit HasAttributeSelector(const std::string &attribute_name) : m_attribute_name(GRM::tolower(attribute_name)) {}
+  explicit HasAttributeSelector(const std::string &attribute_name) : m_attribute_name(GRM::toLower(attribute_name)) {}
 
 protected:
   bool doMatchElement(const GRM::Element &element,
@@ -743,7 +646,7 @@ class AttributeEqualsSelector : public Selector
 {
 public:
   AttributeEqualsSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -762,7 +665,7 @@ class AttributeStartsWithSelector : public Selector
 {
 public:
   AttributeStartsWithSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -782,7 +685,7 @@ private:
 class IDSelector : public Selector
 {
 public:
-  explicit IDSelector(const std::string &id) : m_id(GRM::tolower(id)) {}
+  explicit IDSelector(const std::string &id) : m_id(GRM::toLower(id)) {}
 
 protected:
   bool doMatchElement(const GRM::Element &element,
@@ -798,7 +701,7 @@ class AttributeEndsWithSelector : public Selector
 {
 public:
   AttributeEndsWithSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -806,10 +709,7 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_attribute_name.empty())
-      {
-        return false;
-      }
+    if (m_attribute_name.empty()) return false;
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
     auto attribute_value_position = element_attribute_string.find(m_attribute_value);
     return (attribute_value_position != std::string::npos) &&
@@ -824,7 +724,7 @@ class AttributeContainsSelector : public Selector
 {
 public:
   AttributeContainsSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -832,10 +732,7 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_attribute_name.empty())
-      {
-        return false;
-      }
+    if (m_attribute_name.empty()) return false;
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
     auto attribute_value_position = element_attribute_string.find(m_attribute_value);
     return (attribute_value_position != std::string::npos);
@@ -849,7 +746,7 @@ class AttributeContainsWordSelector : public Selector
 {
 public:
   AttributeContainsWordSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -857,10 +754,7 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_attribute_name.empty())
-      {
-        return false;
-      }
+    if (m_attribute_name.empty()) return false;
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
     auto element_attribute_words = GRM::split(element_attribute_string, " ");
     return (std::find(element_attribute_words.begin(), element_attribute_words.end(), m_attribute_value) !=
@@ -875,7 +769,7 @@ class AttributeContainsPrefixSelector : public Selector
 {
 public:
   AttributeContainsPrefixSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::toLower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
@@ -883,10 +777,7 @@ protected:
   bool doMatchElement(const GRM::Element &element,
                       std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    if (m_attribute_name.empty())
-      {
-        return false;
-      }
+    if (m_attribute_name.empty()) return false;
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
     auto element_attribute_words = GRM::split(element_attribute_string, " ");
     for (const auto &word : element_attribute_words)
@@ -920,14 +811,11 @@ protected:
         auto element_classes = GRM::split((std::string)element_classes_value, " ");
         for (auto &element_class : element_classes)
           {
-            element_class = GRM::tolower(GRM::strip(element_class));
+            element_class = GRM::toLower(GRM::strip(element_class));
           }
         for (const auto &element_class : element_classes)
           {
-            if (element_class == m_class_name)
-              {
-                return true;
-              }
+            if (element_class == m_class_name) return true;
           }
       }
     return false;
@@ -943,7 +831,7 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
   auto individual_selectors = GRM::split(selectors, ",");
   for (auto &selector : individual_selectors)
     {
-      selector = GRM::tolower(GRM::strip(selector));
+      selector = GRM::toLower(GRM::strip(selector));
     }
   std::vector<std::shared_ptr<GRM::Selector>> parsed_individual_selectors;
   for (auto &selector : individual_selectors)
@@ -974,15 +862,9 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                 {
                   ++num_leading_slashes;
                 }
-              if (num_leading_slashes % 2 == 0)
-                {
-                  in_quotes = false;
-                }
+              if (num_leading_slashes % 2 == 0) in_quotes = false;
             }
-          if (in_bracketed_block)
-            {
-              continue;
-            }
+          if (in_bracketed_block) continue;
           switch (*it)
             {
             case ' ':
@@ -990,21 +872,12 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                 char actual_character = ' ';
                 for (auto it2 = it; it2 != selector.rend(); ++it2)
                   {
-                    if (*it2 == ' ')
-                      {
-                        continue;
-                      }
-                    else
-                      {
-                        actual_character = *it2;
-                        break;
-                      }
+                    if (*it2 == ' ') continue;
+                    actual_character = *it2;
+                    break;
                   }
-                if (actual_character == '>' || actual_character == '~')
-                  {
-                    // this is just whitespace around another symbol
-                    continue;
-                  }
+                // this is just whitespace around another symbol
+                if (actual_character == '>' || actual_character == '~') continue;
                 auto ancestor_selector = parseSelectors(selector.substr(0, selector.rend() - it - 1));
                 auto local_selector = parseSelectors(selector.substr(selector.rend() - it));
                 parsed_individual_selectors.push_back(
@@ -1030,20 +903,13 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                 conditional_selector_found = true;
                 break;
               }
-            default:
-              continue;
+            default:;
             }
         }
-      if (conditional_selector_found)
-        {
-          continue;
-        }
+      if (conditional_selector_found) continue;
       std::string local_selector = selector;
       local_selector = GRM::strip(local_selector);
-      if (local_selector.empty())
-        {
-          continue;
-        }
+      if (local_selector.empty()) continue;
       std::vector<std::shared_ptr<GRM::Selector>> parsed_selector_parts;
       in_bracketed_block = false;
       in_quotes = false;
@@ -1129,10 +995,7 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                                     }
                                 }
                             }
-                          if (i < selector_value.size())
-                            {
-                              selector_value = selector_value.substr(0, i);
-                            }
+                          if (i < selector_value.size()) selector_value = selector_value.substr(0, i);
                           if (selector_comparison == "=")
                             {
                               parsed_selector_parts.push_back(
@@ -1250,8 +1113,8 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                           auto factor_and_offset_string = GRM::strip(selector_part.substr(
                               parenthesis_position + 1, selector_part.size() - parenthesis_position - 2));
                           auto n_position = factor_and_offset_string.find('n');
-                          std::string factor_string;
-                          std::string offset_string;
+                          std::string factor_string, offset_string;
+
                           if (n_position == std::string::npos)
                             {
                               parsed_individual_selectors.push_back(std::make_shared<GRM::FalseSelector>());
@@ -1264,8 +1127,7 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                               offset_string = factor_and_offset_string.substr(n_position + 1);
                             }
                           bool invalid = false;
-                          long offset = 0;
-                          long factor = 0;
+                          long offset = 0, factor = 0;
                           if (factor_string.empty())
                             {
                               invalid = true;
@@ -1278,10 +1140,7 @@ std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
                             {
                               char *end;
                               factor = std::strtol(factor_string.c_str(), &end, 10);
-                              if (end - factor_string.c_str() != factor_string.size())
-                                {
-                                  invalid = true;
-                                }
+                              if (end - factor_string.c_str() != factor_string.size()) invalid = true;
                             }
                           if (offset_string.empty())
                             {

@@ -43,7 +43,13 @@ windows-32bit-cross:
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/grm/grplot/grplot.exe artifacts/
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - mkdir -p artifacts/share/doc/grplot
+  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
+  - mkdir -p artifacts/share/licenses/GR
+  - cp LICENSE.md artifacts/share/licenses/GR/
+  - mkdir -p artifacts/share/xml/GRM
+  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
+  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -150,7 +156,13 @@ windows-64bit-cross:
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/grm/grplot/grplot.exe artifacts/
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - mkdir -p artifacts/share/doc/grplot
+  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
+  - mkdir -p artifacts/share/licenses/GR
+  - cp LICENSE.md artifacts/share/licenses/GR/
+  - mkdir -p artifacts/share/xml/GRM
+  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
+  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib

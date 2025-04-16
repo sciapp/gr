@@ -20,7 +20,7 @@
 
 /* ------------------------- tooltips ------------------------------------------------------------------------------- */
 
-static tooltip_reflist_t *tooltip_list = nullptr;
+static TooltipReflist *tooltip_list = nullptr;
 static grm_tooltip_info_t *nearest_tooltip = nullptr;
 
 /* ------------------------- movable xform -------------------------------------------------------------------------- */
@@ -45,15 +45,15 @@ static std::weak_ptr<GRM::Element> movable_obj_ref;
 /* ------------------------- tooltip list --------------------------------------------------------------------------- */
 
 
-tooltip_list_t *tooltip_list_new(void)
+TooltipList *tooltipListNew(void)
 {
-  static const tooltip_list_vtable_t vt = {
-      tooltip_list_entry_copy,
-      tooltip_list_entry_delete,
+  static const TooltipListVtable vt = {
+      tooltipListEntryCopy,
+      tooltipListEntryDelete,
   };
-  tooltip_list_t *list;
+  TooltipList *list;
 
-  list = static_cast<tooltip_list_t *>(malloc(sizeof(tooltip_list_t)));
+  list = static_cast<TooltipList *>(malloc(sizeof(TooltipList)));
   if (list == nullptr)
     {
       return nullptr;
@@ -66,10 +66,10 @@ tooltip_list_t *tooltip_list_new(void)
   return list;
 }
 
-void tooltip_list_delete(tooltip_list_t *list)
+void tooltipListDelete(TooltipList *list)
 {
-  tooltip_list_node_t *current_list_node;
-  tooltip_list_node_t *next_list_node;
+  TooltipListNode *current_list_node;
+  TooltipListNode *next_list_node;
 
   current_list_node = list->head;
   while (current_list_node != nullptr)
@@ -82,39 +82,36 @@ void tooltip_list_delete(tooltip_list_t *list)
   free(list);
 }
 
-err_t tooltip_list_push_front(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+grm_error_t tooltipListPushFront(TooltipList *list, TooltipListConstEntry entry)
 {
-  tooltip_list_node_t *new_list_node;
-  err_t error = ERROR_NONE;
+  TooltipListNode *new_list_node;
+  grm_error_t error = GRM_ERROR_NONE;
 
-  new_list_node = static_cast<tooltip_list_node_t *>(malloc(sizeof(tooltip_list_node_t)));
-  error_cleanup_and_set_error_if(new_list_node == nullptr, ERROR_MALLOC);
+  new_list_node = static_cast<TooltipListNode *>(malloc(sizeof(TooltipListNode)));
+  errorCleanupAndSetErrorIf(new_list_node == nullptr, GRM_ERROR_MALLOC);
   error = list->vt->entry_copy(&new_list_node->entry, entry);
-  error_cleanup_if_error;
+  errorCleanupIfError;
   new_list_node->next = list->head;
   list->head = new_list_node;
-  if (list->tail == nullptr)
-    {
-      list->tail = new_list_node;
-    }
+  if (list->tail == nullptr) list->tail = new_list_node;
   ++(list->size);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 
 error_cleanup:
   free(new_list_node);
   return error;
 }
 
-err_t tooltip_list_push_back(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+grm_error_t tooltipListPushBack(TooltipList *list, TooltipListConstEntry entry)
 {
-  tooltip_list_node_t *new_list_node;
-  err_t error = ERROR_NONE;
+  TooltipListNode *new_list_node;
+  grm_error_t error = GRM_ERROR_NONE;
 
-  new_list_node = static_cast<tooltip_list_node_t *>(malloc(sizeof(tooltip_list_node_t)));
-  error_cleanup_and_set_error_if(new_list_node == nullptr, ERROR_MALLOC);
+  new_list_node = static_cast<TooltipListNode *>(malloc(sizeof(TooltipListNode)));
+  errorCleanupAndSetErrorIf(new_list_node == nullptr, GRM_ERROR_MALLOC);
   error = list->vt->entry_copy(&new_list_node->entry, entry);
-  error_cleanup_if_error;
+  errorCleanupIfError;
   new_list_node->next = nullptr;
   if (list->head == nullptr)
     {
@@ -127,25 +124,22 @@ err_t tooltip_list_push_back(tooltip_list_t *list, tooltip_list_const_entry_t en
   list->tail = new_list_node;
   ++(list->size);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 
 error_cleanup:
   free(new_list_node);
   return error;
 }
 
-tooltip_list_entry_t tooltip_list_pop_front(tooltip_list_t *list)
+TooltipListEntry tooltipListPopFront(TooltipList *list)
 {
-  tooltip_list_node_t *front_node;
-  tooltip_list_entry_t front_entry;
+  TooltipListNode *front_node;
+  TooltipListEntry front_entry;
 
   assert(list->head != nullptr);
   front_node = list->head;
   list->head = list->head->next;
-  if (list->tail == front_node)
-    {
-      list->tail = nullptr;
-    }
+  if (list->tail == front_node) list->tail = nullptr;
   front_entry = front_node->entry;
   free(front_node);
   --(list->size);
@@ -153,15 +147,15 @@ tooltip_list_entry_t tooltip_list_pop_front(tooltip_list_t *list)
   return front_entry;
 }
 
-tooltip_list_entry_t tooltip_list_pop_back(tooltip_list_t *list)
+TooltipListEntry tooltipListPopBack(TooltipList *list)
 {
-  tooltip_list_node_t *last_node;
-  tooltip_list_node_t *next_to_last_node = nullptr;
-  tooltip_list_entry_t last_entry;
+  TooltipListNode *last_node;
+  TooltipListNode *next_to_last_node = nullptr;
+  TooltipListEntry last_entry;
 
   assert(list->tail != nullptr);
   last_node = list->tail;
-  tooltip_list_find_previous_node(list, last_node, &next_to_last_node);
+  tooltipListFindPreviousNode(list, last_node, &next_to_last_node);
   if (next_to_last_node == nullptr)
     {
       list->head = list->tail = nullptr;
@@ -178,36 +172,35 @@ tooltip_list_entry_t tooltip_list_pop_back(tooltip_list_t *list)
   return last_entry;
 }
 
-err_t tooltip_list_push(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+grm_error_t tooltipListPush(TooltipList *list, TooltipListConstEntry entry)
 {
-  return tooltip_list_push_front(list, entry);
+  return tooltipListPushFront(list, entry);
 }
 
-tooltip_list_entry_t tooltip_list_pop(tooltip_list_t *list)
+TooltipListEntry tooltipListPop(TooltipList *list)
 {
-  return tooltip_list_pop_front(list);
+  return tooltipListPopFront(list);
 }
 
-err_t tooltip_list_enqueue(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+grm_error_t tooltipListEnqueue(TooltipList *list, TooltipListConstEntry entry)
 {
-  return tooltip_list_push_back(list, entry);
+  return tooltipListPushBack(list, entry);
 }
 
-tooltip_list_entry_t tooltip_list_dequeue(tooltip_list_t *list)
+TooltipListEntry tooltipListDequeue(TooltipList *list)
 {
-  return tooltip_list_pop_front(list);
+  return tooltipListPopFront(list);
 }
 
-int tooltip_list_empty(tooltip_list_t *list)
+int tooltipListEmpty(TooltipList *list)
 {
   return list->size == 0;
 }
 
-int tooltip_list_find_previous_node(const tooltip_list_t *list, const tooltip_list_node_t *node,
-                                    tooltip_list_node_t **previous_node)
+int tooltipListFindPreviousNode(const TooltipList *list, const TooltipListNode *node, TooltipListNode **previous_node)
 {
-  tooltip_list_node_t *prev_node;
-  tooltip_list_node_t *current_node;
+  TooltipListNode *prev_node;
+  TooltipListNode *current_node;
 
   prev_node = nullptr;
   current_node = list->head;
@@ -215,10 +208,7 @@ int tooltip_list_find_previous_node(const tooltip_list_t *list, const tooltip_li
     {
       if (current_node == node)
         {
-          if (previous_node != nullptr)
-            {
-              *previous_node = prev_node;
-            }
+          if (previous_node != nullptr) *previous_node = prev_node;
           return 1;
         }
       prev_node = current_node;
@@ -230,125 +220,120 @@ int tooltip_list_find_previous_node(const tooltip_list_t *list, const tooltip_li
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-tooltip_reflist_t *tooltip_reflist_new(void)
+TooltipReflist *tooltipReflistNew(void)
 {
-  static const tooltip_reflist_vtable_t vt = {
-      tooltip_reflist_entry_copy,
-      tooltip_reflist_entry_delete,
+  static const TooltipReflistVtable vt = {
+      tooltipReflistEntryCopy,
+      tooltipReflistEntryDelete,
   };
-  tooltip_reflist_t *list;
+  TooltipReflist *list;
 
-  list = (tooltip_reflist_t *)tooltip_list_new();
+  list = (TooltipReflist *)tooltipListNew();
   list->vt = &vt;
 
   return list;
 }
 
-void tooltip_reflist_delete(tooltip_reflist_t *list)
+void tooltipReflistDelete(TooltipReflist *list)
 {
-  tooltip_list_delete((tooltip_list_t *)list);
+  tooltipListDelete((TooltipList *)list);
 }
 
-void tooltip_reflist_delete_with_entries(tooltip_reflist_t *list)
+void tooltipReflistDeleteWithEntries(TooltipReflist *list)
 {
-  tooltip_reflist_node_t *current_reflist_node;
-  tooltip_reflist_node_t *next_reflist_node;
+  TooltipReflistNode *current_reflist_node;
+  TooltipReflistNode *next_reflist_node;
 
   current_reflist_node = list->head;
   while (current_reflist_node != nullptr)
     {
       next_reflist_node = current_reflist_node->next;
-      tooltip_list_entry_delete((tooltip_list_entry_t)current_reflist_node->entry);
+      tooltipListEntryDelete((TooltipListEntry)current_reflist_node->entry);
       free(current_reflist_node);
       current_reflist_node = next_reflist_node;
     }
   free(list);
 }
 
-err_t tooltip_reflist_push_front(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+grm_error_t tooltipReflistPushFront(TooltipReflist *list, TooltipReflistEntry entry)
 {
-  return tooltip_list_push_front((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+  return tooltipListPushFront((TooltipList *)list, (TooltipListEntry)entry);
 }
 
-err_t tooltip_reflist_push_back(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+grm_error_t tooltipReflistPushBack(TooltipReflist *list, TooltipReflistEntry entry)
 {
-  return tooltip_list_push_back((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+  return tooltipListPushBack((TooltipList *)list, (TooltipListEntry)entry);
 }
 
-tooltip_reflist_entry_t tooltip_reflist_pop_front(tooltip_reflist_t *list)
+TooltipReflistEntry tooltipReflistPopFront(TooltipReflist *list)
 {
-  return tooltip_list_pop_front((tooltip_list_t *)list);
+  return tooltipListPopFront((TooltipList *)list);
 }
 
-tooltip_reflist_entry_t tooltip_reflist_pop_back(tooltip_reflist_t *list)
+TooltipReflistEntry tooltipReflistPopBack(TooltipReflist *list)
 {
-  return tooltip_list_pop_back((tooltip_list_t *)list);
+  return tooltipListPopBack((TooltipList *)list);
 }
 
-err_t tooltip_reflist_push(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+grm_error_t tooltipReflistPush(TooltipReflist *list, TooltipReflistEntry entry)
 {
-  return tooltip_list_push((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+  return tooltipListPush((TooltipList *)list, (TooltipListEntry)entry);
 }
 
-tooltip_reflist_entry_t tooltip_reflist_pop(tooltip_reflist_t *list)
+TooltipReflistEntry tooltipReflistPop(TooltipReflist *list)
 {
-  return tooltip_list_pop((tooltip_list_t *)list);
+  return tooltipListPop((TooltipList *)list);
 }
 
-err_t tooltip_reflist_enqueue(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+grm_error_t tooltipReflistEnqueue(TooltipReflist *list, TooltipReflistEntry entry)
 {
-  return tooltip_list_enqueue((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+  return tooltipListEnqueue((TooltipList *)list, (TooltipListEntry)entry);
 }
 
-tooltip_reflist_entry_t tooltip_reflist_dequeue(tooltip_reflist_t *list)
+TooltipReflistEntry tooltipReflistDequeue(TooltipReflist *list)
 {
-  return tooltip_list_dequeue((tooltip_list_t *)list);
+  return tooltipListDequeue((TooltipList *)list);
 }
 
-int tooltip_reflist_empty(tooltip_reflist_t *list)
+int tooltipReflistEmpty(TooltipReflist *list)
 {
-  return tooltip_list_empty((tooltip_list_t *)list);
+  return tooltipListEmpty((TooltipList *)list);
 }
 
-
-int tooltip_reflist_find_previous_node(const tooltip_reflist_t *list, const tooltip_reflist_node_t *node,
-                                       tooltip_reflist_node_t **previous_node)
+int tooltipReflistFindPreviousNode(const TooltipReflist *list, const TooltipReflistNode *node,
+                                   TooltipReflistNode **previous_node)
 {
-  return tooltip_list_find_previous_node((tooltip_list_t *)list, (tooltip_list_node_t *)node,
-                                         (tooltip_list_node_t **)previous_node);
+  return tooltipListFindPreviousNode((TooltipList *)list, (TooltipListNode *)node, (TooltipListNode **)previous_node);
 }
 
-err_t tooltip_reflist_entry_copy(tooltip_reflist_entry_t *copy, tooltip_reflist_entry_t entry)
+grm_error_t tooltipReflistEntryCopy(TooltipReflistEntry *copy, TooltipReflistEntry entry)
 {
   *copy = entry;
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tooltip_reflist_entry_delete(tooltip_reflist_entry_t entry UNUSED)
+grm_error_t tooltipReflistEntryDelete(TooltipReflistEntry entry UNUSED)
 {
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tooltip_list_entry_copy(tooltip_list_entry_t *copy, tooltip_list_const_entry_t entry)
+grm_error_t tooltipListEntryCopy(TooltipListEntry *copy, TooltipListConstEntry entry)
 {
-  tooltip_list_entry_t _copy;
+  TooltipListEntry tmp_copy;
 
-  _copy = static_cast<tooltip_list_entry_t>(malloc(sizeof(grm_tooltip_info_t)));
-  if (_copy == nullptr)
-    {
-      return ERROR_MALLOC;
-    }
+  tmp_copy = static_cast<TooltipListEntry>(malloc(sizeof(grm_tooltip_info_t)));
+  if (tmp_copy == nullptr) return GRM_ERROR_MALLOC;
 
-  memcpy(_copy, entry, sizeof(grm_tooltip_info_t));
-  *copy = _copy;
+  memcpy(tmp_copy, entry, sizeof(grm_tooltip_info_t));
+  *copy = tmp_copy;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
+grm_error_t tooltipListEntryDelete(TooltipListEntry entry)
 {
   free(entry);
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 
@@ -359,7 +344,7 @@ err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
 static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
-                                     int xshift, int yshift, bool is_movable)
+                                     int x_shift, int y_shift, bool is_movable)
 {
   double x_with_shift, y_with_shift, x_ndc, y_ndc;
   double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
@@ -389,9 +374,9 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
       ndc_transformation_elems.end())
     post_fix = "_ndc";
 
-  x_with_shift = ndc_x + (double)xshift / max_width_height;
+  x_with_shift = ndc_x + (double)x_shift / max_width_height;
   x_ndc = ndc_x;
-  y_with_shift = ndc_y + (double)yshift / max_width_height;
+  y_with_shift = ndc_y + (double)y_shift / max_width_height;
   y_ndc = ndc_y;
 
   gr_ndctowc(&x_with_shift, &y_with_shift);
@@ -406,7 +391,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
     old_y_shift = static_cast<double>(element->getAttribute("y_shift" + post_fix));
 
   render->setAutoUpdate(true);
-  if (xshift != 0)
+  if (x_shift != 0)
     {
       if (post_fix == "_wc")
         {
@@ -429,10 +414,10 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
         }
       else
         {
-          element->setAttribute("x_shift" + post_fix, old_x_shift + (double)xshift / max_width_height);
+          element->setAttribute("x_shift" + post_fix, old_x_shift + (double)x_shift / max_width_height);
         }
     }
-  if (yshift != 0)
+  if (y_shift != 0)
     {
       if (post_fix == "_wc")
         {
@@ -440,13 +425,13 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
         }
       else
         {
-          element->setAttribute("y_shift" + post_fix, old_y_shift + (double)yshift / max_width_height);
+          element->setAttribute("y_shift" + post_fix, old_y_shift + (double)y_shift / max_width_height);
         }
     }
   render->setAutoUpdate(false);
 }
 
-int grm_input_(const grm_args_t *input_args)
+int inputImpl(const grm_args_t *input_args)
 {
   /*
    * reset_ranges:
@@ -505,7 +490,7 @@ int grm_input_(const grm_args_t *input_args)
       ndc_y = (double)(height - y) / max_width_height;
       logger((stderr, "x: %d, y: %d, ndc_x: %lf, ndc_y: %lf\n", x, y, ndc_x, ndc_y));
 
-      auto subplot_element = get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
+      auto subplot_element = grm_get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
       if (subplot_element == nullptr && grm_args_values(input_args, "move_selection", "i", &selection_status))
         {
           // needed so the cursor doesn't need to be inside the window for gredit element moving
@@ -558,10 +543,8 @@ int grm_input_(const grm_args_t *input_args)
           double viewport[4];
           auto central_region = subplot_element->querySelectors("central_region");
           auto coordinate_system = subplot_element->querySelectors("coordinate_system");
-          viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-          viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-          viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-          viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+          if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+            throw NotFoundError("Central region doesn't have a viewport but it should.\n");
 
           gr_savestate();
           kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
@@ -625,10 +608,7 @@ int grm_input_(const grm_args_t *input_args)
                 {
                   if (elem->hasAttribute("scale"))
                     {
-                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                       gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                    static_cast<double>(central_region->getAttribute("window_x_max")),
                                    static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -738,13 +718,13 @@ int grm_input_(const grm_args_t *input_args)
                               for (auto &bars : child->children())
                                 {
                                   // fill- and draw_rect level
-                                  for (auto &childSeries : bars->children())
+                                  for (auto &child_series : bars->children())
                                     {
-                                      auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
-                                      std::shared_ptr<GRM::Element> innerFillGroup;
+                                      auto groups = child_series->children(); // inner_fill_group and outerFillGroup
+                                      std::shared_ptr<GRM::Element> inner_fill_group;
                                       if (groups.size() == 2)
                                         {
-                                          innerFillGroup = groups[0];
+                                          inner_fill_group = groups[0];
                                         }
                                       else
                                         {
@@ -753,13 +733,9 @@ int grm_input_(const grm_args_t *input_args)
                                         }
 
                                       if (xind != -1)
-                                        {
-                                          innerFillGroup->children()[xind]->removeAttribute("fill_color_ind");
-                                        }
+                                        inner_fill_group->children()[xind]->removeAttribute("fill_color_ind");
                                       if (yind != -1)
-                                        {
-                                          innerFillGroup->children()[yind]->removeAttribute("fill_color_ind");
-                                        }
+                                        inner_fill_group->children()[yind]->removeAttribute("fill_color_ind");
                                     }
                                 }
                             }
@@ -773,8 +749,7 @@ int grm_input_(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
-                                 "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -808,8 +783,7 @@ int grm_input_(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
-                                 "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -850,10 +824,7 @@ int grm_input_(const grm_args_t *input_args)
                 {
                   if (elem->hasAttribute("scale"))
                     {
-                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                       gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                    static_cast<double>(central_region->getAttribute("window_x_max")),
                                    static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -881,8 +852,7 @@ int grm_input_(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
 
-              if (str_equals_any(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume",
-                                 "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
                     {
@@ -962,10 +932,7 @@ int grm_input_(const grm_args_t *input_args)
                     {
                       if (elem->hasAttribute("scale"))
                         {
-                          gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                                         static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                                         static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                                         static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                          gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
                           gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                                        static_cast<double>(central_region->getAttribute("window_x_max")),
                                        static_cast<double>(central_region->getAttribute("window_y_min")),
@@ -993,8 +960,8 @@ int grm_input_(const grm_args_t *input_args)
 
       grm_args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
-      if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
-                                         subplot_element))
+      if (!grm_get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x,
+                                             &focus_y, subplot_element))
         {
           return 0;
         }
@@ -1049,7 +1016,7 @@ int grm_input(const grm_args_t *input_args)
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
 
-  auto return_value = grm_input_(input_args);
+  auto return_value = inputImpl(input_args);
 
   render->setAutoUpdate(auto_update);
 
@@ -1066,10 +1033,10 @@ int grm_is3d(const int x, const int y)
   ndc_x = (double)x / max_width_height;
   ndc_y = (double)y / max_width_height;
 
-  auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
+  auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
-  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
-                                        "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (subplot_element && strEqualsAny(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
+                                      "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       return 1;
     }
@@ -1086,8 +1053,8 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   std::shared_ptr<GRM::Element> subplot_element;
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
-  if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
-                                     subplot_element))
+  if (!grm_get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
+                                         subplot_element))
     {
       return 0;
     }
@@ -1096,10 +1063,8 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   ws_window[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_max"));
   ws_window[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_min"));
   ws_window[3] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_max"));
-  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+  if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+    throw NotFoundError("Central region doesn't have a viewport but it should.\n");
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
   *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (ws_window[1] - ws_window[0]));
@@ -1111,7 +1076,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   return 1;
 }
 
-static err_t find_nearest_tooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
+static grm_error_t findNearestTooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
 {
   if (nearest_tooltip == nullptr)
     {
@@ -1134,13 +1099,13 @@ static err_t find_nearest_tooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *
         }
     }
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
 grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y)
 {
   nearest_tooltip = nullptr;
-  get_tooltips(mouse_x, mouse_y, find_nearest_tooltip);
+  getTooltips(mouse_x, mouse_y, findNearestTooltip);
   if (nearest_tooltip != nullptr && (mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
                                             (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px) >
                                         MAX_MOUSE_DIST)
@@ -1151,23 +1116,23 @@ grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y)
   return nearest_tooltip;
 }
 
-static err_t collect_tooltips(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
+static grm_error_t collectTooltips(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
 {
-  return tooltip_reflist_push_back(tooltip_list, tooltip_info);
+  return tooltipReflistPushBack(tooltip_list, tooltip_info);
 }
 
 grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *array_length)
 {
   grm_tooltip_info_t **tooltip_array = nullptr, **tooltip_ptr = nullptr;
-  tooltip_reflist_node_t *tooltip_reflist_node = nullptr;
+  TooltipReflistNode *tooltip_reflist_node = nullptr;
 
-  tooltip_list = tooltip_reflist_new();
-  error_cleanup_if(tooltip_list == nullptr);
+  tooltip_list = tooltipReflistNew();
+  errorCleanupIf(tooltip_list == nullptr);
 
-  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+  errorCleanupIf(getTooltips(mouse_x, mouse_y, collectTooltips) != GRM_ERROR_NONE);
 
   tooltip_array = static_cast<grm_tooltip_info_t **>(calloc(tooltip_list->size + 1, sizeof(grm_tooltip_info_t *)));
-  error_cleanup_if(tooltip_array == nullptr);
+  errorCleanupIf(tooltip_array == nullptr);
 
   tooltip_ptr = tooltip_array;
   tooltip_reflist_node = tooltip_list->head;
@@ -1178,16 +1143,13 @@ grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *
       tooltip_reflist_node = tooltip_reflist_node->next;
     }
   *tooltip_ptr = static_cast<grm_tooltip_info_t *>(calloc(1, sizeof(grm_tooltip_info_t)));
-  error_cleanup_if(*tooltip_ptr == nullptr);
+  errorCleanupIf(*tooltip_ptr == nullptr);
   (*tooltip_ptr)->label = nullptr;
-  if (array_length != nullptr)
-    {
-      *array_length = tooltip_list->size;
-    }
+  if (array_length != nullptr) *array_length = tooltip_list->size;
 
   if (tooltip_list != nullptr)
     {
-      tooltip_reflist_delete(tooltip_list);
+      tooltipReflistDelete(tooltip_list);
       tooltip_list = nullptr;
     }
 
@@ -1196,10 +1158,7 @@ grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *
 error_cleanup:
   if (tooltip_array != nullptr)
     {
-      if (tooltip_list != nullptr)
-        {
-          free(tooltip_array[tooltip_list->size]);
-        }
+      if (tooltip_list != nullptr) free(tooltip_array[tooltip_list->size]);
       free(tooltip_array);
     }
   if (tooltip_list != nullptr)
@@ -1210,7 +1169,7 @@ error_cleanup:
           free(tooltip_reflist_node->entry);
           tooltip_reflist_node = tooltip_reflist_node->next;
         }
-      tooltip_reflist_delete(tooltip_list);
+      tooltipReflistDelete(tooltip_list);
       tooltip_list = nullptr;
     }
 
@@ -1223,18 +1182,18 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
   char **ylabels = nullptr, **ylabels_ptr = nullptr;
   unsigned int min_dist = UINT_MAX;
   grm_tooltip_info_t *nearest_tooltip = nullptr;
-  tooltip_reflist_node_t *tooltip_reflist_node = nullptr;
+  TooltipReflistNode *tooltip_reflist_node = nullptr;
   grm_accumulated_tooltip_info_t *accumulated_tooltip = nullptr;
 
-  tooltip_list = tooltip_reflist_new();
-  error_cleanup_if(tooltip_list == nullptr);
+  tooltip_list = tooltipReflistNew();
+  errorCleanupIf(tooltip_list == nullptr);
 
-  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips, true) != ERROR_NONE);
+  errorCleanupIf(getTooltips(mouse_x, mouse_y, collectTooltips, true) != GRM_ERROR_NONE);
 
   y = static_cast<double *>(malloc(tooltip_list->size * sizeof(double)));
-  error_cleanup_if(y == nullptr);
+  errorCleanupIf(y == nullptr);
   ylabels = static_cast<char **>(malloc((tooltip_list->size + 1) * sizeof(char *)));
-  error_cleanup_if(ylabels == nullptr);
+  errorCleanupIf(ylabels == nullptr);
 
   y_ptr = y;
   ylabels_ptr = ylabels;
@@ -1255,18 +1214,18 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
       ++ylabels_ptr;
       tooltip_reflist_node = tooltip_reflist_node->next;
     }
-  error_cleanup_if(nearest_tooltip == nullptr);
+  errorCleanupIf(nearest_tooltip == nullptr);
   *ylabels_ptr = nullptr; /* terminate the ylabels array with a nullptr pointer to simplify loops */
 
   accumulated_tooltip = static_cast<grm_accumulated_tooltip_info_t *>(malloc(sizeof(grm_accumulated_tooltip_info_t)));
-  error_cleanup_if(accumulated_tooltip == nullptr);
+  errorCleanupIf(accumulated_tooltip == nullptr);
   accumulated_tooltip->n = tooltip_list->size;
   accumulated_tooltip->x = nearest_tooltip->x;
   accumulated_tooltip->x_px = nearest_tooltip->x_px;
-  accumulated_tooltip->xlabel = nearest_tooltip->xlabel;
+  accumulated_tooltip->x_label = nearest_tooltip->x_label;
   accumulated_tooltip->y = y;
   accumulated_tooltip->y_px = nearest_tooltip->y_px;
-  accumulated_tooltip->ylabels = ylabels;
+  accumulated_tooltip->y_labels = ylabels;
 
   if (tooltip_list != nullptr)
     {
@@ -1276,7 +1235,7 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
           free(tooltip_reflist_node->entry);
           tooltip_reflist_node = tooltip_reflist_node->next;
         }
-      tooltip_reflist_delete(tooltip_list);
+      tooltipReflistDelete(tooltip_list);
       tooltip_list = nullptr;
     }
 
@@ -1294,15 +1253,15 @@ error_cleanup:
           free(tooltip_reflist_node->entry);
           tooltip_reflist_node = tooltip_reflist_node->next;
         }
-      tooltip_reflist_delete(tooltip_list);
+      tooltipReflistDelete(tooltip_list);
       tooltip_list = nullptr;
     }
 
   return nullptr;
 }
 
-err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
-                    bool accumulated = false)
+grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
+                            bool accumulated = false)
 {
   double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
@@ -1310,16 +1269,16 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   std::vector<std::string> labels;
   unsigned int num_labels = 0;
   std::string kind, orientation = PLOT_DEFAULT_ORIENTATION;
-  unsigned int x_length, y_length, z_length, series_i = 0, i;
+  unsigned int x_length, y_length, series_i = 0, i;
 
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
-  return_error_if(info == nullptr, ERROR_MALLOC);
+  returnErrorIf(info == nullptr, GRM_ERROR_MALLOC);
   info->x_px = -1;
   info->y_px = -1;
   info->x = 0;
   info->y = 0;
-  info->xlabel = (char *)"x";
-  info->ylabel = (char *)"y";
+  info->x_label = (char *)"x";
+  info->y_label = (char *)"y";
   info->label = (char *)"";
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
@@ -1327,15 +1286,15 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   x = (double)mouse_x / max_width_height;
   y = (double)(height - mouse_y) / max_width_height;
 
-  auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
+  auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &x, &y);
 
   if (subplot_element != nullptr) kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
   if (subplot_element == nullptr ||
-      !str_equals_any(kind, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour", "imshow",
-                      "contourf", "pie", "hexbin", "shade", "quiver"))
+      !strEqualsAny(kind, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour", "imshow",
+                    "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       tooltip_callback(mouse_x, mouse_y, info);
-      return ERROR_NONE;
+      return GRM_ERROR_NONE;
     }
 
   gr_savestate();
@@ -1346,10 +1305,10 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   GRM::Render::processWindow(central_region);
   if (central_region->hasAttribute("viewport_x_min"))
     {
-      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
-                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
-                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
-                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+      double viewport[4];
+      if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+        throw NotFoundError("Central region doesn't have a viewport but it should.\n");
+      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     }
   if (central_region->hasAttribute("window_x_min") && kind != "pie")
     {
@@ -1376,20 +1335,20 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   if (label_elements.x && label_elements.x->hasAttribute("text_content"))
     {
       static auto xlabel = static_cast<std::string>(label_elements.x->getAttribute("text_content"));
-      info->xlabel = (char *)xlabel.c_str();
+      info->x_label = (char *)xlabel.c_str();
     }
   else
     {
-      info->xlabel = (char *)"x";
+      info->x_label = (char *)"x";
     }
   if (label_elements.y && label_elements.y->hasAttribute("text_content"))
     {
       static auto ylabel = static_cast<std::string>(label_elements.y->getAttribute("text_content"));
-      info->ylabel = (char *)ylabel.c_str();
+      info->y_label = (char *)ylabel.c_str();
     }
   else
     {
-      info->ylabel = (char *)"y";
+      info->y_label = (char *)"y";
     }
 
   x_range_min = (double)(mouse_x - 50) / max_width_height;
@@ -1422,7 +1381,7 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
   if (kind == "pie")
     {
       static char output[50];
-      double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
+      double max_x = 0.96, min_x = 0.04, max_y = 0.075, min_y = 0.975;
       int center_x, center_y;
       double radius;
       double start_angle, end_angle, act_angle;
@@ -1435,9 +1394,9 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
       min_y = height - min_y * max_width_height;
 
       /* calculate the circle */
-      radius = (max_x - min_x) / 2.0;
-      center_x = (int)(max_x - radius);
-      center_y = (int)(max_y - radius);
+      radius = 0.5 * (max_x - min_x);
+      center_x = (int)(max_x + min_x) / 2;
+      center_y = (int)(max_y + min_y) / 2;
 
       auto current_series = subplot_element->querySelectorsAll("series_pie")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
@@ -1446,7 +1405,7 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
 
       x_length = x_series_vec.size();
       std::vector<double> normalized_x(x_length);
-      GRM::normalize_vec(x_series_vec, &normalized_x);
+      GRM::normalizeVec(x_series_vec, &normalized_x);
       start_angle = 90.0;
       for (i = 0; i < x_length; ++i)
         {
@@ -1456,10 +1415,7 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
           act_angle = (mouse_y - center_y > 0) ? act_angle * 180 / M_PI : 360 - act_angle * 180 / M_PI;
           if (act_angle >= 270 && act_angle <= 360) act_angle = act_angle - 360;
           act_angle *= -1;
-          if (start_angle >= act_angle && end_angle <= act_angle)
-            {
-              snprintf(output, 50, "%f", x_series_vec[i]);
-            }
+          if (start_angle >= act_angle && end_angle <= act_angle) snprintf(output, 50, "%f", x_series_vec[i]);
           start_angle = end_angle;
         }
 
@@ -1474,351 +1430,342 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
         }
       tooltip_callback(mouse_x, mouse_y, info);
       gr_restorestate();
-      return ERROR_NONE;
+      return GRM_ERROR_NONE;
+    }
+
+  auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind);
+  std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
+  if (kind != "marginal_heatmap")
+    {
+      for (const auto &current_series_group : current_series_group_vec)
+        {
+          if (strEqualsAny(kind, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver", "shade"))
+            {
+              current_series_vec.push_back(current_series_group);
+            }
+          else
+            {
+              for (const auto &current_series_group_child : current_series_group->children())
+                {
+                  current_series_vec.push_back(current_series_group_child);
+                }
+            }
+        }
     }
   else
     {
-      auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind);
-      std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
-      if (kind != "marginal_heatmap")
+      current_series_vec.push_back(subplot_element->querySelectors("marginal_heatmap_plot"));
+    }
+
+  for (auto &current_series : current_series_vec)
+    {
+      std::string x_key_string = "x";
+      std::string y_key_string = "y";
+      std::string z_key_string = "z", z_key;
+
+      mindiff = DBL_MAX;
+
+      if (kind == "contour" || kind == "contourf")
         {
-          for (const auto &current_series_group : current_series_group_vec)
+          x_key_string = "px";
+          y_key_string = "py";
+          z_key_string = "pz";
+        }
+
+      if (!current_series->hasAttribute(x_key_string) || !current_series->hasAttribute(y_key_string)) continue;
+      auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
+      auto y_key = static_cast<std::string>(current_series->getAttribute(y_key_string));
+
+      if (!strEqualsAny(kind, "hexbin", "quiver", "line", "scatter", "stem", "stairs", "shade"))
+        {
+          if (!current_series->hasAttribute(z_key_string))
             {
-              if (str_equals_any(kind, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver", "shade"))
+              mindiff = DBL_MAX;
+              continue;
+            }
+          z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
+        }
+
+      std::vector<double> x_series_vec, y_series_vec, z_series_vec;
+
+      if (strEqualsAny(kind, "heatmap", "hexbin", "quiver", "shade") && orientation == "vertical")
+        {
+          auto tmp = x_key;
+          x_key = y_key;
+          y_key = tmp;
+        }
+      x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+      y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+      if (strEqualsAny(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
+        {
+          z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
+        }
+
+      if (!strEqualsAny(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf", "quiver"))
+        {
+          for (i = 0; i < x_series_vec.size(); i++)
+            {
+              x_px = x_series_vec[i];
+              if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
+                  static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) != "x")
                 {
-                  current_series_vec.push_back(current_series_group);
+                  auto location =
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location"));
+                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                  x_px = (x_px - b) / a;
                 }
-              else
+              if (x_px < x_range_min || x_px > x_range_max) continue;
+
+              y_px = y_series_vec[i];
+              if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
+                  static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) != "y")
                 {
-                  for (const auto &current_series_group_child : current_series_group->children())
+                  auto location =
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location"));
+                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                  y_px = (y_px - b) / a;
+                }
+              if (!accumulated && (y_px < y_range_min || y_px > y_range_max)) continue;
+
+              gr_wctondc(&x_px, &y_px);
+              x_px = x_px * max_width_height;
+              y_px = y_px * max_width_height;
+              diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
+              if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
+              if (diff < mindiff && diff <= MAX_MOUSE_DIST)
+                {
+                  mindiff = diff;
+                  info->x = x_series_vec[i];
+                  info->y = y_series_vec[i];
+                  info->x_px = (int)x_px;
+                  info->y_px = height - (int)y_px;
+                  if (num_labels > series_i)
                     {
-                      current_series_vec.push_back(current_series_group_child);
+                      static std::vector<std::string> line_label = labels;
+                      info->label = (char *)line_label[series_i].c_str();
+                    }
+                  else
+                    {
+                      info->label = (char *)"";
                     }
                 }
             }
         }
       else
         {
-          current_series_vec.push_back(subplot_element->querySelectors("marginal_heatmap_plot"));
-        }
+          static char output[50];
+          double num;
+          x_length = x_series_vec.size();
+          y_length = y_series_vec.size();
+          double x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1], y_0 = y_series_vec[0],
+                 y_end = y_series_vec[y_length - 1];
+          double x_step, y_step, x_series_idx, y_series_idx;
+          double *u_series, *v_series;
+          std::vector<double> x_steps, y_steps;
+          int x_offset = 0, y_offset = 0;
 
-      for (auto &current_series : current_series_vec)
-        {
-          std::string x_key_string = "x";
-          std::string y_key_string = "y";
-          std::string z_key_string = "z";
-          std::string z_key;
-
-          mindiff = DBL_MAX;
-
-          if (kind == "contour" || kind == "contourf")
+          if (static_cast<int>(subplot_element->getAttribute("x_log")))
             {
-              x_key_string = "px";
-              y_key_string = "py";
-              z_key_string = "pz";
-            }
-
-          if (!current_series->hasAttribute(x_key_string) || !current_series->hasAttribute(y_key_string))
-            {
-              continue;
-            }
-          auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
-          auto y_key = static_cast<std::string>(current_series->getAttribute(y_key_string));
-
-          if (!str_equals_any(kind, "hexbin", "quiver", "line", "scatter", "stem", "stairs", "shade"))
-            {
-              if (!current_series->hasAttribute(z_key_string))
+              for (int j = 0; j < (int)x_length; j++)
                 {
-                  mindiff = DBL_MAX;
-                  continue;
+                  if (!grm_isnan(x_series_vec[j]))
+                    {
+                      x_min = x_series_vec[j];
+                      break;
+                    }
+                  x_offset += 1;
                 }
-              z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
+              x_0 = x_min;
             }
-
-          std::vector<double> x_series_vec, y_series_vec, z_series_vec;
-
-          if (str_equals_any(kind, "heatmap", "hexbin", "quiver", "shade") && orientation == "vertical")
+          if (static_cast<int>(subplot_element->getAttribute("y_log")))
             {
-              auto tmp = x_key;
-              x_key = y_key;
-              y_key = tmp;
-            }
-          x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
-          y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-          if (str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
-            {
-              z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
-              z_length = z_series_vec.size();
-            }
-
-          if (!str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf", "quiver"))
-            {
-              for (i = 0; i < x_series_vec.size(); i++)
+              for (int j = 0; j < (int)y_length; j++)
                 {
-                  x_px = x_series_vec[i];
-                  if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
-                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) !=
-                          "x")
+                  if (!grm_isnan(y_series_vec[j]))
                     {
-                      auto location = static_cast<std::string>(
-                          current_series->parentElement()->getAttribute("ref_x_axis_location"));
-                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
-                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
-
-                      x_px = (x_px - b) / a;
+                      y_min = y_series_vec[j];
+                      break;
                     }
-                  if (x_px < x_range_min || x_px > x_range_max) continue;
-
-                  y_px = y_series_vec[i];
-                  if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
-                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) !=
-                          "y")
-                    {
-                      auto location = static_cast<std::string>(
-                          current_series->parentElement()->getAttribute("ref_y_axis_location"));
-                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
-                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
-
-                      y_px = (y_px - b) / a;
-                    }
-                  if (!accumulated && (y_px < y_range_min || y_px > y_range_max)) continue;
-
-                  gr_wctondc(&x_px, &y_px);
-                  x_px = x_px * max_width_height;
-                  y_px = y_px * max_width_height;
-                  diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
-                  if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
-                  if (diff < mindiff && diff <= MAX_MOUSE_DIST)
-                    {
-                      mindiff = diff;
-                      info->x = x_series_vec[i];
-                      info->y = y_series_vec[i];
-                      info->x_px = (int)x_px;
-                      info->y_px = height - (int)y_px;
-                      if (num_labels > series_i)
-                        {
-                          static std::vector<std::string> line_label = labels;
-                          info->label = (char *)line_label[series_i].c_str();
-                        }
-                      else
-                        {
-                          info->label = (char *)"";
-                        }
-                    }
+                  y_offset += 1;
                 }
+              y_0 = y_min;
+            }
+          if (kind == "imshow") x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
+
+          gr_wctondc(&x_0, &y_0);
+          gr_wctondc(&x_end, &y_end);
+          x_0 = x_0 * max_width_height;
+          x_end = x_end * max_width_height;
+          y_0 = height - y_0 * max_width_height;
+          y_end = height - y_end * max_width_height;
+
+          x_step = (x_end - x_0) / x_length;
+          y_step = (y_end - y_0) / y_length;
+
+          if (static_cast<int>(subplot_element->getAttribute("x_log")))
+            {
+              for (int j = 0; j < (int)x_length - x_offset; j++)
+                {
+                  double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
+                  double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
+                  gr_wctondc(&a, &tmp);
+                  gr_wctondc(&b, &tmp);
+
+                  a = a * max_width_height;
+                  b = b * max_width_height;
+                  x_steps.push_back(b - a);
+                }
+            }
+          if (static_cast<int>(subplot_element->getAttribute("y_log")))
+            {
+              for (int j = 0; j < (int)y_length - y_offset; j++)
+                {
+                  double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
+                  double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
+                  gr_wctondc(&tmp, &a);
+                  gr_wctondc(&tmp, &b);
+
+                  a = a * max_width_height;
+                  b = b * max_width_height;
+                  y_steps.push_back(-(b - a));
+                }
+            }
+
+          if (kind == "quiver")
+            {
+              auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
+              auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
+
+              auto u_series_vec = GRM::get<std::vector<double>>((*context)[u_key]);
+              auto v_series_vec = GRM::get<std::vector<double>>((*context)[v_key]);
+              u_series = &u_series_vec[0];
+              v_series = &v_series_vec[0];
+            }
+
+          mindiff = 0;
+          x_series_idx = (mouse_x - x_0) / x_step;
+          if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
+              strEqualsAny(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
+            {
+              double tmp = 0;
+              x_series_idx = x_offset;
+              for (int j = 0; j < (int)x_length - x_offset; j++)
+                {
+                  if (tmp + x_steps[j] > (mouse_x - x_0)) break;
+                  tmp += x_steps[j];
+                  x_series_idx += 1;
+                }
+            }
+
+          y_series_idx = (mouse_y - y_0) / y_step;
+          if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
+              strEqualsAny(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
+            {
+              double tmp = 0;
+              y_series_idx = y_offset;
+              for (int j = 0; j < (int)y_length - y_offset; j++)
+                {
+                  if (tmp + y_steps[j] < (mouse_y - y_0)) break;
+                  tmp += y_steps[j];
+                  y_series_idx += 1;
+                }
+            }
+
+          if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
+            {
+              mindiff = DBL_MAX;
+              break;
+            }
+          if (kind == "quiver")
+            {
+              info->x_label = (char *)"u";
+              info->y_label = (char *)"v";
+              if (orientation == "vertical")
+                {
+                  auto tmp = y_series_idx;
+                  y_series_idx = x_series_idx;
+                  x_series_idx = tmp;
+                  x_length = y_length;
+                }
+              info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+              info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
             }
           else
             {
-              static char output[50];
-              double num;
-              x_length = x_series_vec.size();
-              y_length = y_series_vec.size();
-              double x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1], y_0 = y_series_vec[0],
-                     y_end = y_series_vec[y_length - 1];
-              double x_step, y_step, x_series_idx, y_series_idx;
-              double *u_series, *v_series;
-              std::vector<double> x_steps, y_steps;
-              int x_offset = 0, y_offset = 0;
-
-              if (static_cast<int>(subplot_element->getAttribute("x_log")))
-                {
-                  for (int j = 0; j < (int)x_length; j++)
-                    {
-                      if (!grm_isnan(x_series_vec[j]))
-                        {
-                          x_min = x_series_vec[j];
-                          break;
-                        }
-                      x_offset += 1;
-                    }
-                  x_0 = x_min;
-                }
-              if (static_cast<int>(subplot_element->getAttribute("y_log")))
-                {
-                  for (int j = 0; j < (int)y_length; j++)
-                    {
-                      if (!grm_isnan(y_series_vec[j]))
-                        {
-                          y_min = y_series_vec[j];
-                          break;
-                        }
-                      y_offset += 1;
-                    }
-                  y_0 = y_min;
-                }
-              if (kind == "imshow") x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
-
-              gr_wctondc(&x_0, &y_0);
-              gr_wctondc(&x_end, &y_end);
-              x_0 = x_0 * max_width_height;
-              x_end = x_end * max_width_height;
-              y_0 = height - y_0 * max_width_height;
-              y_end = height - y_end * max_width_height;
-
-              x_step = (x_end - x_0) / x_length;
-              y_step = (y_end - y_0) / y_length;
-
-              if (static_cast<int>(subplot_element->getAttribute("x_log")))
-                {
-                  for (int j = 0; j < (int)x_length - x_offset; j++)
-                    {
-                      double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
-                      double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
-                      gr_wctondc(&a, &tmp);
-                      gr_wctondc(&b, &tmp);
-
-                      a = a * max_width_height;
-                      b = b * max_width_height;
-                      x_steps.push_back(b - a);
-                    }
-                }
-              if (static_cast<int>(subplot_element->getAttribute("y_log")))
-                {
-                  for (int j = 0; j < (int)y_length - y_offset; j++)
-                    {
-                      double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
-                      double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
-                      gr_wctondc(&tmp, &a);
-                      gr_wctondc(&tmp, &b);
-
-                      a = a * max_width_height;
-                      b = b * max_width_height;
-                      y_steps.push_back(-(b - a));
-                    }
-                }
-
-              if (kind == "quiver")
-                {
-                  auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
-                  auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
-
-                  auto u_series_vec = GRM::get<std::vector<double>>((*context)[u_key]);
-                  auto v_series_vec = GRM::get<std::vector<double>>((*context)[v_key]);
-                  u_series = &u_series_vec[0];
-                  v_series = &v_series_vec[0];
-                }
-
-              mindiff = 0;
-              x_series_idx = (mouse_x - x_0) / x_step;
-              if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
-                {
-                  double tmp = 0;
-                  x_series_idx = x_offset;
-                  for (int j = 0; j < (int)x_length - x_offset; j++)
-                    {
-                      if (tmp + x_steps[j] > (mouse_x - x_0)) break;
-                      tmp += x_steps[j];
-                      x_series_idx += 1;
-                    }
-                }
-
-              y_series_idx = (mouse_y - y_0) / y_step;
-              if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
-                {
-                  double tmp = 0;
-                  y_series_idx = y_offset;
-                  for (int j = 0; j < (int)y_length - y_offset; j++)
-                    {
-                      if (tmp + y_steps[j] < (mouse_y - y_0)) break;
-                      tmp += y_steps[j];
-                      y_series_idx += 1;
-                    }
-                }
-
-              if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
-                {
-                  mindiff = DBL_MAX;
-                  break;
-                }
-              if (kind == "quiver")
-                {
-                  info->xlabel = (char *)"u";
-                  info->ylabel = (char *)"v";
-                  if (orientation == "vertical")
-                    {
-                      auto tmp = y_series_idx;
-                      y_series_idx = x_series_idx;
-                      x_series_idx = tmp;
-                      x_length = y_length;
-                    }
-                  info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
-                  info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
-                }
-              else
-                {
-                  info->x = x_series_vec[(int)x_series_idx];
-                  info->y = y_series_vec[(int)y_series_idx];
-                }
-              info->x_px = mouse_x;
-              info->y_px = mouse_y;
-
-              if (kind == "quiver")
-                {
-                  info->label = (char *)"";
-                }
-              else
-                {
-                  if (kind == "heatmap" && orientation == "vertical")
-                    {
-                      auto tmp = y_series_idx;
-                      y_series_idx = x_series_idx;
-                      x_series_idx = tmp;
-                      x_length = y_length;
-                    }
-                  num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
-                            ? NAN
-                            : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
-                  snprintf(output, 50, "%f", num);
-                  info->label = output;
-                }
+              info->x = x_series_vec[(int)x_series_idx];
+              info->y = y_series_vec[(int)y_series_idx];
             }
-          tooltip_callback(mouse_x, mouse_y, info);
-          if (current_series != nullptr)
+          info->x_px = mouse_x;
+          info->y_px = mouse_y;
+
+          if (kind == "quiver")
             {
-              info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
-              info->x_px = -1;
-              info->y_px = -1;
-              info->x = 0;
-              info->y = 0;
-              if (label_elements.x && label_elements.x->hasAttribute("text_content"))
-                {
-                  static auto xlabel = static_cast<std::string>(label_elements.x->getAttribute("text_content"));
-                  info->xlabel = (char *)xlabel.c_str();
-                }
-              else
-                {
-                  info->xlabel = (char *)"x";
-                }
-              if (label_elements.y && label_elements.y->hasAttribute("text_content"))
-                {
-                  static auto ylabel = static_cast<std::string>(label_elements.y->getAttribute("text_content"));
-                  info->ylabel = (char *)ylabel.c_str();
-                }
-              else
-                {
-                  info->ylabel = (char *)"y";
-                }
               info->label = (char *)"";
-              return_error_if(info == nullptr, ERROR_MALLOC);
             }
-          ++series_i;
+          else
+            {
+              if (kind == "heatmap" && orientation == "vertical")
+                {
+                  auto tmp = y_series_idx;
+                  y_series_idx = x_series_idx;
+                  x_series_idx = tmp;
+                  x_length = y_length;
+                }
+              num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
+                        ? NAN
+                        : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
+              snprintf(output, 50, "%f", num);
+              info->label = output;
+            }
         }
+      tooltip_callback(mouse_x, mouse_y, info);
+      if (current_series != nullptr)
+        {
+          info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
+          info->x_px = -1;
+          info->y_px = -1;
+          info->x = 0;
+          info->y = 0;
+          if (label_elements.x && label_elements.x->hasAttribute("text_content"))
+            {
+              static auto xlabel = static_cast<std::string>(label_elements.x->getAttribute("text_content"));
+              info->x_label = (char *)xlabel.c_str();
+            }
+          else
+            {
+              info->x_label = (char *)"x";
+            }
+          if (label_elements.y && label_elements.y->hasAttribute("text_content"))
+            {
+              static auto ylabel = static_cast<std::string>(label_elements.y->getAttribute("text_content"));
+              info->y_label = (char *)ylabel.c_str();
+            }
+          else
+            {
+              info->y_label = (char *)"y";
+            }
+          info->label = (char *)"";
+          returnErrorIf(info == nullptr, GRM_ERROR_MALLOC);
+        }
+      ++series_i;
     }
   gr_restorestate();
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
-                   bool accumulated)
+grm_error_t getTooltips(int mouse_x, int mouse_y, grm_error_t (*tooltip_callback)(int, int, grm_tooltip_info_t *),
+                        bool accumulated)
 {
   auto render = grm_get_render();
   bool auto_update;
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
 
-  auto error = get_tooltips_(mouse_x, mouse_y, tooltip_callback, accumulated);
+  auto error = getTooltipsImpl(mouse_x, mouse_y, tooltip_callback, accumulated);
 
   render->setAutoUpdate(auto_update);
 
@@ -1833,11 +1780,10 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
       max_width_height = grm_max(width, height);
 
-      double ndc_x, ndc_y;
-      ndc_x = (double)mouse_x / max_width_height;
-      ndc_y = (double)(height - mouse_y) / max_width_height;
+      auto ndc_x = (double)mouse_x / max_width_height;
+      auto ndc_y = (double)(height - mouse_y) / max_width_height;
 
-      auto subplot_element = get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
+      auto subplot_element = grm_get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
       if (subplot_element != nullptr)
         {
           std::shared_ptr<GRM::Element> movable = nullptr;
@@ -1847,12 +1793,10 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
             {
               if (move_elem != nullptr)
                 {
-                  double bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max;
-
-                  bbox_x_min = static_cast<double>(move_elem->getAttribute("_bbox_x_min"));
-                  bbox_x_max = static_cast<double>(move_elem->getAttribute("_bbox_x_max"));
-                  bbox_y_min = static_cast<double>(move_elem->getAttribute("_bbox_y_min"));
-                  bbox_y_max = static_cast<double>(move_elem->getAttribute("_bbox_y_max"));
+                  auto bbox_x_min = static_cast<double>(move_elem->getAttribute("_bbox_x_min"));
+                  auto bbox_x_max = static_cast<double>(move_elem->getAttribute("_bbox_x_max"));
+                  auto bbox_y_min = static_cast<double>(move_elem->getAttribute("_bbox_y_min"));
+                  auto bbox_y_max = static_cast<double>(move_elem->getAttribute("_bbox_y_max"));
                   if (bbox_x_min <= mouse_x && bbox_x_max >= mouse_x && bbox_y_min <= mouse_y && bbox_y_max >= mouse_y)
                     {
                       if ((static_cast<std::string>(move_elem->getAttribute("name")) == "integral_left" ||

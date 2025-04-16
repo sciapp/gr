@@ -1,10 +1,10 @@
-#include "CustomTreeWidgetItem.h"
+#include "CustomTreeWidgetItem.hxx"
 #include <utility>
 
-CustomTreeWidgetItem::CustomTreeWidgetItem(QTreeWidgetItem *parent, std::shared_ptr<GRM::Element> pRef)
-    : QTreeWidgetItem(parent), ref(pRef)
+CustomTreeWidgetItem::CustomTreeWidgetItem(QTreeWidgetItem *parent, std::shared_ptr<GRM::Element> p_ref)
+    : QTreeWidgetItem(parent), ref(p_ref)
 {
-  this->ref = pRef;
+  this->ref = p_ref;
   this->setFlags(this->flags());
 }
 

@@ -16,12 +16,12 @@ extern "C" {
 
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
-#define logger(logger_arguments)                              \
-  do                                                          \
-    {                                                         \
-      logger1_(stderr, __FILE__, __LINE__, CURRENT_FUNCTION); \
-      logger2_ logger_arguments;                              \
-    }                                                         \
+#define logger(logger_arguments)                             \
+  do                                                         \
+    {                                                        \
+      logger1(stderr, __FILE__, __LINE__, CURRENT_FUNCTION); \
+      logger2 logger_arguments;                              \
+    }                                                        \
   while (0)
 
 
@@ -29,9 +29,9 @@ extern "C" {
 
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
-int logger_enabled(void);
-void logger1_(FILE *stream, const char *filename, int line_number, const char *current_function);
-void logger2_(FILE *stream, const char *format, ...);
+int loggerEnabled(void);
+void logger1(FILE *stream, const char *filename, int line_number, const char *current_function);
+void logger2(FILE *stream, const char *format, ...);
 
 
 #ifdef __cplusplus

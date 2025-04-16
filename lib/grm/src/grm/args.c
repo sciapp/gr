@@ -21,9 +21,9 @@
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
 static int argparse_valid_format[128];
-static read_param_t argparse_format_to_read_callback[128];
-static copy_value_t argparse_format_to_copy_callback[128];
-static delete_value_t argparse_format_to_delete_callback[128];
+static ReadParam argparse_format_to_read_callback[128];
+static CopyValue argparse_format_to_copy_callback[128];
+static DeleteValue argparse_format_to_delete_callback[128];
 static size_t argparse_format_to_size[128];
 static int argparse_format_has_array_terminator[128];
 static int argparse_static_variables_initialized = 0;
@@ -39,31 +39,31 @@ static const char *const ARGS_VALID_DATA_FORMAT_SPECIFIERS = "idcsa"; /* Each sp
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding, char **new_format)
+void *argparseReadParams(const char *format, const void *buffer, va_list *vl, int apply_padding, char **new_format)
 {
   char *fmt, *current_format, first_format_char;
   size_t needed_buffer_size;
   void *save_buffer;
-  argparse_state_t state;
+  ArgparseState state;
 
-  argparse_init_static_variables();
+  argparseInitStaticVariables();
 
   /* copy format string since it is modified during the parsing process */
   fmt = gks_strdup(format);
   if (fmt == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
 
   /* get needed save_buffer size to store all parameters and allocate memory */
-  needed_buffer_size = argparse_calculate_needed_buffer_size(fmt, apply_padding);
+  needed_buffer_size = argparseCalculateNeededBufferSize(fmt, apply_padding);
   if (needed_buffer_size > 0)
     {
       save_buffer = malloc(needed_buffer_size);
       if (save_buffer == NULL)
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
           free(fmt);
           return NULL;
         }
@@ -92,9 +92,9 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
         {
           state.next_is_array = 1;
         }
-      argparse_read_next_option(&state, &current_format);
+      argparseReadNextOption(&state, &current_format);
       state.save_buffer =
-          ((char *)state.save_buffer) + argparse_calculate_needed_padding(state.save_buffer, state.current_format);
+          ((char *)state.save_buffer) + argparseCalculateNeededPadding(state.save_buffer, state.current_format);
       argparse_format_to_read_callback[(unsigned char)state.current_format](&state);
       state.next_is_array = 0;
       state.next_array_length = -1;
@@ -115,7 +115,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
     {
       if (state.dataslot_count > 1 && new_format != NULL)
         {
-          *new_format = argparse_convert_to_array(&state);
+          *new_format = argparseConvertToArray(&state);
         }
       else if (argparse_format_has_array_terminator[(unsigned char)state.current_format])
         {
@@ -141,8 +141,8 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
     }                                                                     \
   while (0)
 
-#define READ_TYPE(type, terminate_array)                                                                       \
-  void argparse_read_##type(argparse_state_t *state)                                                           \
+#define READ_TYPE(name, type, terminate_array)                                                                 \
+  void argparseRead##name(ArgparseState *state)                                                                \
   {                                                                                                            \
     size_t *size_t_typed_buffer;                                                                               \
     type *typed_buffer, **pointer_typed_buffer, *src_ptr;                                                      \
@@ -188,7 +188,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
               }                                                                                                \
             else                                                                                               \
               {                                                                                                \
-                debug_print_malloc_error();                                                                    \
+                debugPrintMallocError();                                                                       \
               }                                                                                                \
             if (state->in_buffer != NULL)                                                                      \
               {                                                                                                \
@@ -216,18 +216,18 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
       }                                                                                                        \
   }
 
-READ_TYPE(int, 0)
-READ_TYPE(double, 0)
-READ_TYPE(grm_args_ptr_t, 1)
+READ_TYPE(Int, int, 0)
+READ_TYPE(Double, double, 0)
+READ_TYPE(GrmArgsPtrT, grm_args_ptr_t, 1)
 
 #undef READ_TYPE
 
 
-void argparse_read_char(argparse_state_t *state)
+void argparseReadChar(ArgparseState *state)
 {
   if (state->next_is_array)
     {
-      argparse_read_char_array(state, 1);
+      argparseReadCharArray(state, 1);
     }
   else
     {
@@ -246,8 +246,7 @@ void argparse_read_char(argparse_state_t *state)
     }
 }
 
-
-void argparse_read_string(argparse_state_t *state)
+void argparseReadString(ArgparseState *state)
 {
   if (state->next_is_array)
     {
@@ -304,12 +303,12 @@ void argparse_read_string(argparse_state_t *state)
                   free((*pointer_typed_buffer)[i]);
                 }
               free(*pointer_typed_buffer);
-              debug_print_malloc_error();
+              debugPrintMallocError();
             }
         }
       else
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
         }
       if (state->in_buffer != NULL)
         {
@@ -320,12 +319,11 @@ void argparse_read_string(argparse_state_t *state)
     }
   else
     {
-      argparse_read_char_array(state, 0);
+      argparseReadCharArray(state, 0);
     }
 }
 
-
-void argparse_read_default_array_length(argparse_state_t *state)
+void argparseReadDefaultArrayLength(ArgparseState *state)
 {
   if (state->in_buffer != NULL)
     {
@@ -341,9 +339,8 @@ void argparse_read_default_array_length(argparse_state_t *state)
     }
 }
 
-
 /* helper function */
-void argparse_read_char_array(argparse_state_t *state, int store_array_length)
+void argparseReadCharArray(ArgparseState *state, int store_array_length)
 {
   char **pointer_typed_buffer;
   const char *src_ptr;
@@ -377,7 +374,7 @@ void argparse_read_char_array(argparse_state_t *state, int store_array_length)
     }
   else
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
     }
   if (state->in_buffer != NULL)
     {
@@ -389,7 +386,7 @@ void argparse_read_char_array(argparse_state_t *state, int store_array_length)
 
 #undef CHECK_PADDING
 
-void argparse_init_static_variables()
+void argparseInitStaticVariables()
 {
   if (!argparse_static_variables_initialized)
     {
@@ -405,18 +402,18 @@ void argparse_init_static_variables()
       argparse_valid_format['a'] = 1;
       argparse_valid_format['A'] = 1;
 
-      argparse_format_to_read_callback['i'] = argparse_read_int;
-      argparse_format_to_read_callback['d'] = argparse_read_double;
-      argparse_format_to_read_callback['c'] = argparse_read_char;
-      argparse_format_to_read_callback['s'] = argparse_read_string;
-      argparse_format_to_read_callback['a'] = argparse_read_grm_args_ptr_t;
-      argparse_format_to_read_callback['n'] = argparse_read_default_array_length;
+      argparse_format_to_read_callback['i'] = argparseReadInt;
+      argparse_format_to_read_callback['d'] = argparseReadDouble;
+      argparse_format_to_read_callback['c'] = argparseReadChar;
+      argparse_format_to_read_callback['s'] = argparseReadString;
+      argparse_format_to_read_callback['a'] = argparseReadGrmArgsPtrT;
+      argparse_format_to_read_callback['n'] = argparseReadDefaultArrayLength;
 
-      argparse_format_to_copy_callback['s'] = (copy_value_t)gks_strdup;
-      argparse_format_to_copy_callback['a'] = (copy_value_t)args_copy;
+      argparse_format_to_copy_callback['s'] = (CopyValue)gks_strdup;
+      argparse_format_to_copy_callback['a'] = (CopyValue)argsCopy;
 
       argparse_format_to_delete_callback['s'] = free;
-      argparse_format_to_delete_callback['a'] = (delete_value_t)grm_args_delete;
+      argparse_format_to_delete_callback['a'] = (DeleteValue)grm_args_delete;
 
       argparse_format_to_size['i'] = sizeof(int);
       argparse_format_to_size['I'] = sizeof(int *);
@@ -438,7 +435,7 @@ void argparse_init_static_variables()
     }
 }
 
-size_t argparse_calculate_needed_buffer_size(const char *format, int apply_padding)
+size_t argparseCalculateNeededBufferSize(const char *format, int apply_padding)
 {
   size_t needed_size;
   size_t size_for_current_specifier;
@@ -458,7 +455,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
       char current_format;
       if (*format == '(')
         {
-          format = argparse_skip_option(format);
+          format = argparseSkipOption(format);
           if (!*format)
             {
               break;
@@ -475,7 +472,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
           if (apply_padding)
             {
               /* apply needed padding for memory alignment first */
-              needed_size += argparse_calculate_needed_padding((void *)needed_size, current_format);
+              needed_size += argparseCalculateNeededPadding((void *)needed_size, current_format);
             }
           /* then add the actual needed memory size */
           needed_size += size_for_current_specifier;
@@ -495,7 +492,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
   return needed_size;
 }
 
-size_t argparse_calculate_needed_padding(void *buffer, char current_format)
+size_t argparseCalculateNeededPadding(void *buffer, char current_format)
 {
   int size_for_current_specifier;
   int needed_padding;
@@ -517,7 +514,7 @@ size_t argparse_calculate_needed_padding(void *buffer, char current_format)
   return needed_padding;
 }
 
-void argparse_read_next_option(argparse_state_t *state, char **format)
+void argparseReadNextOption(ArgparseState *state, char **format)
 {
   char *fmt = *format;
   unsigned int next_array_length;
@@ -536,14 +533,14 @@ void argparse_read_next_option(argparse_state_t *state, char **format)
     }
   if (!*current_char)
     {
-      debug_print_error(("Option \"%s\" in format string \"%s\" is not terminated -> ignore it.\n", fmt, *format));
+      debugPrintError(("Option \"%s\" in format string \"%s\" is not terminated -> ignore it.\n", fmt, *format));
       return;
     }
   *current_char = '\0';
 
-  if (!str_to_uint(fmt, &next_array_length))
+  if (!strToUint(fmt, &next_array_length))
     {
-      debug_print_error(
+      debugPrintError(
           ("Option \"%s\" in format string \"%s\" could not be converted to a number -> ignore it.\n", fmt, *format));
       return;
     }
@@ -552,7 +549,7 @@ void argparse_read_next_option(argparse_state_t *state, char **format)
   *format = current_char;
 }
 
-const char *argparse_skip_option(const char *format)
+const char *argparseSkipOption(const char *format)
 {
   if (*format != '(')
     {
@@ -569,7 +566,7 @@ const char *argparse_skip_option(const char *format)
   return format;
 }
 
-char *argparse_convert_to_array(argparse_state_t *state)
+char *argparseConvertToArray(ArgparseState *state)
 {
   void *new_save_buffer = NULL;
   size_t *size_t_typed_buffer;
@@ -602,28 +599,28 @@ char *argparse_convert_to_array(argparse_state_t *state)
 cleanup:
   free(new_save_buffer);
   free(new_format);
-  debug_print_malloc_error();
+  debugPrintMallocError();
   return NULL;
 }
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding)
+grm_arg_t *argsCreateArgs(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding)
 {
-  arg_t *arg;
+  grm_arg_t *arg;
   char *parsing_format;
   char *new_format = NULL;
 
-  if (!args_validate_format_string(value_format))
+  if (!argsValidateFormatString(value_format))
     {
       return NULL;
     }
 
-  arg = malloc(sizeof(arg_t));
+  arg = malloc(sizeof(grm_arg_t));
   if (arg == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
   if (key != NULL)
@@ -631,7 +628,7 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
       arg->key = gks_strdup(key);
       if (arg->key == NULL)
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
           free(arg);
           return NULL;
         }
@@ -643,7 +640,7 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
   arg->value_format = malloc(2 * strlen(value_format) + 1);
   if (arg->value_format == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       free((char *)arg->key);
       free(arg);
       return NULL;
@@ -651,28 +648,28 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
   parsing_format = malloc(strlen(value_format) + 1);
   if (parsing_format == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       free((char *)arg->key);
       free((char *)arg->value_format);
       free(arg);
       return NULL;
     }
-  args_copy_format_string_for_parsing(parsing_format, value_format);
-  arg->value_ptr = argparse_read_params(parsing_format, buffer, vl, apply_padding, &new_format);
+  argsCopyFormatStringForParsing(parsing_format, value_format);
+  arg->value_ptr = argparseReadParams(parsing_format, buffer, vl, apply_padding, &new_format);
   if (new_format == NULL)
     {
-      args_copy_format_string_for_arg((char *)arg->value_format, value_format);
+      argsCopyFormatStringForArg((char *)arg->value_format, value_format);
     }
   else
     {
-      args_copy_format_string_for_arg((char *)arg->value_format, new_format);
+      argsCopyFormatStringForArg((char *)arg->value_format, new_format);
       free(new_format);
     }
   free(parsing_format);
-  arg->priv = malloc(sizeof(arg_private_t));
+  arg->priv = malloc(sizeof(grm_arg_private_t));
   if (arg->priv == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       free((char *)arg->key);
       free((char *)arg->value_format);
       free(arg);
@@ -683,7 +680,7 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
   return arg;
 }
 
-int args_validate_format_string(const char *format)
+int argsValidateFormatString(const char *format)
 {
   char *fmt;
   char *first_format_char;
@@ -699,7 +696,7 @@ int args_validate_format_string(const char *format)
   fmt = gks_strdup(format);
   if (fmt == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return 0;
     }
 
@@ -724,32 +721,32 @@ int args_validate_format_string(const char *format)
                   if (*current_char)
                     {
                       *current_char = '\0';
-                      is_valid = str_to_uint(option_start, NULL);
+                      is_valid = strToUint(option_start, NULL);
                       if (!is_valid)
                         {
-                          debug_print_error(("The option \"%s\" in the format string \"%s\" in no valid number.\n",
-                                             option_start, format));
+                          debugPrintError(("The option \"%s\" in the format string \"%s\" in no valid number.\n",
+                                           option_start, format));
                         }
                     }
                   else
                     {
                       is_valid = 0;
                       --current_char;
-                      debug_print_error(
+                      debugPrintError(
                           ("Option \"%s\" in the format string \"%s\" is not terminated.\n", option_start, format));
                     }
                 }
               else
                 {
                   is_valid = 0;
-                  debug_print_error(("Specifier '%c' in the format string \"%s\" cannot have any options.\n",
-                                     *previous_char, format));
+                  debugPrintError(("Specifier '%c' in the format string \"%s\" cannot have any options.\n",
+                                   *previous_char, format));
                 }
             }
           else
             {
               is_valid = 0;
-              debug_print_error(
+              debugPrintError(
                   ("The format string \"%s\" is invalid: Format strings must not start with an option.\n", format));
             }
         }
@@ -758,14 +755,14 @@ int args_validate_format_string(const char *format)
           if (strchr(ARGS_VALID_FORMAT_SPECIFIERS, *current_char) == NULL)
             {
               is_valid = 0;
-              debug_print_error(("Invalid specifier '%c' in the format string \"%s\".\n", *current_char, format));
+              debugPrintError(("Invalid specifier '%c' in the format string \"%s\".\n", *current_char, format));
             }
           else if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, *current_char) != NULL)
             {
               if (first_format_char != NULL && *current_char != *first_format_char)
                 {
                   is_valid = 0;
-                  debug_print_error(
+                  debugPrintError(
                       ("The format string \"%s\" consists of different types which is not allowed.\n", format));
                 }
               if (first_format_char == NULL)
@@ -783,7 +780,7 @@ int args_validate_format_string(const char *format)
   return is_valid;
 }
 
-const char *args_skip_option(const char *format)
+const char *argsSkipOption(const char *format)
 {
   if (*format != '(')
     {
@@ -800,7 +797,7 @@ const char *args_skip_option(const char *format)
   return format;
 }
 
-void args_copy_format_string_for_parsing(char *dst, const char *format)
+void argsCopyFormatStringForParsing(char *dst, const char *format)
 {
   while (*format)
     {
@@ -810,7 +807,7 @@ void args_copy_format_string_for_parsing(char *dst, const char *format)
           *dst++ = 's';
           /* skip an optional array length since strings have no array length */
           ++format;
-          format = args_skip_option(format);
+          format = argsSkipOption(format);
         }
       else
         {
@@ -820,7 +817,7 @@ void args_copy_format_string_for_parsing(char *dst, const char *format)
   *dst = '\0';
 }
 
-void args_copy_format_string_for_arg(char *dst, const char *format)
+void argsCopyFormatStringForArg(char *dst, const char *format)
 {
   /* `dst` should have twice as much memory as `format` to ensure that no buffer overun can occur */
   while (*format)
@@ -847,12 +844,12 @@ void args_copy_format_string_for_arg(char *dst, const char *format)
           *dst++ = *format++;
         }
       /* Skip an optional array length since it already saved in the argument buffer itself (-> `n` format) */
-      format = args_skip_option(format);
+      format = argsSkipOption(format);
     }
   *dst = '\0';
 }
 
-int args_check_format_compatibility(const arg_t *arg, const char *compatible_format)
+int argsCheckFormatCompatibility(const grm_arg_t *arg, const char *compatible_format)
 {
   char first_compatible_format_char, first_value_format_char = 0;
   const char *current_format_ptr;
@@ -861,17 +858,11 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
 
   /* First, check if the compatible format itself is valid (-> known format, homogeneous, no options) */
   first_compatible_format_char = *compatible_format;
-  if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(first_compatible_format_char)) == NULL)
-    {
-      return 0;
-    }
+  if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(first_compatible_format_char)) == NULL) return 0;
   current_format_ptr = compatible_format;
   while (*current_format_ptr != '\0')
     {
-      if (*current_format_ptr != first_compatible_format_char)
-        {
-          return 0;
-        }
+      if (*current_format_ptr != first_compatible_format_char) return 0;
       ++current_format_ptr;
     }
   len_compatible_format = current_format_ptr - compatible_format;
@@ -882,10 +873,10 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
   compatible_format_for_arg = malloc(2 * strlen(compatible_format) + 1);
   if (compatible_format_for_arg == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return 0;
     }
-  args_copy_format_string_for_arg(compatible_format_for_arg, compatible_format);
+  argsCopyFormatStringForArg(compatible_format_for_arg, compatible_format);
   if (strcmp(arg->value_format, compatible_format_for_arg) == 0)
     {
       free(compatible_format_for_arg);
@@ -903,46 +894,31 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
       if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(*current_format_ptr)) != NULL)
         {
           ++dataslot_count;
-          if (dataslot_count == 1)
-            {
-              first_value_format_char = *current_format_ptr;
-            }
+          if (dataslot_count == 1) first_value_format_char = *current_format_ptr;
         }
       ++current_format_ptr;
     }
-  if (dataslot_count > 1)
-    {
-      return 0;
-    }
+  if (dataslot_count > 1) return 0;
   /* Check if the first format types are identical (scalar and arrays of same type are considered compatible) */
-  if (tolower(first_value_format_char) != tolower(first_compatible_format_char))
-    {
-      return 0;
-    }
+  if (tolower(first_value_format_char) != tolower(first_compatible_format_char)) return 0;
   /* Check if the stored value is a scalar */
   if (first_value_format_char == tolower(first_value_format_char))
     {
       /* Check if the compatible format has the length 1 since single scalar values can only be converted to one array
        */
-      if (len_compatible_format != 1)
-        {
-          return 0;
-        }
+      if (len_compatible_format != 1) return 0;
     }
   /* Otherwise, it must be an array */
   else
     {
       /* Check if the compatible format is not longer than the stored array */
-      if (len_compatible_format > *(size_t *)arg->value_ptr)
-        {
-          return 0;
-        }
+      if (len_compatible_format > *(size_t *)arg->value_ptr) return 0;
     }
 
   return 1;
 }
 
-void args_decrease_arg_reference_count(args_node_t *args_node)
+void argsDecreaseArgReferenceCount(ArgsNode *args_node)
 {
   if (--(args_node->arg->priv->reference_count) == 0)
     {
@@ -970,7 +946,7 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
               argparse_format_to_delete_callback[(int)value_it->format](*(char **)value_it->value_ptr);
             }
         }
-      args_value_iterator_delete(value_it);
+      argsValueIteratorDelete(value_it);
       free((char *)args_node->arg->key);
       free((char *)args_node->arg->value_format);
       free(args_node->arg->priv);
@@ -982,25 +958,25 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
 
 /* ------------------------- value copy ----------------------------------------------------------------------------- */
 
-void *copy_value(char format, void *value_ptr)
+void *copyValue(char format, void *value_ptr)
 {
   void *copy;
 
   if (!argparse_valid_format[(int)format] || !argparse_format_to_size[(int)format])
     {
-      debug_print_error(("The format '%c' is unsupported.\n", format));
+      debugPrintError(("The format '%c' is unsupported.\n", format));
       return NULL;
     }
   if (tolower(format) != format)
     {
-      debug_print_error(("Array formats are not supported in the function `copy_value`.\n"));
+      debugPrintError(("Array formats are not supported in the function `copy_value`.\n"));
       return NULL;
     }
 
   copy = malloc(argparse_format_to_size[(int)format]);
   if (copy == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
 
@@ -1024,20 +1000,20 @@ void *copy_value(char format, void *value_ptr)
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-grm_args_value_iterator_t *grm_arg_value_iter(const arg_t *arg)
+grm_args_value_iterator_t *grm_arg_value_iter(const grm_arg_t *arg)
 {
-  return args_value_iterator_new(arg);
+  return argsValueIteratorNew(arg);
 }
 
-err_t arg_increase_array(arg_t *arg, size_t increment)
+grm_error_t argIncreaseArray(grm_arg_t *arg, size_t increment)
 {
   size_t *current_size_ptr, new_size;
   void ***current_buffer_ptr, **new_buffer;
   int has_array_terminator;
 
-  return_error_if(arg->value_format[0] != 'n', ERROR_ARGS_INCREASING_NON_ARRAY_VALUE);
+  returnErrorIf(arg->value_format[0] != 'n', GRM_ERROR_ARGS_INCREASING_NON_ARRAY_VALUE);
   /* Currently, only one dimensional arrays can be increased */
-  return_error_if(strlen(arg->value_format) != 2, ERROR_ARGS_INCREASING_MULTI_DIMENSIONAL_ARRAY);
+  returnErrorIf(strlen(arg->value_format) != 2, GRM_ERROR_ARGS_INCREASING_MULTI_DIMENSIONAL_ARRAY);
 
   has_array_terminator = argparse_format_has_array_terminator[tolower(arg->value_format[1])];
 
@@ -1046,7 +1022,7 @@ err_t arg_increase_array(arg_t *arg, size_t increment)
 
   new_size = *current_size_ptr + increment;
   new_buffer = realloc(*current_buffer_ptr, sizeof(void *) * (new_size + (has_array_terminator ? 1 : 0)));
-  return_error_if(new_buffer == NULL, ERROR_MALLOC);
+  returnErrorIf(new_buffer == NULL, GRM_ERROR_MALLOC);
 
   if (has_array_terminator)
     {
@@ -1060,10 +1036,10 @@ err_t arg_increase_array(arg_t *arg, size_t increment)
   *current_size_ptr = new_size;
   *current_buffer_ptr = new_buffer;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length)
+int(argFirstValue)(const grm_arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length)
 {
   char *transformed_first_value_format = NULL;
   size_t transformed_first_value_format_length;
@@ -1076,10 +1052,10 @@ int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *fir
   transformed_first_value_format = malloc(2 * strlen(first_value_format) + 1);
   if (transformed_first_value_format == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
-  args_copy_format_string_for_arg(transformed_first_value_format, first_value_format);
+  argsCopyFormatStringForArg(transformed_first_value_format, first_value_format);
   transformed_first_value_format_length = strlen(transformed_first_value_format);
   array_requested = (transformed_first_value_format_length == 2 && transformed_first_value_format[0] == 'n');
   /* if value_format does not start with the transformed first_value_format, the value cannot be read, so return here */
@@ -1087,8 +1063,8 @@ int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *fir
     {
       /* One exception: If the stored value format is a scalar value (e.g. `i`) and an array of same type shall be read
        * (in this case `nI`), then allow this (will return a pointer to the internal buffer to emulate an array) */
-      cleanup_if(!(array_requested && strlen(arg->value_format) == 1 &&
-                   arg->value_format[0] == tolower(transformed_first_value_format[1])));
+      cleanupIf(!(array_requested && strlen(arg->value_format) == 1 &&
+                  arg->value_format[0] == tolower(transformed_first_value_format[1])));
     }
   first_value_type = (arg->value_format[0] != 'n') ? arg->value_format[0] : arg->value_format[1];
   if (islower(first_value_type))
@@ -1153,21 +1129,21 @@ cleanup:
   return was_successful;
 }
 
-int arg_values(const arg_t *arg, const char *expected_format, ...)
+int argValues(const grm_arg_t *arg, const char *expected_format, ...)
 {
   va_list vl;
   int was_successful;
 
   va_start(vl, expected_format);
 
-  was_successful = arg_values_vl(arg, expected_format, &vl);
+  was_successful = argValuesVl(arg, expected_format, &vl);
 
   va_end(vl);
 
   return was_successful;
 }
 
-int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
+int argValuesVl(const grm_arg_t *arg, const char *expected_format, va_list *vl)
 {
   grm_args_value_iterator_t *value_it = NULL;
   const char *current_va_format;
@@ -1175,7 +1151,7 @@ int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
   int data_offset = 0;
   int was_successful = 0;
 
-  if (!(formats_are_equal = args_check_format_compatibility(arg, expected_format)))
+  if (!(formats_are_equal = argsCheckFormatCompatibility(arg, expected_format)))
     {
       goto cleanup;
     }
@@ -1283,7 +1259,7 @@ int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
 cleanup:
   if (value_it != NULL)
     {
-      args_value_iterator_delete(value_it);
+      argsValueIteratorDelete(value_it);
     }
 
   return was_successful;
@@ -1292,40 +1268,40 @@ cleanup:
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-void args_init(grm_args_t *args)
+void argsInit(grm_args_t *args)
 {
   args->kwargs_head = NULL;
   args->kwargs_tail = NULL;
   args->count = 0;
 }
 
-void args_finalize(grm_args_t *args)
+void argsFinalize(grm_args_t *args)
 {
-  args_clear(args, NULL);
+  argsClear(args, NULL);
 }
 
-grm_args_t *args_flatcopy(const grm_args_t *copy_args)
+grm_args_t *argsFlatCopy(const grm_args_t *copy_args)
 {
   /* Clone the linked list but share the referenced values */
   grm_args_t *args = NULL;
   grm_args_iterator_t *it = NULL;
-  args_node_t *args_node;
-  arg_t *copy_arg;
+  ArgsNode *args_node;
+  grm_arg_t *copy_arg;
 
   args = grm_args_new();
   if (args == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto error_cleanup;
     }
   it = grm_args_iter(copy_args);
   while ((copy_arg = it->next(it)) != NULL)
     {
       ++(copy_arg->priv->reference_count);
-      args_node = malloc(sizeof(args_node_t));
+      args_node = malloc(sizeof(ArgsNode));
       if (args_node == NULL)
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
           goto error_cleanup;
         }
       args_node->arg = copy_arg;
@@ -1342,7 +1318,7 @@ grm_args_t *args_flatcopy(const grm_args_t *copy_args)
       args->kwargs_tail = args_node;
       ++(args->count);
     }
-  args_iterator_delete(it);
+  argsIteratorDelete(it);
 
   return args;
 
@@ -1353,18 +1329,18 @@ error_cleanup:
     }
   if (it != NULL)
     {
-      args_iterator_delete(it);
+      argsIteratorDelete(it);
     }
 
   return NULL;
 }
 
-grm_args_t *args_copy(const grm_args_t *copy_args)
+grm_args_t *argsCopy(const grm_args_t *copy_args)
 {
-  return args_copy_extended(copy_args, NULL, NULL);
+  return argsCopyExtended(copy_args, NULL, NULL);
 }
 
-grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys)
+grm_args_t *argsCopyExtended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys)
 {
   /* Clone the linked list and all values that are argument containers as well. Share all other values (-> **no deep
    * copy!**).
@@ -1375,40 +1351,40 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
              **current_args_copy = NULL;
   grm_args_iterator_t *it = NULL;
   grm_args_value_iterator_t *value_it = NULL;
-  args_node_t *args_node;
-  arg_t *copy_arg;
+  ArgsNode *args_node;
+  grm_arg_t *copy_arg;
 
   args = grm_args_new();
   if (args == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto error_cleanup;
     }
   it = grm_args_iter(copy_args);
-  error_cleanup_if(it == NULL);
+  errorCleanupIf(it == NULL);
   while ((copy_arg = it->next(it)) != NULL)
     {
-      if (ignore_keys != NULL && str_equals_any_in_array(copy_arg->key, ignore_keys))
+      if (ignore_keys != NULL && strEqualsAnyInArray(copy_arg->key, ignore_keys))
         {
           continue;
         }
       if (strncmp(copy_arg->value_format, "a", 1) == 0 || strncmp(copy_arg->value_format, "nA", 2) == 0)
         {
           value_it = grm_arg_value_iter(copy_arg);
-          error_cleanup_if(value_it == NULL);
+          errorCleanupIf(value_it == NULL);
           /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
            * management */
-          error_cleanup_if(value_it->next(value_it) == NULL);
+          errorCleanupIf(value_it->next(value_it) == NULL);
           if (value_it->is_array)
             {
               args_array = *(grm_args_t ***)value_it->value_ptr;
               copied_args_array = malloc(value_it->array_length * sizeof(grm_args_t *));
-              error_cleanup_if(copied_args_array == NULL);
+              errorCleanupIf(copied_args_array == NULL);
               current_args_copy = copied_args_array;
               while (*args_array != NULL)
                 {
-                  *current_args_copy = args_copy_extended(*args_array, keys_copy_as_array, ignore_keys);
-                  error_cleanup_if(*current_args_copy == NULL);
+                  *current_args_copy = argsCopyExtended(*args_array, keys_copy_as_array, ignore_keys);
+                  errorCleanupIf(*current_args_copy == NULL);
                   ++args_array;
                   ++current_args_copy;
                 }
@@ -1417,9 +1393,9 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
             }
           else
             {
-              copied_args = args_copy_extended(*(grm_args_t **)value_it->value_ptr, keys_copy_as_array, ignore_keys);
-              error_cleanup_if(copied_args == NULL);
-              if (keys_copy_as_array != NULL && str_equals_any_in_array(it->arg->key, keys_copy_as_array))
+              copied_args = argsCopyExtended(*(grm_args_t **)value_it->value_ptr, keys_copy_as_array, ignore_keys);
+              errorCleanupIf(copied_args == NULL);
+              if (keys_copy_as_array != NULL && strEqualsAnyInArray(it->arg->key, keys_copy_as_array))
                 {
                   grm_args_push(args, it->arg->key, "A(1)", &copied_args);
                 }
@@ -1433,10 +1409,10 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
       else
         {
           ++(copy_arg->priv->reference_count);
-          args_node = malloc(sizeof(args_node_t));
+          args_node = malloc(sizeof(ArgsNode));
           if (args_node == NULL)
             {
-              debug_print_malloc_error();
+              debugPrintMallocError();
               goto error_cleanup;
             }
           args_node->arg = copy_arg;
@@ -1480,43 +1456,40 @@ cleanup:
     }
   if (it != NULL)
     {
-      args_iterator_delete(it);
+      argsIteratorDelete(it);
     }
   if (value_it != NULL)
     {
-      args_value_iterator_delete(value_it);
+      argsValueIteratorDelete(value_it);
     }
 
   return args;
 }
 
-err_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
-                       int apply_padding)
+grm_error_t argsPushCommon(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
+                           int apply_padding)
 {
-  arg_t *arg;
-  args_node_t *args_node;
+  grm_arg_t *arg;
+  ArgsNode *args_node;
 
-  if ((arg = args_create_args(key, value_format, buffer, vl, apply_padding)) == NULL)
-    {
-      return ERROR_MALLOC;
-    }
+  if ((arg = argsCreateArgs(key, value_format, buffer, vl, apply_padding)) == NULL) return GRM_ERROR_MALLOC;
 
-  if ((args_node = args_find_node(args, key)) != NULL)
+  if ((args_node = argsFindNode(args, key)) != NULL)
     {
-      args_decrease_arg_reference_count(args_node);
+      argsDecreaseArgReferenceCount(args_node);
       args_node->arg = arg;
     }
   else
     {
-      args_node = malloc(sizeof(args_node_t));
+      args_node = malloc(sizeof(ArgsNode));
       if (args_node == NULL)
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
           free((char *)arg->key);
           free((char *)arg->value_format);
           free(arg->priv);
           free(arg);
-          return ERROR_MALLOC;
+          return GRM_ERROR_MALLOC;
         }
       args_node->arg = arg;
       args_node->next = NULL;
@@ -1533,22 +1506,22 @@ err_t args_push_common(grm_args_t *args, const char *key, const char *value_form
       ++(args->count);
     }
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
+grm_error_t argsPushVl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
 {
-  return args_push_common(args, key, value_format, NULL, vl, 0);
+  return argsPushCommon(args, key, value_format, NULL, vl, 0);
 }
 
-err_t args_push_arg(grm_args_t *args, arg_t *arg)
+grm_error_t argsPushArg(grm_args_t *args, grm_arg_t *arg)
 {
-  args_node_t *args_node = NULL, *previous_node_by_keyword = NULL;
-  err_t error = ERROR_NONE;
+  ArgsNode *args_node = NULL, *previous_node_by_keyword = NULL;
+  grm_error_t error = GRM_ERROR_NONE;
 
   ++(arg->priv->reference_count);
-  args_node = malloc(sizeof(args_node_t));
-  error_cleanup_and_set_error_if(args_node == NULL, ERROR_MALLOC);
+  args_node = malloc(sizeof(ArgsNode));
+  errorCleanupAndSetErrorIf(args_node == NULL, GRM_ERROR_MALLOC);
   args_node->arg = arg;
   args_node->next = NULL;
 
@@ -1558,29 +1531,23 @@ err_t args_push_arg(grm_args_t *args, arg_t *arg)
       args->kwargs_tail = args_node;
       ++(args->count);
     }
-  else if (args_find_previous_node(args, arg->key, &previous_node_by_keyword))
+  else if (argsFindPreviousNode(args, arg->key, &previous_node_by_keyword))
     {
       if (previous_node_by_keyword == NULL)
         {
           args_node->next = args->kwargs_head->next;
-          if (args->kwargs_head == args->kwargs_tail)
-            {
-              args->kwargs_tail = args_node;
-            }
-          args_decrease_arg_reference_count(args->kwargs_head);
+          if (args->kwargs_head == args->kwargs_tail) args->kwargs_tail = args_node;
+          argsDecreaseArgReferenceCount(args->kwargs_head);
           free(args->kwargs_head);
           args->kwargs_head = args_node;
         }
       else
         {
           args_node->next = previous_node_by_keyword->next->next;
-          args_decrease_arg_reference_count(previous_node_by_keyword->next);
+          argsDecreaseArgReferenceCount(previous_node_by_keyword->next);
           free(previous_node_by_keyword->next);
           previous_node_by_keyword->next = args_node;
-          if (args_node->next == NULL)
-            {
-              args->kwargs_tail = args_node;
-            }
+          if (args_node->next == NULL) args->kwargs_tail = args_node;
         }
     }
   else
@@ -1590,34 +1557,31 @@ err_t args_push_arg(grm_args_t *args, arg_t *arg)
       ++(args->count);
     }
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 
 error_cleanup:
-  if (args_node != NULL)
-    {
-      free(args_node);
-    }
+  if (args_node != NULL) free(args_node);
   return error;
 }
 
-err_t args_update_many(grm_args_t *args, const grm_args_t *update_args)
+grm_error_t argsUpdateMany(grm_args_t *args, const grm_args_t *update_args)
 {
-  return args_merge(args, update_args, NULL);
+  return argsMerge(args, update_args, NULL);
 }
 
-err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys)
+grm_error_t argsMerge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys)
 {
   grm_args_iterator_t *it = NULL;
   grm_args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
-  arg_t *update_arg, *current_arg;
+  grm_arg_t *update_arg, *current_arg;
   grm_args_t **args_array, **merge_args_array;
   const char *const *current_key_ptr;
   int merge;
   unsigned int i;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   it = grm_args_iter(merge_args);
-  cleanup_and_set_error_if(it == NULL, ERROR_MALLOC);
+  cleanupAndSetErrorIf(it == NULL, GRM_ERROR_MALLOC);
   while ((update_arg = it->next(it)) != NULL)
     {
       merge = 0;
@@ -1634,16 +1598,16 @@ err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *con
               ++current_key_ptr;
             }
         }
-      if (merge && (current_arg = args_at(args, update_arg->key)) != NULL)
+      if (merge && (current_arg = argsAt(args, update_arg->key)) != NULL)
         {
           value_it = grm_arg_value_iter(current_arg);
           merge_value_it = grm_arg_value_iter(update_arg);
-          cleanup_and_set_error_if(value_it == NULL, ERROR_MALLOC);
-          cleanup_and_set_error_if(merge_value_it == NULL, ERROR_MALLOC);
+          cleanupAndSetErrorIf(value_it == NULL, GRM_ERROR_MALLOC);
+          cleanupAndSetErrorIf(merge_value_it == NULL, GRM_ERROR_MALLOC);
           /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
            * management */
-          cleanup_and_set_error_if(value_it->next(value_it) == NULL, ERROR_MALLOC);
-          cleanup_and_set_error_if(merge_value_it->next(merge_value_it) == NULL, ERROR_MALLOC);
+          cleanupAndSetErrorIf(value_it->next(value_it) == NULL, GRM_ERROR_MALLOC);
+          cleanupAndSetErrorIf(merge_value_it->next(merge_value_it) == NULL, GRM_ERROR_MALLOC);
           if (value_it->is_array)
             {
               args_array = *(grm_args_t ***)value_it->value_ptr;
@@ -1662,78 +1626,66 @@ err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *con
             }
           for (i = 0; i < value_it->array_length && i < merge_value_it->array_length; ++i)
             {
-              error = args_merge(args_array[i], merge_args_array[i], merge_keys);
-              cleanup_if_error;
+              error = argsMerge(args_array[i], merge_args_array[i], merge_keys);
+              cleanupIfError;
             }
         }
       else
         {
-          error = args_push_arg(args, update_arg);
-          cleanup_if_error;
+          error = argsPushArg(args, update_arg);
+          cleanupIfError;
         }
     }
 
 cleanup:
-  if (it != NULL)
-    {
-      args_iterator_delete(it);
-    }
-  if (value_it != NULL)
-    {
-      args_value_iterator_delete(value_it);
-    }
-  if (merge_value_it != NULL)
-    {
-      args_value_iterator_delete(merge_value_it);
-    }
+  if (it != NULL) argsIteratorDelete(it);
+  if (value_it != NULL) argsValueIteratorDelete(value_it);
+  if (merge_value_it != NULL) argsValueIteratorDelete(merge_value_it);
 
   return error;
 }
 
-err_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                             va_list *vl, int apply_padding)
+grm_error_t argsSetDefaultCommon(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                 va_list *vl, int apply_padding)
 {
-  if (!grm_args_contains(args, key))
-    {
-      return args_push_common(args, key, value_format, buffer, vl, apply_padding);
-    }
-  return ERROR_NONE;
+  if (!grm_args_contains(args, key)) return argsPushCommon(args, key, value_format, buffer, vl, apply_padding);
+  return GRM_ERROR_NONE;
 }
 
-err_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...)
+grm_error_t argsSetDefault(grm_args_t *args, const char *key, const char *value_format, ...)
 {
-  err_t error;
+  grm_error_t error;
   va_list vl;
   va_start(vl, value_format);
 
-  error = args_setdefault_vl(args, key, value_format, &vl);
+  error = argsSetDefaultVl(args, key, value_format, &vl);
 
   va_end(vl);
 
   return error;
 }
 
-err_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                          int apply_padding)
+grm_error_t argsSetDefaultBuf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                              int apply_padding)
 {
-  return args_setdefault_common(args, key, value_format, buffer, NULL, apply_padding);
+  return argsSetDefaultCommon(args, key, value_format, buffer, NULL, apply_padding);
 }
 
-err_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
+grm_error_t argsSetDefaultVl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
 {
-  return args_setdefault_common(args, key, value_format, NULL, vl, 0);
+  return argsSetDefaultCommon(args, key, value_format, NULL, vl, 0);
 }
 
-void args_clear(grm_args_t *args, const char **exclude_keys)
+void argsClear(grm_args_t *args, const char **exclude_keys)
 {
-  args_node_t *current_node, *next_node, *last_excluded_node;
+  ArgsNode *current_node, *next_node, *last_excluded_node;
 
   current_node = args->kwargs_head;
   last_excluded_node = NULL;
   while (current_node != NULL)
     {
       next_node = current_node->next;
-      if (exclude_keys != NULL && str_equals_any_in_array(current_node->arg->key, exclude_keys))
+      if (exclude_keys != NULL && strEqualsAnyInArray(current_node->arg->key, exclude_keys))
         {
           if (last_excluded_node == NULL)
             {
@@ -1747,7 +1699,7 @@ void args_clear(grm_args_t *args, const char **exclude_keys)
         }
       else
         {
-          args_decrease_arg_reference_count(current_node);
+          argsDecreaseArgReferenceCount(current_node);
           free(current_node);
           --(args->count);
         }
@@ -1764,59 +1716,53 @@ void args_clear(grm_args_t *args, const char **exclude_keys)
     }
 }
 
-err_t args_increase_array(grm_args_t *args, const char *key, size_t increment)
+grm_error_t argsIncreaseArray(grm_args_t *args, const char *key, size_t increment)
 {
-  arg_t *arg;
+  grm_arg_t *arg;
 
-  arg = args_at(args, key);
-  return_error_if(arg == NULL, ERROR_ARGS_INVALID_KEY);
-  return arg_increase_array(arg, increment);
+  arg = argsAt(args, key);
+  returnErrorIf(arg == NULL, GRM_ERROR_ARGS_INVALID_KEY);
+  return argIncreaseArray(arg, increment);
 }
 
-unsigned int args_count(const grm_args_t *args)
+unsigned int argsCount(const grm_args_t *args)
 {
   return args->count;
 }
 
-arg_t *args_at(const grm_args_t *args, const char *keyword)
+grm_arg_t *argsAt(const grm_args_t *args, const char *keyword)
 {
-  args_node_t *current_node;
+  ArgsNode *current_node;
 
-  current_node = args_find_node(args, keyword);
+  current_node = argsFindNode(args, keyword);
 
-  if (current_node != NULL)
-    {
-      return current_node->arg;
-    }
+  if (current_node != NULL) return current_node->arg;
   return NULL;
 }
 
 int(grm_args_first_value)(const grm_args_t *args, const char *keyword, const char *first_value_format,
                           void *first_value, unsigned int *array_length)
 {
-  arg_t *arg;
+  grm_arg_t *arg;
 
-  arg = args_at(args, keyword);
-  if (arg == NULL)
-    {
-      return 0;
-    }
+  arg = argsAt(args, keyword);
+  if (arg == NULL) return 0;
 
-  return arg_first_value(arg, first_value_format, first_value, array_length);
+  return argFirstValue(arg, first_value_format, first_value, array_length);
 }
 
 int grm_args_values(const grm_args_t *args, const char *keyword, const char *expected_format, ...)
 {
   va_list vl;
-  arg_t *arg;
+  grm_arg_t *arg;
   int was_successful = 0;
 
   va_start(vl, expected_format);
 
-  arg = args_at(args, keyword);
-  cleanup_if(arg == NULL);
+  arg = argsAt(args, keyword);
+  cleanupIf(arg == NULL);
 
-  was_successful = arg_values_vl(arg, expected_format, &vl);
+  was_successful = argValuesVl(arg, expected_format, &vl);
 
 cleanup:
   va_end(vl);
@@ -1824,9 +1770,9 @@ cleanup:
   return was_successful;
 }
 
-args_node_t *args_find_node(const grm_args_t *args, const char *keyword)
+ArgsNode *argsFindNode(const grm_args_t *args, const char *keyword)
 {
-  args_node_t *current_node;
+  ArgsNode *current_node;
 
   current_node = args->kwargs_head;
   while (current_node != NULL && strcmp(current_node->arg->key, keyword) != 0)
@@ -1837,9 +1783,9 @@ args_node_t *args_find_node(const grm_args_t *args, const char *keyword)
   return current_node;
 }
 
-int args_find_previous_node(const grm_args_t *args, const char *keyword, args_node_t **previous_node)
+int argsFindPreviousNode(const grm_args_t *args, const char *keyword, ArgsNode **previous_node)
 {
-  args_node_t *prev_node, *current_node;
+  ArgsNode *prev_node, *current_node;
 
   prev_node = NULL;
   current_node = args->kwargs_head;
@@ -1859,53 +1805,53 @@ int args_find_previous_node(const grm_args_t *args, const char *keyword, args_no
 
 grm_args_iterator_t *grm_args_iter(const grm_args_t *args)
 {
-  return args_iterator_new(args->kwargs_head, NULL);
+  return argsIteratorNew(args->kwargs_head, NULL);
 }
 
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
 
-grm_args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end)
+grm_args_iterator_t *argsIteratorNew(const ArgsNode *begin, const ArgsNode *end)
 {
   grm_args_iterator_t *args_iterator;
 
   args_iterator = malloc(sizeof(grm_args_iterator_t));
   if (args_iterator == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
-  args_iterator->priv = malloc(sizeof(args_iterator_private_t));
+  args_iterator->priv = malloc(sizeof(grm_args_iterator_private_t));
   if (args_iterator->priv == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       free(args_iterator);
       return NULL;
     }
-  args_iterator_init(args_iterator, begin, end);
+  argsIteratorInit(args_iterator, begin, end);
   return args_iterator;
 }
 
-void args_iterator_init(grm_args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end)
+void argsIteratorInit(grm_args_iterator_t *args_iterator, const ArgsNode *begin, const ArgsNode *end)
 {
-  args_iterator->next = args_iterator_next;
+  args_iterator->next = argsIteratorNext;
   args_iterator->arg = NULL;
   args_iterator->priv->next_node = begin;
   args_iterator->priv->end = end;
 }
 
-void args_iterator_delete(grm_args_iterator_t *args_iterator)
+void argsIteratorDelete(grm_args_iterator_t *args_iterator)
 {
-  args_iterator_finalize(args_iterator);
+  argsIteratorFinalize(args_iterator);
   free(args_iterator->priv);
   free(args_iterator);
 }
 
-void args_iterator_finalize(grm_args_iterator_t *args_iterator UNUSED) {}
+void argsIteratorFinalize(grm_args_iterator_t *args_iterator UNUSED) {}
 
-arg_t *args_iterator_next(grm_args_iterator_t *args_iterator)
+grm_arg_t *argsIteratorNext(grm_args_iterator_t *args_iterator)
 {
-  arg_t *next_arg;
+  grm_arg_t *next_arg;
 
   if ((args_iterator->priv->next_node != NULL) && (args_iterator->priv->next_node != args_iterator->priv->end))
     {
@@ -1923,30 +1869,30 @@ arg_t *args_iterator_next(grm_args_iterator_t *args_iterator)
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
-grm_args_value_iterator_t *args_value_iterator_new(const arg_t *arg)
+grm_args_value_iterator_t *argsValueIteratorNew(const grm_arg_t *arg)
 {
   grm_args_value_iterator_t *args_value_iterator;
 
   args_value_iterator = malloc(sizeof(grm_args_value_iterator_t));
   if (args_value_iterator == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
-  args_value_iterator->priv = malloc(sizeof(args_value_iterator_private_t));
+  args_value_iterator->priv = malloc(sizeof(grm_args_value_iterator_private_t));
   if (args_value_iterator->priv == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       free(args_value_iterator);
       return NULL;
     }
-  args_value_iterator_init(args_value_iterator, arg);
+  argsValueIteratorInit(args_value_iterator, arg);
   return args_value_iterator;
 }
 
-void args_value_iterator_init(grm_args_value_iterator_t *args_value_iterator, const arg_t *arg)
+void argsValueIteratorInit(grm_args_value_iterator_t *args_value_iterator, const grm_arg_t *arg)
 {
-  args_value_iterator->next = args_value_iterator_next;
+  args_value_iterator->next = argsValueIteratorNext;
   args_value_iterator->value_ptr = NULL;
   args_value_iterator->format = '\0';
   args_value_iterator->is_array = 0;
@@ -1955,16 +1901,16 @@ void args_value_iterator_init(grm_args_value_iterator_t *args_value_iterator, co
   args_value_iterator->priv->value_format = arg->value_format;
 }
 
-void args_value_iterator_delete(grm_args_value_iterator_t *args_value_iterator)
+void argsValueIteratorDelete(grm_args_value_iterator_t *args_value_iterator)
 {
-  args_value_iterator_finalize(args_value_iterator);
+  argsValueIteratorFinalize(args_value_iterator);
   free(args_value_iterator->priv);
   free(args_value_iterator);
 }
 
-void args_value_iterator_finalize(grm_args_value_iterator_t *args_value_iterator UNUSED) {}
+void argsValueIteratorFinalize(grm_args_value_iterator_t *args_value_iterator UNUSED) {}
 
-void *args_value_iterator_next(grm_args_value_iterator_t *args_value_iterator)
+void *argsValueIteratorNext(grm_args_value_iterator_t *args_value_iterator)
 {
   const char *format;
   char current_format;
@@ -1982,11 +1928,8 @@ void *args_value_iterator_next(grm_args_value_iterator_t *args_value_iterator)
   extracted_next_value = 0;
   while (*format)
     {
-      format = args_skip_option(format);
-      if (!*format)
-        {
-          break;
-        }
+      format = argsSkipOption(format);
+      if (!*format) break;
       current_format = tolower(*format);
       if (current_format != *format)
         {
@@ -2061,80 +2004,74 @@ grm_args_t *grm_args_new()
   grm_args_t *args = malloc(sizeof(grm_args_t));
   if (args == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       return NULL;
     }
-  args_init(args);
+  argsInit(args);
   return args;
 }
 
 void grm_args_delete(grm_args_t *args)
 {
-  args_finalize(args);
+  argsFinalize(args);
   free(args);
 }
 
 int grm_args_push(grm_args_t *args, const char *key, const char *value_format, ...)
 {
   va_list vl;
-  err_t error;
+  grm_error_t error;
 
   va_start(vl, value_format);
 
-  error = args_push_vl(args, key, value_format, &vl);
+  error = argsPushVl(args, key, value_format, &vl);
 
   va_end(vl);
 
-  return error == ERROR_NONE;
+  return error == GRM_ERROR_NONE;
 }
 
 int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
                       int apply_padding)
 {
-  err_t error;
+  grm_error_t error;
 
-  error = args_push_common(args, key, value_format, buffer, NULL, apply_padding);
+  error = argsPushCommon(args, key, value_format, buffer, NULL, apply_padding);
 
-  return error == ERROR_NONE;
+  return error == GRM_ERROR_NONE;
 }
 
 int grm_args_contains(const grm_args_t *args, const char *keyword)
 {
-  return args_at(args, keyword) != NULL;
+  return argsAt(args, keyword) != NULL;
 }
 
 void grm_args_clear(grm_args_t *args)
 {
-  args_clear(args, plot_clear_exclude_keys);
+  argsClear(args, plot_clear_exclude_keys);
 }
 
 void grm_args_remove(grm_args_t *args, const char *key)
 {
-  args_node_t *tmp_node, *previous_node_by_keyword;
+  ArgsNode *tmp_node, *previous_node_by_keyword;
 
-  if (args_find_previous_node(args, key, &previous_node_by_keyword))
+  if (argsFindPreviousNode(args, key, &previous_node_by_keyword))
     {
       if (previous_node_by_keyword == NULL)
         {
           tmp_node = args->kwargs_head->next;
-          args_decrease_arg_reference_count(args->kwargs_head);
+          argsDecreaseArgReferenceCount(args->kwargs_head);
           free(args->kwargs_head);
           args->kwargs_head = tmp_node;
-          if (tmp_node == NULL)
-            {
-              args->kwargs_tail = NULL;
-            }
+          if (tmp_node == NULL) args->kwargs_tail = NULL;
         }
       else
         {
           tmp_node = previous_node_by_keyword->next->next;
-          args_decrease_arg_reference_count(previous_node_by_keyword->next);
+          argsDecreaseArgReferenceCount(previous_node_by_keyword->next);
           free(previous_node_by_keyword->next);
           previous_node_by_keyword->next = tmp_node;
-          if (tmp_node == NULL)
-            {
-              args->kwargs_tail = previous_node_by_keyword;
-            }
+          if (tmp_node == NULL) args->kwargs_tail = previous_node_by_keyword;
         }
       --(args->count);
     }

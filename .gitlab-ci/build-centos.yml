@@ -11,7 +11,13 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - mkdir -p artifacts/share/doc/grplot
+  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
+  - mkdir -p artifacts/share/licenses/GR
+  - cp LICENSE.md artifacts/share/licenses/GR/
+  - mkdir -p artifacts/share/xml/GRM
+  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
+  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -85,7 +91,13 @@ centos7-32bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - mkdir -p artifacts/share/doc/grplot
+  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
+  - mkdir -p artifacts/share/licenses/GR
+  - cp LICENSE.md artifacts/share/licenses/GR/
+  - mkdir -p artifacts/share/xml/GRM
+  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
+  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/

@@ -10,7 +10,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include <grm/error.h>
+#include "error_int.h"
 #include "bson_int.h"
 #include "plot_int.h"
 
@@ -19,8 +19,8 @@
 
 /* ========================= macros ================================================================================= */
 
-#define is_little_endian() (*(char *)&(int){1})
-#define opt_arrays 1
+#define isLittleEndian() (*(char *)&(int){1})
+#define OPT_ARRAYS 1
 
 /* ------------------------- general -------------------------------------------------------------------------------- */
 
@@ -34,21 +34,21 @@
 /* ------------------------- bson deserializer ------------------------------------------------------------------------
  */
 
-static err_t (*frombson_datatype_to_func[128])(frombson_state_t *);
-static int frombson_static_variables_initialized = 0;
+static grm_error_t (*from_bson_datatype_to_func[128])(FromBsonState *);
+static int from_bson_static_variables_initialized = 0;
 
 /* ------------------------- bson serializer ------------------------------------------------------------------------ */
 
-static err_t (*tobson_datatype_to_func[128])(tobson_state_t *);
-static int tobson_static_variables_initialized = 0;
-static tobson_permanent_state_t tobson_permanent_state = {complete, 0, NULL};
-static char tobson_datatype_to_byte[128];
+static grm_error_t (*to_bson_datatype_to_func[128])(ToBsonState *);
+static int to_bson_static_variables_initialized = 0;
+static ToBsonPermanentState to_bson_permanent_state = {COMPLETE, 0, NULL};
+static char to_bson_datatype_to_byte[128];
 static char null = 0x00;
 
 
 /* ========================= small helper functions ================================================================= */
 
-void revmemcpy(void *dest, const void *src, size_t len)
+void revMemCpy(void *dest, const void *src, size_t len)
 {
   char *d = (char *)dest + len - 1;
   const char *s = src;
@@ -58,13 +58,11 @@ void revmemcpy(void *dest, const void *src, size_t len)
     }
 }
 
-void memcpy_rev_chunks(void *dest, const void *src, size_t len, size_t chunk_size)
+void memCpyRevChunks(void *dest, const void *src, size_t len, size_t chunk_size)
 {
-
   char *d = dest;
   const char *s = src;
-  int i;
-  int j;
+  int i, j;
 
   for (i = 0; i < len; i += chunk_size)
     {
@@ -75,7 +73,7 @@ void memcpy_rev_chunks(void *dest, const void *src, size_t len, size_t chunk_siz
     }
 }
 
-char byte_to_type(const char *byte)
+char byteToType(const char *byte)
 {
   switch (*byte)
     {
@@ -98,67 +96,66 @@ char byte_to_type(const char *byte)
     }
 }
 
-void int_to_bytes(int i, char **bytes)
+void intToBytes(int i, char **bytes)
 {
   *bytes = (char *)malloc(sizeof(int) * sizeof(char));
-  if (is_little_endian())
+  if (isLittleEndian())
     {
       memcpy(*bytes, &i, sizeof(i));
     }
   else
     {
-      revmemcpy(*bytes, &i, sizeof(i));
+      revMemCpy(*bytes, &i, sizeof(i));
     }
 }
 
-void bytes_to_int(int *i, const char *bytes)
+void bytesToInt(int *i, const char *bytes)
 {
-  if (is_little_endian())
+  if (isLittleEndian())
     {
       memcpy(i, bytes, sizeof(int));
     }
   else
     {
-      revmemcpy(i, bytes, sizeof(int));
+      revMemCpy(i, bytes, sizeof(int));
     }
 }
 
-void double_to_bytes(double d, char **bytes)
+void doubleToBytes(double d, char **bytes)
 {
   *bytes = (char *)malloc(sizeof(double) * sizeof(char));
-  if (is_little_endian())
+  if (isLittleEndian())
     {
       memcpy(*bytes, &d, sizeof(d));
     }
   else
     {
-      revmemcpy(*bytes, &d, sizeof(d));
+      revMemCpy(*bytes, &d, sizeof(d));
     }
 }
 
-void bytes_to_double(double *d, const char *bytes)
+void bytesToDouble(double *d, const char *bytes)
 {
-  if (is_little_endian())
+  if (isLittleEndian())
     {
       memcpy(d, bytes, sizeof(double));
     }
   else
     {
-      revmemcpy(d, bytes, sizeof(double));
+      revMemCpy(d, bytes, sizeof(double));
     }
 }
 
 /* ------------------------- bson deserializer ---------------------------------------------------------------------- */
 
-err_t frombson_read(grm_args_t *args, const char *bson_bytes)
+grm_error_t fromBsonRead(grm_args_t *args, const char *bson_bytes)
 {
-
   int document_size;
-  frombson_state_t state;
-  frombson_object_infos_t object_infos;
-  err_t error = ERROR_NONE;
+  FromBsonState state;
+  FromBsonObjectInfos object_infos;
+  grm_error_t error = GRM_ERROR_NONE;
 
-  frombson_init_static_variables();
+  fromBsonInitStaticVariables();
   state.num_read_bytes = 0;
   state.cur_byte = bson_bytes;
   state.args = args;
@@ -166,35 +163,27 @@ err_t frombson_read(grm_args_t *args, const char *bson_bytes)
 
   object_infos.num_bytes_read_before = 0;
 
-  if ((error = frombson_read_length(&state, &document_size)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadLength(&state, &document_size)) != GRM_ERROR_NONE) return error;
 
   object_infos.length = document_size;
   state.object_infos = &object_infos;
 
-  if ((error = frombson_read_object(&state)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadObject(&state)) != GRM_ERROR_NONE) return error;
 
   return error;
 }
 
-err_t frombson_read_value_format(frombson_state_t *state, char *value_format)
+grm_error_t fromBsonReadValueFormat(FromBsonState *state, char *value_format)
 {
-
-  *value_format = byte_to_type(state->cur_byte);
+  *value_format = byteToType(state->cur_byte);
   state->num_read_bytes++;
   state->cur_byte++;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_key(frombson_state_t *state, const char **key)
+grm_error_t fromBsonReadKey(FromBsonState *state, const char **key)
 {
-
   *key = state->cur_byte;
 
   while (*(state->cur_byte) != '\0')
@@ -206,12 +195,11 @@ err_t frombson_read_key(frombson_state_t *state, const char **key)
   ++(state->num_read_bytes);
   ++(state->cur_byte);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_skip_key(frombson_state_t *state)
+grm_error_t fromBsonSkipKey(FromBsonState *state)
 {
-
   while (*(state->cur_byte) != '\0')
     {
       ++(state->num_read_bytes);
@@ -221,45 +209,40 @@ err_t frombson_skip_key(frombson_state_t *state)
   ++(state->num_read_bytes);
   ++(state->cur_byte);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_length(frombson_state_t *state, int *length)
+grm_error_t fromBsonReadLength(FromBsonState *state, int *length)
 {
-
-  bytes_to_int(length, state->cur_byte);
+  bytesToInt(length, state->cur_byte);
   state->cur_byte += sizeof(int);
   state->num_read_bytes += sizeof(int);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-
-err_t frombson_read_double_value(frombson_state_t *state, double *d)
+grm_error_t fromBsonReadDoubleValue(FromBsonState *state, double *d)
 {
-
-  bytes_to_double(d, state->cur_byte);
+  bytesToDouble(d, state->cur_byte);
 
   state->num_read_bytes += sizeof(double);
   state->cur_byte += sizeof(double);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_int_value(frombson_state_t *state, int *i)
+grm_error_t fromBsonReadIntValue(FromBsonState *state, int *i)
 {
-
-  bytes_to_int(i, state->cur_byte);
+  bytesToInt(i, state->cur_byte);
 
   state->num_read_bytes += sizeof(int);
   state->cur_byte += sizeof(int);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_string_value(frombson_state_t *state, const char **s)
+grm_error_t fromBsonReadStringValue(FromBsonState *state, const char **s)
 {
-
   *s = state->cur_byte;
 
   while (*(state->cur_byte) != '\0')
@@ -271,12 +254,11 @@ err_t frombson_read_string_value(frombson_state_t *state, const char **s)
   ++(state->num_read_bytes);
   ++(state->cur_byte);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_bool_value(frombson_state_t *state, int *b)
+grm_error_t fromBsonReadBoolValue(FromBsonState *state, int *b)
 {
-
   if (*(state->cur_byte) == (char)0x00)
     {
       *b = 0;
@@ -289,28 +271,20 @@ err_t frombson_read_bool_value(frombson_state_t *state, int *b)
   state->num_read_bytes++;
   state->cur_byte++;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t frombson_read_object(frombson_state_t *state)
+grm_error_t fromBsonReadObject(FromBsonState *state)
 {
-
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   int object_closed = 0;
-  frombson_object_infos_t *object_infos = state->object_infos;
+  FromBsonObjectInfos *object_infos = state->object_infos;
 
   while (object_infos->length - (state->num_read_bytes - object_infos->num_bytes_read_before) > 0)
     {
 
-      if ((error = frombson_read_value_format(state, &(state->cur_value_format))) != ERROR_NONE)
-        {
-          return error;
-        }
-
-      if ((error = frombson_datatype_to_func[state->cur_value_format](state)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = fromBsonReadValueFormat(state, &(state->cur_value_format))) != GRM_ERROR_NONE) return error;
+      if ((error = from_bson_datatype_to_func[state->cur_value_format](state)) != GRM_ERROR_NONE) return error;
 
       if (object_infos->length - (state->num_read_bytes - object_infos->num_bytes_read_before) == 1)
         {
@@ -323,202 +297,147 @@ err_t frombson_read_object(frombson_state_t *state)
         }
     }
 
-  if (!object_closed)
-    {
-      error = ERROR_PARSE_OBJECT;
-    }
+  if (!object_closed) error = GRM_ERROR_PARSE_OBJECT;
 
   return error;
 }
 
-
-err_t frombson_parse_double(frombson_state_t *state)
+grm_error_t fromBsonParseDouble(FromBsonState *state)
 {
-
   double d;
   int memory_allocated = 0;
-  err_t error;
+  grm_error_t error;
 
   char cur_value_type[2] = "\0";
   cur_value_type[0] = state->cur_value_format;
 
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
   state->cur_value_buf = malloc(sizeof(double));
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
-  if ((error = frombson_read_double_value(state, &d)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadDoubleValue(state, &d)) != GRM_ERROR_NONE) goto cleanup;
   *((double *)state->cur_value_buf) = d;
 
   grm_args_push_buf(state->args, state->cur_key, cur_value_type, state->cur_value_buf, 0);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_int(frombson_state_t *state)
+grm_error_t fromBsonParseInt(FromBsonState *state)
 {
-
   int i;
-  err_t error;
+  grm_error_t error;
   int memory_allocated = 0;
 
   char cur_value_type[2] = "\0";
   cur_value_type[0] = state->cur_value_format;
 
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
   state->cur_value_buf = malloc(sizeof(int));
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
-  if ((error = frombson_read_int_value(state, &i)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadIntValue(state, &i)) != GRM_ERROR_NONE) goto cleanup;
   *((int *)state->cur_value_buf) = i;
 
   grm_args_push_buf(state->args, state->cur_key, cur_value_type, state->cur_value_buf, 0);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_string(frombson_state_t *state)
+grm_error_t fromBsonParseString(FromBsonState *state)
 {
-
   int length;
   const char *s;
-  err_t error;
+  grm_error_t error;
   int memory_allocated = 0;
 
   char cur_value_type[2] = "\0";
   cur_value_type[0] = state->cur_value_format;
 
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
-
-  if ((error = frombson_read_length(state, &length)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadLength(state, &length)) != GRM_ERROR_NONE) return error;
 
   state->cur_value_buf = malloc(length * sizeof(char));
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
-  if ((error = frombson_read_string_value(state, &s)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadStringValue(state, &s)) != GRM_ERROR_NONE) goto cleanup;
   *((const char **)state->cur_value_buf) = s;
 
   grm_args_push_buf(state->args, state->cur_key, cur_value_type, state->cur_value_buf, 0);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_bool(frombson_state_t *state)
+grm_error_t fromBsonParseBool(FromBsonState *state)
 {
-
   int b;
-  err_t error;
+  grm_error_t error;
   int memory_allocated = 0;
 
   char cur_value_type[2] = "\0";
   cur_value_type[0] = state->cur_value_format;
 
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
   state->cur_value_buf = malloc(sizeof(int));
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
-  if ((error = frombson_read_bool_value(state, &b)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadBoolValue(state, &b)) != GRM_ERROR_NONE) goto cleanup;
   *((int *)state->cur_value_buf) = b;
 
   grm_args_push_buf(state->args, state->cur_key, cur_value_type, state->cur_value_buf, 0);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_array(frombson_state_t *state)
+grm_error_t fromBsonParseArray(FromBsonState *state)
 {
-
   int length, num_bytes_read_before;
   char first_value_type;
   char final_value_type[3] = "\0";
-  frombson_array_infos_t array_infos;
-  err_t error;
+  FromBsonArrayInfos array_infos;
+  grm_error_t error;
   int memory_allocated = 0;
 
   final_value_type[0] = state->cur_value_format;
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
   num_bytes_read_before = state->num_read_bytes;
-  if ((error = frombson_read_length(state, &length)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadLength(state, &length)) != GRM_ERROR_NONE) goto cleanup;
 
   /* read first value type without changing pointer */
-  first_value_type = byte_to_type(state->cur_byte);
+  first_value_type = byteToType(state->cur_byte);
   final_value_type[1] = toupper(first_value_type);
 
   state->cur_value_format = first_value_type;
@@ -526,58 +445,43 @@ err_t frombson_parse_array(frombson_state_t *state)
   array_infos.num_bytes_read_before = num_bytes_read_before;
   state->array_infos = &array_infos;
 
-  if ((error = frombson_datatype_to_func[toupper(first_value_type)](state)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = from_bson_datatype_to_func[toupper(first_value_type)](state)) != GRM_ERROR_NONE) goto cleanup;
   memory_allocated = 1;
 
   grm_args_push(state->args, state->cur_key, final_value_type, state->array_infos->num_elements, state->cur_value_buf);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_optimized_array(frombson_state_t *state)
+grm_error_t fromBsonParseOptimizedArray(FromBsonState *state)
 {
   int length, num_elements, elem_size;
   char value_type;
   char final_value_type[3] = "\0";
-  frombson_array_infos_t array_infos;
-  err_t error;
+  FromBsonArrayInfos array_infos;
+  grm_error_t error;
   int memory_allocated = 0;
   int array_closed = 0;
 
   final_value_type[0] = 'n';
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) goto cleanup;
 
-  if ((error = frombson_read_length(state, &length)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadLength(state, &length)) != GRM_ERROR_NONE) goto cleanup;
 
   /* checking subtype */
   if (*state->cur_byte != (char)0x80)
     {
-      error = ERROR_UNSUPPORTED_DATATYPE;
+      error = GRM_ERROR_UNSUPPORTED_DATATYPE;
       goto cleanup;
     }
   state->cur_byte++;
   state->num_read_bytes++;
 
   /* read value type */
-  if ((error = frombson_read_value_format(state, &value_type)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  if ((error = fromBsonReadValueFormat(state, &value_type)) != GRM_ERROR_NONE) goto cleanup;
   final_value_type[1] = toupper(value_type);
   switch (value_type)
     {
@@ -592,20 +496,20 @@ err_t frombson_parse_optimized_array(frombson_state_t *state)
   state->cur_value_buf = malloc(length - 7); /* array length minus length, subtype, valuetype, null */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
   num_elements = (length - 7) / elem_size;
 
   /* copy values*/
-  if (is_little_endian())
+  if (isLittleEndian())
     {
       memcpy(state->cur_value_buf, state->cur_byte, num_elements * elem_size);
     }
   else
     {
-      memcpy_rev_chunks(state->cur_value_buf, state->cur_byte, num_elements * elem_size, elem_size);
+      memCpyRevChunks(state->cur_value_buf, state->cur_byte, num_elements * elem_size, elem_size);
     }
   state->cur_byte += num_elements * elem_size;
   state->num_read_bytes += num_elements * elem_size;
@@ -618,48 +522,37 @@ err_t frombson_parse_optimized_array(frombson_state_t *state)
       array_closed = 1;
     }
 
-
   if (!array_closed)
     {
-      error = ERROR_PARSE_ARRAY;
+      error = GRM_ERROR_PARSE_ARRAY;
       goto cleanup;
     }
 
   grm_args_push(state->args, state->cur_key, final_value_type, num_elements, state->cur_value_buf);
 
 cleanup:
-  if (memory_allocated)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_parse_object(frombson_state_t *state)
+grm_error_t fromBsonParseObject(FromBsonState *state)
 {
-
   int length;
-  err_t error;
+  grm_error_t error;
   int num_bytes_read_before;
   grm_args_t *new_args = grm_args_new();
-  frombson_state_t inner_state;
-  frombson_object_infos_t object_infos;
+  FromBsonState inner_state;
+  FromBsonObjectInfos object_infos;
 
   char cur_value_type[2] = "\0";
   cur_value_type[0] = state->cur_value_format;
 
-  if ((error = frombson_read_key(state, &(state->cur_key))) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadKey(state, &(state->cur_key))) != GRM_ERROR_NONE) return error;
 
   num_bytes_read_before = state->num_read_bytes;
 
-  if ((error = frombson_read_length(state, &length)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadLength(state, &length)) != GRM_ERROR_NONE) return error;
 
   object_infos.length = length;
   object_infos.num_bytes_read_before = num_bytes_read_before;
@@ -670,34 +563,28 @@ err_t frombson_parse_object(frombson_state_t *state)
   inner_state.cur_value_buf = NULL;
   inner_state.object_infos = &object_infos;
 
-  if ((error = frombson_read_object(&inner_state)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = fromBsonReadObject(&inner_state)) != GRM_ERROR_NONE) return error;
 
   state->num_read_bytes = inner_state.num_read_bytes;
   state->cur_byte = inner_state.cur_byte;
   grm_args_push(state->args, state->cur_key, cur_value_type, inner_state.args);
 
-
   return error;
 }
 
-
-err_t frombson_read_int_array(frombson_state_t *state)
+grm_error_t fromBsonReadIntArray(FromBsonState *state)
 {
-
   int i = 0;
   char next_value_type;
   int array_closed = 0;
-  err_t error;
+  grm_error_t error = GRM_ERROR_NONE;
   int memory_allocated = 0;
-  frombson_array_infos_t *array_infos = state->array_infos;
+  FromBsonArrayInfos *array_infos = state->array_infos;
 
   state->cur_value_buf = malloc(array_infos->length - 4); /* array length minus length bytes */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
@@ -705,23 +592,14 @@ err_t frombson_read_int_array(frombson_state_t *state)
 
   while (array_infos->length - (state->num_read_bytes - array_infos->num_bytes_read_before) > 0)
     {
-      if ((error = frombson_read_value_format(state, &next_value_type)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadValueFormat(state, &next_value_type)) != GRM_ERROR_NONE) goto cleanup;
       if (state->cur_value_format != next_value_type)
         {
-          error = ERROR_PARSE_ARRAY;
+          error = GRM_ERROR_PARSE_ARRAY;
           goto cleanup;
         }
-      if ((error = frombson_skip_key(state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      if ((error = frombson_read_int_value(state, &current_value)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonSkipKey(state)) != GRM_ERROR_NONE) goto cleanup;
+      if ((error = fromBsonReadIntValue(state, &current_value)) != GRM_ERROR_NONE) goto cleanup;
       ((int *)state->cur_value_buf)[i] = current_value;
       ++i;
 
@@ -738,34 +616,27 @@ err_t frombson_read_int_array(frombson_state_t *state)
 
   array_infos->num_elements = i;
 
-  if (!array_closed)
-    {
-      error = ERROR_PARSE_ARRAY;
-    }
+  if (!array_closed) error = GRM_ERROR_PARSE_ARRAY;
 
 cleanup:
-  if (memory_allocated && error != ERROR_NONE)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated && error != GRM_ERROR_NONE) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_read_double_array(frombson_state_t *state)
+grm_error_t fromBsonReadDoubleArray(FromBsonState *state)
 {
-
   int i = 0;
   char next_value_type;
   int array_closed = 0;
-  err_t error;
+  grm_error_t error = GRM_ERROR_NONE;
   int memory_allocated = 0;
-  frombson_array_infos_t *array_infos = state->array_infos;
+  FromBsonArrayInfos *array_infos = state->array_infos;
 
   state->cur_value_buf = malloc(array_infos->length - 4); /* array length minus length bytes */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
@@ -773,23 +644,14 @@ err_t frombson_read_double_array(frombson_state_t *state)
 
   while (array_infos->length - (state->num_read_bytes - array_infos->num_bytes_read_before) > 0)
     {
-      if ((error = frombson_read_value_format(state, &next_value_type)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadValueFormat(state, &next_value_type)) != GRM_ERROR_NONE) goto cleanup;
       if (state->cur_value_format != next_value_type)
         {
-          error = ERROR_PARSE_ARRAY;
+          error = GRM_ERROR_PARSE_ARRAY;
           goto cleanup;
         }
-      if ((error = frombson_skip_key(state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      if ((error = frombson_read_double_value(state, &current_value)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonSkipKey(state)) != GRM_ERROR_NONE) goto cleanup;
+      if ((error = fromBsonReadDoubleValue(state, &current_value)) != GRM_ERROR_NONE) goto cleanup;
       ((double *)state->cur_value_buf)[i] = current_value;
       ++i;
 
@@ -806,35 +668,28 @@ err_t frombson_read_double_array(frombson_state_t *state)
 
   array_infos->num_elements = i;
 
-  if (!array_closed)
-    {
-      error = ERROR_PARSE_ARRAY;
-    }
+  if (!array_closed) error = GRM_ERROR_PARSE_ARRAY;
 
 cleanup:
-  if (memory_allocated && error != ERROR_NONE)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated && error != GRM_ERROR_NONE) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_read_string_array(frombson_state_t *state)
+grm_error_t fromBsonReadStringArray(FromBsonState *state)
 {
-
   int i = 0;
   char next_value_type;
   int array_closed = 0;
   int string_length;
-  err_t error;
+  grm_error_t error = GRM_ERROR_NONE;
   int memory_allocated = 0;
-  frombson_array_infos_t *array_infos = state->array_infos;
+  FromBsonArrayInfos *array_infos = state->array_infos;
 
   state->cur_value_buf = malloc(array_infos->length - 4); /* array length minus length bytes */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
@@ -842,27 +697,15 @@ err_t frombson_read_string_array(frombson_state_t *state)
 
   while (array_infos->length - (state->num_read_bytes - array_infos->num_bytes_read_before) > 0)
     {
-      if ((error = frombson_read_value_format(state, &next_value_type)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadValueFormat(state, &next_value_type)) != GRM_ERROR_NONE) goto cleanup;
       if (state->cur_value_format != next_value_type)
         {
-          error = ERROR_PARSE_ARRAY;
+          error = GRM_ERROR_PARSE_ARRAY;
           goto cleanup;
         }
-      if ((error = frombson_skip_key(state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      if ((error = frombson_read_length(state, &string_length)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      if ((error = frombson_read_string_value(state, &current_value)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonSkipKey(state)) != GRM_ERROR_NONE) goto cleanup;
+      if ((error = fromBsonReadLength(state, &string_length)) != GRM_ERROR_NONE) goto cleanup;
+      if ((error = fromBsonReadStringValue(state, &current_value)) != GRM_ERROR_NONE) goto cleanup;
       ((const char **)state->cur_value_buf)[i] = current_value;
       ++i;
 
@@ -879,34 +722,27 @@ err_t frombson_read_string_array(frombson_state_t *state)
 
   array_infos->num_elements = i;
 
-  if (!array_closed)
-    {
-      error = ERROR_PARSE_ARRAY;
-    }
+  if (!array_closed) error = GRM_ERROR_PARSE_ARRAY;
 
 cleanup:
-  if (memory_allocated && error != ERROR_NONE)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated && error != GRM_ERROR_NONE) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_read_bool_array(frombson_state_t *state)
+grm_error_t fromBsonReadBoolArray(FromBsonState *state)
 {
-
   int i = 0;
   char next_value_type;
   int array_closed = 0;
-  err_t error;
+  grm_error_t error = GRM_ERROR_NONE;
   int memory_allocated = 0;
-  frombson_array_infos_t *array_infos = state->array_infos;
+  FromBsonArrayInfos *array_infos = state->array_infos;
 
   state->cur_value_buf = malloc(array_infos->length - 4); /* array length minus length bytes */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
@@ -914,23 +750,14 @@ err_t frombson_read_bool_array(frombson_state_t *state)
 
   while (array_infos->length - (state->num_read_bytes - array_infos->num_bytes_read_before) > 0)
     {
-      if ((error = frombson_read_value_format(state, &next_value_type)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadValueFormat(state, &next_value_type)) != GRM_ERROR_NONE) goto cleanup;
       if (state->cur_value_format != next_value_type)
         {
-          error = ERROR_PARSE_ARRAY;
+          error = GRM_ERROR_PARSE_ARRAY;
           goto cleanup;
         }
-      if ((error = frombson_skip_key(state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      if ((error = frombson_read_bool_value(state, &current_value)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonSkipKey(state)) != GRM_ERROR_NONE) goto cleanup;
+      if ((error = fromBsonReadBoolValue(state, &current_value)) != GRM_ERROR_NONE) goto cleanup;
       ((int *)state->cur_value_buf)[i] = current_value;
       ++i;
 
@@ -947,62 +774,46 @@ err_t frombson_read_bool_array(frombson_state_t *state)
 
   array_infos->num_elements = i;
 
-  if (!array_closed)
-    {
-      error = ERROR_PARSE_ARRAY;
-    }
+  if (!array_closed) error = GRM_ERROR_PARSE_ARRAY;
 
 cleanup:
-  if (memory_allocated && error != ERROR_NONE)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated && error != GRM_ERROR_NONE) free(state->cur_value_buf);
 
   return error;
 }
 
-err_t frombson_read_object_array(frombson_state_t *state)
+grm_error_t fromBsonReadObjectArray(FromBsonState *state)
 {
-
   int i = 0;
   char next_value_type;
   int array_closed = 0;
   int cur_object_length;
-  err_t error;
+  grm_error_t error = GRM_ERROR_NONE;
   int memory_allocated = 0;
-  frombson_array_infos_t *array_infos = state->array_infos;
-  frombson_state_t inner_state;
-  frombson_object_infos_t object_infos;
+  FromBsonArrayInfos *array_infos = state->array_infos;
+  FromBsonState inner_state;
+  FromBsonObjectInfos object_infos;
   int num_read_bytes_before;
 
   state->cur_value_buf = malloc(array_infos->length - 4); /* array length minus length bytes */
   if (state->cur_value_buf == NULL)
     {
-      debug_print_malloc_error();
+      debugPrintMallocError();
       goto cleanup;
     }
   memory_allocated = 1;
 
   while (array_infos->length - (state->num_read_bytes - array_infos->num_bytes_read_before) > 0)
     {
-      if ((error = frombson_read_value_format(state, &next_value_type)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadValueFormat(state, &next_value_type)) != GRM_ERROR_NONE) goto cleanup;
       if (state->cur_value_format != next_value_type)
         {
-          error = ERROR_PARSE_ARRAY;
+          error = GRM_ERROR_PARSE_ARRAY;
           goto cleanup;
         }
-      if ((error = frombson_skip_key(state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonSkipKey(state)) != GRM_ERROR_NONE) goto cleanup;
       num_read_bytes_before = state->num_read_bytes;
-      if ((error = frombson_read_length(state, &cur_object_length)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadLength(state, &cur_object_length)) != GRM_ERROR_NONE) goto cleanup;
 
       inner_state.args = grm_args_new();
       inner_state.cur_byte = state->cur_byte;
@@ -1013,10 +824,7 @@ err_t frombson_read_object_array(frombson_state_t *state)
       object_infos.num_bytes_read_before = num_read_bytes_before;
       inner_state.object_infos = &object_infos;
 
-      if ((error = frombson_read_object(&inner_state)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if ((error = fromBsonReadObject(&inner_state)) != GRM_ERROR_NONE) goto cleanup;
 
       state->num_read_bytes = inner_state.num_read_bytes;
       state->cur_byte = inner_state.cur_byte;
@@ -1037,138 +845,109 @@ err_t frombson_read_object_array(frombson_state_t *state)
 
   array_infos->num_elements = i;
 
-  if (!array_closed)
-    {
-      error = ERROR_PARSE_ARRAY;
-    }
+  if (!array_closed) error = GRM_ERROR_PARSE_ARRAY;
 
 cleanup:
-  if (memory_allocated && error != ERROR_NONE)
-    {
-      free(state->cur_value_buf);
-    }
+  if (memory_allocated && error != GRM_ERROR_NONE) free(state->cur_value_buf);
 
   return error;
 }
 
-
-void frombson_init_static_variables(void)
+void fromBsonInitStaticVariables(void)
 {
-  if (!frombson_static_variables_initialized)
+  if (!from_bson_static_variables_initialized)
     {
-      frombson_datatype_to_func['n'] = frombson_parse_array;
-      frombson_datatype_to_func['i'] = frombson_parse_int;
-      frombson_datatype_to_func['I'] = frombson_read_int_array;
-      frombson_datatype_to_func['d'] = frombson_parse_double;
-      frombson_datatype_to_func['D'] = frombson_read_double_array;
-      frombson_datatype_to_func['s'] = frombson_parse_string;
-      frombson_datatype_to_func['S'] = frombson_read_string_array;
-      frombson_datatype_to_func['b'] = frombson_parse_bool;
-      frombson_datatype_to_func['B'] = frombson_read_bool_array;
-      frombson_datatype_to_func['a'] = frombson_parse_object;
-      frombson_datatype_to_func['A'] = frombson_read_object_array;
-      frombson_datatype_to_func['x'] = frombson_parse_optimized_array;
+      from_bson_datatype_to_func['n'] = fromBsonParseArray;
+      from_bson_datatype_to_func['i'] = fromBsonParseInt;
+      from_bson_datatype_to_func['I'] = fromBsonReadIntArray;
+      from_bson_datatype_to_func['d'] = fromBsonParseDouble;
+      from_bson_datatype_to_func['D'] = fromBsonReadDoubleArray;
+      from_bson_datatype_to_func['s'] = fromBsonParseString;
+      from_bson_datatype_to_func['S'] = fromBsonReadStringArray;
+      from_bson_datatype_to_func['b'] = fromBsonParseBool;
+      from_bson_datatype_to_func['B'] = fromBsonReadBoolArray;
+      from_bson_datatype_to_func['a'] = fromBsonParseObject;
+      from_bson_datatype_to_func['A'] = fromBsonReadObjectArray;
+      from_bson_datatype_to_func['x'] = fromBsonParseOptimizedArray;
 
-      frombson_static_variables_initialized = 1;
+      from_bson_static_variables_initialized = 1;
     }
 }
 
 /* ------------------------- bson serializer ------------------------------------------------------------------------ */
 
-err_t tobson_int_value(memwriter_t *memwriter, int value)
+grm_error_t toBsonIntValue(Memwriter *memwriter, int value)
 {
   char *bytes;
-  err_t error;
+  grm_error_t error;
 
-  int_to_bytes(value, &bytes);
+  intToBytes(value, &bytes);
 
-  error = memwriter_puts_with_len(memwriter, bytes, sizeof(int));
+  error = memwriterPutsWithLen(memwriter, bytes, sizeof(int));
   free(bytes);
 
   return error;
 }
 
-err_t tobson_double_value(memwriter_t *memwriter, double value)
+grm_error_t toBsonDoubleValue(Memwriter *memwriter, double value)
 {
-  err_t error;
+  grm_error_t error;
   char *bytes;
 
-  double_to_bytes(value, &bytes);
-  error = memwriter_puts_with_len(memwriter, bytes, sizeof(double));
+  doubleToBytes(value, &bytes);
+  error = memwriterPutsWithLen(memwriter, bytes, sizeof(double));
   free(bytes);
 
   return error;
 }
 
-err_t tobson_string_value(memwriter_t *memwriter, char *value)
+grm_error_t toBsonStringValue(Memwriter *memwriter, char *value)
 {
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
 
-  int_to_bytes(strlen(value) + 1, &length_as_bytes); /* plus one for the null byte */
-  if ((error = memwriter_puts_with_len(memwriter, length_as_bytes, sizeof(int))) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
-  if ((error = memwriter_printf(memwriter, "%s", value)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
-  if ((error = memwriter_putc(memwriter, null)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  intToBytes(strlen(value) + 1, &length_as_bytes); /* plus one for the null byte */
+  if ((error = memwriterPutsWithLen(memwriter, length_as_bytes, sizeof(int))) != GRM_ERROR_NONE) goto cleanup;
+  if ((error = memwriterPrintf(memwriter, "%s", value)) != GRM_ERROR_NONE) goto cleanup;
+  if ((error = memwriterPutc(memwriter, null)) != GRM_ERROR_NONE) goto cleanup;
 
 cleanup:
   free(length_as_bytes);
   return error;
 }
 
-err_t tobson_bool_value(memwriter_t *memwriter, int value)
+grm_error_t toBsonBoolValue(Memwriter *memwriter, int value)
 {
-  return memwriter_putc(memwriter, value ? (char)0x01 : (char)0x00);
+  return memwriterPutc(memwriter, value ? (char)0x01 : (char)0x00);
 }
 
-err_t tobson_char_value(memwriter_t *memwriter, char value)
+grm_error_t toBsonCharValue(Memwriter *memwriter, char value)
 {
-  err_t error;
+  grm_error_t error;
   char length[4] = {(char)0x02, (char)0x00, (char)0x00, (char)0x00}; /*char is saved as string */
-  if ((error = memwriter_puts_with_len(memwriter, length, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
-  if ((error = memwriter_putc(memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
-  if ((error = memwriter_putc(memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
-  return ERROR_NONE;
+  if ((error = memwriterPutsWithLen(memwriter, length, 4)) != GRM_ERROR_NONE) return error;
+  if ((error = memwriterPutc(memwriter, value)) != GRM_ERROR_NONE) return error;
+  if ((error = memwriterPutc(memwriter, null)) != GRM_ERROR_NONE) return error;
+  return GRM_ERROR_NONE;
 }
 
-err_t tobson_args_value(memwriter_t *memwriter, grm_args_t *args)
+grm_error_t toBsonArgsValue(Memwriter *memwriter, grm_args_t *args)
 {
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   /* write object start */
-  tobson_open_object(memwriter);
+  toBsonOpenObject(memwriter);
 
-  tobson_permanent_state.serial_result = incomplete_at_struct_beginning;
-  if ((error = tobson_write_args(memwriter, args)) != ERROR_NONE)
-    {
-      return error;
-    }
+  to_bson_permanent_state.serial_result = INCOMPLETE_AT_STRUCT_BEGINNING;
+  if ((error = toBsonWriteArgs(memwriter, args)) != GRM_ERROR_NONE) return error;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-
-err_t tobson_int(tobson_state_t *state)
+grm_error_t toBsonInt(ToBsonState *state)
 {
   int value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(int);
@@ -1185,18 +964,15 @@ err_t tobson_int(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, int);
     }
-  if ((error = tobson_int_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonIntValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-err_t tobson_double(tobson_state_t *state)
+grm_error_t toBsonDouble(ToBsonState *state)
 {
   double value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(double);
@@ -1213,18 +989,15 @@ err_t tobson_double(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, double);
     }
-  if ((error = tobson_double_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonDoubleValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-err_t tobson_char(tobson_state_t *state)
+grm_error_t toBsonChar(ToBsonState *state)
 {
   char value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(char);
@@ -1241,18 +1014,15 @@ err_t tobson_char(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, int);
     }
-  if ((error = tobson_char_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonCharValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-err_t tobson_string(tobson_state_t *state)
+grm_error_t toBsonString(ToBsonState *state)
 {
   char *value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(char *);
@@ -1269,18 +1039,15 @@ err_t tobson_string(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, char *);
     }
-  if ((error = tobson_string_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonStringValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-err_t tobson_bool(tobson_state_t *state)
+grm_error_t toBsonBool(ToBsonState *state)
 {
   int value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(int);
@@ -1297,18 +1064,15 @@ err_t tobson_bool(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, int);
     }
-  if ((error = tobson_bool_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonBoolValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-err_t tobson_args(tobson_state_t *state)
+grm_error_t toBsonArgs(ToBsonState *state)
 {
   grm_args_t *value;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   if (state->shared->data_ptr != NULL && state->shared->apply_padding)
     {
       ptrdiff_t needed_padding = state->shared->data_offset % sizeof(grm_args_t *);
@@ -1325,22 +1089,18 @@ err_t tobson_args(tobson_state_t *state)
     {
       value = va_arg(*state->shared->vl, grm_args_t *);
     }
-  if ((error = tobson_args_value(state->memwriter, value)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = toBsonArgsValue(state->memwriter, value)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
   return error;
 }
 
-
-err_t tobson_int_array(tobson_state_t *state)
+grm_error_t toBsonIntArray(ToBsonState *state)
 {
   int *values;
   int current_value;
   unsigned int length;
   int remaining_elements;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
   char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
   int size_before = state->memwriter->size;
@@ -1364,10 +1124,10 @@ err_t tobson_int_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1379,44 +1139,26 @@ err_t tobson_int_array(tobson_state_t *state)
   num_digits = log10(length) + 2; /* Max key length plus null byte */
   key = (char *)malloc(num_digits);
   /* write array start */
-  if ((error = memwriter_puts_with_len(state->memwriter, length_placeholder, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutsWithLen(state->memwriter, length_placeholder, 4)) != GRM_ERROR_NONE) return error;
   /* write array content */
   while (remaining_elements)
     {
       current_value = *values++;
       /* Datatype */
-      if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte['i'])) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte['i'])) != GRM_ERROR_NONE) return error;
       /* Key */
       sprintf(key, "%d", key_num++);
-      if ((error = memwriter_puts(state->memwriter, key)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPuts(state->memwriter, key)) != GRM_ERROR_NONE) return error;
       /* End Of Key */
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
       /* Value */
-      if ((error = tobson_int_value(state->memwriter, current_value)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonIntValue(state->memwriter, current_value)) != GRM_ERROR_NONE) return error;
       --remaining_elements;
     }
   /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
@@ -1430,13 +1172,13 @@ err_t tobson_int_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_double_array(tobson_state_t *state)
+grm_error_t toBsonDoubleArray(ToBsonState *state)
 {
   double *values;
   double current_value;
   unsigned int length;
   int remaining_elements;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
   char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
   int size_before = state->memwriter->size;
@@ -1460,10 +1202,10 @@ err_t tobson_double_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1476,44 +1218,26 @@ err_t tobson_double_array(tobson_state_t *state)
   key = (char *)malloc(num_digits);
   /* write array start */
   /* Placeholder for length of array*/
-  if ((error = memwriter_puts_with_len(state->memwriter, length_placeholder, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutsWithLen(state->memwriter, length_placeholder, 4)) != GRM_ERROR_NONE) return error;
   /* write array content */
   while (remaining_elements)
     {
       current_value = *values++;
       /* Datatype */
-      if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte['d'])) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte['d'])) != GRM_ERROR_NONE) return error;
       /* Key */
       sprintf(key, "%d", key_num++);
-      if ((error = memwriter_putc(state->memwriter, *key)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, *key)) != GRM_ERROR_NONE) return error;
       /* End Of Key */
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
       /* Value */
-      if ((error = tobson_double_value(state->memwriter, current_value)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonDoubleValue(state->memwriter, current_value)) != GRM_ERROR_NONE) return error;
       --remaining_elements;
     }
   /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
@@ -1527,14 +1251,13 @@ err_t tobson_double_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_optimized_array(tobson_state_t *state)
+grm_error_t toBsonOptimizedArray(ToBsonState *state)
 {
   double *values;
-  double current_value;
   unsigned int length;
   int total_length;
   char *total_length_as_bytes;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   int elem_size;
   if (state->shared->data_ptr != NULL)
     {
@@ -1552,10 +1275,10 @@ err_t tobson_optimized_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1574,50 +1297,31 @@ err_t tobson_optimized_array(tobson_state_t *state)
       break;
     }
   total_length = 7 + length * elem_size;
-  int_to_bytes(total_length, &total_length_as_bytes);
+  intToBytes(total_length, &total_length_as_bytes);
 
   /* total Length */
-  if ((error = memwriter_puts_with_len(state->memwriter, total_length_as_bytes, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
-
+  if ((error = memwriterPutsWithLen(state->memwriter, total_length_as_bytes, 4)) != GRM_ERROR_NONE) return error;
 
   /* datatype (user defined binary) */
-  if ((error = memwriter_putc(state->memwriter, 0x80)) != ERROR_NONE)
-    {
-      return error;
-    }
-
+  if ((error = memwriterPutc(state->memwriter, 0x80)) != GRM_ERROR_NONE) return error;
 
   /* datatype of values */
-  if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte[tolower(state->current_data_type)])) !=
-      ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte[tolower(state->current_data_type)])) !=
+      GRM_ERROR_NONE)
+    return error;
 
   /* values */
-  if (is_little_endian())
+  if (isLittleEndian())
     {
-      if ((error = memwriter_memcpy(state->memwriter, values, length * elem_size)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterMemcpy(state->memwriter, values, length * elem_size)) != GRM_ERROR_NONE) return error;
     }
   else
     {
-      if ((error = memwriter_memcpy_rev_chunks(state->memwriter, values, length * elem_size, elem_size)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterMemcpyRevChunks(state->memwriter, values, length * elem_size, elem_size)) != GRM_ERROR_NONE)
+        return error;
     }
   /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
-
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
 
   free(total_length_as_bytes);
   if (state->shared->data_ptr != NULL)
@@ -1629,11 +1333,11 @@ err_t tobson_optimized_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_char_array(tobson_state_t *state)
+grm_error_t toBsonCharArray(ToBsonState *state)
 {
   char *chars;
   unsigned int length;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   if (state->shared->data_ptr != NULL)
     {
@@ -1652,10 +1356,10 @@ err_t tobson_char_array(tobson_state_t *state)
 
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           return error;
         }
     }
@@ -1671,14 +1375,8 @@ err_t tobson_char_array(tobson_state_t *state)
         }
     }
   /* TODO: Is it correct that `chars` is written twice here? */
-  if ((error = memwriter_printf(state->memwriter, "\"%.*s\"", length, chars)) != ERROR_NONE)
-    {
-      return error;
-    }
-  if ((error = tobson_string_value(state->memwriter, chars)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPrintf(state->memwriter, "\"%.*s\"", length, chars)) != GRM_ERROR_NONE) return error;
+  if ((error = toBsonStringValue(state->memwriter, chars)) != GRM_ERROR_NONE) return error;
   state->shared->wrote_output = 1;
 
   if (state->shared->data_ptr != NULL)
@@ -1690,13 +1388,13 @@ err_t tobson_char_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_string_array(tobson_state_t *state)
+grm_error_t toBsonStringArray(ToBsonState *state)
 {
   char **values;
   char *current_value;
   unsigned int length;
   int remaining_elements;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
   char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
   int size_before = state->memwriter->size;
@@ -1720,10 +1418,10 @@ err_t tobson_string_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1736,43 +1434,25 @@ err_t tobson_string_array(tobson_state_t *state)
   key = (char *)malloc(num_digits);
   /* write array start */
   /* Placeholder for length of array*/
-  if ((error = memwriter_puts_with_len(state->memwriter, length_placeholder, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutsWithLen(state->memwriter, length_placeholder, 4)) != GRM_ERROR_NONE) return error;
   /* write array content */
   while (remaining_elements)
     {
       current_value = *values++;
       /* Datatype */
-      if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte['s'])) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte['s'])) != GRM_ERROR_NONE) return error;
       /* Key */
       sprintf(key, "%d", key_num++);
-      if ((error = memwriter_puts(state->memwriter, key)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPuts(state->memwriter, key)) != GRM_ERROR_NONE) return error;
       /* End Of Key */
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
       /* Value */
-      if ((error = tobson_string_value(state->memwriter, current_value)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonStringValue(state->memwriter, current_value)) != GRM_ERROR_NONE) return error;
       --remaining_elements;
     } /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
@@ -1786,13 +1466,13 @@ err_t tobson_string_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_bool_array(tobson_state_t *state)
+grm_error_t toBsonBoolArray(ToBsonState *state)
 {
   int *values;
   int current_value;
   unsigned int length;
   int remaining_elements;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
   char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
   int size_before = state->memwriter->size;
@@ -1816,10 +1496,10 @@ err_t tobson_bool_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1832,45 +1512,27 @@ err_t tobson_bool_array(tobson_state_t *state)
   key = (char *)malloc(num_digits);
   /* write array start */
   /* Placeholder for length of array*/
-  if ((error = memwriter_puts_with_len(state->memwriter, length_placeholder, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutsWithLen(state->memwriter, length_placeholder, 4)) != GRM_ERROR_NONE) return error;
   /* write array content */
   while (remaining_elements)
     {
       current_value = *values++;
       /* Datatype */
-      if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte['b'])) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte['b'])) != GRM_ERROR_NONE) return error;
       /* Key */
       sprintf(key, "%d", key_num++);
-      if ((error = memwriter_puts(state->memwriter, key)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPuts(state->memwriter, key)) != GRM_ERROR_NONE) return error;
       /* End Of Key */
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
       /* Value */
-      if ((error = tobson_bool_value(state->memwriter, current_value)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonBoolValue(state->memwriter, current_value)) != GRM_ERROR_NONE) return error;
 
       --remaining_elements;
     }
   /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
@@ -1884,13 +1546,13 @@ err_t tobson_bool_array(tobson_state_t *state)
   return error;
 }
 
-err_t tobson_args_array(tobson_state_t *state)
+grm_error_t toBsonArgsArray(ToBsonState *state)
 {
   grm_args_t **values;
   grm_args_t *current_value;
   unsigned int length;
   int remaining_elements;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
   char *length_as_bytes;
   char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
   int size_before = state->memwriter->size;
@@ -1914,10 +1576,10 @@ err_t tobson_args_array(tobson_state_t *state)
     }
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &length))
+      if (!strToUint(state->additional_type_info, &length))
         {
-          debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
-                             state->additional_type_info));
+          debugPrintError(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
+                           state->additional_type_info));
           length = 0;
         }
     }
@@ -1930,45 +1592,27 @@ err_t tobson_args_array(tobson_state_t *state)
   key = (char *)malloc(num_digits);
   /* write array start */
   /* Placeholder for length of array*/
-  if ((error = memwriter_puts_with_len(state->memwriter, length_placeholder, 4)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutsWithLen(state->memwriter, length_placeholder, 4)) != GRM_ERROR_NONE) return error;
   /* write array content */
   while (remaining_elements)
     {
       current_value = *values++;
 
       /* Datatype */
-      if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte['a'])) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte['a'])) != GRM_ERROR_NONE) return error;
       /* Key */
       sprintf(key, "%d", key_num++);
-      if ((error = memwriter_puts(state->memwriter, key)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPuts(state->memwriter, key)) != GRM_ERROR_NONE) return error;
       /* End Of Key */
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
       /* Value */
-      if ((error = tobson_args_value(state->memwriter, current_value)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonArgsValue(state->memwriter, current_value)) != GRM_ERROR_NONE) return error;
       --remaining_elements;
     }
   /* write array end */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
@@ -1982,19 +1626,18 @@ err_t tobson_args_array(tobson_state_t *state)
   return error;
 }
 
-
-err_t tobson_object(tobson_state_t *state)
+grm_error_t toBsonObject(ToBsonState *state)
 {
   char **member_names = NULL;
   char **data_types = NULL;
   char **member_name_ptr;
   char **data_type_ptr;
   int has_members;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   /* IMPORTANT: additional_type_info is altered after the unzip call! */
-  error = tobson_unzip_membernames_and_datatypes(state->additional_type_info, &member_names, &data_types);
-  cleanup_if_error;
+  error = toBsonUnzipMemberNamesAndDatatypes(state->additional_type_info, &member_names, &data_types);
+  cleanupIfError;
 
   member_name_ptr = member_names;
   data_type_ptr = data_types;
@@ -2006,9 +1649,9 @@ err_t tobson_object(tobson_state_t *state)
     {
       if (!state->shared->add_data)
         {
-          tobson_open_object(state->memwriter);
+          toBsonOpenObject(state->memwriter);
           ++(state->shared->struct_nested_level);
-          cleanup_if_error;
+          cleanupIfError;
         }
     }
   /* `add_data` is only relevant for the first object start; reset it to default afterwards since nested objects can
@@ -2021,70 +1664,58 @@ err_t tobson_object(tobson_state_t *state)
       while (!serialized_all_members)
         {
           /* check for optimization of arrays */
-          if (opt_arrays)
+          if (OPT_ARRAYS)
             {
               if (**data_type_ptr == 'n')
                 {
                   /* only optimize double and int */
-                  if (strchr("DI", *((*data_type_ptr) + 1)))
-                    {
-                      **data_type_ptr = 'x';
-                    }
+                  if (strchr("DI", *((*data_type_ptr) + 1))) **data_type_ptr = 'x';
                 }
             }
           /* Datatype */
-          error = memwriter_putc(state->memwriter, tobson_datatype_to_byte[**data_type_ptr]);
-          cleanup_if_error;
+          error = memwriterPutc(state->memwriter, to_bson_datatype_to_byte[**data_type_ptr]);
+          cleanupIfError;
           /* Key */
-          error = memwriter_printf(state->memwriter, "%s", *member_name_ptr);
-          cleanup_if_error;
+          error = memwriterPrintf(state->memwriter, "%s", *member_name_ptr);
+          cleanupIfError;
           /* End Of Key */
-          error = memwriter_putc(state->memwriter, null);
-          cleanup_if_error;
+          error = memwriterPutc(state->memwriter, null);
+          cleanupIfError;
           /* Values */
-          error = tobson_serialize(state->memwriter, *data_type_ptr, NULL, NULL, -1, -1, 0, NULL, NULL, state->shared);
-          cleanup_if_error;
+          error = toBsonSerialize(state->memwriter, *data_type_ptr, NULL, NULL, -1, -1, 0, NULL, NULL, state->shared);
+          cleanupIfError;
           ++member_name_ptr;
           ++data_type_ptr;
-          if (*member_name_ptr == NULL || *data_type_ptr == NULL)
-            {
-              serialized_all_members = 1;
-            }
+          if (*member_name_ptr == NULL || *data_type_ptr == NULL) serialized_all_members = 1;
         }
     }
   /* write object end if the type info is complete */
   if (!state->is_type_info_incomplete)
     {
-      error = tobson_close_object(state);
-      cleanup_if_error;
+      error = toBsonCloseObject(state);
+      cleanupIfError;
     }
   /* Only set serial result if not set before */
   if (state->shared->serial_result == 0 && state->is_type_info_incomplete)
     {
-      state->shared->serial_result = has_members ? incomplete : incomplete_at_struct_beginning;
+      state->shared->serial_result = has_members ? INCOMPLETE : INCOMPLETE_AT_STRUCT_BEGINNING;
     }
 
 cleanup:
   free(member_names);
   free(data_types);
-  if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  if (error != GRM_ERROR_NONE) return error;
 
   state->shared->wrote_output = 1;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-int tobson_get_member_count(const char *data_desc)
+int toBsonGetMemberCount(const char *data_desc)
 {
   int nested_level = 0;
   int member_count = 0;
-  if (data_desc == NULL || *data_desc == '\0')
-    {
-      return 0;
-    }
+  if (data_desc == NULL || *data_desc == '\0') return 0;
   while (*data_desc != 0)
     {
       switch (*data_desc)
@@ -2107,7 +1738,7 @@ int tobson_get_member_count(const char *data_desc)
   return member_count;
 }
 
-void tobson_read_datatype(tobson_state_t *state)
+void toBsonReadDatatype(ToBsonState *state)
 {
   char *additional_type_info = NULL;
   state->current_data_type = *state->data_type_ptr;
@@ -2144,22 +1775,22 @@ void tobson_read_datatype(tobson_state_t *state)
   state->additional_type_info = additional_type_info;
 }
 
-err_t tobson_skip_bytes(tobson_state_t *state)
+grm_error_t toBsonSkipBytes(ToBsonState *state)
 {
   unsigned int count;
 
   if (state->shared->data_ptr == NULL)
     {
-      debug_print_error(("Skipping bytes is not supported when using the variable argument list and is ignored.\n"));
-      return ERROR_NONE;
+      debugPrintError(("Skipping bytes is not supported when using the variable argument list and is ignored.\n"));
+      return GRM_ERROR_NONE;
     }
 
   if (state->additional_type_info != NULL)
     {
-      if (!str_to_uint(state->additional_type_info, &count))
+      if (!strToUint(state->additional_type_info, &count))
         {
-          debug_print_error(("Byte skipping with an invalid number -> ignoring.\n"));
-          return ERROR_NONE;
+          debugPrintError(("Byte skipping with an invalid number -> ignoring.\n"));
+          return GRM_ERROR_NONE;
         }
     }
   else
@@ -2169,56 +1800,53 @@ err_t tobson_skip_bytes(tobson_state_t *state)
   state->shared->data_ptr = ((char *)state->shared->data_ptr) + count;
   state->shared->data_offset += count;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tobson_open_object(memwriter_t *memwriter)
+grm_error_t toBsonOpenObject(Memwriter *memwriter)
 {
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   const char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
-  if (tobson_permanent_state.memwriter_object_start_offset_stack == NULL)
+  if (to_bson_permanent_state.memwriter_object_start_offset_stack == NULL)
     {
-      tobson_permanent_state.memwriter_object_start_offset_stack = size_t_list_new();
-      return_error_if(tobson_permanent_state.memwriter_object_start_offset_stack == NULL, ERROR_MALLOC);
+      to_bson_permanent_state.memwriter_object_start_offset_stack = sizeTListNew();
+      returnErrorIf(to_bson_permanent_state.memwriter_object_start_offset_stack == NULL, GRM_ERROR_MALLOC);
     }
-  size_t_list_push(tobson_permanent_state.memwriter_object_start_offset_stack, memwriter_size(memwriter));
-  error = memwriter_puts_with_len(memwriter, (char *)length_placeholder, 4);
+  sizeTListPush(to_bson_permanent_state.memwriter_object_start_offset_stack, memwriterSize(memwriter));
+  error = memwriterPutsWithLen(memwriter, (char *)length_placeholder, 4);
 
   return error;
 }
 
-err_t tobson_close_object(tobson_state_t *state)
+grm_error_t toBsonCloseObject(ToBsonState *state)
 {
-  err_t error;
+  grm_error_t error;
 
-  size_t size_before = size_t_list_pop(tobson_permanent_state.memwriter_object_start_offset_stack);
+  size_t size_before = sizeTListPop(to_bson_permanent_state.memwriter_object_start_offset_stack);
   char *length_as_bytes;
   char *placeholder_pos;
 
   /* Close object */
-  if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-    {
-      return error;
-    }
+  if ((error = memwriterPutc(state->memwriter, null)) != GRM_ERROR_NONE) return error;
 
   /* Set length of object*/
-  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  intToBytes(state->memwriter->size - size_before, &length_as_bytes);
   placeholder_pos = state->memwriter->buf + size_before;
   memcpy(placeholder_pos, length_as_bytes, 4);
   free(length_as_bytes);
-  if (size_t_list_empty(tobson_permanent_state.memwriter_object_start_offset_stack))
+  if (sizeTListEmpty(to_bson_permanent_state.memwriter_object_start_offset_stack))
     {
-      size_t_list_delete(tobson_permanent_state.memwriter_object_start_offset_stack);
-      tobson_permanent_state.memwriter_object_start_offset_stack = NULL;
+      sizeTListDelete(to_bson_permanent_state.memwriter_object_start_offset_stack);
+      to_bson_permanent_state.memwriter_object_start_offset_stack = NULL;
     }
 
   --(state->shared->struct_nested_level);
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tobson_read_array_length(tobson_state_t *state)
+grm_error_t toBsonReadArrayLength(ToBsonState *state)
 {
   int value;
 
@@ -2240,16 +1868,15 @@ err_t tobson_read_array_length(tobson_state_t *state)
     }
   state->shared->array_length = value;
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-
-err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_name_ptr, char ***data_type_ptr)
+grm_error_t toBsonUnzipMemberNamesAndDatatypes(char *mixed_ptr, char ***member_name_ptr, char ***data_type_ptr)
 {
   int member_count;
   char **arrays[2];
 
-  member_count = tobson_get_member_count(mixed_ptr);
+  member_count = toBsonGetMemberCount(mixed_ptr);
   /* add 1 to member count for a terminatory NULL pointer */
   *member_name_ptr = malloc((member_count + 1) * sizeof(char *));
   *data_type_ptr = malloc((member_count + 1) * sizeof(char *));
@@ -2258,15 +1885,15 @@ err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_nam
       free(*member_name_ptr);
       free(*data_type_ptr);
       *member_name_ptr = *data_type_ptr = NULL;
-      debug_print_malloc_error();
-      return ERROR_MALLOC;
+      debugPrintMallocError();
+      return GRM_ERROR_MALLOC;
     }
-  arrays[member_name] = *member_name_ptr;
-  arrays[data_type] = *data_type_ptr;
+  arrays[MEMBER_NAME] = *member_name_ptr;
+  arrays[DATA_TYPE] = *data_type_ptr;
   if (member_count > 0)
     {
       char separators[2] = {':', ','};
-      int current_array_index = member_name;
+      int current_array_index = MEMBER_NAME;
       int nested_type_level = 0;
       *arrays[current_array_index]++ = mixed_ptr;
 
@@ -2277,7 +1904,7 @@ err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_nam
           /* extract one name or one type */
           while (*mixed_ptr != 0 && (nested_type_level > 0 || *mixed_ptr != separators[current_array_index]))
             {
-              if (current_array_index == data_type)
+              if (current_array_index == DATA_TYPE)
                 {
                   if (*mixed_ptr == '(')
                     {
@@ -2288,10 +1915,7 @@ err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_nam
                       --nested_type_level;
                     }
                 }
-              if (nested_type_level >= 0)
-                {
-                  ++mixed_ptr;
-                }
+              if (nested_type_level >= 0) ++mixed_ptr;
             }
           if (*mixed_ptr != 0)
             {
@@ -2301,14 +1925,14 @@ err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_nam
             }
         }
     }
-  *arrays[member_name] = NULL;
-  *arrays[data_type] = NULL;
-  return ERROR_NONE;
+  *arrays[MEMBER_NAME] = NULL;
+  *arrays[DATA_TYPE] = NULL;
+  return GRM_ERROR_NONE;
 }
 
-err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, va_list *vl, int apply_padding,
-                       int add_data, int add_data_without_separator, unsigned int *struct_nested_level,
-                       tojson_serialization_result_t *serial_result, tobson_shared_state_t *shared_state)
+grm_error_t toBsonSerialize(Memwriter *memwriter, char *data_desc, const void *data, va_list *vl, int apply_padding,
+                            int add_data, int add_data_without_separator, unsigned int *struct_nested_level,
+                            ToJsonSerializationResult *serial_result, ToBsonSharedState *shared_state)
 {
   /**
    * memwriter: memwriter handle
@@ -2326,10 +1950,9 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
    * data: pointer to the buffer that shall be serialized
    * vl: if data is NULL the needed values are read from the va_list vl
    */
-
-  tobson_state_t state;
+  ToBsonState state;
   int allocated_shared_state_mem = 0;
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   state.memwriter = memwriter;
   state.data_type_ptr = data_desc;
@@ -2339,10 +1962,10 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
   state.is_type_info_incomplete = 0;
   if (shared_state == NULL)
     {
-      shared_state = malloc(sizeof(tobson_shared_state_t));
+      shared_state = malloc(sizeof(ToBsonSharedState));
       if (shared_state == NULL)
         {
-          debug_print_malloc_error();
+          debugPrintMallocError();
           goto cleanup;
         }
       shared_state->apply_padding = apply_padding;
@@ -2359,18 +1982,9 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
     }
   else
     {
-      if (data != NULL)
-        {
-          shared_state->data_ptr = data;
-        }
-      if (vl != NULL)
-        {
-          shared_state->vl = vl;
-        }
-      if (apply_padding >= 0)
-        {
-          shared_state->apply_padding = apply_padding;
-        }
+      if (data != NULL) shared_state->data_ptr = data;
+      if (vl != NULL) shared_state->vl = vl;
+      if (apply_padding >= 0) shared_state->apply_padding = apply_padding;
     }
   state.shared = shared_state;
 
@@ -2378,21 +1992,18 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
   while (*state.data_type_ptr != 0)
     {
       shared_state->wrote_output = 0;
-      tobson_read_datatype(&state);
-      if (tobson_datatype_to_func[(unsigned char)state.current_data_type])
+      toBsonReadDatatype(&state);
+      if (to_bson_datatype_to_func[(unsigned char)state.current_data_type])
         {
-          error = tobson_datatype_to_func[(unsigned char)state.current_data_type](&state);
+          error = to_bson_datatype_to_func[(unsigned char)state.current_data_type](&state);
         }
       else
         {
-          debug_print_error(("WARNING: '%c' (ASCII code %d) is not a valid type identifier\n", state.current_data_type,
-                             state.current_data_type));
-          error = ERROR_UNSUPPORTED_DATATYPE;
+          debugPrintError(("WARNING: '%c' (ASCII code %d) is not a valid type identifier\n", state.current_data_type,
+                           state.current_data_type));
+          error = GRM_ERROR_UNSUPPORTED_DATATYPE;
         }
-      if (error != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      if (error != GRM_ERROR_NONE) goto cleanup;
     }
 
   if (serial_result != NULL)
@@ -2404,90 +2015,85 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
         }
       else
         {
-          *serial_result = (shared_state->struct_nested_level > 0) ? incomplete : complete;
+          *serial_result = (shared_state->struct_nested_level > 0) ? INCOMPLETE : COMPLETE;
         }
     }
-  if (struct_nested_level != NULL)
-    {
-      *struct_nested_level = shared_state->struct_nested_level;
-    }
+  if (struct_nested_level != NULL) *struct_nested_level = shared_state->struct_nested_level;
 
 cleanup:
-  if (allocated_shared_state_mem)
-    {
-      free(shared_state);
-    }
+  if (allocated_shared_state_mem) free(shared_state);
 
   return error;
 }
 
-void tobson_init_static_variables(void)
+void toBsonInitStaticVariables(void)
 {
-  if (!tobson_static_variables_initialized)
+  if (!to_bson_static_variables_initialized)
     {
-      tobson_datatype_to_func['n'] = tobson_read_array_length;
-      tobson_datatype_to_func['e'] = tobson_skip_bytes;
-      tobson_datatype_to_func['i'] = tobson_int;
-      if (opt_arrays)
+      to_bson_datatype_to_func['n'] = toBsonReadArrayLength;
+      to_bson_datatype_to_func['e'] = toBsonSkipBytes;
+      to_bson_datatype_to_func['i'] = toBsonInt;
+      if (OPT_ARRAYS)
         {
-          tobson_datatype_to_func['I'] = tobson_optimized_array;
+          to_bson_datatype_to_func['I'] = toBsonOptimizedArray;
         }
       else
         {
-          tobson_datatype_to_func['I'] = tobson_int_array;
+          to_bson_datatype_to_func['I'] = toBsonIntArray;
         }
-      tobson_datatype_to_func['d'] = tobson_double;
-      if (opt_arrays)
+      to_bson_datatype_to_func['d'] = toBsonDouble;
+      if (OPT_ARRAYS)
         {
-          tobson_datatype_to_func['D'] = tobson_optimized_array;
+          to_bson_datatype_to_func['D'] = toBsonOptimizedArray;
         }
       else
         {
-          tobson_datatype_to_func['D'] = tobson_double_array;
+          to_bson_datatype_to_func['D'] = toBsonDoubleArray;
         }
-      tobson_datatype_to_func['c'] = tobson_char;
-      tobson_datatype_to_func['C'] = tobson_char_array;
-      tobson_datatype_to_func['s'] = tobson_string;
-      tobson_datatype_to_func['S'] = tobson_string_array;
-      tobson_datatype_to_func['b'] = tobson_bool;
-      tobson_datatype_to_func['B'] = tobson_bool_array;
-      tobson_datatype_to_func['o'] = tobson_object;
-      tobson_datatype_to_func['a'] = tobson_args;
-      tobson_datatype_to_func['A'] = tobson_args_array;
-      tobson_datatype_to_func[')'] = tobson_close_object;
+      to_bson_datatype_to_func['c'] = toBsonChar;
+      to_bson_datatype_to_func['C'] = toBsonCharArray;
+      to_bson_datatype_to_func['s'] = toBsonString;
+      to_bson_datatype_to_func['S'] = toBsonStringArray;
+      to_bson_datatype_to_func['b'] = toBsonBool;
+      to_bson_datatype_to_func['B'] = toBsonBoolArray;
+      to_bson_datatype_to_func['o'] = toBsonObject;
+      to_bson_datatype_to_func['a'] = toBsonArgs;
+      to_bson_datatype_to_func['A'] = toBsonArgsArray;
+      to_bson_datatype_to_func[')'] = toBsonCloseObject;
       /* user defined datatype (optimized array) */
-      tobson_datatype_to_func['x'] = tobson_read_array_length;
+      to_bson_datatype_to_func['x'] = toBsonReadArrayLength;
 
-      tobson_datatype_to_byte['d'] = 0x01;
-      tobson_datatype_to_byte['s'] = 0x02;
-      tobson_datatype_to_byte['c'] = 0x02;
-      tobson_datatype_to_byte['a'] = 0x03;
-      tobson_datatype_to_byte['n'] = 0x04;
-      tobson_datatype_to_byte['b'] = 0x08;
-      tobson_datatype_to_byte['i'] = 0x10;
+      to_bson_datatype_to_byte['d'] = 0x01;
+      to_bson_datatype_to_byte['s'] = 0x02;
+      to_bson_datatype_to_byte['c'] = 0x02;
+      to_bson_datatype_to_byte['a'] = 0x03;
+      to_bson_datatype_to_byte['n'] = 0x04;
+      to_bson_datatype_to_byte['b'] = 0x08;
+      to_bson_datatype_to_byte['i'] = 0x10;
       /* binary (optimized array) */
-      tobson_datatype_to_byte['x'] = 0x05;
+      to_bson_datatype_to_byte['x'] = 0x05;
 
-      tobson_static_variables_initialized = 1;
+      to_bson_static_variables_initialized = 1;
     }
 }
 
-err_t tobson_init_variables(int *add_data, int *add_data_without_separator, char **_data_desc, const char *data_desc)
+grm_error_t toBsonInitVariables(int *add_data, int *add_data_without_separator, char **data_desc_priv,
+                                const char *data_desc)
 {
-  tobson_init_static_variables();
-  *add_data = (tobson_permanent_state.serial_result != complete);
-  *add_data_without_separator = (tobson_permanent_state.serial_result == incomplete_at_struct_beginning);
+  toBsonInitStaticVariables();
+  *add_data = (to_bson_permanent_state.serial_result != COMPLETE);
+  *add_data_without_separator = (to_bson_permanent_state.serial_result == INCOMPLETE_AT_STRUCT_BEGINNING);
   if (*add_data)
     {
       char *data_desc_ptr;
       int data_desc_len = strlen(data_desc);
-      *_data_desc = malloc(data_desc_len + 3);
-      if (*_data_desc == NULL)
+      *data_desc_priv = malloc(data_desc_len + 3);
+      if (*data_desc_priv == NULL)
         {
-          debug_print_malloc_error();
-          return ERROR_MALLOC;
+          debugPrintMallocError();
+          return GRM_ERROR_MALLOC;
         }
-      data_desc_ptr = *_data_desc;
+      data_desc_ptr = *data_desc_priv;
       if (strncmp(data_desc, "o(", 2) != 0)
         {
           memcpy(data_desc_ptr, "o(", 2);
@@ -2499,74 +2105,71 @@ err_t tobson_init_variables(int *add_data, int *add_data_without_separator, char
     }
   else
     {
-      *_data_desc = gks_strdup(data_desc);
-      if (*_data_desc == NULL)
+      *data_desc_priv = gks_strdup(data_desc);
+      if (*data_desc_priv == NULL)
         {
-          debug_print_malloc_error();
-          return ERROR_MALLOC;
+          debugPrintMallocError();
+          return GRM_ERROR_MALLOC;
         }
     }
 
-  return ERROR_NONE;
+  return GRM_ERROR_NONE;
 }
 
-err_t tobson_write(memwriter_t *memwriter, const char *data_desc, ...)
+grm_error_t toBsonWrite(Memwriter *memwriter, const char *data_desc, ...)
 {
   va_list vl;
-  err_t error;
+  grm_error_t error;
 
   va_start(vl, data_desc);
-  error = tobson_write_vl(memwriter, data_desc, &vl);
+  error = toBsonWriteVl(memwriter, data_desc, &vl);
   va_end(vl);
 
   return error;
 }
 
-err_t tobson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl)
+grm_error_t toBsonWriteVl(Memwriter *memwriter, const char *data_desc, va_list *vl)
 {
   int add_data, add_data_without_separator;
-  char *_data_desc;
-  err_t error;
+  char *data_desc_priv;
+  grm_error_t error;
 
-  error = tobson_init_variables(&add_data, &add_data_without_separator, &_data_desc, data_desc);
+  error = toBsonInitVariables(&add_data, &add_data_without_separator, &data_desc_priv, data_desc);
   if (!error)
     {
       error =
-          tobson_serialize(memwriter, _data_desc, NULL, vl, 0, add_data, add_data_without_separator,
-                           &tobson_permanent_state.struct_nested_level, &tobson_permanent_state.serial_result, NULL);
+          toBsonSerialize(memwriter, data_desc_priv, NULL, vl, 0, add_data, add_data_without_separator,
+                          &to_bson_permanent_state.struct_nested_level, &to_bson_permanent_state.serial_result, NULL);
     }
-  free(_data_desc);
+  free(data_desc_priv);
 
   return error;
 }
 
-err_t tobson_write_buf(memwriter_t *memwriter, const char *data_desc, const void *buffer, int apply_padding)
+grm_error_t toBsonWriteBuf(Memwriter *memwriter, const char *data_desc, const void *buffer, int apply_padding)
 {
   int add_data, add_data_without_separator;
-  char *_data_desc;
-  err_t error;
-  error = tobson_init_variables(&add_data, &add_data_without_separator, &_data_desc, data_desc);
+  char *data_desc_priv;
+  grm_error_t error;
+  error = toBsonInitVariables(&add_data, &add_data_without_separator, &data_desc_priv, data_desc);
   if (!error)
     {
       error =
-          tobson_serialize(memwriter, _data_desc, buffer, NULL, apply_padding, add_data, add_data_without_separator,
-                           &tobson_permanent_state.struct_nested_level, &tobson_permanent_state.serial_result, NULL);
+          toBsonSerialize(memwriter, data_desc_priv, buffer, NULL, apply_padding, add_data, add_data_without_separator,
+                          &to_bson_permanent_state.struct_nested_level, &to_bson_permanent_state.serial_result, NULL);
     }
-  free(_data_desc);
+  free(data_desc_priv);
 
   return error;
 }
 
-err_t tobson_write_arg(memwriter_t *memwriter, const arg_t *arg)
+grm_error_t toBsonWriteArg(Memwriter *memwriter, const grm_arg_t *arg)
 {
-  err_t error = ERROR_NONE;
+  grm_error_t error = GRM_ERROR_NONE;
 
   if (arg->key == NULL)
     {
-      if ((error = tobson_write_buf(memwriter, arg->value_format, arg->value_ptr, 1)) != ERROR_NONE)
-        {
-          return error;
-        }
+      if ((error = toBsonWriteBuf(memwriter, arg->value_format, arg->value_ptr, 1)) != GRM_ERROR_NONE) return error;
     }
   else
     {
@@ -2577,8 +2180,8 @@ err_t tobson_write_arg(memwriter_t *memwriter, const arg_t *arg)
       format = malloc(key_length + value_format_length + 2); /* 2 = 1 ':' + 1 '\0' */
       if (format == NULL)
         {
-          debug_print_malloc_error();
-          return ERROR_MALLOC;
+          debugPrintMallocError();
+          return GRM_ERROR_MALLOC;
         }
       format_ptr = format;
       memcpy(format_ptr, arg->key, key_length);
@@ -2587,7 +2190,7 @@ err_t tobson_write_arg(memwriter_t *memwriter, const arg_t *arg)
       memcpy(format_ptr, arg->value_format, value_format_length);
       format_ptr += value_format_length;
       *format_ptr = '\0';
-      if ((error = tobson_write_buf(memwriter, format, arg->value_ptr, 1)) != ERROR_NONE)
+      if ((error = toBsonWriteBuf(memwriter, format, arg->value_ptr, 1)) != GRM_ERROR_NONE)
         {
           free(format);
           return error;
@@ -2598,35 +2201,33 @@ err_t tobson_write_arg(memwriter_t *memwriter, const arg_t *arg)
   return error;
 }
 
-err_t tobson_write_args(memwriter_t *memwriter, const grm_args_t *args)
+grm_error_t toBsonWriteArgs(Memwriter *memwriter, const grm_args_t *args)
 {
-  const char *key_hierarchy_name;
   grm_args_iterator_t *it;
-  arg_t *arg;
-  err_t error;
+  grm_arg_t *arg;
 
   it = grm_args_iter(args);
   if ((arg = it->next(it)))
     {
-      tobson_write_buf(memwriter, "o(", NULL, 1);
+      toBsonWriteBuf(memwriter, "o(", NULL, 1);
       do
         {
-          tobson_write_arg(memwriter, arg);
+          toBsonWriteArg(memwriter, arg);
         }
       while ((arg = it->next(it)));
-      tobson_write_buf(memwriter, ")", NULL, 1);
+      toBsonWriteBuf(memwriter, ")", NULL, 1);
     }
-  args_iterator_delete(it);
+  argsIteratorDelete(it);
 
   return 0;
 }
 
-int tobson_is_complete(void)
+int toBsonIsComplete(void)
 {
-  return tobson_permanent_state.serial_result == complete;
+  return to_bson_permanent_state.serial_result == COMPLETE;
 }
 
-int tobson_struct_nested_level(void)
+int toBsonStructNestedLevel(void)
 {
-  return tobson_permanent_state.struct_nested_level;
+  return to_bson_permanent_state.struct_nested_level;
 }

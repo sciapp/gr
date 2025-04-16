@@ -1,7 +1,7 @@
 #include <QTreeWidgetItem>
 #include <queue>
 #include <QHeaderView>
-#include "TreeWidget.h"
+#include "TreeWidget.hxx"
 
 
 TreeWidget::TreeWidget(GRPlotWidget *widget, QWidget *parent) : QTreeWidget(parent)
@@ -18,19 +18,18 @@ void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
   this->clear();
   auto tmp = new QTreeWidgetItem(this);
   tmp->setExpanded(true);
-  plotTree = new CustomTreeWidgetItem(tmp, ref);
-  plotTree->setText(0, tr("root"));
-  plotTree->setExpanded(true);
+  plot_tree = new CustomTreeWidgetItem(tmp, ref);
+  plot_tree->setText(0, tr("root"));
+  plot_tree->setExpanded(true);
 
   for (const auto &cur_elem : ref->children())
     {
-      updateDataRecursion(cur_elem, plotTree);
+      updateDataRecursion(cur_elem, plot_tree);
     }
 }
 
 void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *parent)
 {
-  bool skip = false;
   auto *item = new CustomTreeWidgetItem(parent, ref);
   std::string name = ref->localName();
 
@@ -66,26 +65,26 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
       auto bbox_x_max = static_cast<double>(item->getRef()->getAttribute("_bbox_x_max"));
       auto bbox_y_min = static_cast<double>(item->getRef()->getAttribute("_bbox_y_min"));
       auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
-      std::unique_ptr<Bounding_object> bbox(
-          new Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef()));
+      std::unique_ptr<BoundingObject> bbox(
+          new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef()));
       if (!selected_status)
         {
-          grplot_widget->add_current_selection(std::move(bbox));
+          grplot_widget->addCurrentSelection(std::move(bbox));
         }
       else
         {
-          const auto &selections = grplot_widget->get_current_selections();
+          const auto &selections = grplot_widget->getCurrentSelections();
           for (auto it = std::begin(selections); it != std::end(selections); ++it)
             {
-              if ((*it)->get_ref() == bbox->get_ref())
+              if ((*it)->getRef() == bbox->getRef())
                 {
-                  it = grplot_widget->erase_current_selection(it);
+                  it = grplot_widget->eraseCurrentSelection(it);
                   break;
                 }
             }
         }
       item->getRef()->setAttribute("_selected", !selected_status);
-      grplot_widget->redraw(false);
+      grplot_widget->redraw(false, false);
     }
 
   if (item->getRef() != nullptr)
@@ -114,9 +113,9 @@ bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
       auto bbox_x_max = static_cast<double>(item->getRef()->getAttribute("_bbox_x_max"));
       auto bbox_y_min = static_cast<double>(item->getRef()->getAttribute("_bbox_y_min"));
       auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
-      auto *bbox = new Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
+      auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
 
-      grplot_widget->set_current_selection(bbox);
+      grplot_widget->setCurrentSelection(bbox);
       return true;
     }
   return false;
@@ -124,26 +123,26 @@ bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
 
 void TreeWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-  findSelectedItem(plotTree);
-  grplot_widget->AttributeEditEvent();
+  findSelectedItem(plot_tree);
+  grplot_widget->attributeEditEvent();
 }
 
 void TreeWidget::mousePressEvent(QMouseEvent *event)
 {
   QTreeView::mousePressEvent(event);
-  findSelectedItem(plotTree);
-  grplot_widget->redraw(false);
+  findSelectedItem(plot_tree);
+  grplot_widget->redraw(false, false);
 }
 
 void TreeWidget::mouseReleaseEvent(QMouseEvent *event)
 {
   QTreeView::mouseReleaseEvent(event);
-  checkboxStatusChanged(plotTree);
+  checkboxStatusChanged(plot_tree);
 }
 
 bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem)
 {
-  auto item = plotTree;
+  auto item = plot_tree;
   if (tree_elem) item = tree_elem;
   if (item->getRef() != nullptr && item->getRef() != ref)
     {

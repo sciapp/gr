@@ -12,14 +12,14 @@
 
 /* ------------------------- string-to-uint map --------------------------------------------------------------------- */
 
-DECLARE_MAP_TYPE(uint, unsigned int)
+DECLARE_MAP_TYPE(Uint, unsigned int)
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- string-to-uint map --------------------------------------------------------------------- */
 
-DECLARE_MAP_METHODS(uint)
+DECLARE_MAP_METHODS(Uint, uint)
 
 
 #undef DECLARE_MAP_TYPE

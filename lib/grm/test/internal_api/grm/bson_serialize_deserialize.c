@@ -84,11 +84,11 @@ static void test_bson()
   char y_c[] = {'a', 'b', 'c', '\0'};
   grm_args_t *args, *subarg, *subargs[2], *read_args;
   char *filepath, *bson_buffer;
-  memwriter_t *memwriter;
+  Memwriter *memwriter;
   FILE *bson_file;
   int bson_buffer_size;
   size_t bson_file_size, bytes_read;
-  err_t error;
+  grm_error_t error;
 
   args = grm_args_new();
   subarg = grm_args_new();
@@ -125,14 +125,14 @@ static void test_bson()
   bson_file = fopen(filepath, "wb");
   assert(bson_file != NULL);
 
-  memwriter = memwriter_new();
+  memwriter = memwriterNew();
   assert(memwriter != NULL);
-  tobson_write_args(memwriter, args);
-  assert(tobson_is_complete());
-  bson_buffer = memwriter_buf(memwriter);
-  bytes_to_int(&bson_buffer_size, bson_buffer);
+  toBsonWriteArgs(memwriter, args);
+  assert(toBsonIsComplete());
+  bson_buffer = memwriterBuf(memwriter);
+  bytesToInt(&bson_buffer_size, bson_buffer);
   fwrite(bson_buffer, 1, bson_buffer_size, bson_file);
-  memwriter_delete(memwriter);
+  memwriterDelete(memwriter);
 
   fclose(bson_file);
 
@@ -153,8 +153,8 @@ static void test_bson()
   read_args = grm_args_new();
   assert(read_args != NULL);
 
-  error = frombson_read(read_args, bson_buffer);
-  assert(error == ERROR_NONE);
+  error = fromBsonRead(read_args, bson_buffer);
+  assert(error == GRM_ERROR_NONE);
 
   printf("\nParsed Argument container:\n");
   grm_dump(read_args, stdout);

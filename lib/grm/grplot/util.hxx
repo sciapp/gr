@@ -49,7 +49,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 #elif defined _WIN32
 class FormatMessageError : public std::exception
@@ -65,7 +65,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 #endif
 
@@ -77,7 +77,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 #elif defined __unix__
 class PathTooLongError : public GetExecutablePathError
@@ -87,7 +87,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 
 class ProcessFileLinkNotReadableError : public ErrnoError, public GetExecutablePathError
@@ -111,7 +111,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 
 class SetEnvError : public ErrnoError, public SetGrDirError
@@ -139,7 +139,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 
 class AbsolutePathError : public SetGrDirError
@@ -149,7 +149,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 
 class CorruptedGrDirError : public SetGrDirError
@@ -159,7 +159,7 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 
 private:
-  std::string whatStr_;
+  std::string what_str_;
 };
 
 class SetEnvError : public GetLastErrorError, public SetGrDirError
@@ -171,14 +171,14 @@ public:
 
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
-bool is_digits(const std::string &str);
+bool isDigits(const std::string &str);
 #ifdef _WIN32
 bool fileExists(const std::string &file_path);
 bool fileExists(const std::wstring &file_path);
-std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue = L"");
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value = L"");
 #else
 bool fileExists(const std::string &file_path);
-std::string getEnvVar(const std::string &name, const std::string &defaultValue = "");
+std::string getEnvVar(const std::string &name, const std::string &default_value = "");
 #endif
 
 #ifdef _WIN32
@@ -189,25 +189,22 @@ std::string getExecutablePath();
 
 void setGrdir(bool force = false);
 
-template <typename... Args> std::string string_format(const std::string &format, Args... args)
+template <typename... Args> std::string stringFormat(const std::string &format, Args... args)
 {
   // Modified version of <https://stackoverflow.com/a/26221725/5958465>
   const int needed_bytes = std::snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
-  if (needed_bytes <= 0)
-    {
-      throw std::runtime_error("Error during formatting.");
-    }
+  if (needed_bytes <= 0) throw std::runtime_error("Error during formatting.");
   std::vector<char> buf(needed_bytes);
   std::snprintf(buf.data(), needed_bytes, format.c_str(), args...);
   return std::string(buf.data());
 }
 
 // `overloaded` utility taken from <https://en.cppreference.com/w/cpp/utility/variant/visit>
-template <class... Ts> struct overloaded : Ts...
+template <class... Ts> struct Overloaded : Ts...
 {
   using Ts::operator()...;
 };
-template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 } // namespace util
 
 inline std::ostream &operator<<(std::ostream &os, const QPoint &point)

@@ -13,17 +13,16 @@
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-DECLARE_MAP_TYPE(string_array, char **)
+DECLARE_MAP_TYPE(StringArray, char **)
 
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- string_map ----------------------------------------------------------------------------- */
 
-DECLARE_MAP_METHODS(string_array)
+DECLARE_MAP_METHODS(StringArray, stringArray)
 
-string_array_map_t *string_array_map_new_from_string_split(size_t count, const string_map_entry_t *entries,
-                                                           char split_char);
+StringArrayMap *stringArrayMapNewFromStringSplit(size_t count, const StringMapEntry *entries, char split_char);
 
 
 #undef DECLARE_MAP_TYPE

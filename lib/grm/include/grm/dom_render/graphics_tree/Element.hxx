@@ -12,7 +12,7 @@ namespace GRM
 {
 class Document;
 
-class EXPORT Element : public Node
+class GRM_EXPORT Element : public Node
 {
 public:
   virtual ~Element();
@@ -28,31 +28,31 @@ public:
 
   std::unordered_set<std::string> getAttributeNames() const;
 
-  Value getAttribute(const std::string &qualifiedName) const;
+  Value getAttribute(const std::string &qualified_name) const;
 
-  void setAttribute(const std::string &qualifiedName, const Value &value);
+  void setAttribute(const std::string &qualified_name, const Value &value);
 
-  void setAttribute(const std::string &qualifiedName, const std::string &value);
+  void setAttribute(const std::string &qualified_name, const std::string &value);
 
-  void setAttribute(const std::string &qualifiedName, const double &value);
+  void setAttribute(const std::string &qualified_name, const double &value);
 
-  void setAttribute(const std::string &qualifiedName, const int &value);
+  void setAttribute(const std::string &qualified_name, const int &value);
 
-  void removeAttribute(const std::string &qualifiedName);
+  void removeAttribute(const std::string &qualified_name);
 
-  bool toggleAttribute(const std::string &qualifiedName);
+  bool toggleAttribute(const std::string &qualified_name);
 
-  bool toggleAttribute(const std::string &qualifiedName, bool force);
+  bool toggleAttribute(const std::string &qualified_name, bool force);
 
-  bool hasAttribute(const std::string &qualifiedName) const;
+  bool hasAttribute(const std::string &qualified_name) const;
 
-  std::vector<std::shared_ptr<Element>> getElementsByTagName(const std::string &qualifiedName);
+  std::vector<std::shared_ptr<Element>> getElementsByTagName(const std::string &qualified_name);
 
-  std::vector<std::shared_ptr<const Element>> getElementsByTagName(const std::string &qualifiedName) const;
+  std::vector<std::shared_ptr<const Element>> getElementsByTagName(const std::string &qualified_name) const;
 
-  std::vector<std::shared_ptr<Element>> getElementsByClassName(const std::string &classNames);
+  std::vector<std::shared_ptr<Element>> getElementsByClassName(const std::string &class_names);
 
-  std::vector<std::shared_ptr<const Element>> getElementsByClassName(const std::string &classNames) const;
+  std::vector<std::shared_ptr<const Element>> getElementsByClassName(const std::string &class_names) const;
 
   // ChildNode interface
   void before(std::shared_ptr<Element> node);
@@ -115,7 +115,7 @@ public:
   // virtual functions
   std::string nodeName() const override;
 
-  bool isEqualNode(const std::shared_ptr<const Node> &otherNode) const override;
+  bool isEqualNode(const std::shared_ptr<const Node> &other_node) const override;
 
 private:
   friend class Document;

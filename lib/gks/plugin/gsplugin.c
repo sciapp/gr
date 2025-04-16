@@ -832,11 +832,18 @@ static void update(void)
     }
 }
 
-static void set_clip(double *clrt)
+static void set_clip_rect(int tnr)
 {
   int i, j;
-  double cx1, cy1, cx2, cy2;
+  double *clrt, cx1, cy1, cx2, cy2;
   char buffer[120];
+
+  if (gkss->clip_tnr != 0)
+    clrt = gkss->viewport[gkss->clip_tnr];
+  else if (gkss->clip == GKS_K_CLIP)
+    clrt = gkss->viewport[tnr];
+  else
+    clrt = gkss->viewport[0];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
   j = clrt[2] < clrt[3] ? 2 : 3;
@@ -1271,15 +1278,19 @@ static void query_color(int index, unsigned char **buf, int wtype)
     }
 }
 
-static void rgb2color(int rgb, unsigned char **buf, int wtype)
+static void rgb2color(unsigned int rgb, unsigned char **buf, int wtype)
 {
-  int r, g, b;
+  int r, g, b, a;
   double grey;
 
   r = (rgb & 0xff);
   g = (rgb & 0xff00) >> 8;
   b = (rgb & 0xff0000) >> 16;
-
+  a = (rgb & 0xff000000) >> 24;
+  if (a == 0)
+    {
+      r = g = b = 0xff;
+    }
   if (wtype % 2)
     {
       grey = 0.3 * r / 255.0 + 0.59 * g / 255.0 + 0.11 * b / 255.0;
@@ -1373,7 +1384,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
 
   packb("gsave");
 
-  set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? tnr : 0]);
+  set_clip_rect(gkss->cntnr);
 
   packb("/RawData currentfile /ASCII85Decode filter def");
   packb("/Data RawData << >> /LZWDecode filter def");
@@ -1401,7 +1412,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
   else if (swap == 2)
     snprintf(buffer, 100, "/ImageMatrix [%d 0 0 %d 0 0]", dx, dy);
   else
-    snprintf(buffer, 100, "/ImageMatrix [-%d 0 %d %d 0 0]", dx, dx, dy);
+    snprintf(buffer, 100, "/ImageMatrix [-%d 0 0 %d %d 0]", dx, dy, dx);
   packb(buffer);
 
   snprintf(buffer, 100, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]", wtype % 2 == 0 ? " 0 1 0 1" : "");
@@ -1422,7 +1433,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
           if (!true_color)
             query_color(ci, &bufP, wtype);
           else
-            rgb2color(ci, &bufP, wtype);
+            rgb2color((unsigned int)ci, &bufP, wtype);
         }
     }
   LZWEncodeImage(len, buf);
@@ -1499,7 +1510,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   packb("gsave");
 
-  set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? tnr : 0]);
+  set_clip_rect(gkss->cntnr);
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   NDC_to_DC(x, y, p->ix, p->iy);
@@ -2186,16 +2197,10 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           if (ltype != GKS_K_LINETYPE_SOLID) set_linetype(ltype, width);
           set_linewidth(width);
           set_color(color, p->wtype);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           line_routine(ia[0], r1, r2, ltype, tnr);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           if (ltype != GKS_K_LINETYPE_SOLID) set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
           p->empty = 0;
         }
@@ -2221,20 +2226,14 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           set_markerangle(angle);
           color = gkss->asf[5] ? gkss->pmcoli : 1;
           set_foreground(color, p->wtype);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           set_linewidth(gkss->bwidth);
           set_bordercolor(p->wtype);
           packb("0 setlinejoin");
           gks_emul_polymarker(ia[0], r1, r2, marker_routine);
           packb("1 setlinejoin");
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           p->empty = 0;
         }
       break;
@@ -2258,11 +2257,8 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
             set_linewidth(1.0);
           color = gkss->asf[9] ? gkss->txcoli : 1;
           set_color(color, p->wtype);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           nchars = strlen(chars);
           if (prec == GKS_K_TEXT_PRECISION_STRING)
             {
@@ -2275,10 +2271,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
             {
               gks_emul_text(r1[0], r2[0], nchars, chars, line_routine, fill_routine);
             }
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           p->empty = 0;
         }
       break;
@@ -2298,11 +2291,8 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           color = gkss->asf[12] ? gkss->facoli : 1;
           set_color(color, p->wtype);
           set_linewidth(gkss->bwidth);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           if (style == GKS_K_INTSTYLE_SOLID)
             fill_routine(ia[0], r1, r2, tnr);
           else if (style == GKS_K_INTSTYLE_PATTERN)
@@ -2315,10 +2305,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
               yres = 1.0 / 4650.0;
               gks_emul_fillarea(ia[0], r1, r2, tnr, line_routine, yres);
             }
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           p->empty = 0;
         }
       break;
@@ -2336,16 +2323,10 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
               p->init = 1;
             }
           gks_set_dev_xform(gkss, p->window, p->viewpt);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype, true_color);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           p->empty = 0;
         }
       break;
@@ -2360,16 +2341,10 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
               p->init = 1;
             }
           gks_set_dev_xform(gkss, p->window, p->viewpt);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("gsave");
-              set_clip(gkss->viewport[gkss->clip_tnr]);
-            }
+          packb("gsave");
+          set_clip_rect(gkss->cntnr);
           gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
-          if (gkss->clip_tnr != 0)
-            {
-              packb("grestore");
-            }
+          packb("grestore");
           p->empty = 0;
         }
       break;

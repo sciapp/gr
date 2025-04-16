@@ -3,24 +3,24 @@
 
 int ManageZIndex::getZIndex()
 {
-  return this->currentZIndex;
+  return this->current_z_index;
 }
 
-void ManageZIndex::setZIndex(int zIndex)
+void ManageZIndex::setZIndex(int z_index)
 {
-  this->currentZIndex = zIndex;
+  this->current_z_index = z_index;
 }
 
-void ManageZIndex::savestate()
+void ManageZIndex::saveState()
 {
-  this->state.push(this->currentZIndex);
+  this->state.push(this->current_z_index);
 }
 
-void ManageZIndex::restorestate()
+void ManageZIndex::restoreState()
 {
   if (this->state.size() > 0)
     {
-      this->currentZIndex = this->state.top();
+      this->current_z_index = this->state.top();
       this->state.pop();
     }
   else

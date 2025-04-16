@@ -1,0 +1,30 @@
+Checks: '-*,readability-identifier-naming'
+WarningsAsErrors: 'readability-identifier-naming'
+CheckOptions:
+  # Class / Struct
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.StructIgnoredRegexp: '^_?grm_.*_t$'
+  # Constant
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  # Enum
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  readability-identifier-naming.EnumIgnoredRegexp: '^grm_.*_t$'
+  # Function
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.FunctionIgnoredRegexp: '^grm_.*'
+  readability-identifier-naming.MethodCase: camelBack
+  # Template
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  # Typedef
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TypedefIgnoredRegexp: '^grm_.*_t$'
+  # Union
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.UnionIgnoredRegexp: '^grm_.*_t$'
+  # Variable
+  readability-identifier-naming.ClassMemberCase: lower_case
+  readability-identifier-naming.LocalVariableCase: lower_case
+  readability-identifier-naming.GlobalVariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case

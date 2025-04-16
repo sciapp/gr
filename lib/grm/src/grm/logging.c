@@ -22,7 +22,7 @@
 
 /* ========================= functions ============================================================================== */
 
-static void logger_init(void);
+static void loggerInit(void);
 
 
 /* ######################### internal implementation ################################################################ */
@@ -41,12 +41,9 @@ static int logging_enabled = -1;
 
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
-void logger_init(void)
+void loggerInit(void)
 {
-  if (logging_enabled < 0)
-    {
-      logging_enabled = is_env_variable_enabled(ENABLE_LOGGING_ENV_KEY);
-    }
+  if (logging_enabled < 0) logging_enabled = isEnvVariableEnabled(ENABLE_LOGGING_ENV_KEY);
 }
 
 
@@ -56,15 +53,15 @@ void logger_init(void)
 
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
-int logger_enabled(void)
+int loggerEnabled(void)
 {
-  logger_init();
+  loggerInit();
   return logging_enabled;
 }
 
-void logger1_(FILE *stream, const char *filename, int line_number, const char *current_function)
+void logger1(FILE *stream, const char *filename, int line_number, const char *current_function)
 {
-  logger_init();
+  loggerInit();
 
   if (logging_enabled)
     {
@@ -85,11 +82,11 @@ void logger1_(FILE *stream, const char *filename, int line_number, const char *c
     }
 }
 
-void logger2_(FILE *stream, const char *format, ...)
+void logger2(FILE *stream, const char *format, ...)
 {
   va_list vl;
 
-  logger_init();
+  loggerInit();
 
   if (logging_enabled)
     {

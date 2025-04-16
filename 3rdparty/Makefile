@@ -7,6 +7,8 @@ endif
   EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo icu xerces-c
      DIR =
 
+EXTRACLEAN = agg icu xerces-c zeromq
+
 default:
 	@set -e; for d in $(TARGETS); do $(MAKE) -C $$d PREFIX=$(DIR); done
 
@@ -14,7 +16,7 @@ extras:
 	@set -e; for d in $(EXTRAS); do $(MAKE) -C $$d PREFIX=$(DIR); done
 
 clean:
-	@set -e; for d in $(TARGETS); do $(MAKE) -C $$d clean; done
+	@set -e; for d in $(TARGETS) $(EXTRACLEAN); do $(MAKE) -C $$d clean; done
 
 realclean: clean
 	rm -rf ./build

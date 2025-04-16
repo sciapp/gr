@@ -26,13 +26,13 @@
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-std::string_view ltrim(std::string_view s)
+std::string_view lTrim(std::string_view s)
 {
   size_t start = s.find_first_not_of(WHITESPACE);
   return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-std::string_view rtrim(std::string_view s)
+std::string_view rTrim(std::string_view s)
 {
   size_t end = s.find_last_not_of(WHITESPACE);
   return (end == std::string::npos) ? "" : s.substr(0, end + 1);
@@ -40,15 +40,15 @@ std::string_view rtrim(std::string_view s)
 
 std::string_view trim(std::string_view s)
 {
-  return rtrim(ltrim(s));
+  return rTrim(lTrim(s));
 }
 
-bool starts_with(std::string_view str, std::string_view prefix)
+bool startsWith(std::string_view str, std::string_view prefix)
 {
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
-bool ends_with(std::string_view str, std::string_view suffix)
+bool endsWith(std::string_view str, std::string_view suffix)
 {
   return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
@@ -62,14 +62,11 @@ bool ends_with(std::string_view str, std::string_view suffix)
  *            step).
  * \return The position of a found subprefix. If no subprefix is found, `std::string_view::npos` is returned.
  */
-size_t ends_with_any_subprefix(std::string_view str, std::string_view prefix)
+size_t endsWithAnySubPrefix(std::string_view str, std::string_view prefix)
 {
   for (auto i = prefix.size() - 1; i > 0; --i)
     {
-      if (ends_with(str, prefix.substr(0, i)))
-        {
-          return str.size() - i;
-        }
+      if (endsWith(str, prefix.substr(0, i))) return str.size() - i;
     }
 
   return std::string_view::npos;
@@ -86,14 +83,12 @@ size_t ends_with_any_subprefix(std::string_view str, std::string_view prefix)
  * \return The index of the ending character. If the substring does not consist of `c` and `ends_with`,
  *         `std::string_view::npos` is returned instead.
  */
-size_t string_consists_of(std::string_view input, char c, char ends_with, size_t pos)
+size_t stringConsistsOf(std::string_view input, char c, char ends_with, size_t pos)
 {
   auto it_not_c =
       std::find_if_not(std::begin(input) + pos, std::end(input), [&](char current_char) { return current_char == c; });
-  if (it_not_c == std::end(input) || *it_not_c != ends_with)
-    {
-      return std::string_view::npos;
-    }
+  if (it_not_c == std::end(input) || *it_not_c != ends_with) return std::string_view::npos;
+
   return it_not_c - std::begin(input);
 }
 
@@ -114,14 +109,14 @@ namespace internal
  *                           above example).
  * \param[in] unescape Can be set to `true` to unescape instead.
  */
-std::string escape_or_unescape(std::string_view input, char escape_char, char to_escape_char, bool unescape)
+std::string escapeOrUnescape(std::string_view input, char escape_char, char to_escape_char, bool unescape)
 {
   std::vector<std::string_view> output_parts;
 
   auto start_pos = input.find(to_escape_char);
   while (start_pos != std::string_view::npos)
     {
-      auto end_pos = string_consists_of(input, escape_char, to_escape_char, start_pos + 1);
+      auto end_pos = stringConsistsOf(input, escape_char, to_escape_char, start_pos + 1);
       if (end_pos != std::string_view::npos)
         {
           /* Explanation of `(unescape && end_pos - start_pos > 1 ? 1 : 0)`:
@@ -140,7 +135,7 @@ std::string escape_or_unescape(std::string_view input, char escape_char, char to
     }
   output_parts.push_back(input);
 
-  return string_join(std::begin(output_parts), std::end(output_parts), unescape ? "" : std::string{escape_char});
+  return stringJoin(std::begin(output_parts), std::end(output_parts), unescape ? "" : std::string{escape_char});
 }
 } // namespace internal
 
@@ -151,9 +146,9 @@ std::string escape_or_unescape(std::string_view input, char escape_char, char to
  * \param[in] input String to escape.
  * \return The escaped string.
  */
-std::string escape_double_minus(std::string_view input)
+std::string escapeDoubleMinus(std::string_view input)
 {
-  return internal::escape_or_unescape(input, '\\', '-', false);
+  return internal::escapeOrUnescape(input, '\\', '-', false);
 }
 
 /*!
@@ -163,9 +158,9 @@ std::string escape_double_minus(std::string_view input)
  * \param[in] input String to unescape.
  * \return The unescaped string.
  */
-std::string unescape_double_minus(std::string_view input)
+std::string unescapeDoubleMinus(std::string_view input)
 {
-  return internal::escape_or_unescape(input, '\\', '-', true);
+  return internal::escapeOrUnescape(input, '\\', '-', true);
 }
 
 /*!
@@ -176,26 +171,22 @@ std::string unescape_double_minus(std::string_view input)
  * \param[in] name The attribute name to check.
  * \return The attribute name of the original attribute if the input is a backup attribute, `std::nullopt` otherwise.
  */
-std::optional<std::string_view> is_backup_attribute_for(std::string_view name)
+std::optional<std::string_view> isBackupAttributeFor(std::string_view name)
 {
-  if (name.empty() || !(name[0] == '_' && ends_with(name, "_org") && name.size() > 5)) return std::nullopt;
+  if (name.empty() || !(name[0] == '_' && endsWith(name, "_org") && name.size() > 5)) return std::nullopt;
 
   return name.substr(1, name.size() - 5);
 }
 
-bool file_exists(const std::string &name)
+bool fileExists(const std::string &name)
 {
   return (access(name.c_str(), F_OK) != -1);
 }
 
-void linspace(double start, double end, int n, std::vector<double> &x)
+void linSpace(double start, double end, int n, std::vector<double> &x)
 {
-  int i;
-  if (x.size() < n)
-    {
-      x.resize(n);
-    }
-  for (i = 0; i < n; i++)
+  if (x.size() < n) x.resize(n);
+  for (int i = 0; i < n; i++)
     {
       x[i] = (start + i * (end - start) / (n - 1));
     }
@@ -203,47 +194,31 @@ void linspace(double start, double end, int n, std::vector<double> &x)
 
 /* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
  * index */
-void listcomprehension(double factor, double (*pFunction)(double), std::vector<double> &list, int num, int start,
+void listComprehension(double factor, double (*function_ptr)(double), std::vector<double> &list, int num, int start,
                        std::vector<double> &result)
 {
-  int i;
-  if (result.size() < num)
-    {
-      result.resize(num);
-    }
+  if (result.size() < num) result.resize(num);
 
-  for (i = 0; i < num; ++i)
+  for (int i = 0; i < num; ++i)
     {
       // just in case if start + num + 1 exceeds the size of the vector
-      if (i + start >= result.size())
-        {
-          break;
-        }
-      result[i + start] = factor * (*pFunction)(list[i]);
+      if (i + start >= result.size()) break;
+      result[i + start] = factor * (*function_ptr)(list[i]);
     }
 }
 
 std::complex<double> moivre(double r, int x, int n)
 {
-  if (n != 0)
-    {
-      return {pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n)), pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n))};
-    }
-  else
-    {
-      return {1.0, 0.0};
-    }
+  if (n != 0) return {pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n)), pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n))};
+  return {1.0, 0.0};
 }
 
-bool is_number(std::string_view str)
+bool isNumber(std::string_view str)
 {
   const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
   auto em_dash = std::string(minus);
   size_t start_pos = 0;
-  if (starts_with(str, em_dash))
-    {
-      start_pos = em_dash.size();
-    }
+  if (startsWith(str, em_dash)) start_pos = em_dash.size();
   auto pos = str.find_first_not_of(".-0123456789", start_pos);
   return pos == std::string::npos;
 }
@@ -273,14 +248,8 @@ template <typename T> IdPool<T>::IdPool(T start_id) : start_id_(start_id) {}
 
 template <typename T> T IdPool<T>::current()
 {
-  if (current_id_)
-    {
-      return current_id_.value();
-    }
-  else
-    {
-      throw NoCurrentIdError();
-    }
+  if (current_id_) return current_id_.value();
+  throw NoCurrentIdError();
 }
 
 template <typename T> T IdPool<T>::next()
@@ -353,15 +322,9 @@ template <typename T> void IdPool<T>::print(std::ostream &os, bool compact) cons
       os << " ";
       for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
         {
-          if (it != std::begin(used_id_ranges_))
-            {
-              os << ", ";
-            }
+          if (it != std::begin(used_id_ranges_)) os << ", ";
           os << it->first;
-          if (it->first != it->second)
-            {
-              os << "-" << it->second;
-            }
+          if (it->first != it->second) os << "-" << it->second;
         }
       os << std::endl;
     }
@@ -372,10 +335,7 @@ template <typename T> void IdPool<T>::print(std::ostream &os, bool compact) cons
       for (auto it = std::begin(used_id_ranges_); it != std::end(used_id_ranges_); ++it)
         {
           os << "  " << std::setw(field_width) << it->first;
-          if (it->first != it->second)
-            {
-              os << " - " << std::setw(field_width) << it->second;
-            }
+          if (it->first != it->second) os << " - " << std::setw(field_width) << it->second;
           os << std::endl;
         }
     }
@@ -430,10 +390,7 @@ template <typename T> void IdPool<T>::release(T id)
               it->second = id - 1;
               used_id_ranges_.emplace(++it, id + 1, second);
             }
-          if (id == current_id_)
-            {
-              current_id_.reset();
-            }
+          if (id == current_id_) current_id_.reset();
           return;
         }
     }

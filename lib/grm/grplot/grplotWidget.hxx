@@ -12,15 +12,15 @@
 #include <QMainWindow>
 #include <QCursor>
 
-#include "gredit/Bounding_object.h"
-#include "gredit/Bounding_logic.h"
+#include "gredit/BoundingObject.hxx"
+#include "gredit/BoundingLogic.hxx"
 class GRPlotWidget;
-#include "gredit/TreeWidget.h"
-#include "gredit/AddElementWidget.h"
-#include "gredit/EditElementWidget.h"
-#include "gredit/TableWidget.h"
-#include "qtterm/receiver_thread.h"
-#include "qtterm/grm_args_t_wrapper.h"
+#include "gredit/TreeWidget.hxx"
+#include "gredit/AddElementWidget.hxx"
+#include "gredit/EditElementWidget.hxx"
+#include "gredit/TableWidget.hxx"
+#include "qtterm/Receiver.hxx"
+#include "qtterm/ArgsWrapper.hxx"
 #include "util.hxx"
 
 #include <grm.h>
@@ -39,27 +39,29 @@ public:
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool full_redraw = false, bool tree_update = true);
-  std::shared_ptr<GRM::Document> get_schema_tree();
-  void set_selected_parent(Bounding_object *parent);
-  Bounding_object *get_selected_parent();
-  void set_current_selection(Bounding_object *current_selection);
-  Bounding_object **get_current_selection();
-  void add_current_selection(std::unique_ptr<Bounding_object> current_selection);
-  std::list<std::unique_ptr<Bounding_object>>::iterator
-  erase_current_selection(std::list<std::unique_ptr<Bounding_object>>::const_iterator current_selection);
-  const std::list<std::unique_ptr<Bounding_object>> &get_current_selections() const;
-  void AttributeEditEvent();
-  void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **lineEdit);
-  QStringList getCheckBoxAttributes();
-  QStringList getComboBoxAttributes();
+  void addCurrentSelection(std::unique_ptr<BoundingObject> current_selection);
+  std::list<std::unique_ptr<BoundingObject>>::iterator
+  eraseCurrentSelection(std::list<std::unique_ptr<BoundingObject>>::const_iterator current_selection);
+  void attributeEditEvent();
+  void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **line_edit);
   void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
                                const std::string &value, const std::string &label);
   void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
-                                        QWidget **lineEdit);
-  void setTreeUpdate(bool status);
+                                        QWidget **line_edit);
   void editElementAccepted();
-  void set_referenced_elements(std::vector<Bounding_object> referenced_elements);
+  void processTestCommandsFile();
 
+  void setSelectedParent(BoundingObject *parent);
+  void setCurrentSelection(BoundingObject *current_selection);
+  void setTreeUpdate(bool status);
+  void setReferencedElements(std::vector<BoundingObject> referenced_elements);
+
+  const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
+  std::shared_ptr<GRM::Document> getSchemaTree();
+  QStringList getCheckBoxAttributes();
+  QStringList getComboBoxAttributes();
+  BoundingObject *getSelectedParent();
+  BoundingObject **getCurrentSelection();
   QAction *getPdfAct();
   QAction *getPngAct();
   QAction *getJpegAct();
@@ -124,7 +126,6 @@ protected:
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void leaveEvent(QEvent *event) override;
   void paint(QPaintDevice *paint_device);
-  void processTestCommandsFile();
   static Qt::KeyboardModifiers queryKeyboardModifiers();
 
 signals:
@@ -132,11 +133,11 @@ signals:
 
 private slots:
   void heatmap();
-  void marginalheatmapall();
-  void marginalheatmapline();
+  void marginalHeatmapAll();
+  void marginalHeatmapLine();
   void line();
-  void sumalgorithm();
-  void maxalgorithm();
+  void sumAlgorithm();
+  void maxAlgorithm();
   void volume();
   void isosurface();
   void surface();
@@ -155,20 +156,20 @@ private slots:
   void stem();
   void shade();
   void hexbin();
-  void polar_line();
-  void polar_scatter();
+  void polarLine();
+  void polarScatter();
   void pdf();
   void png();
   void jpeg();
   void svg();
   void moveableMode();
-  void show_container_slot();
-  void show_bounding_boxes_slot();
-  void save_file_slot();
-  void load_file_slot();
-  void enable_editor_functions();
-  void add_element_slot();
-  void received(grm_args_t_wrapper args);
+  void showContainerSlot();
+  void showBoundingBoxesSlot();
+  void saveFileSlot();
+  void loadFileSlot();
+  void enableEditorFunctions();
+  void addElementSlot();
+  void received(ArgsWrapper args);
   void screenChanged();
   void showContextSlot();
   void addContextSlot();
@@ -180,11 +181,11 @@ private:
   {
     enum class Mode
     {
-      normal,
-      pan,
-      boxzoom,
-      movable_xform,
-      move_selected,
+      NORMAL,
+      PAN,
+      BOXZOOM,
+      MOVABLE_XFORM,
+      MOVE_SELECTED,
     };
     Mode mode;
     QPoint pressed;
@@ -193,9 +194,9 @@ private:
 
   enum class RedrawType
   {
-    none,
-    partial,
-    full,
+    NONE,
+    PARTIAL,
+    FULL,
   };
 
   class TooltipWrapper
@@ -217,11 +218,11 @@ private:
 
     ~TooltipWrapper()
     {
-      if (holds_alternative<grm_accumulated_tooltip_info_t>())
+      if (holdsAlternative<grm_accumulated_tooltip_info_t>())
         {
           auto accumulated_tooltip = get<grm_accumulated_tooltip_info_t>();
           std::free(accumulated_tooltip->y);
-          std::free(accumulated_tooltip->ylabels);
+          std::free(accumulated_tooltip->y_labels);
         }
       std::visit([](auto *x) { std::free(x); }, tooltip_);
     }
@@ -229,11 +230,11 @@ private:
     template <typename T> T *get() { return std::get<T *>(tooltip_); };
     template <typename T> const T *get() const { return std::get<T *>(tooltip_); };
 
-    template <typename T> bool holds_alternative() const { return std::holds_alternative<T *>(tooltip_); };
+    template <typename T> bool holdsAlternative() const { return std::holds_alternative<T *>(tooltip_); };
 
     int n() const
     {
-      return std::visit(util::overloaded{[](const grm_tooltip_info_t *) { return 1; },
+      return std::visit(util::Overloaded{[](const grm_tooltip_info_t *) { return 1; },
                                          [](const grm_accumulated_tooltip_info_t *tooltip) { return tooltip->n; }},
                         tooltip_);
     };
@@ -243,19 +244,19 @@ private:
       return std::visit([](const auto *tooltip) { return tooltip->x; }, tooltip_);
     };
 
-    int x_px() const
+    int xPx() const
     {
       return std::visit([](const auto *tooltip) { return tooltip->x_px; }, tooltip_);
     };
 
-    int y_px() const
+    int yPx() const
     {
       return std::visit([](const auto *tooltip) { return tooltip->y_px; }, tooltip_);
     };
 
-    const char *xlabel() const
+    const char *xLabel() const
     {
-      return std::visit([](const auto *tooltip) { return tooltip->xlabel; }, tooltip_);
+      return std::visit([](const auto *tooltip) { return tooltip->x_label; }, tooltip_);
     };
 
   private:
@@ -266,16 +267,16 @@ private:
   QPixmap pixmap;
   RedrawType redraw_pixmap;
   grm_args_t *args_;
-  MouseState mouseState;
-  QRubberBand *rubberBand;
+  MouseState mouse_state;
+  QRubberBand *rubber_band;
   std::vector<TooltipWrapper> tooltips;
   QTextDocument label;
-  Bounding_logic *bounding_logic;
-  std::vector<Bounding_object> clicked, referenced_elements;
-  Bounding_object *current_selection, *mouse_move_selection, *selected_parent;
-  std::list<std::unique_ptr<Bounding_object>> current_selections;
-  bool highlightBoundingObjects;
-  TreeWidget *treewidget;
+  BoundingLogic *bounding_logic;
+  std::vector<BoundingObject> clicked, referenced_elements;
+  BoundingObject *current_selection, *mouse_move_selection, *selected_parent;
+  std::list<std::unique_ptr<BoundingObject>> current_selections;
+  bool highlight_bounding_objects;
+  TreeWidget *tree_widget;
   AddElementWidget *add_element_widget;
   int amount_scrolled;
   bool enable_editor;
@@ -287,33 +288,33 @@ private:
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
 
-  QAction *marginalheatmapAllAct, *marginalheatmapLineAct;
-  QAction *sumAct, *maxAct;
-  QAction *lineAct, *scatterAct;
-  QAction *volumeAct, *isosurfaceAct;
-  QAction *heatmapAct, *surfaceAct, *wireframeAct, *contourAct, *imshowAct, *contourfAct;
-  QAction *line3Act, *trisurfAct, *tricontAct, *scatter3Act;
-  QAction *histogramAct, *barplotAct, *stairsAct, *stemAct;
-  QAction *shadeAct, *hexbinAct;
-  QAction *polarLineAct, *polarScatterAct;
-  QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;
+  QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
+  QAction *sum_act, *max_act;
+  QAction *line_act, *scatter_act;
+  QAction *volume_act, *isosurface_act;
+  QAction *heatmap_act, *surface_act, *wireframe_act, *contour_act, *imshow_act, *contourf_act;
+  QAction *line3_act, *trisurf_act, *tricont_act, *scatter3_act;
+  QAction *histogram_act, *barplot_act, *stairs_act, *stem_act;
+  QAction *shade_act, *hexbin_act;
+  QAction *polar_line_act, *polar_scatter_act;
+  QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
   QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
       *add_element_action;
-  QAction *moveableModeAct;
+  QAction *moveable_mode_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_configuration_menu_act, *show_configuration_menu_act, *add_seperator_act;
   QCursor *csr;
 
-  void reset_pixmap();
+  void resetPixmap();
   void moveEvent(QMoveEvent *event) override;
-  void highlight_current_selection(QPainter &painter);
-  void extract_bounding_boxes_from_grm(QPainter &painter);
+  void highlightCurrentSelection(QPainter &painter);
+  void extractBoundingBoxesFromGRM(QPainter &painter);
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
   QSize sizeHint() const override;
-  void size_callback(const grm_event_t *);
-  void cmd_callback(const grm_request_event_t *);
+  void sizeCallback(const grm_event_t *);
+  void cmdCallback(const grm_request_event_t *);
   void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);

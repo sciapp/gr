@@ -1242,9 +1242,9 @@ grm_merge_named = function(args, identificator) {
     return result;
 };
 
-grm_input_c = Module.cwrap('grm_input', 'number', ['number', 'number']);
-grm_input = function(args, mouse_args) {
-    return grm_input_c(args, mouse_args);
+grm_input_c = Module.cwrap('grm_input', 'number', ['number']);
+grm_input = function(args) {
+    return grm_input_c(args);
 };
 
 grm_args_delete_c = Module.cwrap('grm_args_delete', '', ['number']);

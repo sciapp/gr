@@ -9,11 +9,11 @@ extern "C" {
 
 /* ========================= functions ============================================================================== */
 
-void install_backtrace_handler(void);
-void install_backtrace_handler_if_enabled(void);
-void uninstall_backtrace_handler(void);
-void uninstall_backtrace_handler_if_enabled(void);
-int backtrace_enabled(void);
+void installBacktraceHandler(void);
+void installBacktraceHandlerIfEnabled(void);
+void uninstallBacktraceHandler(void);
+void uninstallBacktraceHandlerIfEnabled(void);
+int backtraceEnabled(void);
 
 #ifdef __cplusplus
 }

@@ -7,7 +7,7 @@
 
 int STD_COLORS[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990, 991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
 
-void visualize(element_t **elements, int nelems)
+void visualize(grm_element_t **elements, int nelems)
 {
   int i;
   double *subplot;
@@ -18,7 +18,7 @@ void visualize(element_t **elements, int nelems)
 
   for (i = 0; i < nelems; i++)
     {
-      element_getSubplot(elements[i], &subplot);
+      grm_element_get_subplot(elements[i], &subplot);
       gr_setfillcolorind(STD_COLORS[i]);
       gr_fillrect(subplot[0], subplot[1], subplot[2], subplot[3]);
       /*        printf("[%f %f %f %f]\n", subplot[0], subplot[1], subplot[2], subplot[3]); */
@@ -31,63 +31,63 @@ void test_grid(void)
 {
   int i, nelems = 6;
 
-  grid_t *grid1;
-  grid_new(1, 1, &grid1);
+  grm_grid_t *grid1;
+  grm_grid_new(1, 1, &grid1);
 
-  element_t *elements[nelems];
+  grm_element_t *elements[nelems];
 
   for (i = 0; i < nelems; i++)
     {
-      element_new(&elements[i]);
+      grm_element_new(&elements[i]);
     }
 
-  grid_setElementSlice(0, 1, 0, 1, elements[0], grid1);
-  grid_setElementSlice(0, 1, 1, 2, elements[1], grid1);
+  grm_grid_set_element_slice(0, 1, 0, 1, elements[0], grid1);
+  grm_grid_set_element_slice(0, 1, 1, 2, elements[1], grid1);
 
-  grid_finalize(grid1);
-
-  visualize(elements, nelems);
-
-  element_setAbsWidth(elements[2], 0.25);
-  element_setAbsHeight(elements[2], 0.2);
-  element_setFitParentsHeight(elements[2], 1);
-  grid_setElementSlice(0, 1, 2, 3, elements[2], grid1);
-
-  grid_finalize(grid1);
+  grm_grid_finalize(grid1);
 
   visualize(elements, nelems);
 
-  element_setFitParentsWidth(elements[2], 0);
-  grid_setElementSlice(1, 2, 0, 2, elements[2], grid1);
+  grm_element_set_abs_width(elements[2], 0.25);
+  grm_element_set_abs_height(elements[2], 0.2);
+  grm_element_set_fit_parents_height(elements[2], 1);
+  grm_grid_set_element_slice(0, 1, 2, 3, elements[2], grid1);
 
-  grid_finalize(grid1);
-
-  visualize(elements, nelems);
-
-  trim(grid1);
-
-  grid_finalize(grid1);
+  grm_grid_finalize(grid1);
 
   visualize(elements, nelems);
 
-  grid_setElementSlice(0, 1, 2, 3, elements[3], grid1);
-  grid_setElementSlice(1, 2, 2, 3, elements[4], grid1);
+  grm_element_set_fit_parents_width(elements[2], 0);
+  grm_grid_set_element_slice(1, 2, 0, 2, elements[2], grid1);
 
-  grid_finalize(grid1);
-
-  visualize(elements, nelems);
-
-  grid_t *grid2;
-  grid_new(2, 1, &grid2);
-  grid_setElementSlice(0, 1, 0, 1, elements[3], grid2);
-  grid_setElementSlice(1, 2, 0, 1, elements[4], grid2);
-  grid_setElementSlice(0, 2, 2, 3, grid2, grid1);
-
-  grid_finalize(grid1);
+  grm_grid_finalize(grid1);
 
   visualize(elements, nelems);
 
-  grid_delete(grid1);
+  grm_trim(grid1);
+
+  grm_grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grm_grid_set_element_slice(0, 1, 2, 3, elements[3], grid1);
+  grm_grid_set_element_slice(1, 2, 2, 3, elements[4], grid1);
+
+  grm_grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grm_grid_t *grid2;
+  grm_grid_new(2, 1, &grid2);
+  grm_grid_set_element_slice(0, 1, 0, 1, elements[3], grid2);
+  grm_grid_set_element_slice(1, 2, 0, 1, elements[4], grid2);
+  grm_grid_set_element_slice(0, 2, 2, 3, grid2, grid1);
+
+  grm_grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grm_grid_delete(grid1);
 }
 
 void test_grid_with_grm(void)
@@ -97,7 +97,7 @@ void test_grid_with_grm(void)
   grm_args_t *args, *subplots[4];
   int i, j;
   int nelems = 6;
-  grid_t *grid = NULL;
+  grm_grid_t *grid = NULL;
 
   printf("filling argument container...\n");
 
@@ -118,15 +118,15 @@ void test_grid_with_grm(void)
         }
     }
 
-  grid_new(2, 2, &grid);
+  grm_grid_new(2, 2, &grid);
   for (i = 0; i < 4; ++i)
     {
       subplots[i] = grm_args_new();
       grm_args_push(subplots[i], "x", "nD", n, plots[i][0]);
       grm_args_push(subplots[i], "y", "nD", n, plots[i][1]);
-      grid_setElementArgs(i / 2, i % 2, subplots[i], grid);
+      grm_grid_set_element_args(i / 2, i % 2, subplots[i], grid);
     }
-  grid_finalize(grid);
+  grm_grid_finalize(grid);
 
   args = grm_args_new();
   grm_args_push(args, "subplots", "nA", 4, subplots);
@@ -138,7 +138,7 @@ void test_grid_with_grm(void)
   getchar();
 
   grm_args_delete(args);
-  grid_delete(grid);
+  grm_grid_delete(grid);
 }
 
 void test_grid_with_grm_args(void)

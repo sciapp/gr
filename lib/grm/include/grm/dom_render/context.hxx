@@ -17,7 +17,7 @@ namespace GRM
 {
 
 
-class EXPORT Context
+class GRM_EXPORT Context
 {
   /*!
    * Context is used to store data that can not be easily stored inside the tree such as vectors.
@@ -33,7 +33,7 @@ class EXPORT Context
    */
 
 public:
-  class EXPORT Inner
+  class GRM_EXPORT Inner
   {
     /*!
      * The class Inner is used to return data from Context
@@ -46,7 +46,7 @@ public:
   private:
     Context *context;
     std::string key;
-    void increment_key(const std::string &);
+    void incrementKey(const std::string &);
 
   public:
     Inner(Context &context, std::string key);
@@ -77,9 +77,9 @@ public:
     bool intUsed();
     bool doubleUsed();
     bool stringUsed();
-    void delete_key(const std::string &);
-    void use_context_key(const std::string &key, const std::string &old_key = "");
-    void decrement_key(const std::string &);
+    void deleteKey(const std::string &);
+    void useContextKey(const std::string &key, const std::string &old_key = "");
+    void decrementKey(const std::string &);
   };
 
   Context();
@@ -121,7 +121,7 @@ public:
     std::variant<std::reference_wrapper<std::map<std::string, std::vector<double>>::iterator>,
                  std::reference_wrapper<std::map<std::string, std::vector<int>>::iterator>,
                  std::reference_wrapper<std::map<std::string, std::vector<std::string>>::iterator>>
-    next_iterator();
+    nextIterator();
 
     Context &context_;
     std::map<std::string, std::vector<double>>::iterator table_double_it_;
@@ -138,10 +138,10 @@ public:
 
 private:
   friend class Inner;
-  std::map<std::string, std::vector<double>> tableDouble;
-  std::map<std::string, std::vector<int>> tableInt;
-  std::map<std::string, std::vector<std::string>> tableString;
-  std::map<std::string, int> referenceNumberOfKeys;
+  std::map<std::string, std::vector<double>> table_double;
+  std::map<std::string, std::vector<int>> table_int;
+  std::map<std::string, std::vector<std::string>> table_string;
+  std::map<std::string, int> reference_number_of_keys;
 };
 
 bool operator==(const Context::Iterator &a, const Context::Iterator &b);
@@ -195,7 +195,7 @@ template <class T> static const T &get(const Context::Inner &data)
   return static_cast<const T &>(data);
 }
 
-template <class T> static T *get_if(Context::Inner &&data)
+template <class T> static T *getIf(Context::Inner &&data)
 {
   /*!
    * The GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without throwing
@@ -223,7 +223,7 @@ template <class T> static T *get_if(Context::Inner &&data)
     }
 }
 
-template <class T> static T *get_if(Context::Inner &data)
+template <class T> static T *getIf(Context::Inner &data)
 {
   /*!
    * The GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without throwing
@@ -251,7 +251,7 @@ template <class T> static T *get_if(Context::Inner &data)
     }
 }
 
-template <class T> static const T *get_if(const Context::Inner &&data)
+template <class T> static const T *getIf(const Context::Inner &&data)
 {
   /*!
    * The const GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without
@@ -279,7 +279,7 @@ template <class T> static const T *get_if(const Context::Inner &&data)
     }
 }
 
-template <class T> static const T *get_if(const Context::Inner &data)
+template <class T> static const T *getIf(const Context::Inner &data)
 {
   /*!
    * The const GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without

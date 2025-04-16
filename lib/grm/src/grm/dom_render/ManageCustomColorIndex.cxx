@@ -2,14 +2,14 @@
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 
-void ManageCustomColorIndex::savestate()
+void ManageCustomColorIndex::saveState()
 {
   int rgb;
   gr_inqcolor(PLOT_CUSTOM_COLOR_INDEX, &rgb);
   this->state.push(rgb);
 }
 
-void ManageCustomColorIndex::restorestate()
+void ManageCustomColorIndex::restoreState()
 {
   if (this->state.size() > 0)
     {
@@ -28,16 +28,16 @@ void ManageCustomColorIndex::restorestate()
     }
 }
 
-void ManageCustomColorIndex::savecontext(int contextId)
+void ManageCustomColorIndex::saveContext(int context_id)
 {
   int rgb;
   gr_inqcolor(PLOT_CUSTOM_COLOR_INDEX, &rgb);
-  this->context[contextId] = rgb;
+  this->context[context_id] = rgb;
 }
 
-void ManageCustomColorIndex::selectcontext(int contextId)
+void ManageCustomColorIndex::selectContext(int context_id)
 {
-  if (auto search = context.find(contextId); search != context.end())
+  if (auto search = context.find(context_id); search != context.end())
     {
       int rgb = search->second;
 

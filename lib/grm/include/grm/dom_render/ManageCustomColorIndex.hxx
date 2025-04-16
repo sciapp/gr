@@ -7,10 +7,10 @@
 class ManageCustomColorIndex
 {
 public:
-  void savestate(void);
-  void restorestate(void);
-  void savecontext(int contextId);
-  void selectcontext(int contextId);
+  void saveState(void);
+  void restoreState(void);
+  void saveContext(int context_id);
+  void selectContext(int context_id);
 
 private:
   std::stack<int> state;

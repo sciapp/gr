@@ -14,9 +14,9 @@ void test()
   for (const auto &test_string : test_strings)
     {
       std::cout << "original input: " << test_string << std::endl;
-      auto escaped_minuses = escape_double_minus(test_string);
+      auto escaped_minuses = escapeDoubleMinus(test_string);
       std::cout << "escaped:        " << escaped_minuses << std::endl;
-      auto unescaped_double_minuses = unescape_double_minus(escaped_minuses);
+      auto unescaped_double_minuses = unescapeDoubleMinus(escaped_minuses);
       std::cout << "unescaped:      " << unescaped_double_minuses << std::endl << std::endl;
       assert(test_string == unescaped_double_minuses);
     }
@@ -26,7 +26,7 @@ void test()
   for (auto it = std::begin(test_strings); it != std::begin(test_strings) + 4; ++it)
     {
       std::cout << "original input: " << *it << std::endl;
-      auto unescaped_double_minuses = unescape_double_minus(*it);
+      auto unescaped_double_minuses = unescapeDoubleMinus(*it);
       std::cout << "unescaped:      " << unescaped_double_minuses << std::endl << std::endl;
       assert(unescaped_double_minuses == *it);
     }

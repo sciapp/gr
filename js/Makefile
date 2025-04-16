@@ -13,7 +13,7 @@ OPTS = \
 ifndef DEBUG
     OPTS  += -O3
 else
-    OPTS  += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
+    OPTS  += -g1 -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2 -sNO_DISABLE_EXCEPTION_CATCHING=1
 endif
    DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS
     CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
@@ -170,7 +170,7 @@ $(FTDIR)/libfreetype.a:
 	$(MAKE) -C $(FTDIR)
 
 $(XERCESCDIR)/libxerces-c.a:
-	$(MAKE) -C $(XERCESCDIR) libxerces-c.a
+	$(MAKE) -C $(XERCESCDIR) XERCES_C_EXTRA_CMAKE_FLAGS="-DCMAKE_TOOLCHAIN_FILE=$(EMSDK)/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" libxerces-c.a
 
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 

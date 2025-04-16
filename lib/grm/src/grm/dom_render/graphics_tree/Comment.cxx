@@ -23,13 +23,10 @@ std::shared_ptr<GRM::Node> GRM::Comment::cloneIndividualNode()
   return comment;
 }
 
-bool GRM::Comment::isEqualNode(const std::shared_ptr<const GRM::Node> &otherNode) const
+bool GRM::Comment::isEqualNode(const std::shared_ptr<const GRM::Node> &other_node) const
 {
-  auto other_node_as_comment = std::dynamic_pointer_cast<const GRM::Comment>(otherNode);
-  if (!other_node_as_comment)
-    {
-      return false;
-    }
+  auto other_node_as_comment = std::dynamic_pointer_cast<const GRM::Comment>(other_node);
+  if (!other_node_as_comment) return false;
   return (other_node_as_comment->data() == data());
 }
 
@@ -73,19 +70,19 @@ void GRM::Comment::deleteData(unsigned long offset, unsigned long count)
 
 std::shared_ptr<GRM::Element> GRM::Comment::previousElementSibling()
 {
-  return previousElementSibling_impl();
+  return previousElementSiblingImpl();
 }
 
 std::shared_ptr<const GRM::Element> GRM::Comment::previousElementSibling() const
 {
-  return previousElementSibling_impl();
+  return previousElementSiblingImpl();
 }
 
 std::shared_ptr<GRM::Element> GRM::Comment::nextElementSibling()
 {
-  return nextElementSibling_impl();
+  return nextElementSiblingImpl();
 }
 std::shared_ptr<const GRM::Element> GRM::Comment::nextElementSibling() const
 {
-  return nextElementSibling_impl();
+  return nextElementSiblingImpl();
 }

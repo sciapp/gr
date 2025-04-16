@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT Value
+class GRM_EXPORT Value
 {
 public:
   enum class Type

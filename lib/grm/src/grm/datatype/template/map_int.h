@@ -22,19 +22,19 @@
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
 #undef DECLARE_MAP_TYPE
-#define DECLARE_MAP_TYPE(prefix, value_type)                     \
-  typedef value_type prefix##_map_value_t;                       \
-  typedef const value_type prefix##_map_const_value_t;           \
-                                                                 \
-  typedef struct                                                 \
-  {                                                              \
-    const char *key;                                             \
-    prefix##_map_value_t value;                                  \
-  } prefix##_map_entry_t;                                        \
-  typedef const prefix##_map_entry_t prefix##_map_const_entry_t; \
-                                                                 \
-  DECLARE_SET_TYPE(string_##prefix##_pair, prefix##_map_entry_t) \
-  typedef string_##prefix##_pair_set_t prefix##_map_t;
+#define DECLARE_MAP_TYPE(type_prefix, value_type)                    \
+  typedef value_type type_prefix##MapValue;                          \
+  typedef const value_type type_prefix##MapConstValue;               \
+                                                                     \
+  typedef struct                                                     \
+  {                                                                  \
+    const char *key;                                                 \
+    type_prefix##MapValue value;                                     \
+  } type_prefix##MapEntry;                                           \
+  typedef const type_prefix##MapEntry type_prefix##MapConstEntry;    \
+                                                                     \
+  DECLARE_SET_TYPE(String##type_prefix##Pair, type_prefix##MapEntry) \
+  typedef String##type_prefix##PairSet type_prefix##Map;
 
 
 /* ========================= methods ================================================================================ */
@@ -42,21 +42,20 @@
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
 #undef DECLARE_MAP_METHODS
-#define DECLARE_MAP_METHODS(prefix)                                                                                   \
-  DECLARE_SET_METHODS(string_##prefix##_pair)                                                                         \
-                                                                                                                      \
-  prefix##_map_t *prefix##_map_new(size_t capacity) MAYBE_UNUSED;                                                     \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_const_entry_t *entries) MAYBE_UNUSED;         \
-  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map) MAYBE_UNUSED;                                          \
-  void prefix##_map_delete(prefix##_map_t *prefix##_map) MAYBE_UNUSED;                                                \
-  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value)            \
-      MAYBE_UNUSED;                                                                                                   \
-  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value)    \
-      MAYBE_UNUSED;                                                                                                   \
-  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, prefix##_map_value_t *value) MAYBE_UNUSED; \
-                                                                                                                      \
-  int prefix##_map_value_copy(prefix##_map_value_t *copy, prefix##_map_const_value_t value);                          \
-  void prefix##_map_value_delete(prefix##_map_value_t value);
+#define DECLARE_MAP_METHODS(type_prefix, method_prefix)                                                                \
+  DECLARE_SET_METHODS(String##type_prefix##Pair, string##type_prefix##Pair)                                            \
+                                                                                                                       \
+  type_prefix##Map *method_prefix##MapNew(size_t capacity) MAYBE_UNUSED;                                               \
+  type_prefix##Map *method_prefix##MapNewWithData(size_t count, type_prefix##MapConstEntry *entries) MAYBE_UNUSED;     \
+  type_prefix##Map *method_prefix##MapCopy(const type_prefix##Map *map) MAYBE_UNUSED;                                  \
+  void method_prefix##MapDelete(type_prefix##Map *map) MAYBE_UNUSED;                                                   \
+  int method_prefix##MapInsert(type_prefix##Map *map, const char *key, type_prefix##MapConstValue value) MAYBE_UNUSED; \
+  int method_prefix##MapInsertDefault(type_prefix##Map *map, const char *key, type_prefix##MapConstValue value)        \
+      MAYBE_UNUSED;                                                                                                    \
+  int method_prefix##MapAt(const type_prefix##Map *map, const char *key, type_prefix##MapValue *value) MAYBE_UNUSED;   \
+                                                                                                                       \
+  int method_prefix##MapValueCopy(type_prefix##MapValue *copy, type_prefix##MapConstValue value);                      \
+  void method_prefix##MapValueDelete(type_prefix##MapValue value);
 
 
 /* ######################### implementation ######################################################################### */
@@ -66,125 +65,116 @@
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
 #undef DEFINE_MAP_METHODS
-#define DEFINE_MAP_METHODS(prefix)                                                                                 \
-  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                       \
-                                                                                                                   \
-  prefix##_map_t *prefix##_map_new(size_t capacity)                                                                \
-  {                                                                                                                \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                      \
-                                                                                                                   \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                         \
-    if (string_##prefix##_pair_set == NULL)                                                                        \
-      {                                                                                                            \
-        debug_print_malloc_error();                                                                                \
-        return NULL;                                                                                               \
-      }                                                                                                            \
-                                                                                                                   \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                           \
-  }                                                                                                                \
-                                                                                                                   \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_const_entry_t *entries)                    \
-  {                                                                                                                \
-    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                             \
-  }                                                                                                                \
-                                                                                                                   \
-  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                                     \
-  {                                                                                                                \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                      \
-                                                                                                                   \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);             \
-    if (string_##prefix##_pair_set == NULL)                                                                        \
-      {                                                                                                            \
-        debug_print_malloc_error();                                                                                \
-        return NULL;                                                                                               \
-      }                                                                                                            \
-                                                                                                                   \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                           \
-  }                                                                                                                \
-                                                                                                                   \
-  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                           \
-  {                                                                                                                \
-    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                               \
-  }                                                                                                                \
-                                                                                                                   \
-  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value)         \
-  {                                                                                                                \
-    string_##prefix##_pair_set_entry_t entry;                                                                      \
-                                                                                                                   \
-    entry.key = key;                                                                                               \
-    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */   \
-    entry.value = (prefix##_map_value_t)value;                                                                     \
-    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                    \
-  }                                                                                                                \
-                                                                                                                   \
-  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value) \
-  {                                                                                                                \
-    string_##prefix##_pair_set_entry_t entry;                                                                      \
-                                                                                                                   \
-    entry.key = key;                                                                                               \
-    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */   \
-    entry.value = (prefix##_map_value_t)value;                                                                     \
-    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))                 \
-      {                                                                                                            \
-        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                \
-      }                                                                                                            \
-    return 0;                                                                                                      \
-  }                                                                                                                \
-                                                                                                                   \
-  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, prefix##_map_value_t *value)            \
-  {                                                                                                                \
-    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                         \
-                                                                                                                   \
-    entry.key = key;                                                                                               \
-    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry))        \
-      {                                                                                                            \
-        if (value != NULL)                                                                                         \
-          {                                                                                                        \
-            *value = saved_entry.value;                                                                            \
-          }                                                                                                        \
-        return 1;                                                                                                  \
-      }                                                                                                            \
-    else                                                                                                           \
-      {                                                                                                            \
-        return 0;                                                                                                  \
-      }                                                                                                            \
-  }                                                                                                                \
-                                                                                                                   \
-  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                              \
-                                            const string_##prefix##_pair_set_entry_t entry)                        \
-  {                                                                                                                \
-    const char *key_copy;                                                                                          \
-    prefix##_map_value_t value_copy;                                                                               \
-                                                                                                                   \
-    key_copy = gks_strdup(entry.key);                                                                              \
-    if (key_copy == NULL)                                                                                          \
-      {                                                                                                            \
-        return 0;                                                                                                  \
-      }                                                                                                            \
-    if (!prefix##_map_value_copy(&value_copy, (prefix##_map_const_value_t)entry.value))                            \
-      {                                                                                                            \
-        free((char *)key_copy);                                                                                    \
-        return 0;                                                                                                  \
-      }                                                                                                            \
-    copy->key = key_copy;                                                                                          \
-    copy->value = value_copy;                                                                                      \
-                                                                                                                   \
-    return 1;                                                                                                      \
-  }                                                                                                                \
-                                                                                                                   \
-  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                           \
-  {                                                                                                                \
-    free((char *)entry.key);                                                                                       \
-    prefix##_map_value_delete(entry.value);                                                                        \
-  }                                                                                                                \
-                                                                                                                   \
-  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)                     \
-  {                                                                                                                \
-    return djb2_hash(entry.key);                                                                                   \
-  }                                                                                                                \
-                                                                                                                   \
-  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,                     \
-                                              const string_##prefix##_pair_set_entry_t entry2)                     \
-  {                                                                                                                \
-    return strcmp(entry1.key, entry2.key) == 0;                                                                    \
+#define DEFINE_MAP_METHODS(type_prefix, method_prefix)                                                           \
+  DEFINE_SET_METHODS(String##type_prefix##Pair, string##type_prefix##Pair)                                       \
+                                                                                                                 \
+  type_prefix##Map *method_prefix##MapNew(size_t capacity)                                                       \
+  {                                                                                                              \
+    String##type_prefix##PairSet *set;                                                                           \
+                                                                                                                 \
+    set = string##type_prefix##PairSetNew(capacity);                                                             \
+    if (set == NULL)                                                                                             \
+      {                                                                                                          \
+        debugPrintMallocError();                                                                                 \
+        return NULL;                                                                                             \
+      }                                                                                                          \
+                                                                                                                 \
+    return (type_prefix##Map *)set;                                                                              \
+  }                                                                                                              \
+                                                                                                                 \
+  type_prefix##Map *method_prefix##MapNewWithData(size_t count, type_prefix##MapConstEntry *entries)             \
+  {                                                                                                              \
+    return (type_prefix##Map *)string##type_prefix##PairSetNewWithData(count, entries);                          \
+  }                                                                                                              \
+                                                                                                                 \
+  type_prefix##Map *method_prefix##MapCopy(const type_prefix##Map *map)                                          \
+  {                                                                                                              \
+    String##type_prefix##PairSet *set;                                                                           \
+                                                                                                                 \
+    set = string##type_prefix##PairSetCopy((String##type_prefix##PairSet *)map);                                 \
+    if (set == NULL)                                                                                             \
+      {                                                                                                          \
+        debugPrintMallocError();                                                                                 \
+        return NULL;                                                                                             \
+      }                                                                                                          \
+                                                                                                                 \
+    return (type_prefix##Map *)set;                                                                              \
+  }                                                                                                              \
+                                                                                                                 \
+  void method_prefix##MapDelete(type_prefix##Map *map)                                                           \
+  {                                                                                                              \
+    string##type_prefix##PairSetDelete((String##type_prefix##PairSet *)map);                                     \
+  }                                                                                                              \
+                                                                                                                 \
+  int method_prefix##MapInsert(type_prefix##Map *map, const char *key, type_prefix##MapConstValue value)         \
+  {                                                                                                              \
+    String##type_prefix##PairSetEntry entry;                                                                     \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
+    entry.value = (type_prefix##MapValue)value;                                                                  \
+    return string##type_prefix##PairSetAdd((String##type_prefix##PairSet *)map, entry);                          \
+  }                                                                                                              \
+                                                                                                                 \
+  int method_prefix##MapInsertDefault(type_prefix##Map *map, const char *key, type_prefix##MapConstValue value)  \
+  {                                                                                                              \
+    String##type_prefix##PairSetEntry entry;                                                                     \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
+    entry.value = (type_prefix##MapValue)value;                                                                  \
+    if (!string##type_prefix##PairSetContains((String##type_prefix##PairSet *)map, entry))                       \
+      {                                                                                                          \
+        return string##type_prefix##PairSetAdd((String##type_prefix##PairSet *)map, entry);                      \
+      }                                                                                                          \
+    return 0;                                                                                                    \
+  }                                                                                                              \
+                                                                                                                 \
+  int method_prefix##MapAt(const type_prefix##Map *map, const char *key, type_prefix##MapValue *value)           \
+  {                                                                                                              \
+    String##type_prefix##PairSetEntry entry, saved_entry;                                                        \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    if (string##type_prefix##PairSetFind((String##type_prefix##PairSet *)map, entry, &saved_entry))              \
+      {                                                                                                          \
+        if (value != NULL) *value = saved_entry.value;                                                           \
+        return 1;                                                                                                \
+      }                                                                                                          \
+    return 0;                                                                                                    \
+  }                                                                                                              \
+                                                                                                                 \
+  int string##type_prefix##PairSetEntryCopy(String##type_prefix##PairSetEntry *copy,                             \
+                                            const String##type_prefix##PairSetEntry entry)                       \
+  {                                                                                                              \
+    const char *key_copy;                                                                                        \
+    type_prefix##MapValue value_copy;                                                                            \
+                                                                                                                 \
+    key_copy = gks_strdup(entry.key);                                                                            \
+    if (key_copy == NULL) return 0;                                                                              \
+    if (!method_prefix##MapValueCopy(&value_copy, (type_prefix##MapConstValue)entry.value))                      \
+      {                                                                                                          \
+        free((char *)key_copy);                                                                                  \
+        return 0;                                                                                                \
+      }                                                                                                          \
+    copy->key = key_copy;                                                                                        \
+    copy->value = value_copy;                                                                                    \
+                                                                                                                 \
+    return 1;                                                                                                    \
+  }                                                                                                              \
+                                                                                                                 \
+  void string##type_prefix##PairSetEntryDelete(String##type_prefix##PairSetEntry entry)                          \
+  {                                                                                                              \
+    free((char *)entry.key);                                                                                     \
+    method_prefix##MapValueDelete(entry.value);                                                                  \
+  }                                                                                                              \
+                                                                                                                 \
+  size_t string##type_prefix##PairSetEntryHash(const String##type_prefix##PairSetEntry entry)                    \
+  {                                                                                                              \
+    return djb2Hash(entry.key);                                                                                  \
+  }                                                                                                              \
+                                                                                                                 \
+  int string##type_prefix##PairSetEntryEquals(const String##type_prefix##PairSetEntry entry1,                    \
+                                              const String##type_prefix##PairSetEntry entry2)                    \
+  {                                                                                                              \
+    return strcmp(entry1.key, entry2.key) == 0;                                                                  \
   }

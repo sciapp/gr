@@ -6,13 +6,13 @@
 class ManageZIndex
 {
 public:
-  void savestate(void);
-  void restorestate(void);
+  void saveState(void);
+  void restoreState(void);
   int getZIndex(void);
-  void setZIndex(int zIndex);
+  void setZIndex(int z_index);
 
 private:
-  int currentZIndex = 0;
+  int current_z_index = 0;
   std::stack<int> state;
 };
 

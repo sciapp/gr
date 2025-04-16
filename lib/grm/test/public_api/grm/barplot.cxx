@@ -41,11 +41,7 @@ int main(void)
   const char *yy3_labels[3] = {"1", "4", "6"};
   const char *yy2_labels_for_inner[4] = {"5", "2", "3", "9"};
   const char *yy_pos_neg_labels[4] = {"5", "-5", "3", "-3"};
-  int indices[2] = {1, 2};
   grm_args_t *args;
-  grm_args_t *ind_bar_color[2];
-  grm_args_t *ind_edge_color;
-  grm_args_t *ind_edge_width;
   grm_args_t *series[N_SERIES];
   grm_args_t *inner_series[INNER_N_SERIES];
   int i, j;

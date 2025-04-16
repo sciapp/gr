@@ -23,7 +23,6 @@
 
 /* ------------------------- dump ----------------------------------------------------------------------------------- */
 
-#ifndef NDEBUG
 void grm_dump(const grm_args_t *args, FILE *f)
 {
 #define BUFFER_LEN 200
@@ -32,7 +31,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
 #define ARRAY_PRINT_TRUNCATION_ENV_KEY "GRM_ARRAY_PRINT_TRUNCATION"
   grm_args_iterator_t *it;
   grm_args_value_iterator_t *value_it;
-  arg_t *arg;
+  grm_arg_t *arg;
   unsigned int i;
   char buffer[BUFFER_LEN];
   int count_characters;
@@ -40,7 +39,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
   int columns, cursor_xpos = 0;
   int use_color_codes;
   int has_dark_bg;
-  struct grm_dump_color_codes_t
+  struct GrmDumpColorCodes
   {
     unsigned char k, i, d, c, s;
   } color_codes;
@@ -55,7 +54,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
   ioctl(0, TIOCGWINSZ, &w);
   columns = w.ws_col;
   if (getenv(DARK_BACKGROUND_ENV_KEY) != NULL &&
-      str_equals_any(getenv(DARK_BACKGROUND_ENV_KEY), "1", "yes", "YES", "on", "ON", NULL))
+      strEqualsAny(getenv(DARK_BACKGROUND_ENV_KEY), "1", "yes", "YES", "on", "ON", NULL))
     {
       has_dark_bg = 1;
       color_codes.k = 122;
@@ -76,20 +75,20 @@ void grm_dump(const grm_args_t *args, FILE *f)
 #endif
   if (getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY) != NULL)
     {
-      if (str_equals_any(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), "", "0", "inf", "INF", "unlimited", "UNLIMITED", "off",
-                         "OFF", NULL))
+      if (strEqualsAny(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), "", "0", "inf", "INF", "unlimited", "UNLIMITED", "off",
+                       "OFF", NULL))
         {
           array_print_elements_count = UINT_MAX;
         }
       else
         {
-          str_to_uint(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), &array_print_elements_count);
+          strToUint(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), &array_print_elements_count);
         }
     }
 
 #define INDENT 2
 
-#define print_indent                                                                                                   \
+#define printIndent                                                                                                    \
   do                                                                                                                   \
     {                                                                                                                  \
       if (use_color_codes)                                                                                             \
@@ -108,10 +107,10 @@ void grm_dump(const grm_args_t *args, FILE *f)
     }                                                                                                                  \
   while (0)
 
-#define print_key                                                          \
+#define printKey                                                           \
   do                                                                       \
     {                                                                      \
-      print_indent;                                                        \
+      printIndent;                                                         \
       if (use_color_codes)                                                 \
         {                                                                  \
           fprintf(f, "\033[38;5;%dm%s\033[0m: ", color_codes.k, arg->key); \
@@ -123,7 +122,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
     }                                                                      \
   while (0)
 
-#define print_value(value_type, format_string, color_code)                                                       \
+#define printValue(value_type, format_string, color_code)                                                        \
   do                                                                                                             \
     {                                                                                                            \
       if (use_color_codes)                                                                                       \
@@ -137,7 +136,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
     }                                                                                                            \
   while (0)
 
-#define print_values(value_type, format_string, color_code)                                                         \
+#define printValues(value_type, format_string, color_code)                                                          \
   do                                                                                                                \
     {                                                                                                               \
       int print_last_element = 0;                                                                                   \
@@ -176,34 +175,31 @@ void grm_dump(const grm_args_t *args, FILE *f)
           if (cursor_xpos + count_characters > columns)                                                             \
             {                                                                                                       \
               fputc('\n', f);                                                                                       \
-              print_indent;                                                                                         \
+              printIndent;                                                                                          \
               cursor_xpos = INDENT * recursion_level + fprintf(f, "%*s", (int)strlen(arg->key) + 3, "") - 1;        \
             }                                                                                                       \
           fputs(buffer, f);                                                                                         \
           cursor_xpos += count_characters;                                                                          \
         }                                                                                                           \
-      if (value_it->array_length == 0)                                                                              \
-        {                                                                                                           \
-          fputc(']', f);                                                                                            \
-        }                                                                                                           \
+      if (value_it->array_length == 0) fputc(']', f);                                                               \
     }                                                                                                               \
   while (0)
 
-#define print_type(value_type, format_string, color_code)      \
-  do                                                           \
-    {                                                          \
-      if (value_it->is_array)                                  \
-        {                                                      \
-          print_key;                                           \
-          print_values(value_type, format_string, color_code); \
-        }                                                      \
-      else                                                     \
-        {                                                      \
-          print_key;                                           \
-          print_value(value_type, format_string, color_code);  \
-        }                                                      \
-      fputc('\n', f);                                          \
-    }                                                          \
+#define printType(value_type, format_string, color_code)      \
+  do                                                          \
+    {                                                         \
+      if (value_it->is_array)                                 \
+        {                                                     \
+          printKey;                                           \
+          printValues(value_type, format_string, color_code); \
+        }                                                     \
+      else                                                    \
+        {                                                     \
+          printKey;                                           \
+          printValue(value_type, format_string, color_code);  \
+        }                                                     \
+      fputc('\n', f);                                         \
+    }                                                         \
   while (0)
 
   ++recursion_level;
@@ -220,37 +216,37 @@ void grm_dump(const grm_args_t *args, FILE *f)
               switch (value_it->format)
                 {
                 case 'i':
-                  print_type(int, "% d", color_codes.i);
+                  printType(int, "% d", color_codes.i);
                   break;
                 case 'd':
-                  print_type(double, "% lf", color_codes.d);
+                  printType(double, "% lf", color_codes.d);
                   break;
                 case 'c':
-                  print_type(char, "'%c'", color_codes.c);
+                  printType(char, "'%c'", color_codes.c);
                   break;
                 case 's':
-                  print_type(char *, "\"%s\"", color_codes.s);
+                  printType(char *, "\"%s\"", color_codes.s);
                   break;
                 case 'a':
                   if (value_it->is_array)
                     {
-                      print_key;
+                      printKey;
                       fprintf(f, "[\n");
                       for (i = 0; i < value_it->array_length; i++)
                         {
                           grm_dump((*((grm_args_t ***)value_it->value_ptr))[i], f);
                           if (i < value_it->array_length - 1)
                             {
-                              print_indent;
+                              printIndent;
                               fprintf(f, ",\n");
                             }
                         }
-                      print_indent;
+                      printIndent;
                       fprintf(f, "]\n");
                     }
                   else
                     {
-                      print_key;
+                      printKey;
                       fprintf(f, "\n");
                       grm_dump(*((grm_args_t **)value_it->value_ptr), f);
                       fprintf(f, "\n");
@@ -260,15 +256,15 @@ void grm_dump(const grm_args_t *args, FILE *f)
                   break;
                 }
             }
-          args_value_iterator_delete(value_it);
+          argsValueIteratorDelete(value_it);
         }
       else
         {
-          print_key;
+          printKey;
           fprintf(f, "(none)\n");
         }
     }
-  args_iterator_delete(it);
+  argsIteratorDelete(it);
 
   --recursion_level;
 
@@ -277,68 +273,132 @@ void grm_dump(const grm_args_t *args, FILE *f)
 #undef DARK_BACKGROUND_ENV_KEY
 #undef ARRAY_PRINT_TRUNCATION_ENV_KEY
 #undef INDENT
-#undef print_indent
-#undef print_key
-#undef print_type
+#undef printIndent
+#undef printKey
+#undef printType
 }
 
 void grm_dump_json(const grm_args_t *args, FILE *f)
 {
-  static memwriter_t *memwriter = NULL;
+  static Memwriter *memwriter = NULL;
 
-  if (memwriter == NULL)
+  if (memwriter == NULL) memwriter = memwriterNew();
+  toJsonWriteArgs(memwriter, args);
+  if (toJsonIsComplete())
     {
-      memwriter = memwriter_new();
-    }
-  tojson_write_args(memwriter, args);
-  if (tojson_is_complete())
-    {
-      memwriter_putc(memwriter, '\0');
-      fprintf(f, "%s\n", memwriter_buf(memwriter));
-      memwriter_delete(memwriter);
+      memwriterPutc(memwriter, '\0');
+      fprintf(f, "%s\n", memwriterBuf(memwriter));
+      memwriterDelete(memwriter);
       memwriter = NULL;
     }
 }
 
 char *grm_dump_json_str(void)
 {
-  static memwriter_t *memwriter = NULL;
+  static Memwriter *memwriter = NULL;
   char *result;
 
-  if (memwriter == NULL)
+  if (memwriter == NULL) memwriter = memwriterNew();
+  /* toJsonWriteArgs(memwriter, global_root_args); */
+  toJsonWriteArgs(memwriter, active_plot_args);
+  if (toJsonIsComplete())
     {
-      memwriter = memwriter_new();
-    }
-  /* tojson_write_args(memwriter, global_root_args); */
-  tojson_write_args(memwriter, active_plot_args);
-  if (tojson_is_complete())
-    {
-      memwriter_putc(memwriter, '\0');
-      result = malloc(memwriter_size(memwriter) + 1);
-      strcpy(result, memwriter_buf(memwriter));
-      memwriter_delete(memwriter);
+      memwriterPutc(memwriter, '\0');
+      result = malloc(memwriterSize(memwriter) + 1);
+      strcpy(result, memwriterBuf(memwriter));
+      memwriterDelete(memwriter);
       memwriter = NULL;
       return result;
     }
   return "";
 }
 
+char *grm_dump_html(char *plot_id)
+{
+  return grm_dump_html_args(plot_id, active_plot_args);
+}
+
+char *grm_dump_html_args(char *plot_id, grm_args_t *args)
+{
+  static Memwriter *memwriter = NULL, *memwriter2 = NULL;
+  char *result;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriterNew();
+    }
+  if (memwriter2 == NULL)
+    {
+      memwriter2 = memwriterNew();
+    }
+  toJsonWriteArgs(memwriter, args);
+  if (!toJsonIsComplete())
+    {
+      memwriterDelete(memwriter);
+      memwriter = NULL;
+      memwriterDelete(memwriter2);
+      memwriter2 = NULL;
+      return "";
+    }
+  memwriterPutc(memwriter, '\0');
+
+  memwriterPrintf(memwriter2, "<div id=\"jsterm-display-%s\"></div>\n", plot_id);
+  memwriterPuts(memwriter2, "<script type=\"text/javascript\">\n"
+                            "if (typeof jsterm === \"undefined\") {\n"
+                            "  var jsterm = null;\n"
+                            "}\n"
+                            "function run_on_start(data, display) {\n"
+                            "  if (typeof JSTerm === \"undefined\") {\n"
+                            "    setTimeout(function() {run_on_start(data, display)}, 100);\n"
+                            "    return;\n"
+                            "  }\n"
+                            "  if (jsterm === null) {\n"
+                            "    jsterm = new JSTerm(true);\n"
+                            "  }\n"
+                            "  jsterm.draw({\n"
+                            "    \"json\": data,\n"
+                            "    \"display\": display\n"
+                            "  })\n"
+                            "}\n"
+                            "run_on_start(");
+  toJsonStringifyStringValue(memwriter2, memwriterBuf(memwriter));
+  if (toJsonIsComplete())
+    {
+      memwriterDelete(memwriter);
+      memwriter = NULL;
+
+      memwriterPrintf(memwriter2, ", '%s');\n</script>", plot_id);
+      memwriterPutc(memwriter2, '\0');
+      size_t slen = memwriterSize(memwriter2);
+      result = malloc(slen + 1);
+      memcpy(result, memwriterBuf(memwriter2), slen);
+      result[slen] = '\0';
+
+      memwriterDelete(memwriter2);
+      memwriter2 = NULL;
+
+      return result;
+    }
+  memwriterDelete(memwriter);
+  memwriter = NULL;
+  memwriterDelete(memwriter2);
+  memwriter2 = NULL;
+  return "";
+}
+
 void grm_dump_bson(const grm_args_t *args, FILE *f)
 {
-  static memwriter_t *memwriter = NULL;
+  static Memwriter *memwriter = NULL;
   char *buf;
   int length;
   int i;
 
-  if (memwriter == NULL)
+  if (memwriter == NULL) memwriter = memwriterNew();
+  toBsonWriteArgs(memwriter, args);
+  if (toBsonIsComplete())
     {
-      memwriter = memwriter_new();
-    }
-  tobson_write_args(memwriter, args);
-  if (tobson_is_complete())
-    {
-      buf = memwriter_buf(memwriter);
-      bytes_to_int(&length, buf);
+      buf = memwriterBuf(memwriter);
+      bytesToInt(&length, buf);
 
       for (i = 0; i < length; i++, buf++)
         {
@@ -354,8 +414,7 @@ void grm_dump_bson(const grm_args_t *args, FILE *f)
         }
       fprintf(f, "\n");
 
-      memwriter_delete(memwriter);
+      memwriterDelete(memwriter);
       memwriter = NULL;
     }
 }
-#endif

@@ -8,7 +8,7 @@ namespace GRM
 {
 class Document;
 
-class EXPORT Comment : public Node
+class GRM_EXPORT Comment : public Node
 {
 public:
   // Comment interface
@@ -38,7 +38,7 @@ public:
   // virtual functions
   std::string nodeName() const override;
 
-  bool isEqualNode(const std::shared_ptr<const Node> &otherNode) const override;
+  bool isEqualNode(const std::shared_ptr<const Node> &other_node) const override;
 
 private:
   friend class Document;

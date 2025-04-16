@@ -4,7 +4,7 @@
 #include <QCheckBox>
 #include <QScrollArea>
 #include <QCompleter>
-#include "AddElementWidget.h"
+#include "AddElementWidget.hxx"
 #include "grm/dom_render/graphics_tree/util.hxx"
 #include "../util.hxx"
 #include "grm/dom_render/graphics_tree/NotFoundError.hxx"
@@ -13,15 +13,15 @@ AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWid
 {
   grplot_widget = widget;
 #if !defined(NO_XERCES_C)
-  schema_tree = grplot_widget->get_schema_tree();
+  schema_tree = grplot_widget->getSchemaTree();
 #else
   schema_tree = nullptr;
 #endif
 
-  auto *addElementGroup = new QGroupBox(tr("Add Element"));
+  auto *add_element_group = new QGroupBox(tr("Add Element"));
 
-  auto *addElementLabel = new QLabel(tr("Element:"));
-  addElementComboBox = new QComboBox;
+  auto *add_element_label = new QLabel(tr("Element:"));
+  add_element_combo_box = new QComboBox;
   if (schema_tree != nullptr)
     {
       auto selections = schema_tree->querySelectorsAll("[name]");
@@ -30,37 +30,37 @@ AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWid
           if (selection->localName() == "xs:element")
             {
               auto element_name = static_cast<std::string>(selection->getAttribute("name"));
-              if (element_name != "root") addElementComboBox->addItem(tr(element_name.c_str()));
+              if (element_name != "root") add_element_combo_box->addItem(tr(element_name.c_str()));
             }
         }
     }
-  addElementComboBox->model()->sort(0);
+  add_element_combo_box->model()->sort(0);
 
-  auto *selectParentLabel = new QLabel(tr("Parent:"));
-  selectParentComboBox = new QComboBox;
+  auto *select_parent_label = new QLabel(tr("&Parent:"));
+  select_parent_combo_box = new QComboBox;
 
-  QObject::connect(addElementComboBox, SIGNAL(activated(int)), this, SLOT(elementSelected(int)));
-  QObject::connect(selectParentComboBox, SIGNAL(activated(int)), this, SLOT(parentSelected(int)));
+  QObject::connect(add_element_combo_box, SIGNAL(activated(int)), this, SLOT(elementSelected(int)));
+  QObject::connect(select_parent_combo_box, SIGNAL(activated(int)), this, SLOT(parentSelected(int)));
 
-  addElementLayout = new QGridLayout;
-  addElementLayout->addWidget(addElementLabel, 0, 0);
-  addElementLayout->addWidget(addElementComboBox, 0, 1);
-  addElementLayout->addWidget(selectParentLabel, 1, 0);
-  addElementLayout->addWidget(selectParentComboBox, 1, 1);
-  addElementGroup->setLayout(addElementLayout);
+  add_element_layout = new QGridLayout;
+  add_element_layout->addWidget(add_element_label, 0, 0);
+  add_element_layout->addWidget(add_element_combo_box, 0, 1);
+  add_element_layout->addWidget(select_parent_label, 1, 0);
+  add_element_layout->addWidget(select_parent_combo_box, 1, 1);
+  add_element_group->setLayout(add_element_layout);
 
-  selectParentComboBox->setVisible(false);
+  select_parent_combo_box->setVisible(false);
 
-  addAttributesGroup = new QGroupBox(tr("Add Attributes"));
+  add_attributes_group = new QGroupBox(tr("&Add Attributes"));
 
-  QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
-  QObject::connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
-  QObject::connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+  QDialogButtonBox *button_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
+  QObject::connect(button_box, SIGNAL(accepted()), this, SLOT(accept()));
+  QObject::connect(button_box, SIGNAL(rejected()), this, SLOT(reject()));
 
   QGridLayout *layout = new QGridLayout;
-  layout->addWidget(addElementGroup, 0, 0, 1, 0);
-  layout->addWidget(addAttributesGroup, 1, 0, 3, 0);
-  layout->addWidget(buttonBox, 5, 0, 1, 2);
+  layout->addWidget(add_element_group, 0, 0, 1, 0);
+  layout->addWidget(add_attributes_group, 1, 0, 3, 0);
+  layout->addWidget(button_box, 5, 0, 1, 2);
   setLayout(layout);
 
   this->setWindowTitle("Add Element Menu");
@@ -87,14 +87,14 @@ static void clearLayout(QLayout *layout)
 
 void AddElementWidget::elementSelected(int i)
 {
-  auto selected_element_name = addElementComboBox->itemText(addElementComboBox->currentIndex()).toStdString();
+  auto selected_element_name = add_element_combo_box->itemText(add_element_combo_box->currentIndex()).toStdString();
   if (schema_tree != nullptr)
     {
       parent_vec.clear();
-      selectParentComboBox->clear();
-      clearLayout(addAttributesGroup->layout());
-      delete addAttributesGroup->layout();
-      selectParentComboBox->setVisible(false);
+      select_parent_combo_box->clear();
+      clearLayout(add_attributes_group->layout());
+      delete add_attributes_group->layout();
+      select_parent_combo_box->setVisible(false);
 
       auto global_root = grm_get_document_root();
       auto selections = schema_tree->querySelectorsAll("[ref=" + selected_element_name + "]");
@@ -114,8 +114,8 @@ void AddElementWidget::elementSelected(int i)
                   auto bbox_x_max = static_cast<double>(pos_par->getAttribute("_bbox_x_max"));
                   auto bbox_y_min = static_cast<double>(pos_par->getAttribute("_bbox_y_min"));
                   auto bbox_y_max = static_cast<double>(pos_par->getAttribute("_bbox_y_max"));
-                  const Bounding_object bbox =
-                      Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, pos_par);
+                  const BoundingObject bbox =
+                      BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, pos_par);
 
                   // check if the new child can be added without passing max occurs
                   for (const auto &child : pos_par->children())
@@ -125,15 +125,15 @@ void AddElementWidget::elementSelected(int i)
 
                   if (max_occurs == "unbounded" || occurs < std::stoi(max_occurs))
                     {
-                      selectParentComboBox->addItem(tr(parent_name.c_str()));
-                      selectParentComboBox->setVisible(true);
+                      select_parent_combo_box->addItem(tr(parent_name.c_str()));
+                      select_parent_combo_box->setVisible(true);
                       parent_vec.push_back(bbox);
                     }
                 }
             }
         }
     }
-  selectParentComboBox->model()->sort(0);
+  select_parent_combo_box->model()->sort(0);
 }
 
 void AddElementWidget::parentSelected(int i)
@@ -143,19 +143,20 @@ void AddElementWidget::parentSelected(int i)
       QStringList combo_box_attr = grplot_widget->getComboBoxAttributes();
       QStringList check_box_attr = grplot_widget->getCheckBoxAttributes();
 
-      Bounding_object *tmp = &parent_vec[i];
-      grplot_widget->set_selected_parent(tmp);
+      BoundingObject *tmp = &parent_vec[i];
+      grplot_widget->setSelectedParent(tmp);
       attribute_name_vec.clear();
       attribute_type_vec.clear();
 
       int line = 0;
-      QWidget *attrLineEdit;
-      QLabel *attrLabel;
-      auto *addAttributesLayout = new QGridLayout;
-      std::string selectedElementName = addElementComboBox->itemText(addElementComboBox->currentIndex()).toStdString();
+      QWidget *attr_line_edit;
+      QLabel *attr_label;
+      auto *add_attributes_layout = new QGridLayout;
+      std::string selected_element_name =
+          add_element_combo_box->itemText(add_element_combo_box->currentIndex()).toStdString();
       std::shared_ptr<GRM::Element> element;
 
-      auto selections = schema_tree->querySelectorsAll("[name=" + selectedElementName + "]");
+      auto selections = schema_tree->querySelectorsAll("[name=" + selected_element_name + "]");
       for (const auto &selection : selections)
         {
           if (selection->localName() == "xs:element") element = selection->children()[0];
@@ -173,36 +174,36 @@ void AddElementWidget::parentSelected(int i)
 
               if (combo_box_attr.contains(attr_name.c_str()))
                 {
-                  attrLineEdit = new QComboBox;
-                  ((QComboBox *)attrLineEdit)->addItem(""); // default all attributes are empty
-                  grplot_widget->attributeComboBoxHandler(attr_name, selectedElementName, &attrLineEdit);
-                  int index = ((QComboBox *)attrLineEdit)->count();
-                  ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                  attr_line_edit = new QComboBox;
+                  ((QComboBox *)attr_line_edit)->addItem(""); // default all attributes are empty
+                  grplot_widget->attributeComboBoxHandler(attr_name, selected_element_name, &attr_line_edit);
+                  int index = ((QComboBox *)attr_line_edit)->count();
+                  ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
 
-                  if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+                  if (attr_name == "kind" && util::startsWith(selected_element_name, "series_"))
                     {
-                      int index = ((QComboBox *)attrLineEdit)->findText(selectedElementName.erase(0, 7).c_str());
-                      if (index == -1) index += ((QComboBox *)attrLineEdit)->count();
-                      ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                      index = ((QComboBox *)attr_line_edit)->findText(selected_element_name.erase(0, 7).c_str());
+                      if (index == -1) index += ((QComboBox *)attr_line_edit)->count();
+                      ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
                     }
                 }
               else if (check_box_attr.contains(attr_name.c_str()))
                 {
-                  attrLineEdit = new QCheckBox;
+                  attr_line_edit = new QCheckBox;
                 }
               else
                 {
-                  attrLineEdit = new QLineEdit;
-                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attrLineEdit)->setFocus();
+                  attr_line_edit = new QLineEdit;
+                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attr_line_edit)->setFocus();
                 }
               if (child->hasAttribute("use")) attr_name = "*" + attr_name + ":";
-              attrLabel = new QLabel(tr(attr_name.c_str()));
+              attr_label = new QLabel(tr(attr_name.c_str()));
 
-              addAttributesLayout->addWidget(attrLabel, line, 0);
-              addAttributesLayout->addWidget(attrLineEdit, line++, 1);
+              add_attributes_layout->addWidget(attr_label, line, 0);
+              add_attributes_layout->addWidget(attr_line_edit, line++, 1);
 
-              fields << attrLineEdit;
+              fields << attr_line_edit;
             }
           else if (child->localName() == "xs:attributeGroup")
             {
@@ -231,37 +232,38 @@ void AddElementWidget::parentSelected(int i)
 
                           if (combo_box_attr.contains(attr_name.c_str()))
                             {
-                              attrLineEdit = new QComboBox;
-                              ((QComboBox *)attrLineEdit)->addItem(""); // default all attributes are empty
-                              grplot_widget->attributeComboBoxHandler(attr_name, selectedElementName, &attrLineEdit);
-                              int index = ((QComboBox *)attrLineEdit)->count();
-                              ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                              attr_line_edit = new QComboBox;
+                              ((QComboBox *)attr_line_edit)->addItem(""); // default all attributes are empty
+                              grplot_widget->attributeComboBoxHandler(attr_name, selected_element_name,
+                                                                      &attr_line_edit);
+                              int index = ((QComboBox *)attr_line_edit)->count();
+                              ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
 
-                              if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+                              if (attr_name == "kind" && util::startsWith(selected_element_name, "series_"))
                                 {
-                                  int index =
-                                      ((QComboBox *)attrLineEdit)->findText(selectedElementName.erase(0, 7).c_str());
-                                  if (index == -1) index += ((QComboBox *)attrLineEdit)->count();
-                                  ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                                  index = ((QComboBox *)attr_line_edit)
+                                              ->findText(selected_element_name.erase(0, 7).c_str());
+                                  if (index == -1) index += ((QComboBox *)attr_line_edit)->count();
+                                  ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
                                 }
                             }
                           else if (check_box_attr.contains(attr_name.c_str()))
                             {
-                              attrLineEdit = new QCheckBox;
+                              attr_line_edit = new QCheckBox;
                             }
                           else
                             {
-                              attrLineEdit = new QLineEdit;
-                              ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
-                              ((QLineEdit *)attrLineEdit)->setFocus();
+                              attr_line_edit = new QLineEdit;
+                              ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
+                              ((QLineEdit *)attr_line_edit)->setFocus();
                             }
                           if (childchild->hasAttribute("use")) attr_name = "*" + attr_name + ":";
-                          attrLabel = new QLabel(tr(attr_name.c_str()));
+                          attr_label = new QLabel(tr(attr_name.c_str()));
 
-                          addAttributesLayout->addWidget(attrLabel, line, 0);
-                          addAttributesLayout->addWidget(attrLineEdit, line++, 1);
+                          add_attributes_layout->addWidget(attr_label, line, 0);
+                          add_attributes_layout->addWidget(attr_line_edit, line++, 1);
 
-                          fields << attrLineEdit;
+                          fields << attr_line_edit;
                         }
                     }
                 }
@@ -272,46 +274,46 @@ void AddElementWidget::parentSelected(int i)
                   attribute_name_vec.emplace_back("Colorrep-index");
                   attribute_type_vec.emplace_back("xs:string");
 
-                  attrLabel = new QLabel(tr("Colorrep-index:"));
-                  attrLineEdit = new QLineEdit;
-                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attrLineEdit)->setFocus();
+                  attr_label = new QLabel(tr("Colorrep-index:"));
+                  attr_line_edit = new QLineEdit;
+                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attr_line_edit)->setFocus();
 
-                  addAttributesLayout->addWidget(attrLabel, line, 0);
-                  addAttributesLayout->addWidget(attrLineEdit, line++, 1);
+                  add_attributes_layout->addWidget(attr_label, line, 0);
+                  add_attributes_layout->addWidget(attr_line_edit, line++, 1);
 
-                  fields << attrLineEdit;
+                  fields << attr_line_edit;
 
                   attribute_name_vec.emplace_back("Colorrep-value");
                   attribute_type_vec.emplace_back("xs:string");
 
-                  attrLabel = new QLabel(tr("Colorrep-value:"));
-                  attrLineEdit = new QLineEdit;
-                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attrLineEdit)->setFocus();
+                  attr_label = new QLabel(tr("Colorrep-value:"));
+                  attr_line_edit = new QLineEdit;
+                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attr_line_edit)->setFocus();
 
-                  addAttributesLayout->addWidget(attrLabel, line, 0);
-                  addAttributesLayout->addWidget(attrLineEdit, line++, 1);
+                  add_attributes_layout->addWidget(attr_label, line, 0);
+                  add_attributes_layout->addWidget(attr_line_edit, line++, 1);
 
-                  fields << attrLineEdit;
+                  fields << attr_line_edit;
                 }
             }
         }
 
-      if (!addAttributesGroup->layout())
+      if (!add_attributes_group->layout())
         {
-          auto scrollAreaContent = new QWidget;
-          scrollAreaContent->setLayout(addAttributesLayout);
-          auto scrollArea = new QScrollArea;
-          scrollArea = new QScrollArea;
-          scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-          scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-          scrollArea->setWidgetResizable(true);
-          scrollArea->setWidget(scrollAreaContent);
+          auto scroll_area_content = new QWidget;
+          scroll_area_content->setLayout(add_attributes_layout);
+          auto scroll_area = new QScrollArea;
+          scroll_area = new QScrollArea;
+          scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+          scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+          scroll_area->setWidgetResizable(true);
+          scroll_area->setWidget(scroll_area_content);
 
-          auto groupBoxLayout = new QVBoxLayout;
-          groupBoxLayout->addWidget(scrollArea);
-          addAttributesGroup->setLayout(groupBoxLayout);
+          auto group_box_layout = new QVBoxLayout;
+          group_box_layout->addWidget(scroll_area);
+          add_attributes_group->setLayout(group_box_layout);
         }
       grplot_widget->redraw();
     }
@@ -319,18 +321,18 @@ void AddElementWidget::parentSelected(int i)
 
 void AddElementWidget::reject()
 {
-  grplot_widget->set_selected_parent(nullptr);
+  grplot_widget->setSelectedParent(nullptr);
   this->close();
 }
 
 void AddElementWidget::accept()
 {
   QLabel *msg;
-  Bounding_object *grplot_ref = grplot_widget->get_selected_parent();
+  BoundingObject *grplot_ref = grplot_widget->getSelectedParent();
   std::shared_ptr<GRM::Render> render = grm_get_render();
   bool error = false, auto_update;
   auto new_element =
-      render->createElement(addElementComboBox->itemText(addElementComboBox->currentIndex()).toStdString());
+      render->createElement(add_element_combo_box->itemText(add_element_combo_box->currentIndex()).toStdString());
 
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
@@ -347,9 +349,9 @@ void AddElementWidget::accept()
               }
             else if (attribute_name_vec[i] != "Colorrep-value")
               {
-                std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                auto value = ((QLineEdit *)fields[i])->text().toStdString();
                 if (attribute_type_vec[i] == "xs:string" ||
-                    (attribute_type_vec[i] == "strint" && !util::is_digits(value)))
+                    (attribute_type_vec[i] == "strint" && !util::isDigits(value)))
                   {
                     new_element->setAttribute(attribute_name_vec[i], value);
                   }
@@ -358,7 +360,7 @@ void AddElementWidget::accept()
                     new_element->setAttribute(attribute_name_vec[i], std::stod(value));
                   }
                 else if (attribute_type_vec[i] == "xs:integer" ||
-                         (attribute_type_vec[i] == "strint" && util::is_digits(value)))
+                         (attribute_type_vec[i] == "strint" && util::isDigits(value)))
                   {
                     new_element->setAttribute(attribute_name_vec[i], std::stoi(value));
                   }
@@ -369,7 +371,7 @@ void AddElementWidget::accept()
         {
           int index = ((QComboBox *)fields[i])->currentIndex();
 
-          const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
+          const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
           if (!value.empty())
             {
               grplot_widget->attributeSetForComboBox(attribute_type_vec[i], new_element, value, attribute_name_vec[i]);
@@ -393,7 +395,7 @@ void AddElementWidget::accept()
     }
   else
     {
-      grplot_ref->get_ref()->append(new_element);
+      grplot_ref->getRef()->append(new_element);
       if (!grm_validate())
         {
           msg = new QLabel("Element could not be created. Missing required attributes.");
@@ -416,15 +418,15 @@ void AddElementWidget::accept()
   if (!error)
     {
       parent_vec.clear();
-      selectParentComboBox->clear();
-      addElementComboBox->setCurrentIndex(0);
-      clearLayout(addAttributesGroup->layout());
-      delete addAttributesGroup->layout();
+      select_parent_combo_box->clear();
+      add_element_combo_box->setCurrentIndex(0);
+      clearLayout(add_attributes_group->layout());
+      delete add_attributes_group->layout();
       attribute_name_vec.clear();
       attribute_type_vec.clear();
       fields.clear();
 
-      grplot_widget->set_selected_parent(nullptr);
+      grplot_widget->setSelectedParent(nullptr);
       this->close();
       new_element->parentElement()->setAttribute("_bbox_id", -1);
       render->setAutoUpdate(auto_update);
@@ -438,10 +440,10 @@ void AddElementWidget::accept()
 
       form.addWidget(msg);
 
-      QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-      form.addRow(&buttonBox);
-      QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
-      QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+      QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+      form.addRow(&button_box);
+      QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+      QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
 
       dialog.exec();
       render->setAutoUpdate(auto_update);

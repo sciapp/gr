@@ -6,7 +6,7 @@
 
 namespace GRM
 {
-class EXPORT HierarchyRequestError : public std::logic_error
+class GRM_EXPORT HierarchyRequestError : public std::logic_error
 {
 public:
   explicit HierarchyRequestError(const std::string &what_arg) : std::logic_error(what_arg) {}
