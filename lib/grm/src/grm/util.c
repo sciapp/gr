@@ -555,7 +555,7 @@ wchar_t *convertUtf8ToWstring(const char *utf8_bytes)
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-#if !defined(NDEBUG) && defined(EMSCRIPTEN)
+#ifdef __EMSCRIPTEN__
 FILE *grm_get_stdout(void)
 {
   return stdout;

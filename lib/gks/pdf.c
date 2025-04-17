@@ -2179,13 +2179,8 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
   pdf_restore(p);
 }
 
-#ifndef EMSCRIPTEN
-void gks_drv_pdf(
-#else
-void gks_drv_js(
-#endif
-    int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-    void **ptr)
+void gks_drv_pdf(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                 char *chars, void **ptr)
 {
   GKS_UNUSED(lr1);
   GKS_UNUSED(lr2);
