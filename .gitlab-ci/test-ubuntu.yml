@@ -13,7 +13,7 @@ ubuntu-cmake-self-contained-test-c:
   artifacts:
     paths:
     - test_result/
-    when: on_failure
+    when: always
 
 ubuntu-cmake-self-contained-test-cpp:
   stage: test
@@ -30,7 +30,7 @@ ubuntu-cmake-self-contained-test-cpp:
   artifacts:
     paths:
     - test_result/
-    when: on_failure
+    when: always
 
 ubuntu-cmake-self-contained-test-grplot:
   stage: test
@@ -49,7 +49,7 @@ ubuntu-cmake-self-contained-test-grplot:
   artifacts:
     paths:
     - test_result/
-    when: on_failure
+    when: always
 
 ubuntu-cmake-self-contained-test-grm-internal:
   stage: test
@@ -70,4 +70,4 @@ ubuntu-cmake-self-contained-test-grm-internal:
   artifacts:
     paths:
     - test_result/
-    when: on_failure
+    when: always

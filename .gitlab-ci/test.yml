@@ -18,6 +18,7 @@ gr-test-update-prepare:
   allow_failure: true
   script:
   - find test_result/ -name '*_diff.png' -delete
+  - find test_result/ -name 'results.json' -delete
   - find test_result/ -d -mindepth 2 -maxdepth 2 -exec mkdir '{}/REFERENCE' ";"
   - find test_result/ -d -mindepth 3 -maxdepth 3 ! -name 'REFERENCE' -execdir mv {} REFERENCE ";"
   artifacts:
