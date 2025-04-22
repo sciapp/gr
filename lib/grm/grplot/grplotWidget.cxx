@@ -41,6 +41,7 @@ static bool mouse_move_triggert = false;
 static std::weak_ptr<GRM::Element> previous_active_plot;
 static bool active_plot_changed = false;
 static bool draw_called_at_least_once = false;
+static std::weak_ptr<GRM::Element> prev_selection;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -1278,10 +1279,12 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 }
               current_selections.clear();
             }
+          if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
           current_selection = nullptr;
           mouse_move_selection = nullptr;
+          prev_selection.reset();
           tree_widget->updateData(grm_get_document_root());
-          update();
+          redraw();
         }
       else if (event->key() == Qt::Key_Space)
         {
@@ -1599,6 +1602,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                       break;
                     }
                 }
+              prev_selection.reset();
               if (!removed_selection)
                 {
                   tmp->getRef()->setAttribute("_selected", 1);
@@ -1692,11 +1696,13 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
       grm_merge(args_);
     }
 
+  if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
   current_selection = nullptr;
   for (const auto &selection : current_selections)
     {
       selection->getRef()->setAttribute("_selected", 0);
     }
+  prev_selection.reset();
   current_selections.clear();
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
@@ -2380,6 +2386,11 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
 
 void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
 {
+  for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
+    {
+      elem->removeAttribute("_highlighted");
+    }
+
   if (enable_editor)
     {
       if (!current_selections.empty())
@@ -2399,10 +2410,16 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
         {
           if (current_selection != nullptr)
             {
-              painter.fillRect(current_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
+              painter.drawRect(current_selection->boundingRect().toRect());
               if (current_selection->getRef() != nullptr)
-                painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
-                                 current_selection->getRef()->localName().c_str());
+                {
+                  painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
+                                   current_selection->getRef()->localName().c_str());
+                  current_selection->getRef()->setAttribute("_highlighted", true);
+                  if (prev_selection.lock() == nullptr || prev_selection.lock() != current_selection->getRef())
+                    redraw();
+                  prev_selection = current_selection->getRef();
+                }
             }
           else if (mouse_move_selection != nullptr)
             {
@@ -2483,11 +2500,13 @@ void GRPlotWidget::leaveEvent(QEvent *event)
 void GRPlotWidget::resetPixmap()
 {
   redraw_pixmap = RedrawType::FULL;
+  if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
   current_selection = nullptr;
   for (const auto &selection : current_selections)
     {
       selection->getRef()->setAttribute("_selected", 0);
     }
+  prev_selection.reset();
   current_selections.clear();
   update();
 }
@@ -2606,6 +2625,21 @@ void GRPlotWidget::enableEditorFunctions()
       tree_widget->hide();
       add_element_widget->hide();
       editor_action->setText(tr("&Enable Editorview"));
+
+      // if the editor gets turned off everything needs to be reseted
+      if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
+      current_selection = nullptr;
+      mouse_move_selection = nullptr;
+      amount_scrolled = 0;
+      clicked.clear();
+
+      for (const auto &selection : current_selections)
+        {
+          selection->getRef()->setAttribute("_selected", 0);
+        }
+      prev_selection.reset();
+      current_selections.clear();
+      redraw();
     }
 }
 
@@ -3135,16 +3169,17 @@ void GRPlotWidget::setTreeUpdate(bool status)
 
 void GRPlotWidget::editElementAccepted()
 {
+  if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
   current_selection = nullptr;
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
 
-  current_selection = nullptr;
   for (const auto &selection : current_selections)
     {
       selection->getRef()->setAttribute("_selected", 0);
     }
+  prev_selection.reset();
   current_selections.clear();
   redraw();
 }

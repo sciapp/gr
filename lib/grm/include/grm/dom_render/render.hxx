@@ -525,7 +525,7 @@ public:
 
   void setCharHeight(const std::shared_ptr<Element> &element, double height);
 
-  void setTransparency(const std::shared_ptr<Element> &element, double alpha);
+  void setTransparency(const std::shared_ptr<Element> &element, double transparency);
 
   void setResampleMethod(const std::shared_ptr<Element> &element, int resample);
 
