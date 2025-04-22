@@ -210,9 +210,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   if (listen_mode)
     {
       in_listen_mode = true;
-      qRegisterMetaType<ArgsWrapper>("grm_args_t_wrapper");
+      qRegisterMetaType<ArgsWrapper>("ArgsWrapper");
       receiver = new Receiver();
-      QObject::connect(receiver, SIGNAL(resultReady(grm_args_t_wrapper)), this, SLOT(received(grm_args_t_wrapper)),
+      QObject::connect(receiver, SIGNAL(resultReady(ArgsWrapper)), this, SLOT(received(ArgsWrapper)),
                        Qt::QueuedConnection);
       QObject::connect(this, SIGNAL(pixmapRedrawn()), receiver, SLOT(dataProcessed()), Qt::QueuedConnection);
       receiver->start();
