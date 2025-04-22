@@ -152,7 +152,6 @@
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
-            <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="x_lim_max" type="xs:double"/>
             <xs:attribute name="x_lim_min" type="xs:double"/>
@@ -659,7 +658,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="polyline"/>
-            <xs:attribute name="alpha" type="xs:double"/>
+            <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="x1" type="xs:double"/>
@@ -1543,6 +1542,7 @@
     <!-- definition of polyline attributes -->
     <xs:attributeGroup name="polyline">
         <xs:attribute name="line_color_ind" type="xs:integer"/>
+        <xs:attribute name="line_type" type="strint"/>
         <xs:attribute name="name" type="xs:string"/>
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
