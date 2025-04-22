@@ -955,7 +955,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   if (!true_color)
     {
-      QImage img = QImage(width, height, QImage::Format_RGB32);
+      QImage img = QImage(width, height, QImage::Format_ARGB32);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       img.setDevicePixelRatio(p->device_pixel_ratio);
 #endif
