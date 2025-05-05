@@ -96,7 +96,7 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
         }
       if (major > 1 || minor >= 4)
         {
-          int (*x_error_handler)() = _gr3_ignore_x_errors;
+          int (*x_error_handler)(Display *, XErrorEvent *) = _gr3_ignore_x_errors;
           int i;
           int fb_attribs[] = {GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
           int pbuffer_attribs[] = {GLX_PBUFFER_WIDTH, 1, GLX_PBUFFER_HEIGHT, 1, None};
