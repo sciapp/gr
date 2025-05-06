@@ -42,17 +42,17 @@ gr-test-update:
   - cd gr-test
   - git checkout -b update-files/job-$CI_JOB_ID
 
-  - if [[ -d "../test_result/c" ]]; then
-      cp -R ../test_result/c/* gr_test/c_data/ ;
+  - if [[ -d "../test_result/c" ]] && [[ "$(ls -A ../test_result/c)" != "" ]]; then
+    cp -R ../test_result/c/* gr_test/c_data/ ;
     fi
-  - if [[ -d "../test_result/cpp" ]]; then
-      cp -R ../test_result/cpp/* gr_test/cpp_data/ ;
+  - if [[ -d "../test_result/cpp" ]] && [[ "$(ls -A ../test_result/cpp)" != "" ]]; then
+    cp -R ../test_result/cpp/* gr_test/cpp_data/ ;
     fi
-  - if [[ -d "../test_result/grplot" ]]; then
-      cp -R ../test_result/grplot/* gr_test/grplot_data/ ;
+  - if [[ -d "../test_result/grplot" ]] && [[ "$(ls -A ../test_result/grplot)" != "" ]]; then
+    cp -R ../test_result/grplot/* gr_test/grplot_data/ ;
     fi
-  - if [[ -d "../test_result/js" ]]; then
-      cp -R ../test_result/js/* gr_test/js_data/ ;
+  - if [[ -d "../test_result/js" ]] && [[ "$(ls -A ../test_result/js)" != "" ]]; then
+    cp -R ../test_result/js/* gr_test/js_data/ ;
     fi
   - git config user.name "GR-Test Reference Bot"
   - git config user.email "$GITLAB_USER_EMAIL"
