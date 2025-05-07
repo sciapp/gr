@@ -525,6 +525,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   cairo_pattern_t *pattern;
   cairo_surface_t *image;
   cairo_matrix_t pattern_matrix;
+  double scale = 1.0;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -571,7 +572,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
               k = (1 << i) & gks_pattern[j];
               if (!(k))
                 {
-                  int p_ind = ((i + 7) % 8) + ((j - 1 + (size - 1)) % size) * 8;
+                  int p_ind = (i + (j - 1) * 8);
                   p->patterns[p_ind * 4 + 3] = (unsigned char)(255 * p->transparency);
                   p->patterns[p_ind * 4 + 2] = (unsigned char)(255 * p->rgb[fl_color][0] * p->transparency);
                   p->patterns[p_ind * 4 + 1] = (unsigned char)(255 * p->rgb[fl_color][1] * p->transparency);
@@ -585,7 +586,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       pattern = cairo_pattern_create_for_surface(image);
       cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
       cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
-      cairo_matrix_init_scale(&pattern_matrix, 500.0 / min(p->width, p->height), 500.0 / min(p->width, p->height));
+      scale = min(1.0, 500.0 / min(p->width, p->height));
+      cairo_matrix_init_scale(&pattern_matrix, scale, scale);
       cairo_pattern_set_matrix(pattern, &pattern_matrix);
 
       cairo_set_source(p->cr, pattern);
@@ -594,6 +596,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH || fl_inter == GKS_K_INTSTYLE_SOLID)
     {
       cairo_fill(p->cr);
+      if (fl_inter != GKS_K_INTSTYLE_SOLID) cairo_pattern_destroy(pattern);
     }
   else
     {
