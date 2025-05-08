@@ -166,6 +166,9 @@ debian-self-contained-aarch64:
 debian-cmake-self-contained-aarch64:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
+  needs:
+  - job: debian-cmake-self-contained
+    artifacts: true
   script:
   - make -C 3rdparty default extras \
     HOST=aarch64-linux-gnu \
@@ -191,7 +194,7 @@ debian-cmake-self-contained-aarch64:
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - mkdir build
   - cd build
-  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
+  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_HOST_DIRECTORY=${CI_PROJECT_DIR}/artifacts-debian10-cmake
   - make
   - make install
   - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-aarch64
@@ -203,6 +206,9 @@ debian-cmake-self-contained-aarch64:
 debian-cmake-self-contained-armhf:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf-cross
+  needs:
+  - job: debian-cmake-self-contained
+    artifacts: true
   script:
   - make -C 3rdparty default extras \
     HOST=arm-linux-gnueabihf \
@@ -228,7 +234,7 @@ debian-cmake-self-contained-armhf:
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - mkdir build
   - cd build
-  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
+  - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_HOST_DIRECTORY=${CI_PROJECT_DIR}/artifacts-debian10-cmake
   - make
   - make install
   - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-armhf

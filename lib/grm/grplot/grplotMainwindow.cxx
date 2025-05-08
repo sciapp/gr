@@ -9,6 +9,11 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
                                    QString test_commands_file_path, bool help_mode)
     : QMainWindow(), grplot_widget_(nullptr)
 {
+  if (QPixmap(":/colorbars/uniform.png").isNull())
+    {
+      std::cerr << "Could not load example colorbar." << std::endl;
+      exit(1);
+    }
   if (help_mode)
     {
       auto *w = new QWidget(this);
