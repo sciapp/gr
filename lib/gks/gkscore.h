@@ -318,7 +318,7 @@ DLLEXPORT int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
 int gks_debug(void);
 
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 
 void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
                 double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);

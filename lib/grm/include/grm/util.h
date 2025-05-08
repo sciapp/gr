@@ -7,7 +7,7 @@ extern "C" {
 
 /* ######################### includes ############################################################################### */
 
-#if !defined(NDEBUG) && defined(EMSCRIPTEN)
+#ifdef __EMSCRIPTEN__
 #include <stdio.h>
 #endif
 
@@ -49,7 +49,7 @@ extern "C" {
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-#if !defined(NDEBUG) && defined(EMSCRIPTEN)
+#ifdef __EMSCRIPTEN__
 GRM_EXPORT FILE *grm_get_stdout(void);
 #endif
 
