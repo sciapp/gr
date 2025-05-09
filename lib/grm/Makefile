@@ -117,18 +117,14 @@ endif
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
-
-libGR:
 	$(MAKE) -C ../gr
-
-libGR3:
 	$(MAKE) -C ../gr3
 
 libGRM.a: $(GRMOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
+libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS)
 	$(CXX) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 grplot:
@@ -166,6 +162,6 @@ clean:
 	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 
-.PHONY: all targets install clean prerequisites libGR libGR3 grplot
+.PHONY: all targets install clean prerequisites grplot
 .SUFFIXES:  # Delete the default suffixes
 .SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly
