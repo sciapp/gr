@@ -43,7 +43,10 @@ override_dh_auto_build:
 		EXTRA_CXXFLAGS=-I`pwd`/${THIRDPARTY_INC} \
 		EXTRA_LDFLAGS=-L`pwd`/${THIRDPARTY_LIB} \
 		THIRDPARTYDIR=`pwd`/${THIRDPARTY} \
-		QT5_QMAKE=${QT5_QMAKE}
+		QT5_QMAKE=${QT5_QMAKE} \
+		USE_STATIC_AGG_LIBS=1 \
+		USE_STATIC_CAIRO_LIBS=1 \
+		USE_STATIC_XERCESC_LIBS=1
 
 override_dh_auto_install:
 	mkdir -p ${DEB_BUILD_ROOT}/gr${GRDIR}
