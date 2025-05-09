@@ -137,7 +137,10 @@ make GRDIR=%{grdir} \
      THIRDPARTYDIR=`pwd`/%{THIRDPARTY} \
      %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
      %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}} \
-     %{?qmake_qt6:QT6_QMAKE=%{qmake_qt6}}
+     %{?qmake_qt6:QT6_QMAKE=%{qmake_qt6}} \
+     USE_STATIC_AGG_LIBS=1 \
+     USE_STATIC_CAIRO_LIBS=1 \
+     USE_STATIC_XERCESC_LIBS=1
 
 %install
 %{__install} -m 755 -d $RPM_BUILD_ROOT%{grdir}
