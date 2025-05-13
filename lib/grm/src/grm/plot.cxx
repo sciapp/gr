@@ -309,7 +309,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "only_quadratic_aspect_ratio",
                                     "orientation",
                                     "panzoom",
-                                    "phi_flip",
                                     "rel_height",
                                     "rel_width",
                                     "resample_method",
@@ -320,6 +319,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "series",
                                     "style",
                                     "subplot",
+                                    "theta_flip",
                                     "tilt",
                                     "title",
                                     "transformation",
@@ -370,7 +370,6 @@ const char *valid_series_keys[] = {"a",
                                    "line_spec",
                                    "marker_type",
                                    "num_bins",
-                                   "phi_lim",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
@@ -378,6 +377,7 @@ const char *valid_series_keys[] = {"a",
                                    "s",
                                    "step_where",
                                    "stairs",
+                                   "theta_lim",
                                    "transparency",
                                    "u",
                                    "v",
@@ -1399,7 +1399,7 @@ void plotPostSubplot(grm_args_t *subplot_args)
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {
-      if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "polar_line", "polar_scatter"))
+      if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "polar_line", "polar_scatter", "scatter3", "line3"))
         {
           plotDrawLegend(subplot_args);
         }
@@ -1723,7 +1723,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
-          sub_group->setAttribute("color_ind", c_index);
+          sub_group->setAttribute("marker_color_ind", c_index);
         }
 
       if (z != nullptr || c != nullptr)
@@ -1787,7 +1787,7 @@ grm_error_t plotQuiver(grm_args_t *subplot_args)
       int id = (int)global_root->getAttribute("_id");
       std::string str = std::to_string(id);
       auto temp =
-          global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, 1);
+          global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, true);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -3163,27 +3163,27 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *rho, *theta;
+      double *x, *y;
       double y_min, y_max, x_min, x_max;
-      unsigned int rho_length, theta_length;
+      unsigned int y_length, x_length;
       char *spec;
       auto sub_group = global_render->createSeries("polar_line");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
-      grm_args_first_value(*current_series, "y", "D", &rho, &rho_length);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> theta_vec(theta, theta + theta_length);
-      std::vector<double> rho_vec(rho, rho + rho_length);
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + y_length);
 
-      (*context)["x" + str] = theta_vec;
+      (*context)["x" + str] = x_vec;
       sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = rho_vec;
+      (*context)["y" + str] = y_vec;
       sub_group->setAttribute("y", "y" + str);
 
       if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
@@ -3221,26 +3221,26 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *rho, *theta;
+      double *x, *y;
       double y_min, y_max, x_min, x_max;
-      unsigned int rho_length, theta_length;
+      unsigned int x_length, y_length;
       auto sub_group = global_render->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
-      grm_args_first_value(*current_series, "y", "D", &rho, &rho_length);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> theta_vec(theta, theta + theta_length);
-      std::vector<double> rho_vec(rho, rho + rho_length);
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + y_length);
 
-      (*context)["x" + str] = theta_vec;
+      (*context)["x" + str] = x_vec;
       sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = rho_vec;
+      (*context)["y" + str] = y_vec;
       sub_group->setAttribute("y", "y" + str);
 
       if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
@@ -3284,7 +3284,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
  *            (number of observations in the bin)/(total number of observations * width of bin).
  *            The area of each bin is the relative number of observations. The sum of the bin areas is 1
  *          + cumcount: The height of each bin is the cumulative number of observations in each bin and all
- *            previous bins. The height of the last bin is numel (theta).
+ *            previous bins. The height of the last bin is numel (x).
  *          + cdf: Cumulative density function estimate. The height of each bin is equal to the cumulative relative
  *            number of observations in the bin and all previous bins. The height of the last bin is 1.
  * \param[in] bin_counts an int which behaves like a boolean (series)
@@ -3307,12 +3307,12 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
  *            else: bin edges will be drawn.
  *            It is only compatible with colormap.
  *            The default value is 0.
- * \param[in] phi_lim a list containing two double values representing start and end angle (series)
+ * \param[in] theta_lim a list containing two double values representing start and end angle (series)
  *            The plot will only use the values in the given range and and it will plot bins between those two values.
- * \param[in] phi_flip an integer that represents a boolean (subplot)
+ * \param[in] theta_flip an integer that represents a boolean (subplot)
  *            0: the angles will be displayed anti clockwise.
  *            else: the angles will be displayed clockwise.
- *            If phi_lim[0] is greater than phi_lim[1], phi_flip will be negated.
+ *            If theta_lim[0] is greater than theta_lim[1], theta_flip will be negated.
  *            The default value is 0.
  * \param[in] r_lim a list containing two double values between (inclusive) 0.0 and 1.0 (series)
  *            0.0 is the center and 1.0 is the outer edge of the plot.
@@ -3340,7 +3340,7 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   int stairs;
   int keep_radii_axes;
   int x_colormap, y_colormap;
-  int draw_edges, phi_flip, edge_color, face_color;
+  int draw_edges, theta_flip, edge_color, face_color;
   double transparency;
   double xrange_min, xrange_max, ylim_min, ylim_max;
   grm_args_t **series;
@@ -3364,11 +3364,12 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "edge_color", "i", &edge_color))
     series_group->setAttribute("line_color_ind", edge_color);
   /* face_color */
-  if (grm_args_values(*series, "face_color", "i", &face_color)) series_group->setAttribute("color_ind", face_color);
+  if (grm_args_values(*series, "face_color", "i", &face_color))
+    series_group->setAttribute("fill_color_ind", face_color);
   /* transparency */
   if (grm_args_values(*series, "transparency", "d", &transparency))
     series_group->setAttribute("transparency", transparency);
-  if (grm_args_values(subplot_args, "phi_flip", "i", &phi_flip)) plot_group->setAttribute("phi_flip", phi_flip);
+  if (grm_args_values(subplot_args, "theta_flip", "i", &theta_flip)) plot_group->setAttribute("theta_flip", theta_flip);
   if (grm_args_values(subplot_args, "keep_radii_axes", "i", &keep_radii_axes))
     plot_group->setAttribute("keep_radii_axes", keep_radii_axes);
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges)) series_group->setAttribute("draw_edges", draw_edges);
@@ -4120,7 +4121,7 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
 grm_error_t plotDrawPolarAxes(grm_args_t *args)
 {
   char *kind;
-  int angle_ticks, phi_flip = 0;
+  int angle_ticks, theta_flip = 0;
   const char *norm, *title;
   std::shared_ptr<GRM::Element> group, sub_group;
 
@@ -4152,7 +4153,7 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args)
       if (grm_args_values(args, "normalization", "s", &norm)) sub_group->setAttribute("normalization", norm);
     }
 
-  if (grm_args_values(args, "phi_flip", "i", &phi_flip)) sub_group->setAttribute("phi_flip", phi_flip);
+  if (grm_args_values(args, "theta_flip", "i", &theta_flip)) sub_group->setAttribute("theta_flip", theta_flip);
 
   if (grm_args_values(args, "title", "s", &title))
     {
@@ -4251,7 +4252,7 @@ grm_error_t plotDrawColorbar(grm_args_t *subplot_args, double off, unsigned int 
   if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip) colorbar->setAttribute("y_flip", flip);
 
   side_region->setAttribute("offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
-  colorbar->setAttribute("max_char_height", PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT);
+  colorbar->setAttribute("char_height", PLOT_DEFAULT_COLORBAR_CHAR_HEIGHT);
   side_region->setAttribute("location", PLOT_DEFAULT_COLORBAR_LOCATION);
   side_region->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
 
@@ -4592,7 +4593,7 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
   unsigned int num_bins;
   unsigned int length, num_bin_edges, dummy;
   const char *norm = "count";
-  double *bin_edges = nullptr, *phi_lim = nullptr, *theta = nullptr;
+  double *bin_edges = nullptr, *theta_lim = nullptr, *x = nullptr;
   double bin_width;
   int is_bin_counts;
   int *bin_counts = nullptr;
@@ -4613,14 +4614,14 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &series);
 
-  /* get theta or bin_counts */
+  /* get x or bin_counts */
   if (grm_args_values(*series, "bin_counts", "i", &is_bin_counts) == 0)
     {
       is_bin_counts = 0;
-      grm_args_first_value(*series, "x", "D", &theta, &length);
-      std::vector<double> theta_vec(theta, theta + length);
-      (*context)["theta" + str] = theta_vec;
-      series_group->setAttribute("theta", "theta" + str);
+      grm_args_first_value(*series, "x", "D", &x, &length);
+      std::vector<double> x_vec(x, x + length);
+      (*context)["x" + str] = x_vec;
+      series_group->setAttribute("x", "x" + str);
     }
   else
     {
@@ -4635,10 +4636,10 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
       series_group->setAttribute("num_bins", static_cast<int>(num_bins));
     }
 
-  if (grm_args_first_value(*series, "phi_lim", "D", &phi_lim, &dummy))
+  if (grm_args_first_value(*series, "theta_lim", "D", &theta_lim, &dummy))
     {
-      plot_group->setAttribute("phi_lim_min", phi_lim[0]);
-      plot_group->setAttribute("phi_lim_max", phi_lim[1]);
+      plot_group->setAttribute("theta_lim_min", theta_lim[0]);
+      plot_group->setAttribute("theta_lim_max", theta_lim[1]);
     }
 
   /* bin_edges and nbins */
@@ -6206,10 +6207,14 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
     }
   if (grm_args_values(subplot_args, "subplot", "D", &subplot))
     {
-      group->setAttribute("plot_x_min", subplot[0]);
-      group->setAttribute("plot_x_max", subplot[1]);
-      group->setAttribute("plot_y_min", subplot[2]);
-      group->setAttribute("plot_y_max", subplot[3]);
+      group->setAttribute("viewport_normalized_x_min", subplot[0]);
+      group->setAttribute("viewport_normalized_x_max", subplot[1]);
+      group->setAttribute("viewport_normalized_y_min", subplot[2]);
+      group->setAttribute("viewport_normalized_y_max", subplot[3]);
+      group->setAttribute("_viewport_normalized_x_min_org", subplot[0]);
+      group->setAttribute("_viewport_normalized_x_max_org", subplot[1]);
+      group->setAttribute("_viewport_normalized_y_min_org", subplot[2]);
+      group->setAttribute("_viewport_normalized_y_max_org", subplot[3]);
     }
 
   if (grm_args_values(subplot_args, "x_lim", "dd", &x_lim_min, &x_lim_max))

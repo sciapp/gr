@@ -195,20 +195,6 @@ grm_error_t grm_element_set_abs_height(grm_element_t *a_element, double height)
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_abs_height_pxl(grm_element_t *a_element, int height)
-{
-  GridElement *element = reinterpret_cast<GridElement *>(a_element);
-  try
-    {
-      element->setAbsHeightPxl(height);
-    }
-  catch (const InvalidArgument &e)
-    {
-      return e.getErrorNumber();
-    }
-  return GRM_ERROR_NONE;
-}
-
 grm_error_t grm_element_set_relative_height(grm_element_t *a_element, double height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
@@ -229,20 +215,6 @@ grm_error_t grm_element_set_abs_width(grm_element_t *a_element, double width)
   try
     {
       element->setAbsWidth(width);
-    }
-  catch (const InvalidArgument &e)
-    {
-      return e.getErrorNumber();
-    }
-  return GRM_ERROR_NONE;
-}
-
-grm_error_t grm_element_set_abs_width_pxl(grm_element_t *a_element, int width)
-{
-  GridElement *element = reinterpret_cast<GridElement *>(a_element);
-  try
-    {
-      element->setAbsWidthPxl(width);
     }
   catch (const InvalidArgument &e)
     {

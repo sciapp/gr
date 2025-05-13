@@ -48,19 +48,13 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_height_pxl" type="xs:integer"/>
             <xs:attribute name="absolute_width" type="xs:double"/>
-            <xs:attribute name="absolute_width_pxl" type="xs:integer"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
             <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
             <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
             <xs:attribute name="flip_col_and_row" type="xs:integer"/>
             <xs:attribute name="num_col" type="xs:integer" use="required"/>
             <xs:attribute name="num_row" type="xs:integer" use="required"/>
-            <xs:attribute name="plot_x_max" type="xs:double"/>
-            <xs:attribute name="plot_x_min" type="xs:double"/>
-            <xs:attribute name="plot_y_max" type="xs:double"/>
-            <xs:attribute name="plot_y_min" type="xs:double"/>
             <xs:attribute name="relative_height" type="xs:double"/>
             <xs:attribute name="relative_width" type="xs:double"/>
             <xs:attribute name="start_col" type="xs:integer"/>
@@ -69,6 +63,10 @@
             <xs:attribute name="stop_row" type="xs:integer"/>
             <xs:attribute name="trim_col" type="xs:integer"/>
             <xs:attribute name="trim_row" type="xs:integer"/>
+            <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -80,22 +78,20 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_height_pxl" type="xs:integer"/>
             <xs:attribute name="absolute_width" type="xs:double"/>
-            <xs:attribute name="absolute_width_pxl" type="xs:integer"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
             <xs:attribute name="col_span" type="xs:integer"/>
             <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
             <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
             <xs:attribute name="keep_size_if_swapped" type="xs:integer"/>
-            <xs:attribute name="plot_x_max" type="xs:double"/>
-            <xs:attribute name="plot_x_min" type="xs:double"/>
-            <xs:attribute name="plot_y_max" type="xs:double"/>
-            <xs:attribute name="plot_y_min" type="xs:double"/>
             <xs:attribute name="position" type="xs:string"/>
             <xs:attribute name="relative_height" type="xs:double"/>
             <xs:attribute name="relative_width" type="xs:double"/>
             <xs:attribute name="row_span" type="xs:integer"/>
+            <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -118,6 +114,9 @@
                 <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="adjust_x_lim" type="xs:integer" use="required"/>
             <xs:attribute name="adjust_y_lim" type="xs:integer" use="required"/>
@@ -129,30 +128,25 @@
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="colormap" type="strint"/>
             <xs:attribute name="colormap_inverted" type="xs:integer"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
-            <xs:attribute name="font" type="strint"/>
-            <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
             <xs:attribute name="keep_radii_axes" type="xs:integer"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="max_y_length" type="xs:integer"/>
             <xs:attribute name="only_quadratic_aspect_ratio" type="xs:integer"/>
-            <xs:attribute name="phi_flip" type="xs:integer"/>
-            <xs:attribute name="phi_lim_max" type="xs:double"/>
-            <xs:attribute name="phi_lim_min" type="xs:double"/>
             <xs:attribute name="plot_group" type="xs:integer"/>
-            <xs:attribute name="plot_x_max" type="xs:double" use="required"/>
-            <xs:attribute name="plot_x_min" type="xs:double" use="required"/>
-            <xs:attribute name="plot_y_max" type="xs:double" use="required"/>
-            <xs:attribute name="plot_y_min" type="xs:double" use="required"/>
             <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="theta_flip" type="xs:integer"/>
+            <xs:attribute name="theta_lim_max" type="xs:double"/>
+            <xs:attribute name="theta_lim_min" type="xs:double"/>
+            <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
+            <xs:attribute name="viewport_normalized_y_min" type="xs:double"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="x_lim_max" type="xs:double"/>
             <xs:attribute name="x_lim_min" type="xs:double"/>
@@ -225,16 +219,13 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="clip_region" type="xs:integer"/>
-            <xs:attribute name="diag_factor" type="xs:double"/>
             <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="projection_type" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="resample_method" type="strint"/>
             <xs:attribute name="select_specific_xform" type="xs:integer"/>
-            <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="space_rotation" type="xs:integer"/>
             <xs:attribute name="space_tilt" type="xs:integer"/>
             <xs:attribute name="space_z_max" type="xs:double"/>
@@ -288,9 +279,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="location" type="strint"/>
-            <xs:attribute name="offset" type="xs:double"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="window_x_max" type="xs:double"/>
             <xs:attribute name="window_x_min" type="xs:double"/>
             <xs:attribute name="window_y_max" type="xs:double"/>
@@ -308,8 +297,6 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="location" type="strint"/>
-            <xs:attribute name="offset" type="xs:double"/>
-            <xs:attribute name="width" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -320,20 +307,19 @@
                 <xs:element ref="axes_3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axis" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid_3d" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="rho_axes" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="theta_axes" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="radial_axes" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="angle_ticks" type="xs:integer"/>
             <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="hide" type="xs:integer"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="normalization" type="xs:string"/>
-            <xs:attribute name="phi_flip" type="xs:integer"/>
             <xs:attribute name="plot_type" type="xs:string"/>
+            <xs:attribute name="theta_flip" type="xs:integer"/>
             <xs:attribute name="x_grid" type="xs:integer"/>
             <xs:attribute name="x_label" type="xs:string"/>
             <xs:attribute name="y_grid" type="xs:integer"/>
@@ -366,6 +352,7 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/> <!-- axis-line -->
                 <xs:element ref="tick_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="adjust_y_lim" type="xs:integer"/>
@@ -373,7 +360,6 @@
             <xs:attribute name="draw_grid" type="xs:integer"/>
             <xs:attribute name="label_orientation" type="xs:integer"/>
             <xs:attribute name="label_pos" type="xs:double"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="num_tick_labels" type="xs:integer"/>
@@ -413,15 +399,12 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="2"/> <!-- tick label -->
                 <xs:element ref="tick" minOccurs="0" maxOccurs="2"/> <!-- tick -->
             </xs:choice>
+        <xs:attributeGroup ref="line_modifications"/>
         <xs:attributeGroup ref="move_xform_ndc"/>
+        <xs:attributeGroup ref="text_modifications"/>
         <xs:attribute name="char_height" type="xs:double"/>
         <xs:attribute name="is_major" type="xs:integer"/>
-        <xs:attribute name="line_color_ind" type="xs:integer"/>
-        <xs:attribute name="line_spec" type="xs:string"/>
-        <xs:attribute name="line_width" type="xs:double"/>
-        <xs:attribute name="scientific_format" type="xs:integer"/>
-        <xs:attribute name="text_align_horizontal" type="strint"/>
-        <xs:attribute name="text_align_vertical" type="strint"/>
+        <xs:attribute name="scientific_format" type="strint"/>
         <xs:attribute name="tick_label" type="xs:string"/>
         <xs:attribute name="tick_size" type="xs:double"/>
         <xs:attribute name="value" type="xs:double"/>
@@ -468,22 +451,15 @@
     <xs:element name="text">
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="char_up_x" type="xs:double"/>
             <xs:attribute name="char_up_y" type="xs:double"/>
-            <xs:attribute name="color_ind" type="xs:integer"/>
-            <xs:attribute name="font" type="strint"/>
-            <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="height" type="xs:double"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
-            <xs:attribute name="text_color_ind" type="xs:integer"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="x" type="xs:double"/>
             <xs:attribute name="y" type="xs:double"/>
@@ -511,17 +487,12 @@
                 <xs:element ref="fill_rect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="labels" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="select_specific_xform" type="xs:integer"/>
@@ -541,30 +512,26 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="char_height" type="xs:double"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of rho_axes -->
-    <xs:element name="rho_axes">
+    <!-- definition of radial_axes -->
+    <xs:element name="radial_axes">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="arc_grid_line" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="draw_arc" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="line_type" type="strint"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="scientific_format" type="strint"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
-            <xs:attribute name="tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -575,12 +542,10 @@
                 <xs:element ref="draw_arc" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="arc_label" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="value" type="xs:double"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
@@ -592,11 +557,10 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="angle_line" minOccurs="0" maxOccurs="8"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="angle_line_num" type="xs:integer"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
@@ -607,11 +571,10 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="angle_label" type="xs:string"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="text_x0" type="xs:double"/>
             <xs:attribute name="text_y0" type="xs:double"/>
             <xs:attribute name="x" type="xs:double"/>
@@ -626,6 +589,7 @@
                 <xs:element ref="error_bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="fill_area" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="absolute_downwards" type="xs:string"/>
             <xs:attribute name="absolute_downwards_flt" type="xs:double"/>
@@ -634,8 +598,6 @@
             <xs:attribute name="downwards_cap_color" type="xs:integer"/>
             <xs:attribute name="error_bar_color" type="xs:integer"/>
             <xs:attribute name="error_bar_style" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
             <xs:attribute name="relative_downwards_flt" type="xs:double"/>
             <xs:attribute name="relative_upwards" type="xs:string"/>
@@ -650,6 +612,7 @@
     <!-- definition of polyline_3d -->
     <xs:element name="polyline_3d">
         <xs:complexType>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="z" type="xs:string"/>
@@ -659,12 +622,10 @@
     <!-- definition of polyline -->
     <xs:element name="polyline">
         <xs:complexType>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="transparency" type="xs:double"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="x1" type="xs:double"/>
             <xs:attribute name="x2" type="xs:double"/>
             <xs:attribute name="y1" type="xs:double"/>
@@ -676,6 +637,7 @@
     <!-- definition of polymarker -->
     <xs:element name="polymarker">
         <xs:complexType>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="polymarker"/>
             <xs:attribute name="name" type="xs:string"/>
@@ -686,6 +648,7 @@
     <!-- definition of polymarker_3d -->
     <xs:element name="polymarker_3d">
         <xs:complexType>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="polymarker"/>
             <xs:attribute name="z" type="xs:string"/>
@@ -696,11 +659,9 @@
     <xs:element name="fill_rect">
         <xs:complexType>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="rect"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
         </xs:complexType>
     </xs:element>
 
@@ -708,11 +669,9 @@
     <xs:element name="draw_rect">
         <xs:complexType>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="rect"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -725,9 +684,8 @@
                 <xs:element ref="cell_array" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="color_ind" type="xs:integer"/>
-            <xs:attribute name="diag_factor" type="xs:double"/>
-            <xs:attribute name="max_char_height" type="xs:double"/>
+            <xs:attribute name="char_height" type="xs:double"/>
+            <xs:attribute name="num_color_values" type="xs:integer"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="y_flip" type="xs:integer"/>
         </xs:complexType>
@@ -740,9 +698,9 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="x_dim" type="xs:integer" use="required"/>
-            <xs:attribute name="y_dim" type="xs:integer" use="required"/>
             <xs:attribute name="x_max" type="xs:double" use="required"/>
             <xs:attribute name="x_min" type="xs:double" use="required"/>
+            <xs:attribute name="y_dim" type="xs:integer" use="required"/>
             <xs:attribute name="y_max" type="xs:double" use="required"/>
             <xs:attribute name="y_min" type="xs:double" use="required"/>
         </xs:complexType>
@@ -765,12 +723,12 @@
         <xs:complexType>
             <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
-            <xs:attribute name="phi_max" type="xs:double" use="required"/>
-            <xs:attribute name="phi_min" type="xs:double" use="required"/>
             <xs:attribute name="r_dim" type="xs:integer" use="required"/>
             <xs:attribute name="r_max" type="xs:double" use="required"/>
             <xs:attribute name="r_min" type="xs:double" use="required"/>
+            <xs:attribute name="theta_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="theta_max" type="xs:double" use="required"/>
+            <xs:attribute name="theta_min" type="xs:double" use="required"/>
             <xs:attribute name="x_org" type="xs:double" use="required"/>
             <xs:attribute name="y_org" type="xs:double" use="required"/>
         </xs:complexType>
@@ -781,10 +739,10 @@
         <xs:complexType>
             <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="phi" type="xs:string" use="required"/>
-            <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
             <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="theta" type="xs:string" use="required"/>
+            <xs:attribute name="theta_dim" type="xs:integer" use="required"/>
             <xs:attribute name="x_org" type="xs:double" use="required"/>
             <xs:attribute name="y_org" type="xs:double" use="required"/>
         </xs:complexType>
@@ -811,8 +769,8 @@
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -822,10 +780,8 @@
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -834,10 +790,8 @@
     <xs:element name="fill_area">
         <xs:complexType>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -856,27 +810,21 @@
                 <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="bar_width" type="xs:double"/>
             <xs:attribute name="clip_transformation" type="xs:integer"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="edge_width" type="xs:double"/>
-            <xs:attribute name="fill_color_rgb" type="xs:string"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="indices" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_color_rgb" type="xs:string"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="series_index" type="xs:integer"/>
             <xs:attribute name="style" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -897,9 +845,9 @@
     <xs:element name="series_contourf">
         <xs:complexType>
             <xs:attributeGroup ref="contour"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="series"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -938,15 +886,13 @@
                 <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="bins" type="xs:string"/>
-            <xs:attribute name="fill_color_rgb" type="xs:string"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_color_rgb" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="weights" type="xs:string"/>
@@ -1005,12 +951,12 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="marker_type" type="strint"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1044,16 +990,14 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="pie_segment" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
+            <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -1096,6 +1040,8 @@
                 <xs:element ref="polar_bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="bin_counts" type="xs:string"/>
@@ -1103,21 +1049,16 @@
             <xs:attribute name="bin_width" type="xs:double"/>
             <xs:attribute name="bin_widths" type="xs:string"/>
             <xs:attribute name="classes" type="xs:string"/>
-            <xs:attribute name="color_ind" type="xs:integer"/>
             <xs:attribute name="draw_edges" type="xs:integer"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="stairs" type="xs:integer"/>
-            <xs:attribute name="theta" type="xs:string"/>
             <xs:attribute name="tick" type="xs:double"/>
-            <xs:attribute name="total" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="x_colormap" type="xs:integer"/>
             <xs:attribute name="x_range_max" type="xs:double"/>
             <xs:attribute name="x_range_min" type="xs:double"/>
@@ -1134,13 +1075,13 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="marker_type" type="xs:int"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1154,14 +1095,12 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="marker_size" type="xs:double"/>
-            <xs:attribute name="marker_type" type="xs:int"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1175,7 +1114,7 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
-            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
+            <xs:attribute name="colored" type="xs:integer" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="u" type="xs:string" use="required"/>
             <xs:attribute name="v" type="xs:string" use="required"/>
@@ -1192,10 +1131,10 @@
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
             <xs:attributeGroup ref="series"/>
-            <xs:attribute name="marker_sizes" type="xs:string"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -1207,6 +1146,7 @@
                 <xs:element ref="polymarker_3d" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
             <xs:attributeGroup ref="series"/>
@@ -1236,14 +1176,14 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="xi" type="xs:string"/>
+            <xs:attribute name="x_dummy" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
@@ -1256,11 +1196,11 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1325,10 +1265,10 @@
     <!-- definition of wireframe -->
     <xs:element name="series_wireframe">
         <xs:complexType>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1367,12 +1307,9 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_color_rgb" type="xs:string"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
-            <xs:attribute name="line_color_rgb" type="xs:string"/>
-            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="text" type="xs:string"/>
             <xs:attribute name="x1" type="xs:double" use="required"/>
             <xs:attribute name="x2" type="xs:double" use="required"/>
@@ -1388,11 +1325,9 @@
                 <xs:element ref="fill_area" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="2"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="int_lim_high" type="xs:double" use="required"/>
             <xs:attribute name="int_lim_low" type="xs:double" use="required"/>
         </xs:complexType>
@@ -1404,10 +1339,8 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="integral" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="strint"/>
-            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="int_limits_high" type="xs:string" use="required"/>
             <xs:attribute name="int_limits_low" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1421,17 +1354,17 @@
                 <xs:element ref="fill_area" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="fill_arc" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
+            <xs:attributeGroup ref="fill_modifications"/>
+            <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="bin_edges" type="xs:string"/>
             <xs:attribute name="bin_width" type="xs:double"/>
             <xs:attribute name="bin_widths" type="xs:double"/>
             <xs:attribute name="class_nr" type="xs:integer" use="required"/>
-            <xs:attribute name="color_ind" type="xs:integer"/>
             <xs:attribute name="count" type="xs:double" use="required"/>
             <xs:attribute name="draw_edges" type="xs:integer"/>
-            <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="norm" type="xs:string"/>
-            <xs:attribute name="phi_flip" type="xs:integer"/>
+            <xs:attribute name="theta_flip" type="xs:integer"/>
             <xs:attribute name="x_colormap" type="xs:integer"/>
             <xs:attribute name="y_colormap" type="xs:integer"/>
         </xs:complexType>
@@ -1445,10 +1378,9 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
             <xs:attribute name="end_angle" type="xs:double" use="required"/>
-            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="start_angle" type="xs:double" use="required"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1551,8 +1483,6 @@
 
     <!-- definition of polyline attributes -->
     <xs:attributeGroup name="polyline">
-        <xs:attribute name="line_color_ind" type="xs:integer"/>
-        <xs:attribute name="line_type" type="strint"/>
         <xs:attribute name="name" type="xs:string"/>
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
@@ -1560,9 +1490,6 @@
 
     <!-- definition of polymarker attributes -->
     <xs:attributeGroup name="polymarker">
-        <xs:attribute name="marker_color_ind" type="xs:integer"/>
-        <xs:attribute name="marker_size" type="xs:double"/>
-        <xs:attribute name="marker_type" type="strint"/>
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
     </xs:attributeGroup>
@@ -1593,8 +1520,6 @@
         <xs:attribute name="c" type="xs:string"/>
         <xs:attribute name="color_rgb_values" type="xs:string"/>
         <xs:attribute name="kind" type="xs:string"/>
-        <xs:attribute name="marker_color_indices" type="xs:string"/>
-        <xs:attribute name="marker_type" type="strint"/>
         <xs:attribute name="x" type="xs:string" use="required"/>
         <xs:attribute name="y" type="xs:string" use="required"/>
     </xs:attributeGroup>
@@ -1603,6 +1528,43 @@
     <xs:attributeGroup name="series">
         <xs:attribute name="ref_x_axis_location" type="strint"/>
         <xs:attribute name="ref_y_axis_location" type="strint"/>
+    </xs:attributeGroup>
+
+    <!-- definition of line_modifications attributes -->
+    <xs:attributeGroup name="line_modifications">
+        <xs:attribute name="line_color_ind" type="xs:integer"/>
+        <xs:attribute name="line_color_rgb" type="xs:string"/>
+        <xs:attribute name="line_spec" type="xs:string"/>
+        <xs:attribute name="line_type" type="strint"/>
+        <xs:attribute name="line_width" type="xs:double"/>
+    </xs:attributeGroup>
+
+    <!-- definition of fill_modifications attributes -->
+    <xs:attributeGroup name="fill_modifications">
+        <xs:attribute name="fill_color_ind" type="xs:integer"/>
+        <xs:attribute name="fill_color_rgb" type="xs:string"/>
+        <xs:attribute name="fill_int_style" type="strint"/>
+        <xs:attribute name="fill_style" type="strint"/>
+    </xs:attributeGroup>
+
+    <!-- definition of text_modifications attributes -->
+    <xs:attributeGroup name="text_modifications">
+        <xs:attribute name="font" type="strint"/>
+        <xs:attribute name="font_precision" type="strint"/>
+        <xs:attribute name="text_align_horizontal" type="strint"/>
+        <xs:attribute name="text_align_vertical" type="strint"/>
+        <xs:attribute name="text_color_ind" type="xs:integer"/>
+    </xs:attributeGroup>
+
+    <!-- definition of marker_modifications attributes -->
+    <xs:attributeGroup name="marker_modifications">
+        <xs:attribute name="border_color_ind" type="xs:integer"/>
+        <xs:attribute name="border_width" type="xs:double"/>
+        <xs:attribute name="marker_color_ind" type="xs:integer"/>
+        <xs:attribute name="marker_color_indices" type="xs:string"/>
+        <xs:attribute name="marker_size" type="xs:double"/>
+        <xs:attribute name="marker_sizes" type="xs:string"/>
+        <xs:attribute name="marker_type" type="strint"/>
     </xs:attributeGroup>
 
     <!-- definition of colorrep attributes -->

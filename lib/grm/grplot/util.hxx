@@ -172,6 +172,7 @@ public:
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 bool isDigits(const std::string &str);
+bool isNumber(const std::string &str);
 #ifdef _WIN32
 bool fileExists(const std::string &file_path);
 bool fileExists(const std::wstring &file_path);

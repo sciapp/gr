@@ -124,7 +124,8 @@ extern "C" {
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-void binData(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
+void binData(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights,
+             double ymin);
 const char *createTmpDir(void);
 int deleteTmpDir(void);
 void linSpace(double start, double end, unsigned int n, double *x);
