@@ -119,7 +119,6 @@
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="adjust_x_lim" type="xs:integer" use="required"/>
             <xs:attribute name="adjust_y_lim" type="xs:integer" use="required"/>
             <xs:attribute name="adjust_z_lim" type="xs:integer"/>
@@ -129,8 +128,10 @@
             <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="colormap" type="strint"/>
+            <xs:attribute name="colormap_inverted" type="xs:integer"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="font" type="strint"/>
             <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
@@ -515,6 +516,7 @@
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="labels" type="xs:string"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_spec" type="xs:string"/>
@@ -633,6 +635,7 @@
             <xs:attribute name="error_bar_color" type="xs:integer"/>
             <xs:attribute name="error_bar_style" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
             <xs:attribute name="relative_downwards_flt" type="xs:double"/>
             <xs:attribute name="relative_upwards" type="xs:string"/>
@@ -660,6 +663,7 @@
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="line_type" type="strint"/>
             <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="x1" type="xs:double"/>
             <xs:attribute name="x2" type="xs:double"/>
@@ -696,6 +700,7 @@
             <xs:attributeGroup ref="rect"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
         </xs:complexType>
     </xs:element>
 
@@ -820,6 +825,7 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -861,6 +867,7 @@
             <xs:attribute name="fill_color_rgb" type="xs:string"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="indices" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
@@ -1043,6 +1050,7 @@
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>
@@ -1382,7 +1390,8 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="int_lim_high" type="xs:double" use="required"/>
             <xs:attribute name="int_lim_low" type="xs:double" use="required"/>
@@ -1397,7 +1406,8 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
-            <xs:attribute name="fill_int_style" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="int_limits_high" type="xs:string" use="required"/>
             <xs:attribute name="int_limits_low" type="xs:string" use="required"/>
         </xs:complexType>

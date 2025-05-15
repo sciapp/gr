@@ -720,7 +720,7 @@ int inputImpl(const grm_args_t *input_args)
                                   // fill- and draw_rect level
                                   for (auto &child_series : bars->children())
                                     {
-                                      auto groups = child_series->children(); // inner_fill_group and outerFillGroup
+                                      auto groups = child_series->children(); // inner and outer fill_group
                                       std::shared_ptr<GRM::Element> inner_fill_group;
                                       if (groups.size() == 2)
                                         {
@@ -728,7 +728,7 @@ int inputImpl(const grm_args_t *input_args)
                                         }
                                       else
                                         {
-                                          // no fillGroups?
+                                          // no fill_groups?
                                           break;
                                         }
 
@@ -1753,6 +1753,7 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
         }
       ++series_i;
     }
+  // should be no memory leak cause the other gr_restorestate is for the pie kind which also includes a return
   gr_restorestate();
   return GRM_ERROR_NONE;
 }
