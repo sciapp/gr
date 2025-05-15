@@ -29,7 +29,7 @@ typedef struct _GR3_LightParameter_t_
 #define isfinite(x) ((x) - (x) == (x) - (x))
 #endif
 
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 #ifdef NO_GL
 #define GR3_USE_SR
 #define GLfloat float

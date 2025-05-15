@@ -29,7 +29,7 @@ packages-tar:
   - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
   - rm -rf artifacts-windows64
   - mkdir -p Windows-x86_64-msvc
-  - mv artifacts-windows-64bit-cmake-msvc Windows-x86_64-msvc/gr
+  - mv artifacts-windows-64bit-msvc Windows-x86_64-msvc/gr
   - mkdir -p Debian-x86_64/gr/bin
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/

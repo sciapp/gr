@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17...4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18...4.0 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(GetVersionFromGit)
@@ -34,6 +34,8 @@ if(UNIX)
     )
   endif()
 endif()
+# Force to install libraries to `lib` (avoid `lib64` on RHEL distributions)
+set(CMAKE_INSTALL_LIBDIR "lib")
 set(GR_DIRECTORY
     "${CMAKE_INSTALL_PREFIX}"
     CACHE STRING "Default value for GRDIR"
@@ -45,6 +47,23 @@ option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
 option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR and Qt5_LIBRARY_DIR" OFF)
 option(GR_PREFER_XCODEBUILD "Prefer xcodebuild to build macOS applications if available" ON)
+
+if(EMSCRIPTEN)
+  set(GR_DIRECTORY
+      "/"
+      CACHE STRING "Emscripten requires `/` as GRDIR" FORCE
+  )
+  set(GR_INSTALL
+      OFF
+      CACHE BOOL "Install is not supported on Emscripten" FORCE
+  )
+  set(CMAKE_C_FLAGS_DEBUG
+      "--no-heap-copy -g1 -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2 -sNO_DISABLE_EXCEPTION_CATCHING=1"
+  )
+  set(CMAKE_C_FLAGS_RELEASE "--no-heap-copy -O3 -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+endif()
 
 if(GR_USE_BUNDLED_LIBRARIES)
   list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
@@ -83,12 +102,23 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG
 
 # Find the following packages always in system locations even if `GR_USE_BUNDLED_LIBRARIES` is set, because they are not
 # located in 3rdparty
-find_package(X11)
-find_package(Fontconfig)
-find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
-if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+if(NOT EMSCRIPTEN)
+  find_package(X11)
+  find_package(Fontconfig)
+  find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
+  if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+    find_package(
+      Qt6
+      OPTIONAL_COMPONENTS
+        Widgets
+        Core
+        Network
+        Gui
+        PrintSupport
+    )
+  endif()
   find_package(
-    Qt6
+    Qt5
     OPTIONAL_COMPONENTS
       Widgets
       Core
@@ -96,17 +126,8 @@ if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
       Gui
       PrintSupport
   )
+  find_package(Qt4)
 endif()
-find_package(
-  Qt5
-  OPTIONAL_COMPONENTS
-    Widgets
-    Core
-    Network
-    Gui
-    PrintSupport
-)
-find_package(Qt4)
 
 # Find the following packages only in 3rdparty, if `GR_USE_BUNDLED_LIBRARIES` is set
 if(GR_USE_BUNDLED_LIBRARIES)
@@ -126,24 +147,26 @@ find_package(Qhull REQUIRED)
 if(TARGET Qhull::qhullstatic_r AND NOT TARGET Qhull::qhull_r)
   add_library(Qhull::qhull_r ALIAS Qhull::qhullstatic_r)
 endif()
-find_package(Tiff)
-find_package(Ffmpeg 57.48.100)
-find_package(glfw3)
-if(TARGET glfw AND NOT TARGET Glfw::Glfw)
-  add_library(Glfw::Glfw ALIAS glfw)
-endif()
-find_package(ZeroMQ)
-if(NOT TARGET ZeroMQ::ZeroMQ)
-  if(TARGET libzmq)
-    add_library(ZeroMQ::ZeroMQ ALIAS libzmq)
-  elseif(TARGET libzmq-static)
-    add_library(ZeroMQ::ZeroMQ ALIAS libzmq-static)
-    get_target_property(ZeroMQ_LIBRARY libzmq-static LOCATION)
+if(NOT EMSCRIPTEN)
+  find_package(Tiff)
+  find_package(Ffmpeg 57.48.100)
+  find_package(glfw3)
+  if(TARGET glfw AND NOT TARGET Glfw::Glfw)
+    add_library(Glfw::Glfw ALIAS glfw)
   endif()
+  find_package(ZeroMQ)
+  if(NOT TARGET ZeroMQ::ZeroMQ)
+    if(TARGET libzmq)
+      add_library(ZeroMQ::ZeroMQ ALIAS libzmq)
+    elseif(TARGET libzmq-static)
+      add_library(ZeroMQ::ZeroMQ ALIAS libzmq-static)
+      get_target_property(ZeroMQ_LIBRARY libzmq-static LOCATION)
+    endif()
+  endif()
+  find_package(Cairo)
+  find_package(Agg)
+  find_package(Gs)
 endif()
-find_package(Cairo)
-find_package(Agg)
-find_package(Gs)
 find_package(XercesC)
 
 if(APPLE)
@@ -264,11 +287,28 @@ set(GKS_SOURCES
     lib/gks/ps.c
     lib/gks/resample.c
 )
+if(EMSCRIPTEN)
+  list(APPEND GKS_SOURCES js/jsplugin.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/compress.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/dl.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/gksforbnd.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/mf.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/pdf.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/plugin.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/ps.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/resample.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/socket.c)
+  list(REMOVE_ITEM GKS_SOURCES lib/gks/win.c)
+endif()
 
 add_library(gks_static STATIC ${GKS_SOURCES})
-add_library(gks_shared SHARED ${GKS_SOURCES})
+list(APPEND GKS_LIBRARIES gks_static)
+if(NOT EMSCRIPTEN)
+  add_library(gks_shared SHARED ${GKS_SOURCES})
+  list(APPEND GKS_LIBRARIES gks_shared)
+endif()
 
-foreach(LIBRARY gks_static gks_shared)
+foreach(LIBRARY IN LISTS GKS_LIBRARIES)
   if(LIBRARY MATCHES "static")
     set(GKS_LINK_MODE PUBLIC)
   else()
@@ -328,7 +368,9 @@ unset(GKS_LINK_MODE)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set_target_properties(gks_static PROPERTIES OUTPUT_NAME GKSstatic)
 endif()
-set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GKS)
+if(NOT EMSCRIPTEN)
+  set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GKS)
+endif()
 add_library(GR::GKS ALIAS gks_static)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
      "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n"
@@ -360,9 +402,13 @@ set(GR_SOURCES
 )
 
 add_library(gr_static STATIC ${GR_SOURCES})
-add_library(gr_shared SHARED ${GR_SOURCES})
+list(APPEND GR_LIBRARIES gr_static)
+if(NOT EMSCRIPTEN)
+  add_library(gr_shared SHARED ${GR_SOURCES})
+  list(APPEND GR_LIBRARIES gr_shared)
+endif()
 
-foreach(LIBRARY gr_static gr_shared)
+foreach(LIBRARY IN LISTS GR_LIBRARIES)
   if(LIBRARY MATCHES "static")
     set(GR_LINK_MODE PUBLIC)
   else()
@@ -404,8 +450,10 @@ unset(GR_LINK_MODE)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set_target_properties(gr_static PROPERTIES OUTPUT_NAME GRstatic)
 endif()
-set_target_properties(gr_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR)
-add_library(GR::GR ALIAS gr_shared)
+if(NOT EMSCRIPTEN)
+  set_target_properties(gr_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR)
+  add_library(GR::GR ALIAS gr_shared)
+endif()
 
 set(GR3_SOURCES
     lib/gr3/gr3.c
@@ -421,8 +469,12 @@ set(GR3_SOURCES
 )
 
 add_library(gr3_static STATIC ${GR3_SOURCES})
-add_library(gr3_shared SHARED ${GR3_SOURCES})
-foreach(LIBRARY gr3_static gr3_shared)
+list(APPEND GR3_LIBRARIES gr3_static)
+if(NOT EMSCRIPTEN)
+  add_library(gr3_shared SHARED ${GR3_SOURCES})
+  list(APPEND GR3_LIBRARIES gr3_shared)
+endif()
+foreach(LIBRARY IN LISTS GR3_LIBRARIES)
   if(LIBRARY MATCHES "static")
     set(GR3_LINK_MODE PUBLIC)
   else()
@@ -435,7 +487,11 @@ foreach(LIBRARY gr3_static gr3_shared)
   elseif(WIN32)
     target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
   endif()
-  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} GR::GR)
+  if(LIBRARY MATCHES "static")
+    target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gr_static)
+  else()
+    target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gr_shared)
+  endif()
   target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Jpeg::Jpeg)
   target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Libpng::Libpng)
@@ -452,6 +508,9 @@ foreach(LIBRARY gr3_static gr3_shared)
   endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_definitions(${LIBRARY} PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endif()
+  if(EMSCRIPTEN)
+    target_compile_definitions(${LIBRARY} PRIVATE NO_THREADS)
   endif()
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
@@ -478,8 +537,10 @@ unset(GR3_LINK_MODE)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set_target_properties(gr3_static PROPERTIES OUTPUT_NAME GR3static)
 endif()
-set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR3)
-add_library(GR::GR3 ALIAS gr3_shared)
+if(NOT EMSCRIPTEN)
+  set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR3)
+  add_library(GR::GR3 ALIAS gr3_shared)
+endif()
 
 if(UNIX AND NOT APPLE)
   if(TARGET X11::X11
@@ -503,12 +564,16 @@ if(UNIX AND NOT APPLE)
     )
   else()
     target_compile_definitions(gr3_static PUBLIC -DNO_GL)
-    target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
+    if(NOT EMSCRIPTEN)
+      target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
+    endif()
     message(WARNING "libGR3platform.so requires X11 and will not be built.")
   endif()
 elseif(NOT OpenGL_FOUND)
   target_compile_definitions(gr3_static PUBLIC -DNO_GL)
-  target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
+  if(NOT EMSCRIPTEN)
+    target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
+  endif()
 endif()
 
 set(GRM_SOURCES
@@ -553,10 +618,16 @@ set(GRM_SOURCES
 )
 
 add_library(grm_static STATIC ${GRM_SOURCES})
-add_library(grm_shared SHARED ${GRM_SOURCES})
-add_library(grm_shared_internal SHARED ${GRM_SOURCES})
+list(APPEND GRM_LIBRARIES grm_static)
+if(NOT EMSCRIPTEN)
+  add_library(grm_shared SHARED ${GRM_SOURCES})
+  list(APPEND GRM_LIBRARIES grm_shared)
+  # TODO: Build this only in a debug build / for testing
+  add_library(grm_shared_internal SHARED ${GRM_SOURCES})
+  list(APPEND GRM_LIBRARIES grm_shared_internal)
+endif()
 
-foreach(LIBRARY grm_static grm_shared grm_shared_internal)
+foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   if(LIBRARY MATCHES "static")
     set(GRM_LINK_MODE PUBLIC)
   else()
@@ -566,8 +637,13 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
     set_target_properties(${LIBRARY} PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
   endif()
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
-  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
-  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
+  if(LIBRARY MATCHES "static")
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr_static)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr3_static)
+  else()
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr_shared)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr3_shared)
+  endif()
   if(TARGET XercesC::XercesC)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} XercesC::XercesC)
   else()
@@ -606,345 +682,349 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   )
 endforeach()
 unset(GRM_LINK_MODE)
-set_target_properties(grm_shared_internal PROPERTIES C_VISIBILITY_PRESET default)
-set_target_properties(grm_shared_internal PROPERTIES OUTPUT_NAME GRM_int)
-target_include_directories(grm_shared_internal PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>)
-if(WIN32)
-  target_compile_definitions(grm_static PRIVATE GR_STATIC_LIB)
-  target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
-  target_compile_definitions(grm_shared_internal PRIVATE BUILDING_DLL)
+if(NOT EMSCRIPTEN)
+  set_target_properties(grm_shared_internal PROPERTIES C_VISIBILITY_PRESET default)
+  set_target_properties(grm_shared_internal PROPERTIES OUTPUT_NAME GRM_int)
+  target_include_directories(grm_shared_internal PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>)
+  if(WIN32)
+    target_compile_definitions(grm_static PRIVATE GR_STATIC_LIB)
+    target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
+    target_compile_definitions(grm_shared_internal PRIVATE BUILDING_DLL)
+  endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    set_target_properties(grm_static PROPERTIES OUTPUT_NAME GRMstatic)
+  endif()
+  set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GRM)
+  set_target_properties(grm_shared_internal PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+  add_library(GR::GRM ALIAS grm_shared)
 endif()
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  set_target_properties(grm_static PROPERTIES OUTPUT_NAME GRMstatic)
-endif()
-set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GRM)
-set_target_properties(grm_shared_internal PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
-add_library(GR::GRM ALIAS grm_shared)
 
-set(GR_REPORT "GKS plugins:\n")
+if(NOT EMSCRIPTEN)
+  set(GR_REPORT "GKS plugins:\n")
 
-add_library(cairoplugin SHARED lib/gks/plugin/cairoplugin.c)
-target_link_libraries(cairoplugin PUBLIC gks_static)
-if(Cairo_FOUND)
-  target_link_libraries(cairoplugin PRIVATE Cairo::Cairo)
-  target_link_libraries(cairoplugin PRIVATE Jpeg::Jpeg)
-  string(APPEND GR_REPORT "- cairoplugin:\n")
-  string(APPEND GR_REPORT "\tPNG output: Yes\n")
-  string(APPEND GR_REPORT "\tBMP output: Yes\n")
-  string(APPEND GR_REPORT "\tJPEG output: Yes\n")
+  add_library(cairoplugin SHARED lib/gks/plugin/cairoplugin.c)
+  target_link_libraries(cairoplugin PUBLIC gks_static)
+  if(Cairo_FOUND)
+    target_link_libraries(cairoplugin PRIVATE Cairo::Cairo)
+    target_link_libraries(cairoplugin PRIVATE Jpeg::Jpeg)
+    string(APPEND GR_REPORT "- cairoplugin:\n")
+    string(APPEND GR_REPORT "\tPNG output: Yes\n")
+    string(APPEND GR_REPORT "\tBMP output: Yes\n")
+    string(APPEND GR_REPORT "\tJPEG output: Yes\n")
 
-  if(Tiff_FOUND)
-    target_link_libraries(cairoplugin PRIVATE Tiff::Tiff)
-    string(APPEND GR_REPORT "\tTiff output: Yes\n")
+    if(Tiff_FOUND)
+      target_link_libraries(cairoplugin PRIVATE Tiff::Tiff)
+      string(APPEND GR_REPORT "\tTiff output: Yes\n")
+    else()
+      string(APPEND GR_REPORT "\tTiff output: No (libtiff not found)\n")
+      target_compile_definitions(cairoplugin PRIVATE NO_TIFF)
+    endif()
+    target_compile_options(cairoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+    string(APPEND GR_REPORT "\tSixel output: Yes\n")
+    string(APPEND GR_REPORT "\tMemory output: Yes\n")
+    string(APPEND GR_REPORT "\tX11 output: No (not available in CMake build)\n")
   else()
-    string(APPEND GR_REPORT "\tTiff output: No (libtiff not found)\n")
-    target_compile_definitions(cairoplugin PRIVATE NO_TIFF)
+    target_compile_definitions(cairoplugin PRIVATE NO_CAIRO)
+    string(APPEND GR_REPORT "- cairoplugin: No (Cairo not found)\n")
   endif()
-  target_compile_options(cairoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-  string(APPEND GR_REPORT "\tSixel output: Yes\n")
-  string(APPEND GR_REPORT "\tMemory output: Yes\n")
-  string(APPEND GR_REPORT "\tX11 output: No (not available in CMake build)\n")
-else()
-  target_compile_definitions(cairoplugin PRIVATE NO_CAIRO)
-  string(APPEND GR_REPORT "- cairoplugin: No (Cairo not found)\n")
-endif()
-# Cairo X11 support is disabled to allow users to generate images using Cairo on systems without X11 installed
-target_compile_definitions(cairoplugin PRIVATE NO_X11)
-set_target_properties(
-  cairoplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(aggplugin SHARED lib/gks/plugin/aggplugin.cxx)
-target_link_libraries(aggplugin PUBLIC gks_static)
-if(Agg_FOUND)
-  target_link_libraries(aggplugin PRIVATE Agg::Agg)
-  target_link_libraries(aggplugin PRIVATE Jpeg::Jpeg)
-  target_link_libraries(aggplugin PRIVATE Libpng::Libpng)
-  string(APPEND GR_REPORT "- aggplugin: Yes\n")
-  target_compile_options(aggplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # Do not define `min` and `max` as macros because this can have unintended side effects (like error messages when
-    # using `std::min`)
-    target_compile_definitions(aggplugin PRIVATE NOMINMAX)
-  endif()
-else()
-  target_compile_definitions(aggplugin PRIVATE NO_AGG)
-  string(APPEND GR_REPORT "- aggplugin: No (Agg not found)\n")
-endif()
-set_target_properties(
-  aggplugin
-  PROPERTIES CXX_STANDARD 11
-             CXX_EXTENSIONS OFF
-             CXX_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(videoplugin SHARED lib/gks/plugin/gif.c lib/gks/plugin/vc.c lib/gks/plugin/videoplugin.c)
-target_link_libraries(videoplugin PUBLIC gks_static)
-if(NOT Cairo_FOUND)
-  target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
-  target_compile_definitions(videoplugin PRIVATE NO_AV)
-  string(APPEND GR_REPORT "- videoplugin: No (Cairo not found)\n")
-elseif(NOT Ffmpeg_FOUND)
-  target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
-  target_compile_definitions(videoplugin PRIVATE NO_AV)
-  string(APPEND GR_REPORT "- videoplugin: No (ffmpeg / ogg / theora / vpx / openh264 not found)\n")
-else()
-  string(APPEND GR_REPORT "- videoplugin:\n")
-  string(APPEND GR_REPORT "\tMP4 output: Yes\n")
-  string(APPEND GR_REPORT "\tMOV output: Yes\n")
-  string(APPEND GR_REPORT "\tWEBM output: Yes\n")
-  string(APPEND GR_REPORT "\tOGG output: Yes\n")
-  string(APPEND GR_REPORT "\tGIF output: Yes\n")
-  string(APPEND GR_REPORT "\tAPNG output: Yes\n")
-  target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
-endif()
-target_compile_options(videoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  videoplugin
-  PROPERTIES C_STANDARD 99
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             LINKER_LANGUAGE CXX
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(pgfplugin SHARED lib/gks/plugin/pgfplugin.c)
-target_link_libraries(pgfplugin PUBLIC gks_static)
-target_link_libraries(pgfplugin PUBLIC Libpng::Libpng)
-target_compile_options(pgfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  pgfplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-string(APPEND GR_REPORT "- pgfplugin:\n")
-string(APPEND GR_REPORT "\tTeX output: Yes\n")
-
-add_library(wmfplugin SHARED lib/gks/plugin/wmfplugin.c)
-target_link_libraries(wmfplugin PUBLIC gks_static)
-target_compile_options(wmfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  wmfplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-string(APPEND GR_REPORT "- wmfplugin:\n")
-string(APPEND GR_REPORT "\tWMF output: Yes\n")
-
-add_library(gsplugin SHARED lib/gks/plugin/gsplugin.c)
-target_link_libraries(gsplugin PUBLIC gks_static)
-if(NOT TARGET X11::Xt)
-  string(APPEND GR_REPORT "- gsplugin: No (X11 / Xt not found)\n")
-  target_compile_definitions(gsplugin PRIVATE NO_GS)
-elseif(NOT Gs_FOUND)
-  string(APPEND GR_REPORT "- gsplugin: No (ghostscript not found)\n")
-  target_compile_definitions(gsplugin PRIVATE NO_GS)
-else()
-  target_link_libraries(gsplugin PUBLIC X11::Xt)
-  target_link_libraries(gsplugin PUBLIC Gs::Gs)
-  string(APPEND GR_REPORT "- gsplugin:\n")
-  string(APPEND GR_REPORT "\tPNG outout: Yes\n")
-  string(APPEND GR_REPORT "\tBMP outout: Yes\n")
-  string(APPEND GR_REPORT "\tJPEG outout: Yes\n")
-  string(APPEND GR_REPORT "\tTiff outout: Yes\n")
-endif()
-target_compile_options(gsplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  gsplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(svgplugin SHARED lib/gks/plugin/svgplugin.c)
-target_link_libraries(svgplugin PUBLIC gks_static)
-target_link_libraries(svgplugin PUBLIC Libpng::Libpng)
-target_compile_options(svgplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  svgplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-string(APPEND GR_REPORT "- svgplugin:\n")
-string(APPEND GR_REPORT "\tSVG output: Yes\n")
-
-add_library(glplugin SHARED lib/gks/plugin/glplugin.c)
-target_link_libraries(glplugin PUBLIC gks_static)
-if(TARGET Glfw::Glfw AND OpenGL_FOUND)
-  string(APPEND GR_REPORT "- glplugin: Yes\n")
-  target_link_libraries(glplugin PUBLIC Glfw::Glfw)
-  target_link_libraries(glplugin PUBLIC OpenGL::GL)
-else()
-  string(APPEND GR_REPORT "- glplugin: No (GLFW / OpenGL not found)\n")
-  target_compile_definitions(glplugin PRIVATE NO_GLFW)
-endif()
-if(NOT Freetype_FOUND)
-  target_compile_definitions(glplugin PRIVATE NO_FT)
-endif()
-if(APPLE)
-  # Apple has deprecated OpenGL in macOS 10.14
-  target_compile_definitions(glplugin PRIVATE GL_SILENCE_DEPRECATION)
-endif()
-target_compile_options(glplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  glplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
-target_link_libraries(zmqplugin PUBLIC gks_static)
-if(ZeroMQ_FOUND)
-  string(APPEND GR_REPORT "- zmqplugin: Yes\n")
-  target_link_libraries(zmqplugin PUBLIC ZeroMQ::ZeroMQ)
-else()
-  string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
-  target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
-endif()
-target_compile_options(zmqplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  zmqplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(x11plugin SHARED lib/gks/plugin/x11plugin.c)
-target_link_libraries(x11plugin PUBLIC gks_static)
-if(NOT Freetype_FOUND)
-  target_compile_definitions(x11plugin PRIVATE NO_FT)
-endif()
-if(TARGET X11::Xt)
-  if(Xft_FOUND AND Fontconfig_FOUND)
-    target_link_libraries(x11plugin PUBLIC Fontconfig::Fontconfig)
-  else()
-    target_compile_definitions(x11plugin PRIVATE NO_XFT)
-  endif()
-  target_link_libraries(x11plugin PUBLIC X11::Xt)
-  string(APPEND GR_REPORT "- x11plugin: Yes\n")
-else()
-  target_compile_definitions(x11plugin PRIVATE NO_X11)
-  target_compile_definitions(x11plugin PRIVATE NO_XFT)
-  string(APPEND GR_REPORT "- x11plugin: No (X11 / Xft / Xt not found)\n")
-endif()
-target_compile_options(x11plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  x11plugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             CXX_STANDARD 11
-             CXX_EXTENSIONS OFF
-             CXX_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(qt5plugin SHARED lib/gks/plugin/qt5plugin.cxx)
-target_link_libraries(qt5plugin PUBLIC gks_static)
-if(Qt5Widgets_FOUND)
-  string(APPEND GR_REPORT "- qt5plugin: Yes\n")
-  target_link_libraries(qt5plugin PUBLIC Qt5::Widgets)
-else()
-  string(APPEND GR_REPORT "- qt5plugin: No (Qt5 not found)\n")
-  target_compile_definitions(qt5plugin PRIVATE NO_QT5)
-endif()
-target_compile_options(qt5plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  qt5plugin
-  PROPERTIES CXX_STANDARD 11
-             CXX_EXTENSIONS OFF
-             CXX_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-
-add_library(qt6plugin SHARED lib/gks/plugin/qt6plugin.cxx)
-target_link_libraries(qt6plugin PUBLIC gks_static)
-if(Qt6Widgets_FOUND AND ${CMAKE_VERSION} VERSION_GREATER "3.16.0")
-  string(APPEND GR_REPORT "- qt6plugin: Yes\n")
-  target_link_libraries(qt6plugin PUBLIC Qt6::Widgets)
+  # Cairo X11 support is disabled to allow users to generate images using Cairo on systems without X11 installed
+  target_compile_definitions(cairoplugin PRIVATE NO_X11)
   set_target_properties(
-    qt6plugin
-    PROPERTIES CXX_STANDARD 17
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
+    cairoplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
                PREFIX ""
                SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
-else()
-  if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    string(APPEND GR_REPORT "- qt6plugin: No (CMake version < 3.16.0)\n")
+
+  add_library(aggplugin SHARED lib/gks/plugin/aggplugin.cxx)
+  target_link_libraries(aggplugin PUBLIC gks_static)
+  if(Agg_FOUND)
+    target_link_libraries(aggplugin PRIVATE Agg::Agg)
+    target_link_libraries(aggplugin PRIVATE Jpeg::Jpeg)
+    target_link_libraries(aggplugin PRIVATE Libpng::Libpng)
+    string(APPEND GR_REPORT "- aggplugin: Yes\n")
+    target_compile_options(aggplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+      # Do not define `min` and `max` as macros because this can have unintended side effects (like error messages when
+      # using `std::min`)
+      target_compile_definitions(aggplugin PRIVATE NOMINMAX)
+    endif()
   else()
-    string(APPEND GR_REPORT "- qt6plugin: No (Qt6 not found)\n")
+    target_compile_definitions(aggplugin PRIVATE NO_AGG)
+    string(APPEND GR_REPORT "- aggplugin: No (Agg not found)\n")
   endif()
   set_target_properties(
-    qt6plugin
+    aggplugin
     PROPERTIES CXX_STANDARD 11
                CXX_EXTENSIONS OFF
                CXX_STANDARD_REQUIRED ON
                PREFIX ""
                SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
-  target_compile_definitions(qt6plugin PRIVATE NO_QT6)
-endif()
-target_compile_options(qt6plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 
-add_library(qtplugin SHARED lib/gks/plugin/qtplugin.cxx)
-target_link_libraries(qtplugin PUBLIC gks_static)
-if(Qt4_FOUND)
-  string(APPEND GR_REPORT "- qtplugin: Yes\n")
-  target_link_libraries(qtplugin PUBLIC Qt4::QtGui)
-else()
-  string(APPEND GR_REPORT "- qtplugin: No (Qt4 not found)\n")
-  target_compile_definitions(qtplugin PRIVATE NO_QT)
-endif()
-target_compile_options(qtplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-set_target_properties(
-  qtplugin
-  PROPERTIES CXX_STANDARD 11
-             CXX_EXTENSIONS OFF
-             CXX_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
+  add_library(videoplugin SHARED lib/gks/plugin/gif.c lib/gks/plugin/vc.c lib/gks/plugin/videoplugin.c)
+  target_link_libraries(videoplugin PUBLIC gks_static)
+  if(NOT Cairo_FOUND)
+    target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
+    target_compile_definitions(videoplugin PRIVATE NO_AV)
+    string(APPEND GR_REPORT "- videoplugin: No (Cairo not found)\n")
+  elseif(NOT Ffmpeg_FOUND)
+    target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
+    target_compile_definitions(videoplugin PRIVATE NO_AV)
+    string(APPEND GR_REPORT "- videoplugin: No (ffmpeg / ogg / theora / vpx / openh264 not found)\n")
+  else()
+    string(APPEND GR_REPORT "- videoplugin:\n")
+    string(APPEND GR_REPORT "\tMP4 output: Yes\n")
+    string(APPEND GR_REPORT "\tMOV output: Yes\n")
+    string(APPEND GR_REPORT "\tWEBM output: Yes\n")
+    string(APPEND GR_REPORT "\tOGG output: Yes\n")
+    string(APPEND GR_REPORT "\tGIF output: Yes\n")
+    string(APPEND GR_REPORT "\tAPNG output: Yes\n")
+    target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
+  endif()
+  target_compile_options(videoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    videoplugin
+    PROPERTIES C_STANDARD 99
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               LINKER_LANGUAGE CXX
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
 
-add_library(gtkplugin SHARED lib/gks/plugin/gtkplugin.c)
-target_link_libraries(gtkplugin PUBLIC gks_static)
-set_target_properties(
-  gtkplugin
-  PROPERTIES C_STANDARD 90
-             C_EXTENSIONS OFF
-             C_STANDARD_REQUIRED ON
-             PREFIX ""
-             SUFFIX "${GR_PLUGIN_SUFFIX}"
-)
-target_compile_options(gtkplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
+  add_library(pgfplugin SHARED lib/gks/plugin/pgfplugin.c)
+  target_link_libraries(pgfplugin PUBLIC gks_static)
+  target_link_libraries(pgfplugin PUBLIC Libpng::Libpng)
+  target_compile_options(pgfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    pgfplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+  string(APPEND GR_REPORT "- pgfplugin:\n")
+  string(APPEND GR_REPORT "\tTeX output: Yes\n")
+
+  add_library(wmfplugin SHARED lib/gks/plugin/wmfplugin.c)
+  target_link_libraries(wmfplugin PUBLIC gks_static)
+  target_compile_options(wmfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    wmfplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+  string(APPEND GR_REPORT "- wmfplugin:\n")
+  string(APPEND GR_REPORT "\tWMF output: Yes\n")
+
+  add_library(gsplugin SHARED lib/gks/plugin/gsplugin.c)
+  target_link_libraries(gsplugin PUBLIC gks_static)
+  if(NOT TARGET X11::Xt)
+    string(APPEND GR_REPORT "- gsplugin: No (X11 / Xt not found)\n")
+    target_compile_definitions(gsplugin PRIVATE NO_GS)
+  elseif(NOT Gs_FOUND)
+    string(APPEND GR_REPORT "- gsplugin: No (ghostscript not found)\n")
+    target_compile_definitions(gsplugin PRIVATE NO_GS)
+  else()
+    target_link_libraries(gsplugin PUBLIC X11::Xt)
+    target_link_libraries(gsplugin PUBLIC Gs::Gs)
+    string(APPEND GR_REPORT "- gsplugin:\n")
+    string(APPEND GR_REPORT "\tPNG outout: Yes\n")
+    string(APPEND GR_REPORT "\tBMP outout: Yes\n")
+    string(APPEND GR_REPORT "\tJPEG outout: Yes\n")
+    string(APPEND GR_REPORT "\tTiff outout: Yes\n")
+  endif()
+  target_compile_options(gsplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    gsplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(svgplugin SHARED lib/gks/plugin/svgplugin.c)
+  target_link_libraries(svgplugin PUBLIC gks_static)
+  target_link_libraries(svgplugin PUBLIC Libpng::Libpng)
+  target_compile_options(svgplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    svgplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+  string(APPEND GR_REPORT "- svgplugin:\n")
+  string(APPEND GR_REPORT "\tSVG output: Yes\n")
+
+  add_library(glplugin SHARED lib/gks/plugin/glplugin.c)
+  target_link_libraries(glplugin PUBLIC gks_static)
+  if(TARGET Glfw::Glfw AND OpenGL_FOUND)
+    string(APPEND GR_REPORT "- glplugin: Yes\n")
+    target_link_libraries(glplugin PUBLIC Glfw::Glfw)
+    target_link_libraries(glplugin PUBLIC OpenGL::GL)
+  else()
+    string(APPEND GR_REPORT "- glplugin: No (GLFW / OpenGL not found)\n")
+    target_compile_definitions(glplugin PRIVATE NO_GLFW)
+  endif()
+  if(NOT Freetype_FOUND)
+    target_compile_definitions(glplugin PRIVATE NO_FT)
+  endif()
+  if(APPLE)
+    # Apple has deprecated OpenGL in macOS 10.14
+    target_compile_definitions(glplugin PRIVATE GL_SILENCE_DEPRECATION)
+  endif()
+  target_compile_options(glplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    glplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
+  target_link_libraries(zmqplugin PUBLIC gks_static)
+  if(ZeroMQ_FOUND)
+    string(APPEND GR_REPORT "- zmqplugin: Yes\n")
+    target_link_libraries(zmqplugin PUBLIC ZeroMQ::ZeroMQ)
+  else()
+    string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
+    target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
+  endif()
+  target_compile_options(zmqplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    zmqplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(x11plugin SHARED lib/gks/plugin/x11plugin.c)
+  target_link_libraries(x11plugin PUBLIC gks_static)
+  if(NOT Freetype_FOUND)
+    target_compile_definitions(x11plugin PRIVATE NO_FT)
+  endif()
+  if(TARGET X11::Xt)
+    if(Xft_FOUND AND Fontconfig_FOUND)
+      target_link_libraries(x11plugin PUBLIC Fontconfig::Fontconfig)
+    else()
+      target_compile_definitions(x11plugin PRIVATE NO_XFT)
+    endif()
+    target_link_libraries(x11plugin PUBLIC X11::Xt)
+    string(APPEND GR_REPORT "- x11plugin: Yes\n")
+  else()
+    target_compile_definitions(x11plugin PRIVATE NO_X11)
+    target_compile_definitions(x11plugin PRIVATE NO_XFT)
+    string(APPEND GR_REPORT "- x11plugin: No (X11 / Xft / Xt not found)\n")
+  endif()
+  target_compile_options(x11plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    x11plugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               CXX_STANDARD 11
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(qt5plugin SHARED lib/gks/plugin/qt5plugin.cxx)
+  target_link_libraries(qt5plugin PUBLIC gks_static)
+  if(Qt5Widgets_FOUND)
+    string(APPEND GR_REPORT "- qt5plugin: Yes\n")
+    target_link_libraries(qt5plugin PUBLIC Qt5::Widgets)
+  else()
+    string(APPEND GR_REPORT "- qt5plugin: No (Qt5 not found)\n")
+    target_compile_definitions(qt5plugin PRIVATE NO_QT5)
+  endif()
+  target_compile_options(qt5plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    qt5plugin
+    PROPERTIES CXX_STANDARD 11
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(qt6plugin SHARED lib/gks/plugin/qt6plugin.cxx)
+  target_link_libraries(qt6plugin PUBLIC gks_static)
+  if(Qt6Widgets_FOUND AND ${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+    string(APPEND GR_REPORT "- qt6plugin: Yes\n")
+    target_link_libraries(qt6plugin PUBLIC Qt6::Widgets)
+    set_target_properties(
+      qt6plugin
+      PROPERTIES CXX_STANDARD 17
+                 CXX_EXTENSIONS OFF
+                 CXX_STANDARD_REQUIRED ON
+                 PREFIX ""
+                 SUFFIX "${GR_PLUGIN_SUFFIX}"
+    )
+  else()
+    if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+      string(APPEND GR_REPORT "- qt6plugin: No (CMake version < 3.16.0)\n")
+    else()
+      string(APPEND GR_REPORT "- qt6plugin: No (Qt6 not found)\n")
+    endif()
+    set_target_properties(
+      qt6plugin
+      PROPERTIES CXX_STANDARD 11
+                 CXX_EXTENSIONS OFF
+                 CXX_STANDARD_REQUIRED ON
+                 PREFIX ""
+                 SUFFIX "${GR_PLUGIN_SUFFIX}"
+    )
+    target_compile_definitions(qt6plugin PRIVATE NO_QT6)
+  endif()
+  target_compile_options(qt6plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+
+  add_library(qtplugin SHARED lib/gks/plugin/qtplugin.cxx)
+  target_link_libraries(qtplugin PUBLIC gks_static)
+  if(Qt4_FOUND)
+    string(APPEND GR_REPORT "- qtplugin: Yes\n")
+    target_link_libraries(qtplugin PUBLIC Qt4::QtGui)
+  else()
+    string(APPEND GR_REPORT "- qtplugin: No (Qt4 not found)\n")
+    target_compile_definitions(qtplugin PRIVATE NO_QT)
+  endif()
+  target_compile_options(qtplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(
+    qtplugin
+    PROPERTIES CXX_STANDARD 11
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+
+  add_library(gtkplugin SHARED lib/gks/plugin/gtkplugin.c)
+  target_link_libraries(gtkplugin PUBLIC gks_static)
+  set_target_properties(
+    gtkplugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+  target_compile_options(gtkplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
+endif()
 
 if(APPLE)
   add_library(quartzplugin SHARED lib/gks/plugin/quartzplugin.m)
@@ -1483,6 +1563,241 @@ if(TARGET XercesC::XercesC)
   string(APPEND GR_REPORT "- Xerces-C++: Yes\n")
 else()
   string(APPEND GR_REPORT "- Xerces-C++: No\n")
+endif()
+
+if(EMSCRIPTEN)
+  add_custom_target(gr_js ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gr.js)
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gr.js
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/js/api.js ${CMAKE_CURRENT_SOURCE_DIR}/js/jsterm.js
+            ${CMAKE_CURRENT_SOURCE_DIR}/js/module.js libGR
+    COMMAND
+      ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_SOURCE_DIR}/js/module.js ${CMAKE_CURRENT_BINARY_DIR}/libGR.js
+      ${CMAKE_CURRENT_SOURCE_DIR}/js/api.js ${CMAKE_CURRENT_SOURCE_DIR}/js/jsterm.js > ${CMAKE_CURRENT_BINARY_DIR}/gr.js
+    VERBATIM
+  )
+  add_executable(
+    libGR $<TARGET_OBJECTS:gks_static> $<TARGET_OBJECTS:gr3_static> $<TARGET_OBJECTS:gr_static>
+          $<TARGET_OBJECTS:grm_static>
+  )
+  foreach(LIBRARY gks_static gr_static gr3_static grm_static)
+    get_target_property(CURRENT_LINK_LIBRARIES ${LIBRARY} INTERFACE_LINK_LIBRARIES)
+    list(APPEND LIBGR_JS_DEPENDENCIES ${CURRENT_LINK_LIBRARIES})
+  endforeach()
+  list(REMOVE_DUPLICATES LIBGR_JS_DEPENDENCIES)
+  list(
+    REMOVE_ITEM
+    LIBGR_JS_DEPENDENCIES
+    gks_static
+    gr_static
+    gr3_static
+    grm_static
+    GR::GKS
+    GR::GR
+    GR::GR3
+    GR::GRM
+  )
+  target_link_libraries(libGR PRIVATE ${LIBGR_JS_DEPENDENCIES})
+  target_link_options(libGR PRIVATE "SHELL:-s USE_ICU=1")
+  target_link_options(libGR PRIVATE "SHELL:-s DYNCALLS=1")
+  target_link_options(libGR PRIVATE "SHELL:-s ERROR_ON_UNDEFINED_SYMBOLS=0")
+  target_link_options(libGR PRIVATE "SHELL:-s LEGACY_GL_EMULATION=1")
+  target_link_options(libGR PRIVATE "SHELL:-s NO_EXIT_RUNTIME=0")
+  target_link_options(libGR PRIVATE "SHELL:-s WASM=0")
+  target_link_options(libGR PRIVATE "SHELL:-s TOTAL_MEMORY=33554432")
+  target_link_options(libGR PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+  target_link_options(libGR PRIVATE "SHELL:-s RESERVED_FUNCTION_POINTERS=4")
+  target_link_options(libGR PRIVATE "SHELL:-s ALLOW_TABLE_GROWTH=1")
+  set(EXPORTED_RUNTIME_METHODS
+      UTF8ToString
+      addFunction
+      ccall
+      cwrap
+      getValue
+      lengthBytesUTF8
+      removeFunction
+      setValue
+      stringToUTF8
+  )
+  list(JOIN EXPORTED_RUNTIME_METHODS "\', \'" EXPORTED_RUNTIME_METHODS)
+  string(PREPEND EXPORTED_RUNTIME_METHODS "[\'")
+  string(APPEND EXPORTED_RUNTIME_METHODS "\']")
+  target_link_options(libGR PRIVATE "SHELL:-s \"EXPORTED_RUNTIME_METHODS=${EXPORTED_RUNTIME_METHODS}\"")
+  set(EXPORTED_FUNCTIONS
+      _free
+      _gks_get_dash_list
+      _gr_activatews
+      _gr_adjustrange
+      _gr_axes
+      _gr_axes3d
+      _gr_begingraphics
+      _gr_beginprint
+      _gr_beginprintext
+      _gr_beginselection
+      _gr_cellarray
+      _gr_clearws
+      _gr_closegks
+      _gr_closeseg
+      _gr_closews
+      _gr_colorbar
+      _gr_contour
+      _gr_copysegws
+      _gr_createseg
+      _gr_deactivatews
+      _gr_destroycontext
+      _gr_drawarc
+      _gr_drawarrow
+      _gr_drawgraphics
+      _gr_drawimage
+      _gr_drawpath
+      _gr_drawrect
+      _gr_emergencyclosegks
+      _gr_endgraphics
+      _gr_endprint
+      _gr_endselection
+      _gr_fillarc
+      _gr_fillarea
+      _gr_fillrect
+      _gr_grid
+      _gr_gridit
+      _gr_herrorbars
+      _gr_hexbin
+      _gr_hsvtorgb
+      _gr_importgraphics
+      _gr_inqbbox
+      _gr_inqbordercolorind
+      _gr_inqborderwidth
+      _gr_inqclipxform
+      _gr_inqcolor
+      _gr_inqcolorfromrgb
+      _gr_inqcolormap
+      _gr_inqdspsize
+      _gr_inqlinecolorind
+      _gr_inqlinetype
+      _gr_inqlinewidth
+      _gr_inqmarkercolorind
+      _gr_inqmarkertype
+      _gr_inqregenflags
+      _gr_inqscale
+      _gr_inqspace
+      _gr_inqtext
+      _gr_inqtextext
+      _gr_inqviewport
+      _gr_inqwindow
+      _gr_mathtex
+      _gr_moveselection
+      _gr_ndctowc
+      _gr_opengks
+      _gr_openws
+      _gr_panzoom
+      _gr_path
+      _gr_polyline
+      _gr_polyline3d
+      _gr_polymarker
+      _gr_precision
+      _gr_readimage
+      _gr_redrawsegws
+      _gr_resizeselection
+      _gr_restorestate
+      _gr_savestate
+      _gr_selectclipxform
+      _gr_selectcontext
+      _gr_selntran
+      _gr_selntran
+      _gr_setarrowstyle
+      _gr_setbordercolorind
+      _gr_setborderwidth
+      _gr_setcharexpan
+      _gr_setcharheight
+      _gr_setcharspace
+      _gr_setcharup
+      _gr_setclip
+      _gr_setcolormap
+      _gr_setcolorrep
+      _gr_setcoordxform
+      _gr_setfillcolorind
+      _gr_setfillintstyle
+      _gr_setfillstyle
+      _gr_setlinecolorind
+      _gr_setlinetype
+      _gr_setlinewidth
+      _gr_setmarkercolorind
+      _gr_setmarkersize
+      _gr_setmarkertype
+      _gr_setregenflags
+      _gr_setscale
+      _gr_setscientificformat
+      _gr_setsegtran
+      _gr_setshadow
+      _gr_setspace
+      _gr_settextalign
+      _gr_settextcolorind
+      _gr_settextencoding
+      _gr_settextfontprec
+      _gr_settextpath
+      _gr_settransparency
+      _gr_setviewport
+      _gr_setwindow
+      _gr_setwsviewport
+      _gr_setwswindow
+      _gr_shade
+      _gr_shadelines
+      _gr_shadepoints
+      _gr_spline
+      _gr_surface
+      _gr_text
+      _gr_textext
+      _gr_tick
+      _gr_titles3d
+      _gr_updategks
+      _gr_updatews
+      _gr_uselinespec
+      _gr_validaterange
+      _gr_verrorbars
+      _gr_wctondc
+      _grm_args_delete
+      _grm_args_new
+      _grm_args_push
+      _grm_dump
+      _grm_dump_json
+      _grm_dump_json_str
+      _grm_get_box
+      _grm_get_stdout
+      _grm_get_tooltip
+      _grm_input
+      _grm_is3d
+      _grm_load_from_str
+      _grm_merge
+      _grm_merge_named
+      _grm_plot
+      _grm_read
+      _grm_register
+      _grm_switch
+      _grm_unregister
+      _malloc
+  )
+  list(JOIN EXPORTED_FUNCTIONS "\', \'" EXPORTED_FUNCTIONS)
+  string(PREPEND EXPORTED_FUNCTIONS "[\'")
+  string(APPEND EXPORTED_FUNCTIONS "\']")
+  target_link_options(libGR PRIVATE "SHELL:-s \"EXPORTED_FUNCTIONS=${EXPORTED_FUNCTIONS}\"")
+  target_link_options(libGR PRIVATE --js-library "${CMAKE_CURRENT_SOURCE_DIR}/js/library.js")
+  foreach(
+    FONT
+    gksfont.dat
+    CMUSerif-Math.ttf
+    DejaVuSans.ttf
+    STIXTwoMath.ttf
+    mathtex2_offsets.bin
+  )
+    add_custom_command(
+      TARGET libGR
+      PRE_LINK
+      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/fonts/${FONT}"
+              "${CMAKE_CURRENT_BINARY_DIR}/fonts/${FONT}"
+      BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/fonts/${FONT}"
+    )
+    target_link_options(libGR PRIVATE "SHELL:--embed-file fonts/${FONT}")
+  endforeach()
 endif()
 
 if(GR_BUILD_DEMOS)

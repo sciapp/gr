@@ -1,10 +1,10 @@
-ubuntu-cmake-self-contained-test-c:
+ubuntu-self-contained-test-c:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   needs:
-  - ubuntu-cmake-self-contained-debug
+  - ubuntu-self-contained-debug
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004/
   - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export TERM=ansi
@@ -15,13 +15,13 @@ ubuntu-cmake-self-contained-test-c:
     - test_result/
     when: always
 
-ubuntu-cmake-self-contained-test-cpp:
+ubuntu-self-contained-test-cpp:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
   needs:
-  - ubuntu-cmake-self-contained-debug
+  - ubuntu-self-contained-debug
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004/
   - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export TERM=ansi
@@ -32,13 +32,13 @@ ubuntu-cmake-self-contained-test-cpp:
     - test_result/
     when: always
 
-ubuntu-cmake-self-contained-test-grplot:
+ubuntu-self-contained-test-grplot:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
   needs:
-  - ubuntu-cmake-self-contained-debug
+  - ubuntu-self-contained-debug
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004/
   - export GR3_NUM_THREADS=4
   - export GRM_VALIDATE=yes
   - export LD_LIBRARY_PATH=$GRDIR/lib
@@ -51,15 +51,15 @@ ubuntu-cmake-self-contained-test-grplot:
     - test_result/
     when: always
 
-ubuntu-cmake-self-contained-test-grm-internal:
+ubuntu-self-contained-test-grm-internal:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   needs:
-  - ubuntu-cmake-self-contained-debug
+  - ubuntu-self-contained-debug
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004/
   - export GR3_NUM_THREADS=4
-  - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
+  - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004/lib
   - export TERM=ansi
   - export CLICOLOR_FORCE=1
   - for f in grm_test_internal_api/*; do
