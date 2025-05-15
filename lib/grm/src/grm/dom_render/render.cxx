@@ -268,6 +268,7 @@ static bool redraw_ws = false;
 static bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 static bool first_call = true;
+static bool highlighted_attr_exist = false;
 
 static StringMapEntry kind_to_fmt[] = {
     {"line", "xys"},           {"hexbin", "xys"},
@@ -2432,6 +2433,10 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                           if (down_ticks) vp_x_min -= 0.02 * (plot_vp[1] - plot_vp[0]);
                         }
                     }
+
+                  // 0.025 for tick-label at min/max viewport which will be longer than the normal min/max viewport
+                  vp_y_min -= 0.025 * (plot_vp[3] - plot_vp[2]);
+                  vp_y_max += 0.025 * (plot_vp[3] - plot_vp[2]);
                 }
               else if (strEqualsAny(location, "x", "twin_x"))
                 {
@@ -2470,6 +2475,10 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                           if (down_ticks) vp_y_min -= 0.02 * (plot_vp[3] - plot_vp[2]);
                         }
                     }
+
+                  // 0.025 for tick-label at min/max viewport which will be longer than the normal min/max viewport
+                  vp_x_min -= 0.025 * (plot_vp[1] - plot_vp[0]);
+                  vp_x_max += 0.025 * (plot_vp[1] - plot_vp[0]);
                 }
             }
         }
@@ -2712,6 +2721,18 @@ static bool isDrawable(const std::shared_ptr<GRM::Element> &element)
     {
       auto kind = static_cast<std::string>(element->getAttribute("kind"));
       if (drawable_kinds.find(kind) != drawable_kinds.end()) return true;
+    }
+  return false;
+}
+
+static bool hasHighlightedParent(const std::shared_ptr<GRM::Element> &element)
+{
+  if (element->localName() == "root") return false;
+  auto parent = element->parentElement();
+  if (parent->localName() != "root")
+    {
+      if (parent->hasAttribute("_highlighted") && static_cast<int>(parent->getAttribute("_highlighted"))) return true;
+      return hasHighlightedParent(parent);
     }
   return false;
 }
@@ -4173,11 +4194,6 @@ void GRM::addValidContextKey(std::string key)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void processAlpha(const std::shared_ptr<GRM::Element> &element)
-{
-  gr_settransparency(static_cast<double>(element->getAttribute("alpha")));
-}
-
 static void processBorderColorInd(const std::shared_ptr<GRM::Element> &element)
 {
   gr_setbordercolorind(static_cast<int>(element->getAttribute("border_color_ind")));
@@ -4691,13 +4707,14 @@ static void processIntegral(const std::shared_ptr<GRM::Element> &element, const 
   if (left_border != nullptr)
     {
       int line_color_ind = 1;
-      double alpha = 0;
+      double transparency = 0;
       if (element->hasAttribute("line_color_ind"))
         line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
       left_border->setAttribute("line_color_ind", line_color_ind);
       left_border->setAttribute("name", "integral_left");
-      if (left_border->hasAttribute("alpha")) alpha = static_cast<double>(left_border->getAttribute("alpha"));
-      left_border->setAttribute("alpha", alpha);
+      if (left_border->hasAttribute("transparency"))
+        transparency = static_cast<double>(left_border->getAttribute("transparency"));
+      left_border->setAttribute("transparency", transparency);
     }
 
   x2 += x_shift;
@@ -4715,13 +4732,14 @@ static void processIntegral(const std::shared_ptr<GRM::Element> &element, const 
   if (right_border != nullptr)
     {
       int line_color_ind = 1;
-      double alpha = 0;
+      double transparency = 0;
       if (element->hasAttribute("line_color_ind"))
         line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
       right_border->setAttribute("line_color_ind", line_color_ind);
       right_border->setAttribute("name", "integral_right");
-      if (right_border->hasAttribute("alpha")) alpha = static_cast<double>(right_border->getAttribute("alpha"));
-      right_border->setAttribute("alpha", alpha);
+      if (right_border->hasAttribute("transparency"))
+        transparency = static_cast<double>(right_border->getAttribute("transparency"));
+      right_border->setAttribute("transparency", transparency);
     }
 }
 
@@ -5941,7 +5959,25 @@ std::string GRM::tickOrientationIntToString(int tick_orientation)
 
 static void processTransparency(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_settransparency(static_cast<double>(element->getAttribute("transparency")));
+  double transparency = 1.0;
+  if (global_root->querySelectors("[_highlighted=\"1\"]")) gr_inqtransparency(&transparency);
+  gr_settransparency(transparency * static_cast<double>(element->getAttribute("transparency")));
+}
+
+static void processPrivateTransparency(const std::shared_ptr<GRM::Element> &element)
+{
+  if (highlighted_attr_exist)
+    {
+      if (!(element->hasAttribute("_highlighted") && static_cast<int>(element->getAttribute("_highlighted"))) &&
+          !hasHighlightedParent(element))
+        {
+          gr_settransparency(0.5);
+        }
+      else
+        {
+          gr_settransparency(1.0);
+        }
+    }
 }
 
 static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *tick_labels,
@@ -7130,7 +7166,6 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
 
   // Map used for processing all kinds of attributes
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attr_string_to_func{
-      {std::string("alpha"), processAlpha},
       {std::string("background_color"), processBackgroundColor},
       {std::string("border_color_ind"), processBorderColorInd},
       {std::string("marginal_heatmap_side_plot"), processMarginalHeatmapSidePlot},
@@ -10329,6 +10364,10 @@ static void processFillArc(const std::shared_ptr<GRM::Element> &element, const s
   auto start_angle = static_cast<double>(element->getAttribute("start_angle"));
   auto end_angle = static_cast<double>(element->getAttribute("end_angle"));
   applyMoveTransformation(element);
+
+  if (element->parentElement()->localName() == "polar_bar")
+    processTransparency(element->parentElement()->parentElement());
+
   if (redraw_ws) gr_fillarc(x_min, x_max, y_min, y_max, start_angle, end_angle);
 }
 
@@ -10345,6 +10384,11 @@ static void processFillRect(const std::shared_ptr<GRM::Element> &element, const 
   auto y_min = static_cast<double>(element->getAttribute("y_min"));
   auto y_max = static_cast<double>(element->getAttribute("y_max"));
   applyMoveTransformation(element);
+
+  if (element->parentElement()->localName() == "bar" &&
+      element->parentElement()->parentElement()->hasAttribute("transparency"))
+    processTransparency(element->parentElement()->parentElement());
+
   if (redraw_ws) gr_fillrect(x_min, x_max, y_min, y_max);
 }
 
@@ -10412,6 +10456,9 @@ static void processGridLine(const std::shared_ptr<GRM::Element> &element, const 
   auto major_count = static_cast<int>(axis_elem->getAttribute("major_count"));
   auto value = static_cast<double>(element->getAttribute("value"));
   auto is_major = static_cast<int>(element->getAttribute("is_major"));
+
+  processPrivateTransparency(element);
+  if (element->hasAttribute("transparency")) processTransparency(element);
 
   tick_t g = {value, is_major};
   axis_t grid = {min_val, max_val, tick, org, pos, major_count, 1, &g, 0.0, 0, nullptr, NAN, false, 0};
@@ -11077,6 +11124,7 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
   edge_color_index = static_cast<int>(element->getAttribute("line_color_ind"));
   if (element->hasAttribute("text")) text = static_cast<std::string>(element->getAttribute("text"));
   if (element->hasAttribute("line_width")) line_width = static_cast<double>(element->getAttribute("line_width"));
+  if (element->parentElement()->hasAttribute("transparency")) processTransparency(element->parentElement());
 
   if (element->hasAttribute("fill_color_rgb"))
     {
@@ -12662,7 +12710,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
   if (element->hasAttribute("stairs"))
     {
-      /* Set default stairs alpha values */
+      /* Set default stairs transparency values */
       if (!element->hasAttribute("transparency")) element->setAttribute("transparency", 1.0);
 
       stairs = static_cast<int>(element->getAttribute("stairs"));
@@ -13021,6 +13069,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
 
   if (plot_parent->hasAttribute("y_log")) y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
 
+  if (element->parentElement()->hasAttribute("transparency")) processTransparency(element->parentElement());
   if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
   if (element->hasAttribute("phi_flip")) phi_flip = static_cast<int>(element->getAttribute("phi_flip"));
@@ -15113,6 +15162,9 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
 
   applyMoveTransformation(element);
   processTextEncoding(active_figure);
+  processPrivateTransparency(element);
+  if (element->hasAttribute("transparency")) processTransparency(element);
+
   if (space == CoordinateSpace::WC) gr_wctondc(&x, &y);
   if (element->hasAttribute("width") && element->hasAttribute("height"))
     {
@@ -17451,6 +17503,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
    * \param[in] context The GRM::Context containing the actual data
    */
 
+  processPrivateTransparency(element);
+
   // Map used for processing all kinds of elements
   bool update_required = static_cast<int>(element->getAttribute("_update_required"));
   static std::map<std::string,
@@ -18157,6 +18211,10 @@ void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
   global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
+      if (global_root->querySelectors("[_highlighted=\"1\"]"))
+        highlighted_attr_exist = true;
+      else
+        highlighted_attr_exist = false;
       for (const auto &child : root->children())
         {
           gr_savestate();
@@ -18178,6 +18236,10 @@ void GRM::Render::render(std::shared_ptr<GRM::Document> const &document)
   global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
+      if (global_root->querySelectors("[_highlighted=\"1\"]"))
+        highlighted_attr_exist = true;
+      else
+        highlighted_attr_exist = false;
       for (const auto &child : root->children())
         {
           gr_savestate();
@@ -18199,6 +18261,10 @@ void GRM::Render::render(const std::shared_ptr<GRM::Context> &ext_context)
   global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
+      if (global_root->querySelectors("[_highlighted=\"1\"]"))
+        highlighted_attr_exist = true;
+      else
+        highlighted_attr_exist = false;
       for (const auto &child : root->children())
         {
           gr_savestate();
@@ -18235,6 +18301,12 @@ void GRM::Render::render()
       automatic_update = false;
       root->setAttribute("_modified", true);
       automatic_update = old_state;
+
+      if (global_root->querySelectors("[_highlighted=\"1\"]"))
+        highlighted_attr_exist = true;
+      else
+        highlighted_attr_exist = false;
+
       finalizeGrid(active_figure);
       renderHelper(root, this->context);
       renderZQueue(this->context);
@@ -18260,6 +18332,11 @@ void GRM::Render::render()
 
 void GRM::Render::processTree()
 {
+  if (global_root->querySelectors("[_highlighted=\"1\"]"))
+    highlighted_attr_exist = true;
+  else
+    highlighted_attr_exist = false;
+
   global_root->setAttribute("_modified", true);
   finalizeGrid(active_figure);
   renderHelper(global_root, this->context);
@@ -20302,14 +20379,14 @@ void GRM::Render::setProjectionType(const std::shared_ptr<GRM::Element> &element
   element->setAttribute("projection_type", type);
 }
 
-void GRM::Render::setTransparency(const std::shared_ptr<GRM::Element> &element, double alpha)
+void GRM::Render::setTransparency(const std::shared_ptr<GRM::Element> &element, double transparency)
 {
   /*!
    * This function can be used to set the transparency of a GRM::Element
    * \param[in] element A GRM::Element
-   * \param[in] alpha The alpha
+   * \param[in] transparency The transparency
    */
-  element->setAttribute("transparency", alpha);
+  element->setAttribute("transparency", transparency);
 }
 
 void GRM::Render::setResampleMethod(const std::shared_ptr<GRM::Element> &element, int resample)
