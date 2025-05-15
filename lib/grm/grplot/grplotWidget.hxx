@@ -42,7 +42,7 @@ public:
   void addCurrentSelection(std::unique_ptr<BoundingObject> current_selection);
   std::list<std::unique_ptr<BoundingObject>>::iterator
   eraseCurrentSelection(std::list<std::unique_ptr<BoundingObject>>::const_iterator current_selection);
-  void attributeEditEvent();
+  void attributeEditEvent(bool highlight_location = false);
   void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **line_edit);
   void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
                                const std::string &value, const std::string &label);
@@ -110,7 +110,36 @@ public:
   QAction *getShowMarginalSubMenuAct();
   QAction *getHideConfigurationMenuAct();
   QAction *getShowConfigurationMenuAct();
+  QAction *getHideOrientationSubMenuAct();
+  QAction *getShowOrientationSubMenuAct();
+  QAction *getHideAspectRatioSubMenuAct();
+  QAction *getShowAspectRatioSubMenuAct();
+  QAction *getHideLocationSubMenuAct();
+  QAction *getShowLocationSubMenuAct();
   QAction *getAddSeperatorAct();
+  QAction *getXLogAct();
+  QAction *getYLogAct();
+  QAction *getZLogAct();
+  QAction *getXFlipAct();
+  QAction *getYFlipAct();
+  QAction *getZFlipAct();
+  QAction *getPhiFlipAct();
+  QAction *getAccelerateAct();
+  QAction *getPolarWithPanAct();
+  QAction *getKeepWindowAct();
+  QAction *getKeepAspectRatioAct();
+  QAction *getOnlyQuadraticAspectRatioAct();
+  QAction *getVerticalOrientationAct();
+  QAction *getHorizontalOrientationAct();
+  QAction *getLegendAct();
+  QAction *getColorbarAct();
+  QAction *getLeftAxisAct();
+  QAction *getRightAxisAct();
+  QAction *getBottomAxisAct();
+  QAction *getTopAxisAct();
+  QAction *getTwinXAxisAct();
+  QAction *getTwinYAxisAct();
+  QAction *getColormapAct();
 
 protected:
   virtual void draw();
@@ -175,6 +204,29 @@ private slots:
   void addContextSlot();
   void addGRPlotDataContextSlot();
   void generateLinearContextSlot();
+  void xLogSlot();
+  void yLogSlot();
+  void zLogSlot();
+  void xFlipSlot();
+  void yFlipSlot();
+  void zFlipSlot();
+  void phiFlipSlot();
+  void accelerateSlot();
+  void polarWithPanSlot();
+  void keepWindowSlot();
+  void onlyQuadraticAspectRatioSlot();
+  void keepAspectRatioSlot();
+  void verticalOrientationSlot();
+  void horizontalOrientationSlot();
+  void legendSlot();
+  void colorbarSlot();
+  void leftAxisSlot();
+  void rightAxisSlot();
+  void bottomAxisSlot();
+  void topAxisSlot();
+  void twinXAxisSlot();
+  void twinYAxisSlot();
+  void colormapSlot();
 
 private:
   struct MouseState
@@ -303,7 +355,16 @@ private:
   QAction *moveable_mode_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
-      *hide_configuration_menu_act, *show_configuration_menu_act, *add_seperator_act;
+      *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
+      *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
+      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act;
+  QAction *x_flip_act, *y_flip_act, *z_flip_act, *phi_flip_act;
+  QAction *x_log_act, *y_log_act, *z_log_act;
+  QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
+  QAction *keep_aspect_ratio_act, *only_quadratic_aspect_ratio_act;
+  QAction *vertical_orientation_act, *horizontal_orientation_act;
+  QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
+      *twin_x_axis_act, *twin_y_axis_act;
   QCursor *csr;
 
   void resetPixmap();

@@ -105,10 +105,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "clip_region",
       "colormap",
       "error_bar_style",
+      "fill_int_style",
+      "fill_style",
       "font",
       "font_precision",
       "kind",
-      "line_spec",
       "line_type",
       "location",
       "marginal_heatmap_kind",
@@ -141,6 +142,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "adjust_y_lim",
       "adjust_z_lim",
       "clip_negative",
+      "colormap_inverted",
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
@@ -309,12 +311,66 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       moveable_mode_act = new QAction(tr("&Disable movable transformation"), this);
       connect(moveable_mode_act, &QAction::triggered, this, &GRPlotWidget::moveableMode);
 
+      x_log_act = new QAction(tr("&X Log"), this);
+      connect(x_log_act, &QAction::triggered, this, &GRPlotWidget::xLogSlot);
+      y_log_act = new QAction(tr("&Y Log"), this);
+      connect(y_log_act, &QAction::triggered, this, &GRPlotWidget::yLogSlot);
+      z_log_act = new QAction(tr("&Z Log"), this);
+      connect(z_log_act, &QAction::triggered, this, &GRPlotWidget::zLogSlot);
+      x_flip_act = new QAction(tr("&X Flip"), this);
+      connect(x_flip_act, &QAction::triggered, this, &GRPlotWidget::xFlipSlot);
+      y_flip_act = new QAction(tr("&Y Flip"), this);
+      connect(y_flip_act, &QAction::triggered, this, &GRPlotWidget::yFlipSlot);
+      z_flip_act = new QAction(tr("&Z Flip"), this);
+      connect(z_flip_act, &QAction::triggered, this, &GRPlotWidget::zFlipSlot);
+      phi_flip_act = new QAction(tr("&Phi Flip"), this);
+      connect(phi_flip_act, &QAction::triggered, this, &GRPlotWidget::phiFlipSlot);
+
+      accelerate_act = new QAction(tr("&Accelerate"), this);
+      connect(accelerate_act, &QAction::triggered, this, &GRPlotWidget::accelerateSlot);
+      polar_with_pan_act = new QAction(tr("&Polar Pan"), this);
+      connect(polar_with_pan_act, &QAction::triggered, this, &GRPlotWidget::polarWithPanSlot);
+      keep_window_act = new QAction(tr("&Keep Window"), this);
+      connect(keep_window_act, &QAction::triggered, this, &GRPlotWidget::keepWindowSlot);
+      colormap_act = new QAction(tr("&Colormap"), this);
+      connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
+
+      vertical_orientation_act = new QAction(tr("&Vertical"), this);
+      connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
+      horizontal_orientation_act = new QAction(tr("&Horizontal"), this);
+      connect(horizontal_orientation_act, &QAction::triggered, this, &GRPlotWidget::horizontalOrientationSlot);
+      keep_aspect_ratio_act = new QAction(tr("&Keep Aspectratio"), this);
+      connect(keep_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::keepAspectRatioSlot);
+      only_quadratic_aspect_ratio_act = new QAction(tr("&Quadratic Aspectratio"), this);
+      connect(only_quadratic_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::onlyQuadraticAspectRatioSlot);
+
+      legend_act = new QAction(tr("&Legend"), this);
+      connect(legend_act, &QAction::triggered, this, &GRPlotWidget::legendSlot);
+      colorbar_act = new QAction(tr("&Colorbar"), this);
+      connect(colorbar_act, &QAction::triggered, this, &GRPlotWidget::colorbarSlot);
+      left_axis_act = new QAction(tr("&Left Axis"), this);
+      connect(left_axis_act, &QAction::triggered, this, &GRPlotWidget::leftAxisSlot);
+      right_axis_act = new QAction(tr("&Right Axis"), this);
+      connect(right_axis_act, &QAction::triggered, this, &GRPlotWidget::rightAxisSlot);
+      bottom_axis_act = new QAction(tr("&Bottom Axis"), this);
+      connect(bottom_axis_act, &QAction::triggered, this, &GRPlotWidget::bottomAxisSlot);
+      top_axis_act = new QAction(tr("&Top Axis"), this);
+      connect(top_axis_act, &QAction::triggered, this, &GRPlotWidget::topAxisSlot);
+      twin_x_axis_act = new QAction(tr("&Twin-X Axis"), this);
+      connect(twin_x_axis_act, &QAction::triggered, this, &GRPlotWidget::twinXAxisSlot);
+      twin_y_axis_act = new QAction(tr("&Twin-Y Axis"), this);
+      connect(twin_y_axis_act, &QAction::triggered, this, &GRPlotWidget::twinYAxisSlot);
+
       hide_algo_menu_act = new QAction(this);
       show_algo_menu_act = new QAction(this);
       hide_marginal_sub_menu_act = new QAction(this);
       show_marginal_sub_menu_act = new QAction(this);
       hide_configuration_menu_act = new QAction(this);
       show_configuration_menu_act = new QAction(this);
+      hide_orientation_sub_menu_act = new QAction(this);
+      show_orientation_sub_menu_act = new QAction(this);
+      hide_aspect_ratio_sub_menu_act = new QAction(this);
+      show_aspect_ratio_sub_menu_act = new QAction(this);
       add_seperator_act = new QAction(this);
     }
 
@@ -367,6 +423,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(add_grplot_data_context, SIGNAL(triggered()), this, SLOT(addGRPlotDataContextSlot()));
       generate_linear_context_action = new QAction(tr("&Generate linear Data-Context"));
       QObject::connect(generate_linear_context_action, SIGNAL(triggered()), this, SLOT(generateLinearContextSlot()));
+
+      hide_location_sub_menu_act = new QAction(this);
+      show_location_sub_menu_act = new QAction(this);
     }
 }
 
@@ -432,7 +491,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
       x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
-      text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list;
+      text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list, fill_style_list,
+      fill_int_style_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -511,6 +571,18 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
     {
       model_list.push_back(i.c_str());
     }
+  auto fill_style_vec = GRM::getFillStyles();
+  fill_style_list.reserve((int)fill_style_vec.size());
+  for (auto &i : fill_style_vec)
+    {
+      fill_style_list.push_back(i.c_str());
+    }
+  auto fill_int_style_vec = GRM::getFillIntStyles();
+  fill_int_style_list.reserve((int)fill_int_style_vec.size());
+  for (auto &i : fill_int_style_vec)
+    {
+      fill_int_style_list.push_back(i.c_str());
+    }
   table_widget->extractContextNames(grm_get_render()->getContext());
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve((int)context_attr_vec.size());
@@ -575,9 +647,6 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "latin1",
       "utf8",
   };
-  QStringList line_spec_list{
-      "-", ":", ".", "+", "o", "*", "x", "s", "d", "^", "v", "<", ">", "p", "h", "r", "g", "b", "c", "m", "y", "k", "w",
-  };
   QStringList org_pos_list{
       "low",
       "high",
@@ -598,6 +667,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},
+      {"fill_style", fill_style_list},
+      {"fill_int_style", fill_int_style_list},
       {"font", font_list},
       {"font_precision", font_precision_list},
       {"line_type", line_type_list},
@@ -618,7 +689,6 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"size_y_type", size_type_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
-      {"line_spec", line_spec_list},
       {"x_org_pos", org_pos_list},
       {"y_org_pos", org_pos_list},
       {"z_org_pos", org_pos_list},
@@ -636,10 +706,75 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   ((QComboBox *)*line_edit)->setEditable(true);
   if (attribute_to_list.count(cur_attr_name))
     {
+      int cnt = 0;
       QStringList list = attribute_to_list[cur_attr_name];
       for (const auto &elem : list)
         {
           ((QComboBox *)*line_edit)->addItem(elem.toStdString().c_str());
+          if (cur_attr_name == "colormap")
+            {
+              const auto global_root = grm_get_document_root();
+              const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+              const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                                : global_root->querySelectors("figure[active=1]");
+              const auto plot_elem = figure_elem->querySelectors("plot");
+
+              auto colormap = QPixmap((":/preview_images/colormaps/" + elem.toStdString() + ".png").c_str());
+              auto colormap_inverted = plot_elem->hasAttribute("colormap_inverted") &&
+                                       static_cast<int>(plot_elem->getAttribute("colormap_inverted"));
+              if (!colormap.isNull())
+                {
+                  colormap.setDevicePixelRatio(15);
+                  if (colormap_inverted) colormap = colormap.transformed(QTransform().rotate(180));
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, colormap, Qt::DecorationRole);
+                }
+            }
+          else if (cur_attr_name == "marker_type")
+            {
+              auto marker_type = QPixmap((":/preview_images/marker_types/" + elem.toStdString() + ".png").c_str());
+              if (!marker_type.isNull())
+                {
+                  marker_type.setDevicePixelRatio(15);
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, marker_type, Qt::DecorationRole);
+                }
+            }
+          else if (cur_attr_name == "line_type")
+            {
+              auto line_type = QPixmap((":/preview_images/line_types/" + elem.toStdString() + ".png").c_str());
+              if (!line_type.isNull())
+                {
+                  line_type.setDevicePixelRatio(15);
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, line_type, Qt::DecorationRole);
+                }
+            }
+          else if (cur_attr_name == "fill_style")
+            {
+              auto fill_style = QPixmap((":/preview_images/fill_styles/" + elem.toStdString() + ".png").c_str());
+              if (!fill_style.isNull())
+                {
+                  fill_style = fill_style.scaled(30, 30, Qt::KeepAspectRatio);
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, fill_style, Qt::DecorationRole);
+                }
+            }
+          else if (cur_attr_name == "font_precision")
+            {
+              auto font_precision =
+                  QPixmap((":/preview_images/font_precisions/" + elem.toStdString() + ".png").c_str());
+              if (!font_precision.isNull())
+                {
+                  font_precision.setDevicePixelRatio(15);
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, font_precision, Qt::DecorationRole);
+                }
+            }
+          else if (cur_attr_name == "font")
+            {
+              auto font = QPixmap((":/preview_images/fonts/" + elem.toStdString() + ".png").c_str());
+              if (!font.isNull())
+                {
+                  font.setDevicePixelRatio(15);
+                  ((QComboBox *)*line_edit)->setItemData(cnt++, font, Qt::DecorationRole);
+                }
+            }
         }
       auto *completer = new QCompleter(list, this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
@@ -876,9 +1011,24 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::errorBarStyleIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "fill_style" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::fillStyleIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "fill_int_style" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::fillIntStyleIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
+
   int index = ((QComboBox *)*line_edit)->findText(current_text.c_str());
   if (index == -1) index += ((QComboBox *)*line_edit)->count();
   ((QComboBox *)*line_edit)->setCurrentIndex(index);
+  if (cur_attr_name == "colormap") ((QComboBox *)*line_edit)->setIconSize(QSize(90, 40));
+  if (cur_attr_name == "line_type") ((QComboBox *)*line_edit)->setIconSize(QSize(60, 40));
+  if (cur_attr_name == "font_precision") ((QComboBox *)*line_edit)->setIconSize(QSize(60, 40));
+  if (cur_attr_name == "font") ((QComboBox *)*line_edit)->setIconSize(QSize(60, 40));
 }
 
 void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
@@ -966,6 +1116,14 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, GRM::errorBarStyleStringToInt(value));
         }
+      else if (label == "fill_style")
+        {
+          element->setAttribute(label, GRM::fillStyleStringToInt(value));
+        }
+      else if (label == "fill_int_style")
+        {
+          element->setAttribute(label, GRM::fillIntStyleStringToInt(value));
+        }
       else
         {
           element->setAttribute(label, std::stoi(value));
@@ -973,10 +1131,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
     }
 }
 
-void GRPlotWidget::attributeEditEvent()
+void GRPlotWidget::attributeEditEvent(bool highlight_location)
 {
   edit_element_widget->show();
-  edit_element_widget->attributeEditEvent();
+  edit_element_widget->attributeEditEvent(highlight_location);
 }
 
 void GRPlotWidget::draw()
@@ -1414,7 +1572,8 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_input(args);
           grm_args_delete(args);
 
-          mouse_state.anchor = event->pos();
+          mouse_state.anchor.setX(x);
+          mouse_state.anchor.setY(y);
           redraw();
         }
       else
@@ -1478,7 +1637,8 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_input(args);
           grm_args_delete(args);
 
-          mouse_state.anchor = event->pos();
+          mouse_state.anchor.setX(mouse_x);
+          mouse_state.anchor.setY(mouse_y);
           redraw();
         }
       else if (mouse_state.mode == MouseState::Mode::MOVABLE_XFORM)
@@ -1498,7 +1658,8 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_input(args);
           grm_args_delete(args);
 
-          mouse_state.anchor = event->pos();
+          mouse_state.anchor.setX(mouse_x);
+          mouse_state.anchor.setY(mouse_y);
           redraw();
         }
       else
@@ -1561,7 +1722,8 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
         {
           mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
         }
-      mouse_state.anchor = event->pos();
+      mouse_state.anchor.setX(x);
+      mouse_state.anchor.setY(y);
 
       int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
       if (cursor_state != DEFAULT_HOVER_MODE)
@@ -1897,7 +2059,7 @@ void GRPlotWidget::line()
       elem->setAttribute("kind", "line");
     }
 
-  // to get the same lines then before all lines have to exist during render call so that the linespec work properly
+  // to get the same lines then before all lines have to exist during render call so that the line_spec work properly
   for (const auto &elem : plot_elem->querySelectorsAll("series_line"))
     {
       elem->setAttribute("_update_required", true);
@@ -2175,7 +2337,7 @@ void GRPlotWidget::histogram()
         }
     }
 
-  // to get the same bars then before all bars have to exist during render call so that the linespec work properly
+  // to get the same bars then before all bars have to exist during render call so that the line_spec work properly
   for (const auto &elem : plot_elem->querySelectorsAll("series_histogram"))
     {
       elem->setAttribute("_update_required", true);
@@ -2200,7 +2362,7 @@ void GRPlotWidget::barplot()
         }
     }
 
-  // to get the same bars then before all bars have to exist during render call so that the linespec work properly
+  // to get the same bars then before all bars have to exist during render call so that the line_spec work properly
   for (const auto &elem : plot_elem->querySelectorsAll("series_barplot"))
     {
       elem->removeAttribute("fill_color_ind");
@@ -2226,7 +2388,7 @@ void GRPlotWidget::stairs()
         }
     }
 
-  // to get the same lines then before all lines have to exist during render call so that the linespec work properly
+  // to get the same lines then before all lines have to exist during render call so that the line_spec work properly
   for (const auto &elem : plot_elem->querySelectorsAll("series_stairs"))
     {
       elem->setAttribute("_update_required", true);
@@ -2336,6 +2498,529 @@ void GRPlotWidget::svg()
 void GRPlotWidget::moveableMode()
 {
   disable_movable_xform = !disable_movable_xform;
+}
+
+void GRPlotWidget::xLogSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool x_log = plot_elem->hasAttribute("x_log") && static_cast<int>(plot_elem->getAttribute("x_log"));
+  plot_elem->setAttribute("x_log", !x_log);
+
+  redraw();
+}
+
+void GRPlotWidget::yLogSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool y_log = plot_elem->hasAttribute("y_log") && static_cast<int>(plot_elem->getAttribute("y_log"));
+  plot_elem->setAttribute("y_log", !y_log);
+
+  redraw();
+}
+
+void GRPlotWidget::zLogSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool z_log = plot_elem->hasAttribute("z_log") && static_cast<int>(plot_elem->getAttribute("z_log"));
+  plot_elem->setAttribute("z_log", !z_log);
+
+  redraw();
+}
+
+void GRPlotWidget::xFlipSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool x_flip = plot_elem->hasAttribute("x_flip") && static_cast<int>(plot_elem->getAttribute("x_flip"));
+  plot_elem->setAttribute("x_flip", !x_flip);
+
+  redraw();
+}
+
+void GRPlotWidget::yFlipSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool y_flip = plot_elem->hasAttribute("y_flip") && static_cast<int>(plot_elem->getAttribute("y_flip"));
+  plot_elem->setAttribute("y_flip", !y_flip);
+
+  redraw();
+}
+
+void GRPlotWidget::zFlipSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool z_flip = plot_elem->hasAttribute("z_flip") && static_cast<int>(plot_elem->getAttribute("z_flip"));
+  plot_elem->setAttribute("z_flip", !z_flip);
+
+  redraw();
+}
+
+void GRPlotWidget::phiFlipSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool phi_flip = plot_elem->hasAttribute("phi_flip") && static_cast<int>(plot_elem->getAttribute("phi_flip"));
+  plot_elem->setAttribute("phi_flip", !phi_flip);
+
+  redraw();
+}
+
+void GRPlotWidget::accelerateSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+
+  auto series_elements = figure_elem->querySelectorsAll("series_surface");
+  for (const auto &series_elem : series_elements)
+    {
+      bool accelerate = static_cast<int>(series_elem->getAttribute("accelerate"));
+      series_elem->setAttribute("accelerate", !accelerate);
+    }
+
+  redraw();
+}
+
+void GRPlotWidget::polarWithPanSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool polar_with_pan =
+      plot_elem->hasAttribute("polar_with_pan") && static_cast<int>(plot_elem->getAttribute("polar_with_pan"));
+  plot_elem->setAttribute("polar_with_pan", !polar_with_pan);
+
+  redraw();
+}
+
+void GRPlotWidget::keepWindowSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto central_region = figure_elem->querySelectors("central_region");
+
+  bool keep_window =
+      central_region->hasAttribute("keep_window") && static_cast<int>(central_region->getAttribute("keep_window"));
+  central_region->setAttribute("keep_window", !keep_window);
+
+  redraw();
+}
+
+void GRPlotWidget::colormapSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  auto colormap_old = GRM::colormapIntToString(static_cast<int>(plot_elem->getAttribute("colormap")));
+  auto colormap_inverted =
+      plot_elem->hasAttribute("colormap_inverted") && static_cast<int>(plot_elem->getAttribute("colormap_inverted"));
+
+  QList<QRadioButton *> radio_buttons;
+  QDialog dialog(this);
+  QString title("Colormaps");
+  dialog.setWindowTitle(title);
+  auto form = new QFormLayout;
+  auto colormap_names = GRM::getColormaps();
+
+  // needed information to generate linear data for the context
+  for (const auto &name : colormap_names)
+    {
+      QString tooltip_string = name.c_str();
+      auto colormap = QPixmap((":/preview_images/colormaps/" + name + ".png").c_str());
+      colormap.setDevicePixelRatio(10);
+      if (colormap_inverted) colormap = colormap.transformed(QTransform().rotate(180));
+      auto label_pix = new QLabel();
+      label_pix->setPixmap(colormap);
+      label_pix->setToolTip(tooltip_string);
+      auto button = new QRadioButton(this);
+      if (name == colormap_old) button->setChecked(true);
+
+      form->addRow(label_pix, button);
+      radio_buttons << button;
+    }
+
+  auto checkbox = new QCheckBox(this);
+  checkbox->setToolTip("If checked flip the selected colormap");
+  if (colormap_inverted) checkbox->setChecked(true);
+  auto text_label = QString("colormap_inverted");
+  form->addRow(text_label, checkbox);
+
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  form->addRow(&button_box);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  auto scroll_area_content = new QWidget;
+  scroll_area_content->setLayout(form);
+  auto scroll_area = new QScrollArea;
+  scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  scroll_area->setWidgetResizable(true);
+  scroll_area->setWidget(scroll_area_content);
+
+  auto group_box_layout = new QVBoxLayout;
+  group_box_layout->addWidget(scroll_area);
+  dialog.setLayout(group_box_layout);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      std::vector<std::string> values;
+      std::vector<double> data_vec;
+      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+      for (int i = 0; i < colormap_names.size(); i++)
+        {
+          if (radio_buttons[i]->isChecked())
+            plot_elem->setAttribute("colormap", GRM::colormapStringToInt(colormap_names[i]));
+        }
+
+      plot_elem->setAttribute("colormap_inverted", checkbox->isChecked());
+    }
+
+  redraw();
+}
+
+void GRPlotWidget::keepAspectRatioSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool keep_aspect_ratio =
+      plot_elem->hasAttribute("keep_aspect_ratio") && static_cast<int>(plot_elem->getAttribute("keep_aspect_ratio"));
+  plot_elem->setAttribute("keep_aspect_ratio", !keep_aspect_ratio);
+
+  redraw();
+}
+
+void GRPlotWidget::onlyQuadraticAspectRatioSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool only_quadratic_aspect_ratio = plot_elem->hasAttribute("only_quadratic_aspect_ratio") &&
+                                     static_cast<int>(plot_elem->getAttribute("only_quadratic_aspect_ratio"));
+  plot_elem->setAttribute("only_quadratic_aspect_ratio", !only_quadratic_aspect_ratio);
+
+  redraw();
+}
+
+void GRPlotWidget::verticalOrientationSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto central_region = figure_elem->querySelectors("central_region");
+
+  central_region->setAttribute("orientation", "vertical");
+
+  redraw();
+}
+
+void GRPlotWidget::horizontalOrientationSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto central_region = figure_elem->querySelectors("central_region");
+
+  central_region->setAttribute("orientation", "horizontal");
+
+  redraw();
+}
+
+void GRPlotWidget::legendSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto legend_elem = figure_elem->querySelectors("legend");
+
+  if (legend_elem)
+    {
+      auto bbox_id = static_cast<int>(legend_elem->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(legend_elem->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(legend_elem->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(legend_elem->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(legend_elem->getAttribute("_bbox_y_max"));
+      auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, legend_elem);
+
+      editor_action->trigger(); // open the editor view to update the location
+      current_selection = bbox;
+      attributeEditEvent(true);
+      editor_action->trigger(); // clode the editor view again
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::colorbarSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto colorbar = figure_elem->querySelectors("colorbar");
+
+  if (colorbar)
+    {
+      auto bbox_id = static_cast<int>(colorbar->parentElement()->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(colorbar->parentElement()->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(colorbar->parentElement()->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(colorbar->parentElement()->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(colorbar->parentElement()->getAttribute("_bbox_y_max"));
+      auto *bbox =
+          new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, colorbar->parentElement());
+
+      editor_action->trigger(); // open the editor view to update the location
+      current_selection = bbox;
+      attributeEditEvent(true);
+      editor_action->trigger(); // clode the editor view again
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::leftAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto side_region = figure_elem->querySelectors("side_region[location=\"left\"]");
+
+  if (side_region)
+    {
+      const auto side_plot_region = side_region->querySelectors("side_plot_region");
+
+      for (const auto &axis : side_plot_region->children())
+        {
+          if (axis->localName() == "axis")
+            {
+              auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+              auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+              auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+              auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+              auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+              auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+              editor_action->trigger(); // open the editor view to update the location
+              current_selection = bbox;
+              attributeEditEvent();
+              editor_action->trigger(); // clode the editor view again
+            }
+        }
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::rightAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto side_region = figure_elem->querySelectors("side_region[location=\"right\"]");
+
+  if (side_region)
+    {
+      const auto side_plot_region = side_region->querySelectors("side_plot_region");
+
+      for (const auto &axis : side_plot_region->children())
+        {
+          if (axis->localName() == "axis")
+            {
+              auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+              auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+              auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+              auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+              auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+              auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+              editor_action->trigger(); // open the editor view to update the location
+              current_selection = bbox;
+              attributeEditEvent();
+              editor_action->trigger(); // clode the editor view again
+            }
+        }
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::bottomAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto side_region = figure_elem->querySelectors("side_region[location=\"bottom\"]");
+
+  if (side_region)
+    {
+      const auto side_plot_region = side_region->querySelectors("side_plot_region");
+
+      for (const auto &axis : side_plot_region->children())
+        {
+          if (axis->localName() == "axis")
+            {
+              auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+              auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+              auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+              auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+              auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+              auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+              editor_action->trigger(); // open the editor view to update the location
+              current_selection = bbox;
+              attributeEditEvent();
+              editor_action->trigger(); // clode the editor view again
+            }
+        }
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::topAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto side_region = figure_elem->querySelectors("side_region[location=\"top\"]");
+
+  if (side_region)
+    {
+      const auto side_plot_region = side_region->querySelectors("side_plot_region");
+
+      for (const auto &axis : side_plot_region->children())
+        {
+          if (axis->localName() == "axis")
+            {
+              auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+              auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+              auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+              auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+              auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+              auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+              editor_action->trigger(); // open the editor view to update the location
+              current_selection = bbox;
+              attributeEditEvent();
+              editor_action->trigger(); // clode the editor view again
+            }
+        }
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::twinXAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto coordinate_system = figure_elem->querySelectors("coordinate_system");
+
+  if (coordinate_system)
+    {
+      const auto axis = coordinate_system->querySelectors("axis[location=\"twin_x\"]");
+
+      auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+      auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+      editor_action->trigger(); // open the editor view to update the location
+      current_selection = bbox;
+      attributeEditEvent();
+      editor_action->trigger(); // clode the editor view again
+
+      redraw();
+    }
+}
+
+void GRPlotWidget::twinYAxisSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto coordinate_system = figure_elem->querySelectors("coordinate_system");
+
+  if (coordinate_system)
+    {
+      const auto axis = coordinate_system->querySelectors("axis[location=\"twin_x\"]");
+
+      auto bbox_id = static_cast<int>(axis->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(axis->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(axis->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(axis->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(axis->getAttribute("_bbox_y_max"));
+      auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
+
+      editor_action->trigger(); // open the editor view to update the location
+      current_selection = bbox;
+      attributeEditEvent();
+      editor_action->trigger(); // clode the editor view again
+
+      redraw();
+    }
 }
 
 void GRPlotWidget::moveEvent(QMoveEvent *event)
@@ -2890,7 +3575,7 @@ void GRPlotWidget::processTestCommandsFile()
 
               if (strcmp(value, "line") == 0)
                 {
-                  // to get the same lines then before all lines have to exist during render call so that the linespec
+                  // to get the same lines then before all lines have to exist during render call so that the line_spec
                   // work properly
                   for (const auto &elem : global_root->querySelectorsAll("series_line"))
                     {
@@ -2900,7 +3585,7 @@ void GRPlotWidget::processTestCommandsFile()
               if (strcmp(value, "barplot") == 0 || strcmp(value, "histogram") == 0 || strcmp(value, "stairs") == 0)
                 {
                   // to get the same barplots then before all lines have to exist during render call so that the
-                  // linespec work properly
+                  // line_spec work properly
                   for (const auto &elem : global_root->querySelectorsAll("series_" + std::string(value)))
                     {
                       if (strcmp(value, "barplot") == 0) elem->removeAttribute("fill_color_ind");
@@ -3194,6 +3879,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
   bool error = false;
   auto central_region = plot_parent->querySelectors("central_region");
   if (central_region == nullptr) return;
+  bool edit_enabled = getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0;
 
   // hide all menu elements
   if (tree_widget != nullptr) // dummy elem which only exist in default grplot case
@@ -3233,11 +3919,76 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
       hidePlotTypeMenuElements();
       hide_marginal_sub_menu_act->trigger();
       hide_algo_menu_act->trigger();
+      accelerate_act->setVisible(false);
+      polar_with_pan_act->setVisible(false);
+      z_flip_act->setVisible(false);
+      z_log_act->setVisible(false);
+      phi_flip_act->setVisible(false);
+      legend_act->setVisible(false);
+      colorbar_act->setVisible(false);
+      left_axis_act->setVisible(false);
+      right_axis_act->setVisible(false);
+      bottom_axis_act->setVisible(false);
+      top_axis_act->setVisible(false);
+      twin_x_axis_act->setVisible(false);
+      twin_y_axis_act->setVisible(false);
+      hide_orientation_sub_menu_act->trigger();
+      hide_aspect_ratio_sub_menu_act->trigger();
+      if (edit_enabled) hide_location_sub_menu_act->trigger();
 
       if (grm_args_contains(args_, "error"))
         {
           error = true;
           fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
+        }
+
+      auto coordinate_system = plot_parent->querySelectors("coordinate_system");
+      if (coordinate_system != nullptr)
+        {
+          auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+          if (plot_type == "2d") show_aspect_ratio_sub_menu_act->trigger();
+        }
+
+      if (coordinate_system && coordinate_system->querySelectors("axis[location=\"twin_x\"]"))
+        {
+          if (edit_enabled) show_location_sub_menu_act->trigger();
+          twin_x_axis_act->setVisible(true);
+        }
+      if (coordinate_system && coordinate_system->querySelectors("axis[location=\"twin_y\"]"))
+        {
+          if (edit_enabled) show_location_sub_menu_act->trigger();
+          twin_y_axis_act->setVisible(true);
+        }
+      if (plot_parent->querySelectors("legend") && coordinate_system)
+        {
+          // check for coordinate_system cause pie legends location cant be changed
+          if (edit_enabled) show_location_sub_menu_act->trigger();
+          legend_act->setVisible(true);
+        }
+      if (plot_parent->querySelectors("colorbar"))
+        {
+          if (edit_enabled) show_location_sub_menu_act->trigger();
+          colorbar_act->setVisible(true);
+        }
+      if (plot_parent->querySelectors("side_plot_region"))
+        {
+          if (edit_enabled) show_location_sub_menu_act->trigger();
+          auto side_plot_region = plot_parent->querySelectors("side_plot_region");
+          auto location = static_cast<std::string>(side_plot_region->getAttribute("location"));
+          if (location.empty())
+            location = static_cast<std::string>(side_plot_region->parentElement()->getAttribute("location"));
+
+          if (!side_plot_region->querySelectors("colorbar"))
+            {
+              if (location == "left")
+                left_axis_act->setVisible(true);
+              else if (location == "right")
+                right_axis_act->setVisible(true);
+              else if (location == "top")
+                top_axis_act->setVisible(true);
+              else if (location == "bottom")
+                bottom_axis_act->setVisible(true);
+            }
         }
 
       for (const auto &name : valid_series_names)
@@ -3256,6 +4007,12 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   kind == "surface" || kind == "wireframe" || kind == "contourf")
                 {
                   if (kind == "marginal_heatmap") show_algo_menu_act->trigger();
+                  if (kind == "surface") accelerate_act->setVisible(true);
+                  if (kind == "surface" || kind == "wireframe")
+                    {
+                      z_flip_act->setVisible(true);
+                      z_log_act->setVisible(true);
+                    }
 
                   heatmap_act->setVisible(true);
                   surface_act->setVisible(true);
@@ -3269,6 +4026,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                 {
                   line_act->setVisible(true);
                   scatter_act->setVisible(true);
+                  show_orientation_sub_menu_act->trigger();
                 }
               else if (kind == "volume" || kind == "isosurface")
                 {
@@ -3278,6 +4036,11 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
               else if (kind == "line3" || kind == "trisurface" || kind == "tricontour" || kind == "scatter3" ||
                        kind == "scatter")
                 {
+                  if (kind != "tricontour")
+                    {
+                      z_flip_act->setVisible(true);
+                      z_log_act->setVisible(true);
+                    }
                   line3_act->setVisible(true);
                   trisurf_act->setVisible(true);
                   tricont_act->setVisible(true);
@@ -3290,6 +4053,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   barplot_act->setVisible(true);
                   stairs_act->setVisible(true);
                   stem_act->setVisible(true);
+                  show_orientation_sub_menu_act->trigger();
                 }
               else if (kind == "shade" || kind == "hexbin")
                 {
@@ -3300,6 +4064,13 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                 {
                   polar_line_act->setVisible(true);
                   polar_scatter_act->setVisible(true);
+                  polar_with_pan_act->setVisible(true);
+                  phi_flip_act->setVisible(true);
+                }
+              else if (kind == "polar_heatmap" || kind == "polar_histogram")
+                {
+                  polar_with_pan_act->setVisible(true);
+                  phi_flip_act->setVisible(true);
                 }
               add_seperator_act->trigger();
             }
@@ -3573,9 +4344,153 @@ QAction *GRPlotWidget::getShowConfigurationMenuAct()
   return show_configuration_menu_act;
 }
 
+QAction *GRPlotWidget::getHideOrientationSubMenuAct()
+{
+  return hide_orientation_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowOrientationSubMenuAct()
+{
+  return show_orientation_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getHideAspectRatioSubMenuAct()
+{
+  return hide_aspect_ratio_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowAspectRatioSubMenuAct()
+{
+  return show_aspect_ratio_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getHideLocationSubMenuAct()
+{
+  return hide_location_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowLocationSubMenuAct()
+{
+  return show_location_sub_menu_act;
+}
+
 QAction *GRPlotWidget::getAddSeperatorAct()
 {
   return add_seperator_act;
+}
+
+QAction *GRPlotWidget::getXLogAct()
+{
+  return x_log_act;
+}
+
+QAction *GRPlotWidget::getYLogAct()
+{
+  return y_log_act;
+}
+
+QAction *GRPlotWidget::getZLogAct()
+{
+  return z_log_act;
+}
+
+QAction *GRPlotWidget::getXFlipAct()
+{
+  return x_flip_act;
+}
+
+QAction *GRPlotWidget::getYFlipAct()
+{
+  return y_flip_act;
+}
+
+QAction *GRPlotWidget::getZFlipAct()
+{
+  return z_flip_act;
+}
+
+QAction *GRPlotWidget::getPhiFlipAct()
+{
+  return phi_flip_act;
+}
+
+QAction *GRPlotWidget::getAccelerateAct()
+{
+  return accelerate_act;
+}
+
+QAction *GRPlotWidget::getPolarWithPanAct()
+{
+  return polar_with_pan_act;
+}
+
+QAction *GRPlotWidget::getKeepWindowAct()
+{
+  return keep_window_act;
+}
+
+QAction *GRPlotWidget::getKeepAspectRatioAct()
+{
+  return keep_aspect_ratio_act;
+}
+
+QAction *GRPlotWidget::getOnlyQuadraticAspectRatioAct()
+{
+  return only_quadratic_aspect_ratio_act;
+}
+
+QAction *GRPlotWidget::getVerticalOrientationAct()
+{
+  return vertical_orientation_act;
+}
+
+QAction *GRPlotWidget::getHorizontalOrientationAct()
+{
+  return horizontal_orientation_act;
+}
+
+QAction *GRPlotWidget::getLegendAct()
+{
+  return legend_act;
+}
+
+QAction *GRPlotWidget::getColorbarAct()
+{
+  return colorbar_act;
+}
+QAction *GRPlotWidget::getLeftAxisAct()
+{
+  return left_axis_act;
+}
+
+QAction *GRPlotWidget::getRightAxisAct()
+{
+  return right_axis_act;
+}
+
+QAction *GRPlotWidget::getBottomAxisAct()
+{
+  return bottom_axis_act;
+}
+
+QAction *GRPlotWidget::getTopAxisAct()
+{
+  return top_axis_act;
+}
+
+QAction *GRPlotWidget::getTwinXAxisAct()
+{
+  return twin_x_axis_act;
+}
+
+QAction *GRPlotWidget::getTwinYAxisAct()
+{
+  return twin_y_axis_act;
+}
+
+QAction *GRPlotWidget::getColormapAct()
+{
+  return colormap_act;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)

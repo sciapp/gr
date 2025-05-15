@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.17...4.0 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(GetVersionFromGit)
@@ -1281,10 +1281,12 @@ if((Qt6Widgets_FOUND
        AND Qt5Gui_FOUND
       )
 )
-
   if(NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    include(GenPreviewImages)
+
     add_executable(
       grplot WIN32 MACOSX_BUNDLE
+      "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc"
       lib/grm/grplot/gredit/AddElementWidget.cpp
       lib/grm/grplot/gredit/BoundingLogic.cpp
       lib/grm/grplot/gredit/BoundingObject.cpp

@@ -299,7 +299,7 @@ enum class DelValues
 };
 
 static std::map<std::string, int> colormap_string_to_int{
-    {"uniform", 0},       {"temperature", 1}, {"grayscale", 2},   {"glowing", 3},    {"rainbowlike", 4},
+    {"default", 0},       {"temperature", 1}, {"grayscale", 2},   {"glowing", 3},    {"rainbowlike", 4},
     {"geologic", 5},      {"greenscale", 6},  {"cyanscale", 7},   {"bluescale", 8},  {"magentascale", 9},
     {"redscale", 10},     {"flame", 11},      {"brownscale", 12}, {"pilatus", 13},   {"autumn", 14},
     {"bone", 15},         {"cool", 16},       {"copper", 17},     {"gray", 18},      {"hot", 19},
@@ -308,7 +308,7 @@ static std::map<std::string, int> colormap_string_to_int{
     {"gist_rainbow", 30}, {"gist_stern", 31}, {"afmhot", 32},     {"brg", 33},       {"bwr", 34},
     {"coolwarm", 35},     {"cmrmap", 36},     {"cubehelix", 37},  {"gnuplot", 38},   {"gnuplot2", 39},
     {"ocean", 40},        {"rainbow", 41},    {"seismic", 42},    {"terrain", 43},   {"viridis", 44},
-    {"inferno", 45},      {"plasma", 46},     {"magma", 47},
+    {"inferno", 45},      {"plasma", 46},     {"magma", 47},      {"uniform", 48},
 };
 static std::map<std::string, int> font_string_to_int{
     {"times_roman", 101},
@@ -458,6 +458,37 @@ static std::map<std::string, int> resample_method_string_to_int{
     {"nearest", GKS_K_RESAMPLE_NEAREST},
     {"linear", GKS_K_RESAMPLE_LINEAR},
     {"lanczos", GKS_K_RESAMPLE_LANCZOS},
+};
+static std::map<std::string, int> fill_style_string_to_int{
+    {"hatch01", 1},      {"hatch02", 2},      {"hatch03", 3},      {"hatch04", 4},      {"hatch05", 5},
+    {"hatch06", 6},      {"hatch07", 7},      {"hatch08", 8},      {"hatch09", 9},      {"hatch10", 10},
+    {"hatch11", 11},     {"pattern001", 1},   {"pattern002", 2},   {"pattern003", 3},   {"pattern004", 4},
+    {"pattern005", 5},   {"pattern006", 6},   {"pattern007", 7},   {"pattern008", 8},   {"pattern009", 9},
+    {"pattern010", 10},  {"pattern011", 11},  {"pattern012", 12},  {"pattern013", 13},  {"pattern014", 14},
+    {"pattern015", 15},  {"pattern016", 16},  {"pattern017", 17},  {"pattern018", 18},  {"pattern019", 19},
+    {"pattern020", 20},  {"pattern021", 21},  {"pattern022", 22},  {"pattern023", 23},  {"pattern024", 24},
+    {"pattern025", 25},  {"pattern026", 26},  {"pattern027", 27},  {"pattern028", 28},  {"pattern029", 29},
+    {"pattern030", 30},  {"pattern031", 31},  {"pattern032", 32},  {"pattern033", 33},  {"pattern034", 34},
+    {"pattern035", 35},  {"pattern036", 36},  {"pattern037", 37},  {"pattern038", 38},  {"pattern039", 39},
+    {"pattern040", 40},  {"pattern041", 41},  {"pattern042", 42},  {"pattern043", 43},  {"pattern044", 44},
+    {"pattern045", 45},  {"pattern046", 46},  {"pattern047", 47},  {"pattern048", 48},  {"pattern049", 49},
+    {"pattern050", 50},  {"pattern040", 40},  {"pattern041", 41},  {"pattern042", 42},  {"pattern043", 43},
+    {"pattern044", 44},  {"pattern045", 45},  {"pattern046", 46},  {"pattern047", 47},  {"pattern048", 48},
+    {"pattern049", 49},  {"pattern050", 50},  {"pattern040", 40},  {"pattern041", 41},  {"pattern042", 42},
+    {"pattern043", 43},  {"pattern044", 44},  {"pattern045", 45},  {"pattern046", 46},  {"pattern047", 47},
+    {"pattern048", 48},  {"pattern049", 49},  {"pattern050", 50},  {"pattern051", 51},  {"pattern052", 52},
+    {"pattern053", 53},  {"pattern054", 54},  {"pattern055", 55},  {"pattern056", 56},  {"pattern057", 57},
+    {"pattern058", 58},  {"pattern059", 59},  {"pattern060", 60},  {"pattern061", 61},  {"pattern062", 62},
+    {"pattern063", 63},  {"pattern064", 64},  {"pattern065", 65},  {"pattern066", 66},  {"pattern067", 67},
+    {"pattern068", 68},  {"pattern069", 69},  {"pattern070", 70},  {"pattern071", 71},  {"pattern072", 72},
+    {"pattern073", 73},  {"pattern074", 74},  {"pattern075", 75},  {"pattern076", 76},  {"pattern077", 77},
+    {"pattern078", 78},  {"pattern079", 79},  {"pattern080", 80},  {"pattern081", 81},  {"pattern082", 82},
+    {"pattern083", 83},  {"pattern084", 84},  {"pattern085", 85},  {"pattern086", 86},  {"pattern087", 87},
+    {"pattern088", 88},  {"pattern089", 89},  {"pattern090", 90},  {"pattern091", 91},  {"pattern092", 92},
+    {"pattern093", 93},  {"pattern094", 94},  {"pattern095", 95},  {"pattern096", 96},  {"pattern097", 97},
+    {"pattern098", 98},  {"pattern099", 99},  {"pattern100", 100}, {"pattern101", 101}, {"pattern102", 102},
+    {"pattern103", 103}, {"pattern104", 104}, {"pattern105", 105}, {"pattern106", 106}, {"pattern107", 107},
+    {"pattern108", 108},
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ static function header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2831,6 +2862,61 @@ std::string GRM::resampleMethodIntToString(int resample_method)
   throw std::logic_error("Given resample_method is unknown.\n");
 }
 
+int GRM::fillStyleStringToInt(const std::string &fill_style_str)
+{
+  if (fill_style_string_to_int.count(fill_style_str)) return fill_style_string_to_int[fill_style_str];
+  logger((stderr, "Got unknown fill_style \"%s\"\n", fill_style_str.c_str()));
+  throw std::logic_error("Given fill_style is unknown.\n");
+}
+
+std::string GRM::fillStyleIntToString(int fill_style)
+{
+  for (auto const &map_elem : fill_style_string_to_int)
+    {
+      if (map_elem.second == fill_style) return map_elem.first;
+    }
+  logger((stderr, "Got unknown fill_style \"%i\"\n", fill_style));
+  throw std::logic_error("Given fill_style is unknown.\n");
+}
+
+int GRM::fillIntStyleStringToInt(const std::string &fill_int_style_str)
+{
+  if (fill_int_style_str == "hollow")
+    return 0;
+  else if (fill_int_style_str == "solid")
+    return 1;
+  else if (fill_int_style_str == "pattern")
+    return 2;
+  else if (fill_int_style_str == "hatch")
+    return 3;
+  else if (fill_int_style_str == "solid_with_border")
+    return 4;
+  else
+    {
+      logger((stderr, "Got unknown fill_int_style \"%s\"\n", fill_int_style_str.c_str()));
+      throw std::logic_error("The given fill_int_style is unknown.\n");
+    }
+}
+
+std::string GRM::fillIntStyleIntToString(int fill_int_style)
+{
+  if (fill_int_style == 0)
+    return "hollow";
+  else if (fill_int_style == 1)
+    return "solid";
+  else if (fill_int_style == 2)
+    return "pattern";
+  else if (fill_int_style == 3)
+    return "hatch";
+  else if (fill_int_style == 4)
+    return "solid_with_border";
+  else
+    {
+      logger((stderr, "Got unknown fill_int_style \"%i\"\n", fill_int_style));
+      throw std::logic_error("The given fill_int_style is unknown.\n");
+    }
+}
+
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
 {
   int algorithm;
@@ -4087,7 +4173,10 @@ std::vector<std::string> GRM::getColormaps()
 {
   std::vector<std::string> colormaps;
   colormaps.reserve(colormap_string_to_int.size());
-  for (auto const &imap : colormap_string_to_int) colormaps.push_back(imap.first);
+  for (auto const &imap : colormap_string_to_int)
+    {
+      if (imap.first != "default") colormaps.push_back(imap.first);
+    }
   return colormaps;
 }
 
@@ -4185,6 +4274,20 @@ std::vector<std::string> GRM::getContextAttributes()
   attributes.reserve(valid_context_attributes.size());
   for (auto const &attr : valid_context_attributes) attributes.push_back(attr);
   return attributes;
+}
+
+std::vector<std::string> GRM::getFillStyles()
+{
+  std::vector<std::string> fill_styles;
+  fill_styles.reserve(fill_style_string_to_int.size());
+  for (auto const &imap : fill_style_string_to_int) fill_styles.push_back(imap.first);
+  return fill_styles;
+}
+
+std::vector<std::string> GRM::getFillIntStyles()
+{
+  std::vector<std::string> fill_styles = {"hollow", "solid", "pattern", "hatch", "solid_with_border"};
+  return fill_styles;
 }
 
 void GRM::addValidContextKey(std::string key)
@@ -4314,6 +4417,9 @@ static void processColormap(const std::shared_ptr<GRM::Element> &element)
       colormap = GRM::colormapStringToInt(static_cast<std::string>(element->getAttribute("colormap")));
     }
 
+  if (element->hasAttribute("colormap_inverted") && static_cast<int>(element->getAttribute("colormap_inverted")))
+    colormap *= -1;
+
   gr_setcolormap(colormap);
 }
 
@@ -4357,44 +4463,6 @@ static void processFillColorInd(const std::shared_ptr<GRM::Element> &element)
   gr_setfillcolorind(static_cast<int>(element->getAttribute("fill_color_ind")));
 }
 
-int GRM::fillIntStyleStringToInt(const std::string &fill_int_style_str)
-{
-  if (fill_int_style_str == "hollow")
-    return 0;
-  else if (fill_int_style_str == "solid")
-    return 1;
-  else if (fill_int_style_str == "pattern")
-    return 2;
-  else if (fill_int_style_str == "hatch")
-    return 3;
-  else if (fill_int_style_str == "solid_with_border")
-    return 4;
-  else
-    {
-      logger((stderr, "Got unknown fill_int_style \"%s\"\n", fill_int_style_str.c_str()));
-      throw std::logic_error("The given fill_int_style is unknown.\n");
-    }
-}
-
-std::string GRM::fillIntStyleIntToString(int fill_int_style)
-{
-  if (fill_int_style == 0)
-    return "hollow";
-  else if (fill_int_style == 1)
-    return "solid";
-  else if (fill_int_style == 2)
-    return "pattern";
-  else if (fill_int_style == 3)
-    return "hatch";
-  else if (fill_int_style == 4)
-    return "solid_with_border";
-  else
-    {
-      logger((stderr, "Got unknown fill_int_style \"%i\"\n", fill_int_style));
-      throw std::logic_error("The given fill_int_style is unknown.\n");
-    }
-}
-
 static void processFillIntStyle(const std::shared_ptr<GRM::Element> &element)
 {
   int fill_int_style = 1;
@@ -4409,54 +4477,16 @@ static void processFillIntStyle(const std::shared_ptr<GRM::Element> &element)
   gr_setfillintstyle(fill_int_style);
 }
 
-int GRM::fillStyleStringToInt(const std::string &fill_style_str)
-{
-  if (fill_style_str == "hollow")
-    return 0;
-  else if (fill_style_str == "solid")
-    return 1;
-  else if (fill_style_str == "pattern")
-    return 2;
-  else if (fill_style_str == "hatch")
-    return 3;
-  else if (fill_style_str == "solid_with_border")
-    return 4;
-  else
-    {
-      logger((stderr, "Got unknown fill_style \"%s\"\n", fill_style_str.c_str()));
-      throw std::logic_error("The given fill_style is unknown.\n");
-    }
-}
-
-std::string GRM::fillStyleIntToString(int fill_style)
-{
-  if (fill_style == 0)
-    return "hollow";
-  else if (fill_style == 1)
-    return "solid";
-  else if (fill_style == 2)
-    return "pattern";
-  else if (fill_style == 3)
-    return "hatch";
-  else if (fill_style == 4)
-    return "solid_with_border";
-  else
-    {
-      logger((stderr, "Got unknown fill_style \"%i\"\n", fill_style));
-      throw std::logic_error("The given fill_style is unknown.\n");
-    }
-}
-
 static void processFillStyle(const std::shared_ptr<GRM::Element> &element)
 {
   int fill_style = 1;
   if (element->getAttribute("fill_style").isInt())
     {
-      fill_style = static_cast<int>(element->getAttribute("fill_int_style"));
+      fill_style = static_cast<int>(element->getAttribute("fill_style"));
     }
   else if (element->getAttribute("fill_style").isString())
     {
-      fill_style = GRM::fillStyleStringToInt(static_cast<std::string>(element->getAttribute("fill_int_style")));
+      fill_style = GRM::fillStyleStringToInt(static_cast<std::string>(element->getAttribute("fill_style")));
     }
   gr_setfillstyle(fill_style);
 }
@@ -9972,7 +10002,7 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
                                      : first_tick + tmp_tick * i;
               element->setAttribute("_r_max", value);
             }
-          if (!with_pan || (r > window[2] && window[3] > r))
+          if (!with_pan || (window[0] < 0 && window[1] > 0 && r > window[2] && window[3] > r))
             {
               if (y_log) // y_log uses the exponential notation
                 {
@@ -18441,6 +18471,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("color_rgb_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in rgb format"}},
       {std::string("colormap"), std::vector<std::string>{"viridis", "Sets the current colormap"}},
+      {std::string("colormap_inverted"), std::vector<std::string>{"0", "Sets if the colormap gets inverted"}},
       {std::string("count"), std::vector<std::string>{"None", "The total number of bars"}},
       {std::string("data"), std::vector<std::string>{"None", "Data which gets displayed in the graphic"}},
       {std::string("diag_factor"),
@@ -18470,7 +18501,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("fill_color_ind"), std::vector<std::string>{"None", "Sets the index of the current fill color"}},
       {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Color for the bars in rgb format"}},
       {std::string("fill_int_style"), std::vector<std::string>{"None", "Sets the index of the current fill style"}},
-      {std::string("fill_style"), std::vector<std::string>{"None", "Sets the index of the current fill style"}},
+      {std::string("fill_style"),
+       std::vector<std::string>{"None", "If the fill_int_style is set to hatch or pattern the fill style defines which "
+                                        "pattern or hatch should be used"}},
       {std::string("fit_parents_height"),
        std::vector<std::string>{"None", "Toggle if the parent grid should match the element`s height"}},
       {std::string("fit_parents_width"),
@@ -18479,7 +18512,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"False", "Define if the rows and cols inside the layout should be flipped"}},
       {std::string("font"), std::vector<std::string>{"computermodern", "The used text font"}},
       {std::string("font_precision"), std::vector<std::string>{"precision_outline", "The precision of the text font"}},
-      {std::string("grplot"), std::vector<std::string>{"0", "Sets if GRPlot is used or not"}},
+      {std::string("grplot"),
+       std::vector<std::string>{"0",
+                                "Sets if GRPlot is used or not. This could change some aspects in the displayed plot"}},
       {std::string("height"), std::vector<std::string>{"None", "The height of the element"}},
       {std::string("indices"),
        std::vector<std::string>{"None",
@@ -18965,7 +19000,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createText(double x, double y, const 
 std::shared_ptr<GRM::Element>
 GRM::Render::createFillArea(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
                             std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &ext_context,
-                            int fillintstyle, int fillstyle, int fillcolorind,
+                            int fill_int_style, int fill_style, int fill_color_ind,
                             const std::shared_ptr<GRM::Element> &ext_element)
 {
   /*!
@@ -18989,9 +19024,9 @@ GRM::Render::createFillArea(const std::string &x_key, std::optional<std::vector<
   if (y != std::nullopt) (*use_context)[y_key] = *y;
   element->setAttribute("y", y_key);
 
-  if (fillintstyle != 0) element->setAttribute("fill_int_style", fillintstyle);
-  if (fillstyle != 0) element->setAttribute("fill_style", fillstyle);
-  if (fillcolorind != -1) element->setAttribute("fill_color_ind", fillcolorind);
+  if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
+  if (fill_style != 0) element->setAttribute("fill_style", fill_style);
+  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
 
   return element;
 }
@@ -19256,7 +19291,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawArc(double xmin, double xma
 }
 
 std::shared_ptr<GRM::Element> GRM::Render::createFillArc(double xmin, double xmax, double ymin, double ymax, double a1,
-                                                         double a2, int fillintstyle, int fillstyle, int fillcolorind,
+                                                         double a2, int fill_int_style, int fill_style,
+                                                         int fill_color_ind,
                                                          const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("fill_arc") : ext_element;
@@ -19268,9 +19304,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createFillArc(double xmin, double xma
   element->setAttribute("start_angle", a1);
   element->setAttribute("end_angle", a2);
 
-  if (fillintstyle != 0) element->setAttribute("fill_int_style", fillintstyle);
-  if (fillstyle != 0) element->setAttribute("fill_style", fillstyle);
-  if (fillcolorind != -1) element->setAttribute("fill_color_ind", fillcolorind);
+  if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
+  if (fill_style != 0) element->setAttribute("fill_style", fill_style);
+  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
 
   return element;
 }
@@ -19289,7 +19325,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawRect(double xmin, double xm
 }
 
 std::shared_ptr<GRM::Element> GRM::Render::createFillRect(double xmin, double xmax, double ymin, double ymax,
-                                                          int fillintstyle, int fillstyle, int fillcolorind,
+                                                          int fill_int_style, int fill_style, int fill_color_ind,
                                                           const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("fill_rect") : ext_element;
@@ -19299,9 +19335,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createFillRect(double xmin, double xm
   element->setAttribute("y_min", ymin);
   element->setAttribute("y_max", ymax);
 
-  if (fillintstyle != 0) element->setAttribute("fill_int_style", fillintstyle);
-  if (fillstyle != 0) element->setAttribute("fill_style", fillstyle);
-  if (fillcolorind != -1) element->setAttribute("fill_color_ind", fillcolorind);
+  if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
+  if (fill_style != 0) element->setAttribute("fill_style", fill_style);
+  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
 
   return element;
 }
@@ -20832,7 +20868,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "reset_ranges",
   };
   std::vector<std::string> plot_critical_attributes{
-      "colormap", "phi_flip", "x_flip", "x_log", "y_flip", "y_log", "z_flip", "z_log",
+      "colormap", "colormap_inverted", "phi_flip", "x_flip", "x_log", "y_flip", "y_log", "z_flip", "z_log",
   };
   std::vector<std::string> integral_critical_attributes{
       "int_lim_high",
@@ -21670,6 +21706,14 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   auto rho_axes = element->querySelectors("rho_axes");
                   if (rho_axes != nullptr && rho_axes->hasAttribute("_r_max")) rho_axes->removeAttribute("_r_max");
 
+                  auto coordinate_system = element->querySelectors("coordinate_system");
+                  auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                  if (plot_type == "polar")
+                    {
+                      coordinate_system->setAttribute("_update_required", true);
+                      coordinate_system->setAttribute("_delete_children", 2);
+                    }
+
                   // reset the bounding boxes for elements in list
                   for (const std::string name : {"bar", "pie_segment", "colorbar", "polar_bar", "axes_text_group",
                                                  "error_bar", "integral", "integral_group"})
@@ -21712,6 +21756,33 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                 element->setAttribute("x_range_max",
                                                       static_cast<double>(element->getAttribute("_x_range_max_org")));
                               element->setAttribute("_update_limits", true);
+
+                              auto coordinate_system = element->querySelectors("coordinate_system");
+                              if (coordinate_system != nullptr)
+                                {
+                                  auto axes = coordinate_system->querySelectorsAll("axis[location=\"x\"]");
+                                  if (!axes.empty())
+                                    {
+                                      for (const auto &axis : axes)
+                                        {
+                                          axis->setAttribute("_update_required", true);
+                                          axis->setAttribute("_delete_children",
+                                                             static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                        }
+                                    }
+                                  else
+                                    {
+                                      // no axis-elements in 3d plots so the complete coordinate_system must be reseted
+                                      auto type =
+                                          static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                                      if (type == "3d")
+                                        {
+                                          coordinate_system->setAttribute("_update_required", true);
+                                          coordinate_system->setAttribute(
+                                              "_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                        }
+                                    }
+                                }
                             }
                           if (attr == "y_log")
                             {
@@ -21727,6 +21798,32 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                 element->setAttribute("y_range_max",
                                                       static_cast<double>(element->getAttribute("_y_range_max_org")));
                               element->setAttribute("_update_limits", true);
+
+                              auto coordinate_system = element->querySelectors("coordinate_system");
+                              if (coordinate_system != nullptr)
+                                {
+                                  auto axes = coordinate_system->querySelectorsAll("axis[location=\"y\"]");
+                                  if (!axes.empty())
+                                    {
+                                      for (const auto &axis : axes)
+                                        {
+                                          axis->setAttribute("_update_required", true);
+                                          axis->setAttribute("_delete_children",
+                                                             static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                        }
+                                    }
+                                }
+                              else
+                                {
+                                  // no axis-elements in 3d plots so the complete coordinate_system must be reseted
+                                  auto type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                                  if (type == "3d")
+                                    {
+                                      coordinate_system->setAttribute("_update_required", true);
+                                      coordinate_system->setAttribute(
+                                          "_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                    }
+                                }
                             }
                           if (attr == "z_log")
                             {
@@ -21742,6 +21839,29 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                 element->setAttribute("z_range_max",
                                                       static_cast<double>(element->getAttribute("_z_range_max_org")));
                               element->setAttribute("_update_limits", true);
+
+                              // no axis-elements in 3d plots so the complete coordinate_system must be reseted
+                              auto coordinate_system = element->querySelectors("coordinate_system");
+                              if (coordinate_system != nullptr)
+                                {
+                                  auto type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                                  if (type == "3d")
+                                    {
+                                      coordinate_system->setAttribute("_update_required", true);
+                                      coordinate_system->setAttribute(
+                                          "_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                    }
+                                }
+                            }
+                          if (strEqualsAny(attr, "x_flip", "y_flip", "z_flip", "phi_flip"))
+                            {
+                              auto coordinate_system = element->querySelectors("coordinate_system");
+                              if (coordinate_system != nullptr)
+                                {
+                                  coordinate_system->setAttribute("_update_required", true);
+                                  coordinate_system->setAttribute("_delete_children",
+                                                                  static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                                }
                             }
                         }
                     }
@@ -22198,8 +22318,12 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   processClipRegion(central_region);
                   element->setAttribute("reset_ranges", 1);
 
-                  auto theta_axes = coordinate_system->querySelectors("theta_axes");
-                  theta_axes->setAttribute("_delete_children", 2);
+                  if (std::stod(value) != static_cast<int>(element->getAttribute("polar_with_pan")))
+                    {
+                      coordinate_system->setAttribute("_update_required", true);
+                      coordinate_system->setAttribute("_delete_children",
+                                                      static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                    }
                 }
             }
           else if (element->localName() == "axis" && attr == "tick_orientation")
