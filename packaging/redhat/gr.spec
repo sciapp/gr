@@ -1,3 +1,10 @@
+# Fedora 35 introduced extra rpath checks which don't allow
+# `/usr/lib/gr` as a valid rpath -> disable the check
+# See <https://fedoraproject.org/wiki/Changes/Broken_RPATH_will_fail_rpmbuild> for details
+%if 0%{?fedora_version} >= 35
+%global __brp_check_rpaths %{nil}
+%endif
+
 %define THIRDPARTY 3rdparty
 %define THIRDPARTY_SRC %{THIRDPARTY}/build/src
 
