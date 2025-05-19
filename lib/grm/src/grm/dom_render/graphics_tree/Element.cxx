@@ -85,6 +85,10 @@ void GRM::Element::setAttribute(const std::string &qualified_name, const GRM::Va
         {
           if (update) update(elem_p, qualified_name, std::to_string(static_cast<double>(old_value)));
         }
+      else if (qualified_name == "polar_with_pan")
+        {
+          if (update) update(elem_p, qualified_name, std::to_string(static_cast<int>(old_value)));
+        }
       else
         {
           if (update) update(elem_p, qualified_name, static_cast<std::string>(old_value));

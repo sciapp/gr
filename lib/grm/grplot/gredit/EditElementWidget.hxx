@@ -23,7 +23,7 @@ class EditElementWidget : public QWidget
 public:
   explicit EditElementWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
 
-  void attributeEditEvent();
+  void attributeEditEvent(bool highlight_location = false);
 
 private slots:
   void reject();

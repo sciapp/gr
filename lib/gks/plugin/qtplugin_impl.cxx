@@ -114,6 +114,7 @@ typedef struct ws_state_list_t
   QPainter *painter;
   int state, wtype;
   int device_dpi_x, device_dpi_y;
+  bool has_user_defined_device_pixel_ratio;
   double device_pixel_ratio;
   double mwidth, mheight;
   int width, height;
@@ -955,7 +956,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   if (!true_color)
     {
-      QImage img = QImage(width, height, QImage::Format_RGB32);
+      QImage img = QImage(width, height, QImage::Format_ARGB32);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       img.setDevicePixelRatio(p->device_pixel_ratio);
 #endif
@@ -1885,60 +1886,16 @@ static void release_data()
   delete p;
 }
 
-static int get_paint_device(void)
+static void update_metrics(const QPaintDevice *device)
 {
-  char *env;
-  QPaintDevice *device;
-  bool has_explicit_device_pixel_ratio = false;
-
-  env = (char *)gks_getenv("GKS_CONID");
-  if (!env) env = (char *)gks_getenv("GKSconid");
-
-  if (env != NULL)
-    {
-      bool has_exclamation_mark = strchr(env, '!');
-      bool has_hash_mark = strchr(env, '#');
-      if (has_exclamation_mark && has_hash_mark)
-        {
-          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->painter, &p->device_pixel_ratio);
-          device = p->widget;
-          has_explicit_device_pixel_ratio = true;
-        }
-      else if (has_exclamation_mark)
-        {
-          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->painter);
-          device = p->widget;
-        }
-      else if (has_hash_mark)
-        {
-          sscanf(env, "%p#%lf", (void **)&p->painter, &p->device_pixel_ratio);
-          p->widget = NULL;
-          device = p->painter->device();
-          has_explicit_device_pixel_ratio = true;
-        }
-      else
-        {
-          sscanf(env, "%p", (void **)&p->painter);
-          p->widget = NULL;
-          device = p->painter->device();
-        }
-#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
-      QPixmap *pixmap = dynamic_cast<QPixmap *>(p->painter->device());
-      if (pixmap != NULL)
-        {
-          p->pixmap = pixmap;
-        }
-#endif
-    }
-  else
-    {
-      return 1;
-    }
-
   p->width = device->width();
   p->height = device->height();
-  if (has_explicit_device_pixel_ratio)
+  if (p->has_user_defined_device_pixel_ratio)
     {
+      /* This case was introduced to work around broken HiDPI support in `QQuickPaintedItem`. QML uses phyiscal instead
+       * of logical pixels, but this plugin works with logical pixels. Therefore, convert the physical `width` and
+       * `height` to logical pixels by dividing by `p->device_pixel_ratio` given by the user. Multiply with the
+       * `device_pixel_ratio` set on the paint device to support logical pixels in QML in the future. */
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
       p->width *= device->devicePixelRatioF() / p->device_pixel_ratio;
       p->height *= device->devicePixelRatioF() / p->device_pixel_ratio;
@@ -1966,6 +1923,57 @@ static int get_paint_device(void)
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
   p->nominal_size = min(p->width, p->height) / 500.0;
   if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
+}
+
+static int get_paint_device(void)
+{
+  char *env;
+  QPaintDevice *device;
+
+  env = (char *)gks_getenv("GKS_CONID");
+  if (!env) env = (char *)gks_getenv("GKSconid");
+
+  if (env != NULL)
+    {
+      bool has_exclamation_mark = strchr(env, '!');
+      bool has_hash_mark = strchr(env, '#');
+      p->has_user_defined_device_pixel_ratio = has_hash_mark;
+      if (has_exclamation_mark && has_hash_mark)
+        {
+          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->painter, &p->device_pixel_ratio);
+          device = p->widget;
+        }
+      else if (has_exclamation_mark)
+        {
+          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->painter);
+          device = p->widget;
+        }
+      else if (has_hash_mark)
+        {
+          sscanf(env, "%p#%lf", (void **)&p->painter, &p->device_pixel_ratio);
+          p->widget = NULL;
+          device = p->painter->device();
+        }
+      else
+        {
+          sscanf(env, "%p", (void **)&p->painter);
+          p->widget = NULL;
+          device = p->painter->device();
+        }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
+      QPixmap *pixmap = dynamic_cast<QPixmap *>(p->painter->device());
+      if (pixmap != NULL)
+        {
+          p->pixmap = pixmap;
+        }
+#endif
+    }
+  else
+    {
+      return 1;
+    }
+
+  update_metrics(device);
 
   return 0;
 }
@@ -2064,6 +2072,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       break;
 
     case 205: /* configure ws */
+      if (p->widget != NULL) update_metrics(p->widget);
       f_arr_1[0] = p->mwidth;
       f_arr_2[0] = p->mheight;
       i_arr[0] = p->width;

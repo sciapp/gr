@@ -1093,8 +1093,6 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
       plotDrawAxes(subplot_args, 1);
     }
 
-  if (grm_args_values(subplot_args, "alpha", "d", &alpha)) group->setAttribute("alpha", alpha);
-
   return GRM_ERROR_NONE;
 }
 

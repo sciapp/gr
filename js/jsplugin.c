@@ -17,11 +17,11 @@ typedef struct JS_point_t
 extern "C" {
 #endif
 
-extern void js_stroke(int n, JS_point *points, unsigned char color[4], int linewidth);
+extern void js_stroke(int n, JS_point *points, unsigned char color[4], double linewidth);
 extern void js_text(double x, double y, int n, char *chars, int height, double top, double angle, int bold, int italic,
                     int align, int valign, int font, unsigned char rgb[4]);
 extern void js_cellarray(int x, int y, int width, int height, int colia[]);
-extern void js_line_routine(int n, double *px, double *py, int linetype, int fill, int width, unsigned char *rgb);
+extern void js_line_routine(int n, double *px, double *py, int linetype, int fill, double width, unsigned char *rgb);
 extern void js_point(double x, double y, unsigned char *rgb);
 extern void js_line(double x1, double y1, double x2, double y2, unsigned char *rgb);
 extern void js_circle(double x, double y, double r, int fill, unsigned char *rgb);
@@ -33,7 +33,7 @@ extern void js_clear(void);
 extern int js_get_ws_width(void);
 extern int js_get_ws_height(void);
 extern void js_draw_path(int n, double *px, double *py, int nc, int *codes, unsigned char *bcoli, unsigned char *facoli,
-                         int linewidth, void (*to_DC)(int n, double *x, double *y));
+                         double linewidth, void (*to_DC)(int n, double *x, double *y));
 
 #ifdef __cplusplus
 #define }
@@ -124,7 +124,8 @@ typedef struct ws_state_list_t
   double window[4], viewport[4];
   unsigned char rgb[MAX_COLOR][4];
   int width, height;
-  int color, linewidth;
+  int color;
+  double linewidth;
   double angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
@@ -430,7 +431,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   color[2] = p->rgb[p->color][2];
   color[3] = p->alpha;
 
-  js_line_routine(n, px, py, linetype, 0, 1, color);
+  js_line_routine(n, px, py, linetype, 0, p->linewidth, color);
 }
 
 static void line_routine_with_transform(int n, double *px, double *py, int linetype, int tnr)
@@ -545,7 +546,7 @@ static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
-  int width;
+  double width;
 
   if (n > p->max_points)
     {
@@ -558,9 +559,9 @@ static void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
+    width = ln_width * (p->width + p->height) * 0.001;
   else
-    width = nint(ln_width);
+    width = ln_width;
   if (width < 1) width = 0;
 
   p->linewidth = width;
