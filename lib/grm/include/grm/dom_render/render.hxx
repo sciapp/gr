@@ -130,8 +130,6 @@ namespace GRM
 
 GRM_EXPORT int algorithmStringToInt(const std::string &algorithm_str);
 GRM_EXPORT int colormapStringToInt(const std::string &colormap_str);
-GRM_EXPORT int fillIntStyleStringToInt(const std::string &fillintstyle_str);
-GRM_EXPORT int fillStyleStringToInt(const std::string &fillstyle_str);
 GRM_EXPORT int fontStringToInt(const std::string &font_str);
 GRM_EXPORT int fontPrecisionStringToInt(const std::string &font_precision_str);
 GRM_EXPORT int lineTypeStringToInt(const std::string &line_type_str);
@@ -149,11 +147,11 @@ GRM_EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_st
 GRM_EXPORT int errorBarStyleStringToInt(const std::string &error_bar_stylr_str);
 GRM_EXPORT int clipRegionStringToInt(const std::string &error_bar_stylr_str);
 GRM_EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str);
+GRM_EXPORT int fillStyleStringToInt(const std::string &fill_style_str);
+GRM_EXPORT int fillIntStyleStringToInt(const std::string &fill_int_style_str);
 
 GRM_EXPORT std::string algorithmIntToString(int algorithm);
 GRM_EXPORT std::string colormapIntToString(int colormap);
-GRM_EXPORT std::string fillIntStyleIntToString(int fillintstyle);
-GRM_EXPORT std::string fillStyleIntToString(int fillstyle);
 GRM_EXPORT std::string fontIntToString(int font);
 GRM_EXPORT std::string fontPrecisionIntToString(int font_precision);
 GRM_EXPORT std::string lineTypeIntToString(int line_type);
@@ -171,6 +169,8 @@ GRM_EXPORT std::string tickOrientationIntToString(int tick_orientation);
 GRM_EXPORT std::string errorBarStyleIntToString(int error_bar_style);
 GRM_EXPORT std::string clipRegionIntToString(int error_bar_style);
 GRM_EXPORT std::string resampleMethodIntToString(int error_bar_style);
+GRM_EXPORT std::string fillStyleIntToString(int fill_style);
+GRM_EXPORT std::string fillIntStyleIntToString(int fill_int_style);
 
 GRM_EXPORT std::vector<std::string> getSizeUnits();
 GRM_EXPORT std::vector<std::string> getColormaps();
@@ -186,6 +186,8 @@ GRM_EXPORT std::vector<std::string> getTextAlignVertical();
 GRM_EXPORT std::vector<std::string> getAlgorithm();
 GRM_EXPORT std::vector<std::string> getModel();
 GRM_EXPORT std::vector<std::string> getContextAttributes();
+GRM_EXPORT std::vector<std::string> getFillStyles();
+GRM_EXPORT std::vector<std::string> getFillIntStyles();
 
 GRM_EXPORT void addValidContextKey(std::string key);
 
@@ -255,8 +257,8 @@ public:
 
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,
-                                          const std::shared_ptr<Context> &ext_context = nullptr, int fillintstyle = 0,
-                                          int fillstyle = 0, int fillcolorind = -1,
+                                          const std::shared_ptr<Context> &ext_context = nullptr, int fill_int_style = 0,
+                                          int fill_style = 0, int fill_color_ind = -1,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createCellArray(double xmin, double xmax, double ymin, double ymax, int dimx, int dimy,
@@ -325,14 +327,14 @@ public:
                                          double end_angle, const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createFillArc(double xmin, double xmax, double ymin, double ymax, double a1, double a2,
-                                         int fillintstyle = 0, int fillstyle = 0, int fillcolorind = -1,
+                                         int fill_int_style = 0, int fill_style = 0, int fill_color_ind = -1,
                                          const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createDrawRect(double xmin, double xmax, double ymin, double ymax,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createFillRect(double xmin, double xmax, double ymin, double ymax, int fillintstyle = 0,
-                                          int fillstyle = 0, int fillcolorind = -1,
+  std::shared_ptr<Element> createFillRect(double xmin, double xmax, double ymin, double ymax, int fill_int_style = 0,
+                                          int fill_style = 0, int fill_color_ind = -1,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
@@ -525,7 +527,7 @@ public:
 
   void setCharHeight(const std::shared_ptr<Element> &element, double height);
 
-  void setTransparency(const std::shared_ptr<Element> &element, double alpha);
+  void setTransparency(const std::shared_ptr<Element> &element, double transparency);
 
   void setResampleMethod(const std::shared_ptr<Element> &element, int resample);
 

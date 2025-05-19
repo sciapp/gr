@@ -362,13 +362,13 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
         }
       for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
-          if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() ||
+          if ((!columns.empty() && std::find(columns.begin(), columns.end(), col + 1) != columns.end()) ||
               (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
               (columns.empty() && (!use_bins || col > 0)))
             {
-              if ((row == 0 && (col == use_bins || col + 1 == columns.front())) ||
-                  (depth_change && (col == use_bins || col + 1 == columns.front())) ||
-                  (start_with_nan && (col == use_bins || col + 1 == columns.front())))
+              if ((row == 0 && (col == use_bins || (!columns.empty() && col + 1 == columns.front()))) ||
+                  (depth_change && (col == use_bins || (!columns.empty() && col + 1 == columns.front()))) ||
+                  (start_with_nan && (col == use_bins || (!columns.empty() && col + 1 == columns.front()))))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }

@@ -9,4 +9,4 @@ emscripten-test:
   artifacts:
     paths:
     - test_result/
-    when: on_failure
+    when: always
