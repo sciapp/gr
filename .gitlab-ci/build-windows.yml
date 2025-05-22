@@ -182,9 +182,6 @@ windows-64bit-cross:
 windows-64bit-cmake-cross:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-64bit-cross
-  needs:
-  - job: debian-cmake-self-contained
-    artifacts: true
   script:
   - mkdir qt5-runtime-Windows-x86_64
   - cd qt5-runtime-Windows-x86_64
@@ -214,7 +211,7 @@ windows-64bit-cmake-cross:
     OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
   - mkdir build
   - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_HOST_DIRECTORY=${CI_PROJECT_DIR}/artifacts-debian10-cmake
+  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
   - make
   - make install
   - cd ..
