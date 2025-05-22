@@ -1,11 +1,13 @@
-       GRDIR = /usr/local/gr
-      DOCDIR = $(DESTDIR)$(GRDIR)/share/GR
-      LIBDIR = $(DESTDIR)$(GRDIR)/lib
-      INCDIR = $(DESTDIR)$(GRDIR)/include
-PKGCONFIGDIR = $(LIBDIR)/pkgconfig
-      CONFIG = xft=no
-
+BUILD_TYPE = Release
+BUILD_DEMOS = OFF
+EXPORT_COMPILE_COMMANDS = OFF
+GRDIR = /usr/local/gr
 UNAME := $(shell uname)
+ifneq (,$(filter self,$(MAKECMDGOALS)))
+  USE_BUNDLED_LIBRARIES = ON
+else
+  USE_BUNDLED_LIBRARIES = OFF
+endif
 
 PREFERRED_CLANG_FORMAT_VERSION="13"
 ifeq ($(shell command -v "clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"),)
@@ -16,49 +18,58 @@ endif
 
 default: all
 
+all: build
+
 pre-check:
 	@lib/Precheck "${GRDIR}"  || \
 	( echo "FATAL: Source and target directory are identical"; exit 1 )
 
-Makedefs:
-	@lib/Preflight $(CONFIG) >Makedefs
+configure: pre-check $(subst ON,bundled-libraries,$(filter ON,$(USE_BUNDLED_LIBRARIES)))
+	cmake \
+	  -DCMAKE_INSTALL_PREFIX="$(GRDIR)" \
+	  -DCMAKE_BUILD_TYPE="$(BUILD_TYPE)" \
+	  -DGR_BUILD_DEMOS="$(BUILD_DEMOS)" \
+	  -DGR_USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
+	  -DCMAKE_EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)" \
+	  -S . \
+	  -B build
 
-all: pre-check
-	$(MAKE) -C lib/gks GRDIR=$(GRDIR)
-	$(MAKE) -C lib/gr GRDIR=$(GRDIR)
-	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR)
-	$(MAKE) -C lib/grm GRDIR=$(GRDIR)
+build:
+	@if [ ! -d build ]; then \
+	  $(MAKE) configure \
+	    GRDIR="$(GRDIR)" \
+	    BUILD_TYPE="$(BUILD_TYPE)" \
+	    BUILD_DEMOS="$(BUILD_DEMOS)" \
+	    USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
+	    EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)"; \
+	fi
+	cmake --build build -j
 
-install: default
-	$(MAKE) -C lib/gks GRDIR=$(GRDIR) install
-	$(MAKE) -C lib/gr GRDIR=$(GRDIR) install
-	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR) install
-	$(MAKE) -C lib/grm GRDIR=$(GRDIR) install
-	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
-	@if [ ! -d $(DOCDIR) ]; then mkdir -m 755 -p $(DOCDIR); fi
-	cp -p LICENSE.md $(DOCDIR)
-	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
-	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
-	@if [ ! -d $(PKGCONFIGDIR) ]; then mkdir -m 755 $(PKGCONFIGDIR); fi
-	@for package in gks gr gr3 grm; do PREFIX=${GRDIR} lib/configure-pkg-config $${package}.pc.in > $(PKGCONFIGDIR)/$${package}.pc; done
+install:
+	@if [ ! -d build ]; then \
+	  $(MAKE) build \
+	    GRDIR="$(GRDIR)" \
+	    BUILD_TYPE="$(BUILD_TYPE)" \
+	    BUILD_DEMOS="$(BUILD_DEMOS)" \
+	    USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
+	    EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)"; \
+	fi
+	cmake --install build
 
 clean:
-	rm -f Makedefs
-	$(MAKE) -C lib/gks clean
-	$(MAKE) -C lib/gr clean
-	$(MAKE) -C lib/gr3 clean
-	$(MAKE) -C lib/grm clean
+	rm -rf build
 	$(MAKE) -C 3rdparty clean
 	rm -f gr.pkg
 
 realclean: clean
 	$(MAKE) -C 3rdparty realclean
-	rm -rf build
 	find packaging -type f \( -name '*.deb' -o -name '*.rpm' \) -exec rm \{\} \;
 	rm -rf tmp
 
-self:
-	sh 3rdparty/makeself.sh
+bundled-libraries:
+	$(MAKE) -C 3rdparty default extras
+
+self: build
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
@@ -108,4 +119,4 @@ else
 endif
 
 
-.PHONY: default pre-check all install clean realclean self osxpkg code-format
+.PHONY: default all pre-check configure build install clean realclean bundled-libraries self osxpkg code-format

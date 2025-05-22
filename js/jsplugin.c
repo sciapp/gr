@@ -437,10 +437,11 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static void line_routine_with_transform(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, *ix, *iy;
+  int i;
 
   ix = malloc(n * sizeof(double));
   iy = malloc(n * sizeof(double));
-  for (int i = 0; i < n; i++)
+  for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
@@ -469,6 +470,7 @@ static void fillarea(int n, double *px, double *py)
   double x, y, *ix, *iy;
   int parray[33];
   int *patp;
+  int i, j;
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
@@ -480,7 +482,7 @@ static void fillarea(int n, double *px, double *py)
       p->color = fl_color;
       ix = malloc(n * sizeof(double));
       iy = malloc(n * sizeof(double));
-      for (int i = 0; i < n; i++)
+      for (i = 0; i < n; i++)
         {
           WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
           seg_xform(&x, &y);
@@ -503,7 +505,7 @@ static void fillarea(int n, double *px, double *py)
       color[3] = p->alpha;
       ix = malloc(n * sizeof(double));
       iy = malloc(n * sizeof(double));
-      for (int i = 0; i < n; i++)
+      for (i = 0; i < n; i++)
         {
           WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
           seg_xform(&x, &y);
@@ -525,11 +527,11 @@ static void fillarea(int n, double *px, double *py)
       col = (255 << 0) + (255 << 8) + (255 << 16) + (255 << 24);
       col2 = (0 << 0) + (0 << 8) + (0 << 16) + (255 << 24);
       patp = malloc(64 * sizeof(int));
-      for (int i = 0; i < 8; i++)
-        for (int j = 0; j < 8; j++) patp[i * 8 + j] = (((parray[(j % parray[0]) + 1] >> i) & 0x01) ? col : col2);
+      for (i = 0; i < 8; i++)
+        for (j = 0; j < 8; j++) patp[i * 8 + j] = (((parray[(j % parray[0]) + 1] >> i) & 0x01) ? col : col2);
       ix = malloc(n * sizeof(double));
       iy = malloc(n * sizeof(double));
-      for (int i = 0; i < n; i++)
+      for (i = 0; i < n; i++)
         {
           WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
           seg_xform(&x, &y);
