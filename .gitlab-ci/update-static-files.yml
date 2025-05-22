@@ -1,0 +1,58 @@
+update-grplot-preview-images:
+  stage: update-static-files
+  image: debian:bookworm-slim
+  rules:
+  - if: $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems" && $CI_COMMIT_BRANCH == "develop"
+  needs:
+  - job: debian-cmake-self-contained
+    artifacts: true
+  before_script:
+  - apt-get update
+  - apt-get install -y git imagemagick
+  - git config --global user.name "GRPlot Preview Image Updater"
+  - git config --global user.email "image.updater@fz-juelich.de"
+  - chmod 400 "${SSH_GR_DEPLOY_KEY}"
+  - |-
+    cat <<'EOF' >/usr/local/bin/git_image_diff
+    #!/bin/bash
+
+    main () {
+        local filename old_filepath new_filepath
+        # Git calls git diff drivers with the arguments:
+        #   path old-file old-hex old-mode new-file new-hex new-mode
+        (( $# == 7 )) || return
+
+        filename="$1"
+        old_filepath="$2"
+        new_filepath="$5"
+
+        if ! compare -metric AE "${old_filepath}" "${new_filepath}" /dev/null &>/dev/null; then
+            echo "${filename} differs between commits"
+        fi
+    }
+
+    main "$@"
+    EOF
+  - chmod +x /usr/local/bin/git_image_diff
+  - git config --global core.attributesfile ~/.gitattributes
+  - git config --global diff.image.command /usr/local/bin/git_image_diff
+  - echo "*.png diff=image" > ~/.gitattributes
+  script:
+  - rm -rf lib/grm/grplot/preview_images
+  - mv grplot-preview-images lib/grm/grplot/preview_images
+  - git add lib/grm/grplot/preview_images
+  - if [[ -n "$(git diff --staged)" ]]; then
+      git commit -m "Update grplot preview images";
+      GIT_SSH_COMMAND="ssh -i ${SSH_GR_DEPLOY_KEY} -o UserKnownHostsFile=${SSH_KNOWN_HOSTS}"
+      git push
+        -o merge_request.create
+        -o merge_request.target="${CI_COMMIT_BRANCH}"
+        -o merge_request.target_project="${CI_PROJECT_PATH}"
+        -o merge_request.title="Update static files"
+        -o merge_request.assign=imeyer
+        -o merge_request.label="auto-create"
+        -o merge_request.label="update-static-files"
+        -o merge_request.remove_source_branch
+        -o merge_request.auto_merge
+        "gitlab@${CI_SERVER_HOST}:${CI_PROJECT_PATH}" HEAD:refs/heads/update-static-files;
+    fi
