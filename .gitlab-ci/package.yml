@@ -4,218 +4,58 @@ packages-tar:
   variables:
     GIT_STRATEGY: none
   script:
-  - mkdir -p Windows-i686/gr/bin
-  - mkdir -p Windows-i686/gr/lib
-  - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
-  - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
-  - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
-  - mv artifacts-windows32/grplot.exe Windows-i686/gr/bin/
-  - mv artifacts-windows32/platforms Windows-i686/gr/bin/
-  - mv artifacts-windows32/fonts Windows-i686/gr/
-  - mv artifacts-windows32/include Windows-i686/gr/
-  - mv artifacts-windows32/share Windows-i686/gr/
-  - cp artifacts-js/gr.js Windows-i686/gr/lib/
-  - rm -rf artifacts-windows32
-  - mkdir -p Windows-x86_64/gr/bin
-  - mkdir -p Windows-x86_64/gr/lib
-  - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
-  - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
-  - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
-  - mv artifacts-windows64/grplot.exe Windows-x86_64/gr/bin/
-  - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
-  - mv artifacts-windows64/fonts Windows-x86_64/gr/
-  - mv artifacts-windows64/include Windows-x86_64/gr/
-  - mv artifacts-windows64/share Windows-x86_64/gr/
-  - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
-  - rm -rf artifacts-windows64
-  - mkdir -p Windows-x86_64-msvc
-  - mv artifacts-windows-64bit-cmake-msvc Windows-x86_64-msvc/gr
-  - mkdir -p Debian-x86_64/gr/bin
-  - mkdir -p Debian-x86_64/gr/lib
-  - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/
-  - mv artifacts-debian10/gksqt Debian-x86_64/gr/bin/
-  - mv artifacts-debian10/grplot Debian-x86_64/gr/bin/
-  - mv artifacts-debian10/fonts Debian-x86_64/gr/
-  - mv artifacts-debian10/include Debian-x86_64/gr/
-  - mv artifacts-debian10/share Debian-x86_64/gr/
-  - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
-  - rm -rf artifacts-debian10
-  - mkdir -p Debian-armhf/gr/bin
-  - mkdir -p Debian-armhf/gr/lib
-  - mv artifacts-debian10-armhf/*.so Debian-armhf/gr/lib/
-  - mv artifacts-debian10-armhf/gksqt Debian-armhf/gr/bin/
-  - mv artifacts-debian10-armhf/grplot Debian-armhf/gr/bin/
-  - mv artifacts-debian10-armhf/fonts Debian-armhf/gr/
-  - mv artifacts-debian10-armhf/include Debian-armhf/gr/
-  - mv artifacts-debian10-armhf/share Debian-armhf/gr/
-  - cp artifacts-js/gr.js Debian-armhf/gr/lib/
-  - rm -rf artifacts-debian10-armhf
-  - mkdir -p Debian-aarch64/gr/bin
-  - mkdir -p Debian-aarch64/gr/lib
-  - mv artifacts-debian10-aarch64/*.so Debian-aarch64/gr/lib/
-  - mv artifacts-debian10-aarch64/gksqt Debian-aarch64/gr/bin/
-  - mv artifacts-debian10-aarch64/grplot Debian-aarch64/gr/bin/
-  - mv artifacts-debian10-aarch64/fonts Debian-aarch64/gr/
-  - mv artifacts-debian10-aarch64/include Debian-aarch64/gr/
-  - mv artifacts-debian10-aarch64/share Debian-aarch64/gr/
-  - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
-  - rm -rf artifacts-debian10-aarch64
-  - mkdir -p Ubuntu-x86_64/gr/bin
-  - mkdir -p Ubuntu-x86_64/gr/lib
-  - mv artifacts-ubuntu2004/*.so Ubuntu-x86_64/gr/lib/
-  - mv artifacts-ubuntu2004/gksqt Ubuntu-x86_64/gr/bin/
-  - mv artifacts-ubuntu2004/grplot Ubuntu-x86_64/gr/bin/
-  - mv artifacts-ubuntu2004/fonts Ubuntu-x86_64/gr/
-  - mv artifacts-ubuntu2004/include Ubuntu-x86_64/gr/
-  - mv artifacts-ubuntu2004/share Ubuntu-x86_64/gr/
-  - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
-  - rm -rf artifacts-ubuntu2004
-  - mkdir -p CentOS-x86_64/gr/bin
-  - mkdir -p CentOS-x86_64/gr/lib
-  - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
-  - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
-  - mv artifacts-centos7/grplot CentOS-x86_64/gr/bin/
-  - mv artifacts-centos7/fonts CentOS-x86_64/gr/
-  - mv artifacts-centos7/include CentOS-x86_64/gr/
-  - mv artifacts-centos7/share CentOS-x86_64/gr/
-  - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
-  - rm -rf artifacts-centos7
-  - cp -r CentOS-x86_64 Linux-x86_64
-  - mkdir -p Linux-i386/gr/bin
-  - mkdir -p Linux-i386/gr/lib
-  - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
-  - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
-  - mv artifacts-centos7-32bit/grplot Linux-i386/gr/bin/
-  - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
-  - mv artifacts-centos7-32bit/include Linux-i386/gr/
-  - mv artifacts-centos7-32bit/share Linux-i386/gr/
-  - cp artifacts-js/gr.js Linux-i386/gr/lib/
-  - rm -rf artifacts-centos7-32bit
-  - mkdir -p ArchLinux-x86_64/gr/bin
-  - mkdir -p ArchLinux-x86_64/gr/lib
-  - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
-  - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
-  - mv artifacts-arch/grplot ArchLinux-x86_64/gr/bin/
-  - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
-  - mv artifacts-arch/include ArchLinux-x86_64/gr/
-  - mv artifacts-arch/share ArchLinux-x86_64/gr/
-  - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
-  - rm -rf artifacts-arch
-  - mkdir -p FreeBSD-x86_64/gr/bin
-  - mkdir -p FreeBSD-x86_64/gr/lib
-  - mv artifacts-freebsd13/*.so FreeBSD-x86_64/gr/lib/
-  - mv artifacts-freebsd13/gksqt FreeBSD-x86_64/gr/bin/
-  - mv artifacts-freebsd13/grplot FreeBSD-x86_64/gr/bin/
-  - mv artifacts-freebsd13/fonts FreeBSD-x86_64/gr/
-  - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
-  - mv artifacts-freebsd13/share FreeBSD-x86_64/gr/
-  - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
-  - rm -rf artifacts-freebsd13
-  - mkdir -p Darwin-x86_64/gr/lib
-  - mv artifacts-darwin-x86_64/*.dylib Darwin-x86_64/gr/lib/
-  - mv artifacts-darwin-x86_64/*.so Darwin-x86_64/gr/lib/
-  - mv artifacts-darwin-x86_64/fonts Darwin-x86_64/gr/
-  - mv artifacts-darwin-x86_64/include Darwin-x86_64/gr/
-  - mv artifacts-darwin-x86_64/share Darwin-x86_64/gr/
-  - mv artifacts-darwin-x86_64/Applications Darwin-x86_64/gr/
-  - cp artifacts-js/gr.js Darwin-x86_64/gr/lib/
-  - rm -rf artifacts-darwin-x86_64
-  - mkdir -p Darwin-aarch64/gr/lib
-  - mv artifacts-darwin-aarch64/*.dylib Darwin-aarch64/gr/lib/
-  - mv artifacts-darwin-aarch64/*.so Darwin-aarch64/gr/lib/
-  - mv artifacts-darwin-aarch64/fonts Darwin-aarch64/gr/
-  - mv artifacts-darwin-aarch64/include Darwin-aarch64/gr/
-  - mv artifacts-darwin-aarch64/share Darwin-aarch64/gr/
-  - mv artifacts-darwin-aarch64/Applications Darwin-aarch64/gr/
-  - cp artifacts-js/gr.js Darwin-aarch64/gr/lib/
-  - rm -rf artifacts-darwin-aarch64
-  - mkdir -p Darwin-universal/gr/lib
-  - mv artifacts-darwin-universal/*.dylib Darwin-universal/gr/lib/
-  - mv artifacts-darwin-universal/*.so Darwin-universal/gr/lib/
-  - mv artifacts-darwin-universal/fonts Darwin-universal/gr/
-  - mv artifacts-darwin-universal/include Darwin-universal/gr/
-  - mv artifacts-darwin-universal/share Darwin-universal/gr/
-  - mv artifacts-darwin-universal/Applications Darwin-universal/gr/
-  - cp artifacts-js/gr.js Darwin-universal/gr/lib/
-  - rm -rf artifacts-darwin-universal
-  - cd Darwin-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd Darwin-aarch64 && tar czf gr.tar.gz gr && cd -
-  - cd Darwin-universal && tar czf gr.tar.gz gr && cd -
-  - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
-  - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd Windows-x86_64-msvc && tar czf gr.tar.gz gr && cd -
-  - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd Debian-armhf && tar czf gr.tar.gz gr && cd -
-  - cd Debian-aarch64 && tar czf gr.tar.gz gr && cd -
-  - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
-  - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd ArchLinux-x86_64 && tar czf gr.tar.gz gr && cd -
-  - cd FreeBSD-x86_64 && tar czf gr.tar.gz gr && cd -
-  - mkdir Downloads
-  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-      export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
-      cp Windows-i686/gr.tar.gz Downloads/gr-$VERSION-Windows-i686.tar.gz;
-      cp Windows-x86_64/gr.tar.gz Downloads/gr-$VERSION-Windows-x86_64.tar.gz;
-      cp Windows-x86_64-msvc/gr.tar.gz Downloads/gr-$VERSION-Windows-x86_64-msvc.tar.gz;
-      cp Debian-x86_64/gr.tar.gz Downloads/gr-$VERSION-Debian-x86_64.tar.gz;
-      cp Debian-armhf/gr.tar.gz Downloads/gr-$VERSION-Debian-armhf.tar.gz;
-      cp Debian-aarch64/gr.tar.gz Downloads/gr-$VERSION-Debian-aarch64.tar.gz;
-      cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
-      cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
-      ln -s gr-$VERSION-CentOS-x86_64.tar.gz Downloads/gr-$VERSION-Redhat-x86_64.tar.gz;
-      cp Linux-i386/gr.tar.gz Downloads/gr-$VERSION-Linux-i386.tar.gz;
-      cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
-      cp ArchLinux-x86_64/gr.tar.gz Downloads/gr-$VERSION-ArchLinux-x86_64.tar.gz;
-      cp FreeBSD-x86_64/gr.tar.gz Downloads/gr-$VERSION-FreeBSD-x86_64.tar.gz;
-      cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
-      cp Darwin-aarch64/gr.tar.gz Downloads/gr-$VERSION-Darwin-aarch64.tar.gz;
-      cp Darwin-universal/gr.tar.gz Downloads/gr-$VERSION-Darwin-universal.tar.gz;
-      cp artifacts-js/gr.js Downloads/gr-$VERSION.js;
-      cd Downloads && sha512sum -b gr-*.tar.gz > gr-$VERSION.sha512.txt && cd -;
+  - has_release_tag="$(grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' <<< "${CI_COMMIT_TAG}" && echo 1 || echo 0)"
+  - if (( has_release_tag )); then
+      version="${CI_COMMIT_TAG/#v/}";
     else
-      cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz;
-      cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64.tar.gz;
-      cp Windows-x86_64-msvc/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64-msvc.tar.gz;
-      cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz;
-      cp Debian-armhf/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-armhf.tar.gz;
-      cp Debian-aarch64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-aarch64.tar.gz;
-      cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
-      cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
-      ln -s gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz Downloads/gr-$CI_COMMIT_SHA-Redhat-x86_64.tar.gz;
-      cp Linux-i386/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-i386.tar.gz;
-      cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
-      cp ArchLinux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-ArchLinux-x86_64.tar.gz;
-      cp FreeBSD-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-FreeBSD-x86_64.tar.gz;
-      cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
-      cp Darwin-aarch64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-aarch64.tar.gz;
-      cp Darwin-universal/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-universal.tar.gz;
-      cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
-      for f in
-        ArchLinux-x86_64
-        CentOS-x86_64
-        Darwin-aarch64
-        Darwin-universal
-        Darwin-x86_64
-        Debian-aarch64
-        Debian-armhf
-        Debian-x86_64
-        FreeBSD-x86_64
-        Linux-i386
-        Linux-x86_64
-        Redhat-x86_64
-        Ubuntu-x86_64
-        Windows-i686
-        Windows-x86_64
-        Windows-x86_64-msvc;
-      do
-        ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
-      done;
-      ln -s gr-$CI_COMMIT_SHA.js Downloads/gr-latest.js;
-      cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
-      ln -s gr-$CI_COMMIT_SHA.sha512.txt Downloads/gr-latest.sha512.txt;
+      version="${CI_COMMIT_SHA}";
     fi
+  - mkdir Downloads
+  - |-
+    for artifact_target_pair in \
+      "artifacts-windows-32bit      | Windows-i686" \
+      "artifacts-windows-64bit      | Windows-x86_64" \
+      "artifacts-windows-64bit-msvc | Windows-x86_64-msvc" \
+      "artifacts-debian10           | Debian-x86_64" \
+      "artifacts-debian10-armhf     | Debian-armhf" \
+      "artifacts-debian10-aarch64   | Debian-aarch64" \
+      "artifacts-ubuntu2004         | Ubuntu-x86_64" \
+      "artifacts-centos7            | CentOS-x86_64" \
+      "artifacts-centos7-32bit      | CentOS-i386" \
+      "artifacts-arch               | ArchLinux-x86_64" \
+      "artifacts-freebsd13          | FreeBSD-x86_64" \
+      "artifacts-darwin-x86_64      | Darwin-x86_64" \
+      "artifacts-darwin-aarch64     | Darwin-aarch64" \
+      "artifacts-darwin-universal   | Darwin-universal"
+    do
+      artifact_dirname=$(awk -F'[[:space:]]*\\|[[:space:]]*' '{ print $1 }' <<< "${artifact_target_pair}") && \
+      target_dirname=$(awk -F'[[:space:]]*\\|[[:space:]]*' '{ print $2 }' <<< "${artifact_target_pair}") && \
+      echo "Packing $(awk -F'\\|' '{ print $1 }' <<< "${artifact_target_pair}") -> ${target_dirname}" && \
+      mkdir "${target_dirname}" && \
+      mv "${artifact_dirname}" "${target_dirname}/gr" && \
+      cp artifacts-js/gr.js "${target_dirname}/gr/lib/" && \
+      tar -C "${target_dirname}" -czf "${target_dirname}/gr.tar.gz" --remove-files gr && \
+      mv "${target_dirname}/gr.tar.gz" "Downloads/gr-${version}-${target_dirname}.tar.gz" || exit
+      if ! (( has_release_tag )); then
+        ln -s "gr-${version}-${target_dirname}.tar.gz" "Downloads/gr-latest-${target_dirname}.tar.gz" || exit
+      fi
+    done
+  - cp artifacts-js/gr.js "Downloads/gr-${version}.js"
+  - if ! (( has_release_tag )); then
+      ln -s "gr-${version}.js" "Downloads/gr-latest.js";
+    fi
+  - for alias in Redhat Linux; do
+      for arch in x86_64 i386; do
+        ln -s "gr-${version}-CentOS-${arch}.tar.gz" "Downloads/gr-${version}-${alias}-${arch}.tar.gz";
+      done;
+    done
+  - (
+      cd Downloads &&
+      sha512sum -b gr-*.tar.gz gr-*.js > "gr-${version}.sha512.txt" &&
+      if ! (( has_release_tag )); then
+        ln -s "gr-${version}.sha512.txt" gr-latest.sha512.txt;
+      fi
+    )
   artifacts:
     expire_in: 1 week
     paths:

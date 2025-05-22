@@ -625,14 +625,12 @@ if(NOT CMAKE_CROSSCOMPILING)
   target_link_libraries(gen_preview_images PRIVATE GR::GKS GR::GR)
   set(GR_GEN_PREVIEW_IMAGES_EXECUTABLE $<TARGET_FILE:gen_preview_images>)
 else()
-  if(NOT GR_HOST_DIRECTORY)
-    message(FATAL_ERROR "GR_HOST_DIRECTORY is not set. You need a native GR installation when cross compiling grplot!")
-  endif()
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images")
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/gen_preview_images.c" "${GEN_PREVIEWS_SRC}")
-  file(
-    WRITE "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/CMakeLists.txt"
-    "\
+  if(GR_HOST_DIRECTORY)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/gen_preview_images.c" "${GEN_PREVIEWS_SRC}")
+    file(
+      WRITE "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/CMakeLists.txt"
+      "\
 cmake_minimum_required(VERSION 3.1...4.0 FATAL_ERROR)\n\
 \n\
 project(\n\
@@ -656,20 +654,28 @@ PROPERTIES\n\
   C_EXTENSIONS OFF\n\
 )\n\
 "
-  )
-  set(GR_GEN_PREVIEW_IMAGES_EXECUTABLE
-      "${CMAKE_CURRENT_BINARY_DIR}/host/gen_preview_images${CMAKE_HOST_EXECUTABLE_SUFFIX}"
-  )
-  add_custom_target(gen_preview_images DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE})
-  add_custom_command(
-    OUTPUT ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
-    COMMAND
-      "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images" -B
-      "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/build" -DCMAKE_BUILD_TYPE="Release"
-      -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE="${CMAKE_CURRENT_BINARY_DIR}/host" -DGR_DIRECTORY="${GR_HOST_DIRECTORY}"
-    COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/build" --config Release
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/gen_preview_images.c"
-  )
+    )
+    set(GR_GEN_PREVIEW_IMAGES_EXECUTABLE
+        "${CMAKE_CURRENT_BINARY_DIR}/host/gen_preview_images${CMAKE_HOST_EXECUTABLE_SUFFIX}"
+    )
+    add_custom_target(gen_preview_images DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE})
+    add_custom_command(
+      OUTPUT ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
+      COMMAND
+        "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images" -B
+        "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/build" -DCMAKE_BUILD_TYPE="Release"
+        -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE="${CMAKE_CURRENT_BINARY_DIR}/host"
+        -DGR_DIRECTORY="${GR_HOST_DIRECTORY}"
+      COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/build" --config Release
+      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/gen_preview_images/gen_preview_images.c"
+    )
+  else()
+    message(
+      WARNING
+        "GR_HOST_DIRECTORY is not set. GRPlot preview images will be taken from the source code tree and could differ \
+from the version of GRPlot that you are building."
+    )
+  endif()
 endif()
 
 set(GR_COLORMAP_IMAGES "${GR_COLORMAPS}")
@@ -708,14 +714,27 @@ add_custom_target(
           ${GR_MARKER_TYPE_IMAGES}
           ${GR_FILL_STYLE_IMAGES}
 )
-add_custom_command(
-  OUTPUT ${GR_COLORMAP_IMAGES}
-         ${GR_FONT_IMAGES}
-         ${GR_FONT_PRECISION_IMAGES}
-         ${GR_LINE_TYPE_IMAGES}
-         ${GR_MARKER_TYPE_IMAGES}
-         ${GR_FILL_STYLE_IMAGES}
-  COMMAND "${CMAKE_COMMAND}" -E env GKS_FONTPATH="${CMAKE_CURRENT_LIST_DIR}/../lib/gks"
-          ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
-  DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
-)
+if(NOT CMAKE_CROSSCOMPILING OR GR_HOST_DIRECTORY)
+  add_custom_command(
+    OUTPUT ${GR_COLORMAP_IMAGES}
+           ${GR_FONT_IMAGES}
+           ${GR_FONT_PRECISION_IMAGES}
+           ${GR_LINE_TYPE_IMAGES}
+           ${GR_MARKER_TYPE_IMAGES}
+           ${GR_FILL_STYLE_IMAGES}
+    COMMAND "${CMAKE_COMMAND}" -E env GKS_FONTPATH="${CMAKE_CURRENT_LIST_DIR}/../lib/gks"
+            ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
+    DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
+  )
+else()
+  add_custom_command(
+    OUTPUT ${GR_COLORMAP_IMAGES}
+           ${GR_FONT_IMAGES}
+           ${GR_FONT_PRECISION_IMAGES}
+           ${GR_LINE_TYPE_IMAGES}
+           ${GR_MARKER_TYPE_IMAGES}
+           ${GR_FILL_STYLE_IMAGES}
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/../lib/grm/grplot/preview_images"
+            "${CMAKE_CURRENT_BINARY_DIR}/preview_images"
+  )
+endif()
