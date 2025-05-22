@@ -1,62 +1,34 @@
 arch-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
   script:
-  - make self GRDIR=/usr/local/gr
-  - mkdir artifacts
-  - cp lib/gks/demo artifacts/gksdemo
-  - cp lib/gks/qt/gksqt artifacts/gksqt
-  - cp lib/grm/grplot/grplot artifacts/grplot
-  - mkdir -p artifacts/share/doc/grplot
-  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
-  - mkdir -p artifacts/share/licenses/GR
-  - cp LICENSE.md artifacts/share/licenses/GR/
-  - mkdir -p artifacts/share/xml/GRM
-  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
-  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
-  - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - cp -r lib/grm/include/grm artifacts/include/
-  - mv artifacts artifacts-arch
+  - make -C 3rdparty default extras
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv ./install/usr/local/gr ./artifacts-arch
   artifacts:
     expire_in: 1 week
     paths:
     - artifacts-arch/
 
-arch-cmake-self-contained:
-  stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
-  script:
-  - make -C 3rdparty default extras
-  - mkdir build
-  - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DCMAKE_INSTALL_LIBDIR=${CI_PROJECT_DIR}/install/lib
-  - make
-  - make install
-  - cd ..
-  - mv install artifacts-arch-cmake
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-arch-cmake/
-
 arch-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
-  script:
-  - make install GRDIR=/usr/local/gr
-
-arch-cmake-system-dependencies:
-  stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
-  script:
+  before_script:
   - pacman -Sy
   - pacman -S --noconfirm --needed qhull
-  - mkdir build
-  - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-  - make
+  script:
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - cmake --build build

@@ -1,236 +1,112 @@
 windows-32bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
-  script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg xerces-c"
-    HOST=i686-w64-mingw32
-    ARCHITECTURE=i686
-    OS=w64_x86-cross-mingw32
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw
-    GRDIR=./
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    ARCHITECTURE=i686
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/gks/qt
-    GRDIR=./
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    ARCHITECTURE=i686
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/grm/grplot
-    GRDIR=./
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    ARCHITECTURE=i686
-  - mkdir artifacts
-  - cp lib/gks/qt/gksqt.exe artifacts/
-  - cp lib/grm/grplot/grplot.exe artifacts/
-  - mkdir -p artifacts/share/doc/grplot
-  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
-  - mkdir -p artifacts/share/licenses/GR
-  - cp LICENSE.md artifacts/share/licenses/GR/
-  - mkdir -p artifacts/share/xml/GRM
-  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
-  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
-  - cp lib/gks/qt/*.dll artifacts/
-  - cp -r lib/gks/qt/platforms artifacts/
-  - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
-       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
-       artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - cp -r lib/grm/include/grm artifacts/include/
-  - mv artifacts artifacts-windows32
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-windows32/
-
-windows-32bit-cmake-cross:
-  stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-32bit-cross
-  script:
+  before_script:
   - mkdir qt5-runtime-Windows-i686
   - cd qt5-runtime-Windows-i686
   - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686-mingw81.tar.gz
   - tar xf qt5-runtime-Windows-i686-mingw81.tar.gz
   - cd ..
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  script:
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg xerces-c"
-    HOST=i686-w64-mingw32
-    ARCHITECTURE=i686
-    OS=w64_x86-cross-mingw32
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - cd ..
-  - mv qt5-runtime-Windows-i686/*.dll install/bin/
-  - mv qt5-runtime-Windows-i686/platforms install/bin/platforms
-  - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll install/bin/
-  - mv install artifacts-windows-32bit-cmake
+      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg xerces-c"
+      HOST=i686-w64-mingw32
+      ARCHITECTURE=i686
+      OS=w64_x86-cross-mingw32
+      CC=i686-w64-mingw32-gcc
+      CXX=i686-w64-mingw32-g++
+      AR=i686-w64-mingw32-ar
+      OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
+      XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_TOOLCHAIN_FILE="${CI_PROJECT_DIR}/cmake/i686-w64-mingw32.cmake"
+      -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake
+      -DGR_MANUAL_MOC_AND_RCC=ON
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv qt5-runtime-Windows-i686/*.dll install/usr/local/gr/bin/
+  - mv qt5-runtime-Windows-i686/platforms install/usr/local/gr/bin/platforms
+  - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll install/usr/local/gr/bin/
+  - mv ./install/usr/local/gr artifacts-windows-32bit
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-windows-32bit-cmake/
+    - artifacts-windows-32bit/
 
 windows-64bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
-  script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-  - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg xerces-c"
-    HOST=x86_64-w64-mingw32
-    ARCHITECTURE=x86_64
-    OS=w64_amd64-cross-mingw32
-    CC=x86_64-w64-mingw32-gcc
-    CXX=x86_64-w64-mingw32-g++
-    AR=x86_64-w64-mingw32-ar
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw
-    GRDIR=./
-    CC=x86_64-w64-mingw32-gcc
-    CXX=x86_64-w64-mingw32-g++
-    AR=x86_64-w64-mingw32-ar
-    ARCHITECTURE=x86_64
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/gks/qt
-    GRDIR=./
-    CC=x86_64-w64-mingw32-gcc
-    CXX=x86_64-w64-mingw32-g++
-    AR=x86_64-w64-mingw32-ar
-    ARCHITECTURE=x86_64
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/grm/grplot
-    GRDIR=./
-    CC=x86_64-w64-mingw32-gcc
-    CXX=x86_64-w64-mingw32-g++
-    AR=x86_64-w64-mingw32-ar
-    ARCHITECTURE=x86_64
-  - mkdir artifacts
-  - cp lib/gks/qt/gksqt.exe artifacts/
-  - cp lib/grm/grplot/grplot.exe artifacts/
-  - mkdir -p artifacts/share/doc/grplot
-  - cp lib/grm/grplot/README.md artifacts/share/doc/grplot/grplot.man.md
-  - mkdir -p artifacts/share/licenses/GR
-  - cp LICENSE.md artifacts/share/licenses/GR/
-  - mkdir -p artifacts/share/xml/GRM
-  - cp lib/grm/src/grm/dom_render/graphics_tree/schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_schema.xsd
-  - cp lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd artifacts/share/xml/GRM/grm_graphics_tree_private_schema.xsd
-  - cp lib/gks/qt/*.dll artifacts/
-  - cp -r lib/gks/qt/platforms artifacts/
-  - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
-       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
-       artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - cp -r lib/grm/include/grm artifacts/include/
-  - mv artifacts artifacts-windows64
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-windows64/
-
-windows-64bit-cmake-cross:
-  stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-64bit-cross
-  script:
+  before_script:
   - mkdir qt5-runtime-Windows-x86_64
   - cd qt5-runtime-Windows-x86_64
   - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-x86_64-mingw81.tar.gz
   - tar xf qt5-runtime-Windows-x86_64-mingw81.tar.gz
   - cd ..
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  script:
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg xerces-c"
-    HOST=x86_64-w64-mingw32
-    ARCHITECTURE=x86_64
-    OS=w64_amd64-cross-mingw32
-    CC=x86_64-w64-mingw32-gcc
-    CXX=x86_64-w64-mingw32-g++
-    AR=x86_64-w64-mingw32-ar
-    OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
-    GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
-    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
-    OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
-    PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
-  - mkdir build
-  - cd build
-  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
-  - make
-  - make install
-  - cd ..
-  - mv qt5-runtime-Windows-x86_64/*.dll install/bin/
-  - mv qt5-runtime-Windows-x86_64/platforms install/bin/platforms
-  - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll install/bin/
-  - mv install artifacts-windows-64bit-cmake
+      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg xerces-c"
+      HOST=x86_64-w64-mingw32
+      ARCHITECTURE=x86_64
+      OS=w64_amd64-cross-mingw32
+      CC=x86_64-w64-mingw32-gcc
+      CXX=x86_64-w64-mingw32-g++
+      AR=x86_64-w64-mingw32-ar
+      OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
+      XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
+  - cmake
+      -S .
+      -B build
+      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=/usr/local/gr
+      -DCMAKE_TOOLCHAIN_FILE="${CI_PROJECT_DIR}/cmake/x86_64-w64-mingw32.cmake"
+      -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake
+      -DGR_MANUAL_MOC_AND_RCC=ON
+      -DGR_USE_BUNDLED_LIBRARIES=ON
+  - cmake --build build
+  - DESTDIR="${CI_PROJECT_DIR}/install"
+    cmake --install build
+  - mv qt5-runtime-Windows-x86_64/*.dll install/usr/local/gr/bin/
+  - mv qt5-runtime-Windows-x86_64/platforms install/usr/local/gr/bin/platforms
+  - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll install/usr/local/gr/bin/
+  - mv ./install/usr/local/gr artifacts-windows-64bit
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-windows-64bit-cmake/
+    - artifacts-windows-64bit/
 
-windows-64bit-cmake-msvc:
+windows-64bit-msvc:
   stage: build
   image: windows:10-gr-build
   tags:
   - libvirt
   script:
-  - vcvars_cmd cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/c/gr -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - vcvars_cmd cmake
+      -S .
+      -B build
+      -DCMAKE_INSTALL_PREFIX=/c/gr
+      -DGR_USE_BUNDLED_LIBRARIES=OFF
   - vcvars_cmd cmake --build build --config Release
   - vcvars_cmd cmake --install build --config Release
   - cd /c/Qt6/6.8.1/msvc2022_64/bin
@@ -248,9 +124,8 @@ windows-64bit-cmake-msvc:
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140.dll" /c/gr/bin/
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140_1.dll" /c/gr/bin/
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140_2.dll" /c/gr/bin/
-  - mv /c/gr artifacts-windows-64bit-cmake-msvc
+  - mv /c/gr artifacts-windows-64bit-msvc
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-windows-64bit-cmake-msvc/
-
+    - artifacts-windows-64bit-msvc/

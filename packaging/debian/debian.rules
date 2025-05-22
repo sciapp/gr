@@ -1,14 +1,15 @@
 #!/usr/bin/make -f
 
 export DH_VERBOSE=1
-export THIRDPARTY=build/3rdparty
-export THIRDPARTY_SRC=${THIRDPARTY}/src
-export THIRDPARTY_INC=${THIRDPARTY}/include
-export THIRDPARTY_LIB=${THIRDPARTY}/lib
+export THIRDPARTY=3rdparty
+export THIRDPARTY_SRC=${THIRDPARTY}/build/src
 
 export GRDIR=/usr/gr
 export DEB_BUILD_ROOT=/usr/src/packages/BUILD/debian
 #export DEB_BUILD_ROOT=/home/felder/dpkg/gr/debian
+
+DISTRIBUTION_NAME := $(shell grep -Po '^NAME=.*?\K[^"]+' /etc/os-release)
+DISTRIBUTION_VERSION := $(shell grep -Po '^VERSION_ID=.*?\K[^"]+' /etc/os-release)
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 ifeq ( $(wildcard /usr/lib/$(DEB_HOST_MULTIARCH)/qt5/bin/qmake), )
@@ -34,20 +35,30 @@ override_dh_auto_configure:
 	cp ../SOURCES/libopenh264-2.0.0.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/xerces-c-3.2.4.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/icu4c-74.2.tar.gz ${THIRDPARTY_SRC}
+	tar -C ${THIRDPARTY} -xf ../SOURCES/cmake-3.23.0-linux-x86_64.tar.gz
 
 override_dh_auto_build:
-	make -C 3rdparty GRDIR=${GRDIR} DIR=`pwd`/${THIRDPARTY}
-	make -C 3rdparty extras GRDIR=${GRDIR} DIR=`pwd`/${THIRDPARTY}
-	make GRDIR=${GRDIR} \
-		EXTRA_CFLAGS=-I`pwd`/${THIRDPARTY_INC} \
-		EXTRA_CXXFLAGS=-I`pwd`/${THIRDPARTY_INC} \
-		EXTRA_LDFLAGS=-L`pwd`/${THIRDPARTY_LIB} \
-		THIRDPARTYDIR=`pwd`/${THIRDPARTY} \
-		QT5_QMAKE=${QT5_QMAKE} \
-		USE_STATIC_AGG_LIBS=1 \
-		USE_STATIC_CAIRO_LIBS=1 \
-		USE_STATIC_XERCESC_LIBS=1
+	# Ubuntu 20.04 and earlier ship with an too old CMake version
+	if [ "$(DISTRIBUTION_NAME)" = "Ubuntu" ] && \
+	    [ "$$(echo $(DISTRIBUTION_VERSION) | tr -d .)" -le "2004" ]; \
+	then \
+	    export PATH="$$(pwd)/$(THIRDPARTY)/cmake-3.23.0-linux-x86_64/bin:$${PATH}"; \
+	fi; \
+	make -C 3rdparty default extras && \
+	cmake \
+	    -DCMAKE_INSTALL_PREFIX=${GRDIR} \
+	    -DCMAKE_BUILD_TYPE=Release \
+	    -DGR_USE_BUNDLED_LIBRARIES=ON \
+	    -S . \
+	    -B build && \
+	cmake --build build
 
 override_dh_auto_install:
-	mkdir -p ${DEB_BUILD_ROOT}/gr${GRDIR}
-	make install GRDIR=${GRDIR} THIRDPARTYDIR=`pwd`/${THIRDPARTY} DESTDIR=${DEB_BUILD_ROOT}/gr
+	install -m 755 -d ${DEB_BUILD_ROOT}/gr${GRDIR}
+	# Ubuntu 20.04 and earlier ship with an too old CMake version
+	if [ "$(DISTRIBUTION_NAME)" = "Ubuntu" ] && \
+	    [ "$$(echo $(DISTRIBUTION_VERSION) | tr -d .)" -le "2004" ]; \
+	then \
+	    export PATH="$$(pwd)/$(THIRDPARTY)/cmake-3.23.0-linux-x86_64/bin:$${PATH}"; \
+	fi; \
+	DESTDIR=${DEB_BUILD_ROOT}/gr cmake --install build
