@@ -1,7 +1,12 @@
-%define THIRDPARTY build/3rdparty
-%define THIRDPARTY_SRC %{THIRDPARTY}/src
-%define THIRDPARTY_INC %{THIRDPARTY}/include
-%define THIRDPARTY_LIB %{THIRDPARTY}/lib
+# Fedora 35 introduced extra rpath checks which don't allow
+# `/usr/lib/gr` as a valid rpath -> disable the check
+# See <https://fedoraproject.org/wiki/Changes/Broken_RPATH_will_fail_rpmbuild> for details
+%if 0%{?fedora_version} >= 35
+%global __brp_check_rpaths %{nil}
+%endif
+
+%define THIRDPARTY 3rdparty
+%define THIRDPARTY_SRC %{THIRDPARTY}/build/src
 
 %if 0%{?mlz}
 %define fixedversion %{version}
@@ -11,7 +16,6 @@
 %define compression gz
 %endif
 
-%define qmake_qt4 qmake-qt4
 %define grdir %{_prefix}/gr
 
 Name:				gr
@@ -27,7 +31,7 @@ Source3:			https://gr-framework.org/downloads/3rdparty/libvpx-1.4.0.tar.bz2
 Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-5.1.4.tar.gz
 Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.3.3.tar.gz
 Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.3.4.tar.gz
-Source7:			https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
+Source7:			https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
 Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.16.0.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.42.2.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.7.0.tar.gz
@@ -45,8 +49,6 @@ BuildRequires: qt-devel
 %endif
 
 %if 0%{?suse_version}
-%define qmake_qt4 qmake
-%define qmake_qt5 qmake-qt5
 BuildRequires:		xorg-x11-devel
 BuildRequires:		Mesa-libGL-devel
 BuildRequires:		libqt4-devel
@@ -88,13 +90,11 @@ BuildRequires:		wxWidgets-devel
 
 # Qt5 BuildRequires
 %if 0%{?fedora_version} >= 23 || 0%{?rhel} >= 8
-%define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
 
 # Qt6 BuildRequires
 %if 0%{?fedora_version} >= 34 || 0%{?rhel} >= 9
-%define qmake_qt6 qmake6
 BuildRequires:		qt6-qtbase-devel
 %endif
 
@@ -103,7 +103,6 @@ GR, a universal framework for visualization applications
 
 %prep
 %setup -n gr-%{fixedversion}
-mkdir -p %{THIRDPARTY}
 mkdir -p %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE1} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE2} %{THIRDPARTY_SRC}
@@ -121,30 +120,30 @@ mkdir -p %{THIRDPARTY_SRC}
 %{__tar} -C %{THIRDPARTY} -xf %{SOURCE7}
 
 %build
+# Honor flags from Linux distribution
+export CFLAGS="%{optflags}"
+export CXXFLAGS="%{optflags}"
+export LDFLAGS="%{build_ldflags}"
 # RHEL, CentOS and Scientific Linux 7 have too old cmake version (use prebuild)
 %if 0%{?rhel} == 7
-export PATH=`pwd`/%{THIRDPARTY}/cmake-3.6.3-Linux-x86_64/bin:$PATH
+export PATH=`pwd`/%{THIRDPARTY}/cmake-3.23.0-linux-x86_64/bin:$PATH
 %endif
-make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
-make -C 3rdparty extras GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
-make GRDIR=%{grdir} \
-     EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
-     EXTRA_CXXFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
-     EXTRA_LDFLAGS=-L`pwd`/%{THIRDPARTY_LIB} \
-     EXTRA_LDFLAGS_QT4= \
-     EXTRA_LDFLAGS_QT5= \
-     EXTRA_LDFLAGS_QT6= \
-     THIRDPARTYDIR=`pwd`/%{THIRDPARTY} \
-     %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
-     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}} \
-     %{?qmake_qt6:QT6_QMAKE=%{qmake_qt6}} \
-     USE_STATIC_AGG_LIBS=1 \
-     USE_STATIC_CAIRO_LIBS=1 \
-     USE_STATIC_XERCESC_LIBS=1
+make -C 3rdparty default extras
+cmake \
+  -DCMAKE_INSTALL_PREFIX=%{grdir} \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DGR_USE_BUNDLED_LIBRARIES=ON \
+  -S . \
+  -B build
+cmake --build build
 
 %install
+# RHEL, CentOS and Scientific Linux 7 have too old cmake version (use prebuild)
+%if 0%{?rhel} == 7
+export PATH=`pwd`/%{THIRDPARTY}/cmake-3.23.0-linux-x86_64/bin:$PATH
+%endif
 %{__install} -m 755 -d $RPM_BUILD_ROOT%{grdir}
-make install GRDIR=%{grdir} THIRDPARTYDIR=`pwd`/%{THIRDPARTY} DESTDIR=${RPM_BUILD_ROOT}
+DESTDIR=${RPM_BUILD_ROOT} cmake --install build
 
 %clean
 make realclean

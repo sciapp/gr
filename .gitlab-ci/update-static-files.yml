@@ -4,7 +4,7 @@ update-grplot-preview-images:
   rules:
   - if: $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems" && $CI_COMMIT_BRANCH == "develop"
   needs:
-  - job: debian-cmake-self-contained
+  - job: debian-self-contained
     artifacts: true
   before_script:
   - apt-get update
