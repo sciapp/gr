@@ -45,10 +45,12 @@ debian-cmake-self-contained:
   - make install
   - cd ..
   - mv install artifacts-debian10-cmake
+  - mv build/preview_images ./grplot-preview-images
   artifacts:
     expire_in: 1 week
     paths:
     - artifacts-debian10-cmake/
+    - grplot-preview-images/
 
 debian-self-contained-armhf:
   stage: build
