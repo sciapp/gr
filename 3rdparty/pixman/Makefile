@@ -4,7 +4,11 @@ endif
 
 VERSION = 0.42.2
 PIXMAN_EXTRA_CONFIGURE_FLAGS ?=
+ifndef OS
 ifeq ($(shell uname),Darwin)
+PIXMAN_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
 PIXMAN_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 

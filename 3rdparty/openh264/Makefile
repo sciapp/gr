@@ -4,7 +4,11 @@ endif
 
 VERSION = 2.0.0
 OPENH264_EXTRA_MAKE_FLAGS ?=
+ifndef OS
 ifeq ($(shell uname),Darwin)
+OPENH264_EXTRA_MAKE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
 OPENH264_EXTRA_MAKE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
