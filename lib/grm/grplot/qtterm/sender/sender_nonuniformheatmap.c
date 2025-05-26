@@ -173,7 +173,7 @@ int test_sendmeta_ref(void)
   grm_send_ref(handle, "y", 'D', y, 21);
   grm_send_ref(handle, "z", 'D', z, 20 * 40);
   grm_send_ref(handle, NULL, 'O', "]", 0);
-  grm_send_ref(handle, "kind", 's', "nonuniformheatmap", 0);
+  grm_send_ref(handle, "kind", 's', "nonuniform_heatmap", 0);
   grm_send_ref(handle, "x_lim", 'D', xlim, 2);
   grm_send_ref(handle, "y_lim", 'D', ylim, 2);
   grm_send_ref(handle, "z_lim", 'D', zlim, 2);

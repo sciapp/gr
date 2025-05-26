@@ -65,14 +65,14 @@ static void test_plot(void)
   //    Not yet supported:
   //    grm_args_push(series[1], "bar_color", "ddd", 0.5, 1.,0.5);
   //    grm_args_push(series[1], "edge_color", "ddd", 0., 0., 0.);
-  grm_args_push(series[1], "nbins", "i", NBINS / 3);
+  grm_args_push(series[1], "num_bins", "i", NBINS / 3);
 
 
   grm_args_push(args, "series", "nA", 2, series);
   //  Color on per subplot basis:
   grm_args_push(args, "bar_color", "ddd", 1., 0., 0.);
   grm_args_push(args, "edge_color", "ddd", 0., 0., 1.);
-  grm_args_push(args, "kind", "s", "hist");
+  grm_args_push(args, "kind", "s", "histogram");
   grm_args_push(args, "title", "s", "Histogram of two sine waves [0; 2pi] with 40 and 13 bins");
 
   printf("plotting data...\n");
