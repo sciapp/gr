@@ -101,6 +101,7 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 #define MAX_TNR 9
 
 #define HEIGHT_IN_CELLS 24
+#define CHUNK_SIZE 4096
 
 #define STR(x) #x
 #define XSTR(x) STR(x)
@@ -210,6 +211,93 @@ static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 static int predef_ints[] = {0, 1, 3, 3, 3};
 
 static int predef_styli[] = {1, 1, 1, 2, 3};
+
+#ifndef _WIN32
+static enum tmux_state_t have_tmux(void)
+{
+  const char *term_env_var = gks_getenv("TERM");
+  if (term_env_var == NULL)
+    {
+      return NO_TMUX;
+    }
+
+  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
+    {
+      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
+      if (gks_getenv("TMUX") != NULL)
+        {
+          FILE *fp;
+          char client_termname[80];
+
+          /* Inside tmux we can query the tmux server for the outer terminal name */
+          fp = popen("tmux display -p '#{client_termname}'", "r");
+          if (fp == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              return SINGLE_TMUX_SESSION;
+            }
+          /* Read the output a line at a time - output it. */
+          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              pclose(fp);
+              return SINGLE_TMUX_SESSION;
+            }
+          pclose(fp);
+          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
+                     ? NESTED_TMUX_SESSION
+                     : SINGLE_TMUX_SESSION;
+        }
+      return SINGLE_TMUX_SESSION;
+    }
+
+  return NO_TMUX;
+}
+
+static void send_tmux_escape_sequence_start(void)
+{
+  if (!p->have_tmux) return;
+
+  if (p->have_tmux == SINGLE_TMUX_SESSION)
+    {
+      fprintf(stdout, "\033Ptmux;"); /* Start a tmux pass-through sequence */
+    }
+  else
+    {
+      fprintf(stdout, "\033Ptmux;\033\033Ptmux;"); /* Start a nested tmux pass-through sequence */
+    }
+}
+
+static void send_tmux_escaped_escape(void)
+{
+  switch (p->have_tmux)
+    {
+    case NESTED_TMUX_SESSION:
+      fprintf(stdout, "\033\033\033\033");
+      break;
+    case SINGLE_TMUX_SESSION:
+      fprintf(stdout, "\033\033");
+      break;
+    default:
+      fprintf(stdout, "\033");
+      break;
+    }
+}
+
+static void send_tmux_escape_sequence_end(void)
+{
+  if (!p->have_tmux) return;
+
+  if (p->have_tmux == SINGLE_TMUX_SESSION)
+    {
+      fprintf(stdout, "\033\\"); /* End a tmux pass-through sequence */
+    }
+  else
+    {
+      fprintf(stdout, "\033\033\\\033\\"); /* End a nested tmux pass-through sequence */
+    }
+}
+#endif
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
@@ -997,7 +1085,7 @@ static void open_page(void)
 #endif
     }
   else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 ||
-           p->wtype == 150 || p->wtype == 151)
+           p->wtype == 150 || p->wtype == 151 || p->wtype == 152)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
@@ -1674,7 +1762,7 @@ static void write_page(void)
       free(pix);
     }
 #ifndef _WIN32
-  else if (p->wtype == 151)
+  else if (p->wtype == 151 || p->wtype == 152)
     {
       FILE *stream;
       long size, b64_size;
@@ -1714,16 +1802,9 @@ static void write_page(void)
               fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
             }
           fprintf(stdout, "\033[%dA", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
-          if (p->have_tmux == SINGLE_TMUX_SESSION)
-            {
-              fprintf(stdout, "\033Ptmux;\033"); /* Start a tmux pass-through sequence */
-            }
-          else
-            {
-              fprintf(stdout, "\033Ptmux;\033\033Ptmux;\033\033\033"); /* Start a nested tmux pass-through sequence */
-            }
+          send_tmux_escape_sequence_start();
         }
-      else if (!p->scroll)
+      else if (p->wtype == 151 && !p->scroll)
         {
           if (p->page_counter == 1)
             {
@@ -1734,25 +1815,45 @@ static void write_page(void)
               fprintf(stdout, "\033[H");
             }
         }
-      fprintf(stdout, "\033]1337;File=inline=1;height=" XSTR(HEIGHT_IN_CELLS) ";preserveAspectRatio=0:%s\a",
-              b64_string);
+      if (p->wtype == 151)
+        {
+          /* For a description of the iTerm image protocol, see <https://iterm2.com/documentation-images.html> */
+          long sent_bytes;
+          send_tmux_escaped_escape();
+          fprintf(stdout, "]1337;MultipartFile=inline=1;height=%d;preserveAspectRatio=0\a", HEIGHT_IN_CELLS);
+          for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
+            {
+              send_tmux_escaped_escape();
+              fprintf(stdout, "]1337;FilePart=%.*s\a", min((int)(b64_size - sent_bytes), CHUNK_SIZE),
+                      b64_string + sent_bytes);
+            }
+          send_tmux_escaped_escape();
+          fprintf(stdout, "]1337;FileEnd\a");
+        }
+      else
+        {
+          /* For a description of the Kitty image protocol, see <https://sw.kovidgoyal.net/kitty/graphics-protocol/> */
+          long sent_bytes;
+          for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
+            {
+              send_tmux_escaped_escape();
+              fprintf(stdout, "_Gf=100,a=T,q=2,r=%d,m=%d;%.*s", HEIGHT_IN_CELLS,
+                      (sent_bytes < b64_size - CHUNK_SIZE) ? 1 : 0, min((int)(b64_size - sent_bytes), CHUNK_SIZE),
+                      b64_string + sent_bytes);
+              send_tmux_escaped_escape();
+              fprintf(stdout, "\\");
+            }
+        }
       if (p->have_tmux)
         {
-          if (p->have_tmux == SINGLE_TMUX_SESSION)
-            {
-              fprintf(stdout, "\033\\"); /* End a tmux pass-through sequence */
-            }
-          else
-            {
-              fprintf(stdout, "\033\033\\\033\\"); /* End a nested tmux pass-through sequence */
-            }
+          send_tmux_escape_sequence_end();
           /*
            * tmux does not recognize the drawn image and reserves no space for it
            * -> place the cursor at the end of the drawn image
            */
           fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
         }
-      else if (!p->scroll)
+      else if (p->wtype == 151 && !p->scroll)
         {
           fprintf(stdout, "\033[%dH\n", HEIGHT_IN_CELLS);
         }
@@ -2192,49 +2293,6 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
-#ifndef _WIN32
-static enum tmux_state_t have_tmux(void)
-{
-  const char *term_env_var = gks_getenv("TERM");
-  if (term_env_var == NULL)
-    {
-      return NO_TMUX;
-    }
-
-  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
-    {
-      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
-      if (gks_getenv("TMUX") != NULL)
-        {
-          FILE *fp;
-          char client_termname[80];
-
-          /* Inside tmux we can query the tmux server for the outer terminal name */
-          fp = popen("tmux display -p '#{client_termname}'", "r");
-          if (fp == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              return SINGLE_TMUX_SESSION;
-            }
-          /* Read the output a line at a time - output it. */
-          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              pclose(fp);
-              return SINGLE_TMUX_SESSION;
-            }
-          pclose(fp);
-          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
-                     ? NESTED_TMUX_SESSION
-                     : SINGLE_TMUX_SESSION;
-        }
-      return SINGLE_TMUX_SESSION;
-    }
-
-  return NO_TMUX;
-}
-#endif
-
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
@@ -2260,7 +2318,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->path = chars;
       p->wtype = ia[2];
 #ifndef _WIN32
-      if (p->wtype == 151)
+      if (p->wtype == 151 || p->wtype == 152)
         {
           p->have_tmux = have_tmux();
         }
@@ -2271,7 +2329,8 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 #endif
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151 ||
+          p->wtype == 152)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
