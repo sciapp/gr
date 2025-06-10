@@ -15,7 +15,7 @@ double gauss(void)
   return u * c;
 }
 
-int test_shading(int number_of_points)
+int test_shading(int port, int number_of_points)
 {
   int i, number_of_points_in_file;
   double *d_x = NULL, *d_y = NULL;
@@ -36,7 +36,7 @@ int test_shading(int number_of_points)
   printf("sending data...");
   fflush(stdout);
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -71,14 +71,26 @@ int test_shading(int number_of_points)
   return 0;
 }
 
-int main(int argcount, char **argv)
+int main(int argc, char **argv)
 {
-  if (argcount > 1)
+  if (argc != 2 && argc != 3)
     {
-      return test_shading(atoi(argv[1]));
+      fprintf(stderr, "Usage: sender_shade <port> [number_of_points]\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+
+  if (argc == 3)
+    {
+      return test_shading(port, atoi(argv[2]));
     }
   else
     {
-      return test_shading(NUMBEROFPOINTS);
+      return test_shading(port, NUMBEROFPOINTS);
     }
 }

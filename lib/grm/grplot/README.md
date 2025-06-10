@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This program allows to create plots from the command line while using simple key-value pairs as arguments. The latter are converted into GRM containers which will then be used to plot the data. Alternatively a sender receiver mechanic can be used. For that start the grplot with the parameter `--listen`. The executable will now display the elements the sender sends to it.
+This program allows to create plots from the command line while using simple key-value pairs as arguments. The latter are converted into GRM containers which will then be used to plot the data. Alternatively a sender receiver mechanic can be used. For that start the grplot with the parameter `--listen <port>`. The executable will now display the elements the sender sends to it.
 
 ## Command line arguments
 

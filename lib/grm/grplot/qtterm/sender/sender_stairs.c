@@ -19,14 +19,14 @@ static int n_points = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
 static const char *labels[] = {"post", "pre", "mid"};
 
 
-int test_sendmeta_ref(void)
+int test_sendmeta_ref(int port)
 {
   void *handle;
 
   printf("sending data...");
   fflush(stdout);
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -61,7 +61,18 @@ int test_sendmeta_ref(void)
 }
 
 
-int main(void)
+int main(int argc, char **argv)
 {
-  return test_sendmeta_ref();
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_stairs <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+  return test_sendmeta_ref(port);
 }

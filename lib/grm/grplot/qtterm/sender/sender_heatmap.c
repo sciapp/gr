@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "grm.h"
 
 static double x[40] = {-2.,         -1.8974359,  -1.79487179, -1.69230769, -1.58974359, -1.48717949, -1.38461538,
@@ -149,14 +151,14 @@ static double z[20][40] = {
      1.76548509e+00, 1.82734200e+00, 1.88050339e+00, 1.92441054e+00, 1.95860198e+00, 1.98271834e+00, 1.99650615e+00,
      1.99982051e+00, 1.99262657e+00, 1.97499996e+00, 1.94712592e+00, 1.90929743e+00}};
 
-int test_sendmeta_ref(void)
+int test_sendmeta_ref(int port)
 {
   void *handle;
 
   printf("sending data...");
   fflush(stdout);
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -185,7 +187,18 @@ int test_sendmeta_ref(void)
 }
 
 
-int main(void)
+int main(int argc, char **argv)
 {
-  return test_sendmeta_ref();
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_heatmap <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+  return test_sendmeta_ref(port);
 }

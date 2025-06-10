@@ -3,7 +3,7 @@
 
 #define N_SERIES 3
 
-int main()
+int main(int argc, char **argv)
 {
   int n_y = 3;
   int n_yy = 3;
@@ -22,9 +22,22 @@ int main()
   grm_args_t *series[N_SERIES];
   int i, j;
   void *handle;
+  int port = -1;
+
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_barplot <port>\n");
+      return 1;
+    }
+  port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
 
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");

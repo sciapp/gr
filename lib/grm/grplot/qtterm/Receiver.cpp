@@ -1,7 +1,8 @@
 #include "Receiver.hxx"
 
-Receiver::Receiver()
+Receiver::Receiver(int listen_port)
 {
+  listen_port_ = listen_port;
   moveToThread(&thread_);
   connect(&thread_, &QThread::started, this, &Receiver::receiveData);
 }
@@ -47,7 +48,7 @@ void Receiver::receiveData()
           bool receiver_opened = false;
           while (!receiver_opened)
             {
-              grm_receiver_handle_ = grm_open(GRM_RECEIVER, "127.0.0.1", 8002, nullptr, nullptr);
+              grm_receiver_handle_ = grm_open(GRM_RECEIVER, "127.0.0.1", listen_port_, nullptr, nullptr);
               if (grm_receiver_handle_ != nullptr)
                 {
                   receiver_opened = true;

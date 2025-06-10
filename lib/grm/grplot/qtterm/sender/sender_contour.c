@@ -5,7 +5,7 @@
 #include "grm.h"
 
 
-static int test_contourf(void)
+static int test_contourf(int port)
 {
   double x[100], y[100], z[100];
   int n = sizeof(x) / sizeof(x[0]);
@@ -13,7 +13,7 @@ static int test_contourf(void)
   grm_args_t *series, *subplot, *args;
   void *handle;
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -52,7 +52,18 @@ static int test_contourf(void)
 }
 
 
-int main(void)
+int main(int argc, char **argv)
 {
-  return test_contourf();
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_contour <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+  return test_contourf(port);
 }

@@ -12,7 +12,8 @@ class GRPlotMainWindow : public QMainWindow
 
 public:
   explicit GRPlotMainWindow(int argc, char **argv, int width, int height, bool listen_mode = false,
-                            bool test_mode = false, QString test_commands_file_path = "", bool help_mode = false);
+                            int listen_port = 8002, bool test_mode = false, QString test_commands_file_path = "",
+                            bool help_mode = false);
   ~GRPlotMainWindow() override;
 
 private:
