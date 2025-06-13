@@ -54,8 +54,6 @@ static std::map<std::string, const char *> key_to_types{
     {"normalization", "s"},
     {"only_quadratic_aspect_ratio", "i"},
     {"orientation", "s"},
-    {"phi_flip", "i"},
-    {"phi_lim", "dd"},
     {"resample_method", "s"},
     {"r_lim", "dd"},
     {"rotation", "d"},
@@ -64,6 +62,8 @@ static std::map<std::string, const char *> key_to_types{
     {"stairs", "i"},
     {"step_where", "s"},
     {"style", "s"},
+    {"theta_flip", "i"},
+    {"theta_lim", "dd"},
     {"tilt", "d"},
     {"title", "s"},
     {"transformation", "i"},
@@ -648,6 +648,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               cols -= x_data.size() + error_data.size(); // less y columns if x or error data given
             }
+          else if (strEqualsAny(kind, "histogram"))
+            {
+              cols -= y_data.size() + error_data.size(); // less x columns if y or error data given
+            }
           rows = file_data[0][0].size();
           depth = (depth == 1) ? 0 : depth;
         }
@@ -1077,6 +1081,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
               return 0;
             }
+          // Todo: add multiple column/data file support
           if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed\n");
 
           /* apply the ranges to the data */
@@ -1134,8 +1139,12 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
           grm_args_push(plot[plot_i], "y", "nD", rows, file_data[depth][1].data());
           grm_args_push(plot[plot_i], "z", "nD", rows, file_data[depth][2].data());
+
+          if (!labels.empty() && 0 < labels.size()) labels_c.push_back(labels[0].c_str());
+          if (!labels_c.empty())
+            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), 1), labels_c.data());
         }
-      else if (strEqualsAny(kind, "barplot", "histogram", "stem", "stairs"))
+      else if (strEqualsAny(kind, "barplot", "stem", "stairs"))
         {
           std::vector<double> x(rows);
           double xmin, xmax, ymin, ymax;
@@ -1163,7 +1172,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           cols += x_data.size() + error_data.size();
 
           // precalculate the number of error columns, so they can be removed from the y-data in the following step
-          if (strEqualsAny(kind, "barplot", "histogram") &&
+          if (strEqualsAny(kind, "barplot") &&
               (grm_args_values(plot[plot_i], "error", "a", &error) || xye_file || equal_up_and_down_error))
             {
               if (error == nullptr)
@@ -1194,15 +1203,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   fprintf(stderr, "Not enough data for error parameter\n");
                 }
-              else if (strEqualsAny(kind, "barplot", "histogram"))
+              else if (strEqualsAny(kind, "barplot"))
                 {
-                  if (!grm_args_values(plot[plot_i], "num_bins", "i", &nbins))
-                    {
-                      if (!grm_args_values(plot[plot_i], "bins", "i", &nbins, &bins))
-                        {
-                          if (strcmp(kind, "histogram") == 0) nbins = (int)(3.3 * log10((int)rows) + 0.5) + 1;
-                        }
-                    }
                   if (strcmp(kind, "barplot") == 0) nbins = (int)rows;
                   if (nbins <= rows)
                     {
@@ -1344,10 +1346,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                                                 ((double)file_data[depth][x_data[col] - 1][row] - xmin);
                         }
                     }
-                  // special case for barplot and histogram cause the x-values and bar_width gets calculated via
+                  // special case for barplot cause the x-values and bar_width gets calculated via
                   // x_range_min and max; without the following code block all series will always have the same x and
                   // same width
-                  if (strEqualsAny(kind, "barplot", "histogram"))
+                  if (strEqualsAny(kind, "barplot"))
                     {
                       for (col = 0; col < x_data.size(); ++col)
                         {
@@ -1410,7 +1412,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                           std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
                           std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
                 }
-              if (strEqualsAny(kind, "barplot", "histogram", "stem")) ymin = grm_min(ymin, 0);
+              if (strEqualsAny(kind, "barplot", "stem")) ymin = grm_min(ymin, 0);
               for (col = 0; col < cols; ++col)
                 {
                   if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
@@ -1435,15 +1437,12 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   /* for barplot */
                   grm_args_push(series[col], "y", "nD", rows,
                                 file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
-                  /* for histogram */
-                  grm_args_push(series[col], "weights", "nD", rows,
-                                file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
                   /* for stairs */
                   grm_args_push(series[col], "z", "nD", rows,
                                 file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
-                  if (strEqualsAny(kind, "barplot", "histogram") && series_num > 1)
+                  if (strEqualsAny(kind, "barplot") && series_num > 1)
                     grm_args_push(series[col], "transparency", "d", 0.5);
                   if (col < err / down_err_off)
                     {
@@ -1475,17 +1474,368 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     {
                       if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
-                      /* for histogram */
-                      grm_args_push(series[y_cnt], "weights", "nD", rows, file_data[depth][col].data());
                       /* for stairs */
                       grm_args_push(series[y_cnt], "z", "nD", rows, file_data[depth][col].data());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
-                      if (strEqualsAny(kind, "barplot", "histogram") && series_num > 1)
+                      if (strEqualsAny(kind, "barplot") && series_num > 1)
                         grm_args_push(series[y_cnt], "transparency", "d", 0.5);
                       y_cnt += 1;
                     }
-                  else if (!equal_up_and_down_error && strEqualsAny(kind, "barplot", "histogram") && error != nullptr &&
+                  else if (!equal_up_and_down_error && strEqualsAny(kind, "barplot") && error != nullptr &&
+                           std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col + 1) ==
+                               filtered_error_columns.end())
+                    {
+                      grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
+                      err_cnt += 1;
+                    }
+                  else if (equal_up_and_down_error &&
+                           std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end())
+                    {
+                      grm_args_push(series[err_cnt], "error", "a", error_vec[err_cnt]);
+                      err_cnt += 1;
+                    }
+                }
+            }
+          cols -= x_data.size() + error_data.size();
+          grm_args_push(plot[plot_i], "series", "nA", series_num, series.data());
+
+          if (!labels_c.empty())
+            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), series_num), labels_c.data());
+        }
+      else if (strEqualsAny(kind, "histogram"))
+        {
+          double xmin, xmax, ymin, ymax;
+          grm_args_t *error = nullptr;
+          const char *spec;
+          std::vector<grm_args_t *> error_vec;
+          std::vector<int> filtered_error_columns;
+          int err = 0, col_group_elem = 3, down_err_off = 2;
+          int series_num = 0;
+          int err_cnt = 0, y_cnt = 0, x_cnt = 0;
+          if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
+            {
+              xmin = 0.0;
+              xmax = rows - 1.0;
+            }
+          adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+          cols += y_data.size() + error_data.size();
+
+          // precalculate the number of error columns, so they can be removed from the y-data in the following step
+          if ((grm_args_values(plot[plot_i], "error", "a", &error) || xye_file || equal_up_and_down_error))
+            {
+              if (error == nullptr)
+                {
+                  error = grm_args_new();
+                  grm_args_push(plot[plot_i], "error", "a", error);
+                }
+
+              if (equal_up_and_down_error)
+                {
+                  col_group_elem -= 1;
+                  down_err_off -= 1;
+                }
+              err = floor(cols / col_group_elem) * down_err_off;
+            }
+
+          /* the needed calculation to get the errorbars out of the data */
+          if (grm_args_values(plot[plot_i], "error", "a", &error) || xye_file || equal_up_and_down_error)
+            {
+              int nbins, i;
+              int color_up, color_down, color;
+              std::vector<double> errors_up(rows);
+              std::vector<double> errors_down(rows);
+              std::vector<double> bins;
+
+              if ((cols < col_group_elem && error_data.empty()) ||
+                  (!error_data.empty() && error_data.size() < down_err_off))
+                {
+                  fprintf(stderr, "Not enough data for error parameter\n");
+                }
+              else
+                {
+                  if (!grm_args_values(plot[plot_i], "num_bins", "i", &nbins))
+                    {
+                      if (!grm_args_values(plot[plot_i], "bins", "i", &nbins, &bins))
+                        {
+                          nbins = (int)(3.3 * log10((int)rows) + 0.5) + 1;
+                        }
+                    }
+                  if (nbins <= rows)
+                    {
+                      if (error_data.empty())
+                        {
+                          err = floor(cols / col_group_elem);
+                          error_vec.resize(err);
+                          for (col = 0; col < err; col++)
+                            {
+                              error_vec[col] = grm_args_new();
+                              for (i = 0; i < nbins; i++)
+                                {
+                                  errors_up[i] = file_data[depth][col + 1 + col * down_err_off][i];
+                                  errors_down[i] = file_data[depth][col + down_err_off + col * down_err_off][i];
+                                }
+                              grm_args_push(error_vec[col], "relative", "nDD", nbins, errors_up.data(),
+                                            errors_down.data());
+                              if (grm_args_values(error, "error_bar_color", "i", &color))
+                                grm_args_push(error_vec[col], "error_bar_color", "i", color);
+                              if (grm_args_values(error, "downwards_cap_color", "i", &color_down))
+                                grm_args_push(error_vec[col], "downwards_cap_color", "i", color_down);
+                              if (grm_args_values(error, "upwards_cap_color", "i", &color_up))
+                                grm_args_push(error_vec[col], "upwards_cap_color", "i", color_up);
+                            }
+                          err *= down_err_off;
+                        }
+                      else
+                        {
+                          int cnt = 0;
+                          err = 0;
+                          error_vec.resize(equal_up_and_down_error ? error_data.size() : error_data.size() / 2);
+                          for (i = 0; i < error_vec.size(); i++)
+                            {
+                              error_vec[i] = grm_args_new();
+                              if (grm_args_values(error, "error_bar_color", "i", &color))
+                                grm_args_push(error_vec[i], "error_bar_color", "i", color);
+                              if (grm_args_values(error, "downwards_cap_color", "i", &color_down))
+                                grm_args_push(error_vec[i], "downwards_cap_color", "i", color_down);
+                              if (grm_args_values(error, "upwards_cap_color", "i", &color_up))
+                                grm_args_push(error_vec[i], "upwards_cap_color", "i", color_up);
+                            }
+                          for (int error_col : error_data)
+                            {
+                              for (i = 0; i < nbins; i++)
+                                {
+                                  if (equal_up_and_down_error)
+                                    {
+                                      errors_up[i] = file_data[depth][error_col - 1][i];
+                                      errors_down[i] = file_data[depth][error_col - 1][i];
+                                    }
+                                  else if (cnt % 2 == 0)
+                                    {
+                                      errors_up[i] = file_data[depth][error_col - 1][i];
+                                    }
+                                  else if (cnt % 2 != 0)
+                                    {
+                                      errors_down[i] = file_data[depth][error_col - 1][i];
+                                    }
+                                }
+                              if (cnt % 2 != 0 || equal_up_and_down_error)
+                                {
+                                  grm_args_push(error_vec[floor(cnt / (equal_up_and_down_error ? 1 : 2))], "relative",
+                                                "nDD", nbins, errors_up.data(), errors_down.data());
+                                }
+                              else
+                                {
+                                  filtered_error_columns.push_back(error_col);
+                                }
+                              cnt += 1;
+                            }
+                        }
+                      grm_args_push(error, "relative", "nDD", nbins, errors_up.data(), errors_down.data());
+                    }
+                  else
+                    {
+                      fprintf(stderr, "Not enough data for error parameter\n");
+                    }
+                }
+            }
+
+          series_num = (!y_data.empty() || !error_data.empty()) ? x_data.size() : cols - err;
+          for (col = 0; col < series_num; col++)
+            {
+              series[col] = grm_args_new();
+              setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                                twin_y_series);
+            }
+
+          // find min and max value of all x-data and make sure the all data points are inside that range
+          if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
+            {
+              double x_min = INFINITY, x_max = -INFINITY;
+              int tmp_cnt = 0;
+              if (!x_data.empty())
+                {
+                  for (col = 0; col < x_data.size(); col++)
+                    {
+                      xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                               std::end(file_data[depth][x_data[col] - 1]));
+                      xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                               std::end(file_data[depth][x_data[col] - 1]));
+                      x_min = grm_min(x_min, xmin);
+                      x_max = grm_max(x_max, xmax);
+                      if (!x_data.empty() && col < series_num) grm_args_push(series[col], "x_range", "dd", xmin, xmax);
+                    }
+                }
+              else
+                {
+                  for (col = 0; col < cols - err; col++)
+                    {
+                      xmin = grm_min(
+                          0, *std::min_element(
+                                 std::begin(
+                                     file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
+                                 std::end(
+                                     file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
+                      xmax = *std::max_element(
+                          std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
+                          std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]));
+                      x_min = grm_min(x_min, xmin);
+                      x_max = grm_max(x_max, xmax);
+                      if (cols - err == series_num)
+                        grm_args_push(series[col], "x_range", "dd", xmin, xmax);
+                      else if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
+                        grm_args_push(series[tmp_cnt++], "x_range", "dd", xmin, xmax);
+                    }
+                }
+              adjustRanges(&ranges.xmin, &ranges.xmax, std::min<double>(0.0, x_min), x_max);
+            }
+          else
+            {
+              /* apply x_range to the data */
+              for (col = 0; col < series_num; ++col)
+                {
+                  grm_args_push(series[col], "x_range", "dd", xmin, xmax);
+                }
+              xmin = INFINITY;
+              xmax = -INFINITY;
+              for (col = 0; col < cols; ++col)
+                {
+                  if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
+                  xmin = grm_min(
+                      xmin,
+                      *std::min_element(
+                          std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
+                          std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
+                  xmax = grm_max(
+                      xmax,
+                      *std::max_element(
+                          std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
+                          std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
+                }
+              xmin = grm_min(xmin, 0);
+              for (col = 0; col < cols; ++col)
+                {
+                  if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end()) continue;
+                  if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
+                  for (row = 0; row < rows; ++row)
+                    {
+                      file_data[depth][col][row] = ranges.xmin + (ranges.xmax - ranges.xmin) / (xmax - xmin) *
+                                                                     ((double)file_data[depth][col][row] - xmin);
+                    }
+                }
+              // special case for histogram cause the x-values and bar_width gets calculated via
+              // x_range_min and max; without the following code block all series will always have the same x and
+              // same width
+              for (col = 0; col < x_data.size(); ++col)
+                {
+                  xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                           std::end(file_data[depth][x_data[col] - 1]));
+                  xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                           std::end(file_data[depth][x_data[col] - 1]));
+                  if (col < series_num) grm_args_push(series[col], "x_range", "dd", xmin, xmax);
+                }
+            }
+
+          // find min and max value of all y-data and make sure the all data points are inside that range
+          if (!grm_args_values(plot[plot_i], "y_range", "dd", &ymin, &ymax))
+            {
+              double y_min = INFINITY, y_max = -INFINITY;
+              for (col = 0; col < y_data.size(); col++)
+                {
+                  ymin = *std::min_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                           std::end(file_data[depth][y_data[col] - 1]));
+                  ymax = *std::max_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                           std::end(file_data[depth][y_data[col] - 1]));
+                  y_min = grm_min(y_min, ymin);
+                  y_max = grm_max(y_max, ymax);
+                  if (!y_data.empty() && col < series_num) grm_args_push(series[col], "y_range", "dd", ymin, ymax);
+                }
+              adjustRanges(&ranges.ymin, &ranges.ymax, y_min, y_max);
+              grm_args_push(plot[plot_i], "y_line_pos", "d", 0.0);
+            }
+          else
+            {
+              for (col = 0; col < series_num; ++col)
+                {
+                  grm_args_push(series[col], "y_range", "dd", ymin, ymax);
+                }
+              ymin = INFINITY;
+              ymax = -INFINITY;
+              for (col = 0; col < y_data.size(); ++col)
+                {
+                  ymin = grm_min(ymin, *std::min_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                                         std::end(file_data[depth][y_data[col] - 1])));
+                  ymax = grm_max(ymax, *std::max_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                                         std::end(file_data[depth][y_data[col] - 1])));
+                }
+              for (col = 0; col < y_data.size(); ++col)
+                {
+                  for (row = 0; row < rows; row++)
+                    {
+                      file_data[depth][y_data[col] - 1][row] =
+                          ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) *
+                                            ((double)file_data[depth][y_data[col] - 1][row] - ymin);
+                    }
+                }
+              if (!y_data.empty())
+                {
+                  grm_args_push(plot[plot_i], "y_line_pos", "d",
+                                ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) * (0.0 - ymin));
+                }
+              else
+                {
+                  grm_args_push(plot[plot_i], "y_line_pos", "d", ranges.ymin);
+                }
+            }
+
+          // push the data into the container structure
+          for (col = 0; col < cols - err; col++)
+            {
+              if (x_data.empty() && y_data.empty() && error_data.empty())
+                {
+                  if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                  grm_args_push(series[col], "x", "nD", rows,
+                                file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
+                  if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
+                    grm_args_push(series[col], "line_spec", "s", spec);
+                  if (series_num > 1) grm_args_push(series[col], "transparency", "d", 0.5);
+                  if (col < err / down_err_off)
+                    {
+                      int error_bar_style;
+                      grm_args_push(series[col], "error", "a", error_vec[col]);
+                      if (grm_args_values(plot[plot_i], "error_bar_style", "i", &error_bar_style))
+                        grm_args_push(series[err_cnt], "error_bar_style", "i", error_bar_style);
+                    }
+                }
+              else
+                {
+                  if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
+                    {
+                      int error_bar_style;
+                      if (grm_args_values(plot[plot_i], "error_bar_style", "i", &error_bar_style))
+                        grm_args_push(series[x_cnt], "error_bar_style", "i", error_bar_style);
+                      grm_args_push(series[x_cnt], "x", "nD", rows, file_data[depth][col].data());
+                      if (x_data.size() == 1)
+                        {
+                          // special case: if only one x-column is given use it for all y-columns
+                          for (int k = 1; k < y_data.size(); k++)
+                            {
+                              grm_args_push(series[k], "x", "nD", rows, file_data[depth][col].data());
+                            }
+                        }
+                      x_cnt += 1;
+                    }
+                  else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
+                    {
+                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                      grm_args_push(series[y_cnt], "weights", "nD", rows, file_data[depth][col].data());
+                      if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
+                        grm_args_push(series[y_cnt], "line_spec", "s", spec);
+                      if (series_num > 1) grm_args_push(series[y_cnt], "transparency", "d", 0.5);
+                      y_cnt += 1;
+                    }
+                  else if (!equal_up_and_down_error && error != nullptr &&
                            std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col + 1) ==
                                filtered_error_columns.end())
                     {

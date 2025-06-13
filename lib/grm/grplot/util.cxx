@@ -232,6 +232,16 @@ bool isDigits(const std::string &str)
   return str.find_first_not_of("0123456789") == std::string::npos;
 }
 
+bool isNumber(const std::string &str)
+{
+  const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
+  auto em_dash = std::string(minus);
+  size_t start_pos = 0;
+  if (startsWith(str, em_dash)) start_pos = em_dash.size();
+  auto pos = str.find_first_not_of(".-0123456789", start_pos);
+  return pos == std::string::npos;
+}
+
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value)
 #else

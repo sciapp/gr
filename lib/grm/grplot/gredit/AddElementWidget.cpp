@@ -350,19 +350,24 @@ void AddElementWidget::accept()
             else if (attribute_name_vec[i] != "Colorrep-value")
               {
                 auto value = ((QLineEdit *)fields[i])->text().toStdString();
-                if (attribute_type_vec[i] == "xs:string" ||
-                    (attribute_type_vec[i] == "strint" && !util::isDigits(value)))
+                if ((attribute_type_vec[i] == "xs:string" || attribute_type_vec[i] == "strint") &&
+                    !util::isDigits(value))
                   {
                     new_element->setAttribute(attribute_name_vec[i], value);
                   }
-                else if (attribute_type_vec[i] == "xs:double")
+                else if (attribute_type_vec[i] == "xs:double" && util::isNumber(value))
                   {
                     new_element->setAttribute(attribute_name_vec[i], std::stod(value));
                   }
-                else if (attribute_type_vec[i] == "xs:integer" ||
-                         (attribute_type_vec[i] == "strint" && util::isDigits(value)))
+                else if ((attribute_type_vec[i] == "xs:integer" || attribute_type_vec[i] == "strint") &&
+                         util::isDigits(value))
                   {
                     new_element->setAttribute(attribute_name_vec[i], std::stoi(value));
+                  }
+                else
+                  {
+                    fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
+                            attribute_name_vec[i].c_str(), attribute_type_vec[i].c_str());
                   }
               }
           }

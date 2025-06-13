@@ -32,17 +32,15 @@ class GRM_EXPORT GridElement
 {
 public:
   GridElement();
-  GridElement(double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl, int fit_parents_height,
-              int fit_parents_width, double relative_height, double relative_width, double aspect_ratio);
+  GridElement(double abs_height, double abs_width, int fit_parents_height, int fit_parents_width,
+              double relative_height, double relative_width, double aspect_ratio);
   virtual ~GridElement();
   virtual void finalizePlot();
   virtual bool isGrid();
   void setPlot(double x1, double x2, double y1, double y2);
   void setAbsHeight(double height);
-  void setAbsHeightPxl(int height);
   void setRelativeHeight(double height);
   void setAbsWidth(double width);
-  void setAbsWidthPxl(int width);
   void setRelativeWidth(double width);
   void setAspectRatio(double ar);
   void setFitParentsHeight(bool fit_parents_height);
@@ -54,8 +52,6 @@ public:
 
   double abs_height = -1;
   double abs_width = -1;
-  int abs_height_pxl = -1;
-  int abs_width_pxl = -1;
   int fit_parents_height = 0;
   int fit_parents_width = 1;
   double relative_height = -1;
@@ -79,9 +75,8 @@ class GRM_EXPORT Grid : public GridElement
 
 public:
   Grid(int n_rows, int n_cols);
-  Grid(int n_rows, int n_cols, double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl,
-       int fit_parents_height, int fit_parents_width, double relative_height, double relative_width,
-       double aspect_ratio);
+  Grid(int n_rows, int n_cols, double abs_height, double abs_width, int fit_parents_height, int fit_parents_width,
+       double relative_height, double relative_width, double aspect_ratio);
   ~Grid();
   void setElement(int row, int col, GridElement *element);
   void setElement(int row, int col, grm_args_t *args);

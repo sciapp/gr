@@ -37,13 +37,17 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
   item->setText(0, tr(name.c_str()));
   item->setExpanded(true);
   // checkboxes for _selected attribute
-  if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+  if (item->getRef()->localName() != "coordinate_system" &&
+      !(item->getRef()->localName() == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
     {
-      item->setCheckState(0, Qt::Checked);
-    }
-  else
-    {
-      item->setCheckState(0, Qt::Unchecked);
+      if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+        {
+          item->setCheckState(0, Qt::Checked);
+        }
+      else
+        {
+          item->setCheckState(0, Qt::Unchecked);
+        }
     }
 
   for (const auto &cur_elem : ref->children())
@@ -56,7 +60,9 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
 {
   bool selected_status =
       item->getRef()->hasAttribute("_selected") && static_cast<int>(item->getRef()->getAttribute("_selected"));
-  if (item->getRef()->localName() != "root" &&
+  if ((item->getRef()->localName() != "root" && item->getRef()->localName() != "coordinate_system" &&
+       (item->getRef()->localName() != "layout_grid" &&
+        item->getRef()->parentElement()->localName() != "layout_grid")) &&
       ((item->checkState(0) == 0 && selected_status == true) || (item->checkState(0) == 2 && selected_status == false)))
     {
       // checkbox status got changed

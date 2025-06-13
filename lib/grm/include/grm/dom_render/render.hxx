@@ -23,10 +23,10 @@
 #define PLOT_DEFAULT_CLEAR 1
 #define PLOT_DEFAULT_UPDATE 1
 #define PLOT_DEFAULT_LOCATION 1
-#define PLOT_DEFAULT_PLOT_MIN_X 0.0
-#define PLOT_DEFAULT_PLOT_MAX_X 1.0
-#define PLOT_DEFAULT_PLOT_MIN_Y 0.0
-#define PLOT_DEFAULT_PLOT_MAX_Y 1.0
+#define PLOT_DEFAULT_VIEWPORT_NORMALIZED_MIN_X 0.0
+#define PLOT_DEFAULT_VIEWPORT_NORMALIZED_MAX_X 1.0
+#define PLOT_DEFAULT_VIEWPORT_NORMALIZED_MIN_Y 0.0
+#define PLOT_DEFAULT_VIEWPORT_NORMALIZED_MAX_Y 1.0
 #define PLOT_DEFAULT_ROTATION 40.0
 #define PLOT_DEFAULT_TILT 60.0
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 1
@@ -68,7 +68,7 @@
 #define PLOT_DEFAULT_SPACE_3D_FOV 30.0
 #define PLOT_DEFAULT_SPACE_3D_DISTANCE 0.0
 #define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
-#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.016
+#define PLOT_DEFAULT_COLORBAR_CHAR_HEIGHT 0.016
 #define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
 #define PLOT_3D_COLORBAR_OFFSET 0.05
 #define PLOT_POLAR_COLORBAR_OFFSET 0.025
@@ -149,6 +149,7 @@ GRM_EXPORT int clipRegionStringToInt(const std::string &error_bar_stylr_str);
 GRM_EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str);
 GRM_EXPORT int fillStyleStringToInt(const std::string &fill_style_str);
 GRM_EXPORT int fillIntStyleStringToInt(const std::string &fill_int_style_str);
+GRM_EXPORT int transformationStringToInt(const std::string &transformation_str);
 
 GRM_EXPORT std::string algorithmIntToString(int algorithm);
 GRM_EXPORT std::string colormapIntToString(int colormap);
@@ -171,6 +172,7 @@ GRM_EXPORT std::string clipRegionIntToString(int error_bar_style);
 GRM_EXPORT std::string resampleMethodIntToString(int error_bar_style);
 GRM_EXPORT std::string fillStyleIntToString(int fill_style);
 GRM_EXPORT std::string fillIntStyleIntToString(int fill_int_style);
+GRM_EXPORT std::string transformationIntToString(int transformation);
 
 GRM_EXPORT std::vector<std::string> getSizeUnits();
 GRM_EXPORT std::vector<std::string> getColormaps();
@@ -188,6 +190,7 @@ GRM_EXPORT std::vector<std::string> getModel();
 GRM_EXPORT std::vector<std::string> getContextAttributes();
 GRM_EXPORT std::vector<std::string> getFillStyles();
 GRM_EXPORT std::vector<std::string> getFillIntStyles();
+GRM_EXPORT std::vector<std::string> getTransformation();
 
 GRM_EXPORT void addValidContextKey(std::string key);
 
@@ -268,14 +271,14 @@ public:
                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createNonUniformPolarCellArray(
-      double x_org, double y_org, const std::string &phi_key, std::optional<std::vector<double>> phi,
-      const std::string &r_key, std::optional<std::vector<double>> r, int dimphi, int dimr, int scol, int srow,
-      int ncol, int nrow, const std::string &color_key, std::optional<std::vector<int>> color,
+      double x_org, double y_org, const std::string &theta_key, std::optional<std::vector<double>> theta,
+      const std::string &r_key, std::optional<std::vector<double>> r, int dim_theta, int dim_r, int s_col, int s_row,
+      int n_col, int n_row, const std::string &color_key, std::optional<std::vector<int>> color,
       const std::shared_ptr<Context> &ext_context = nullptr, const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createPolarCellArray(double x_org, double y_org, double phimin, double phimax, double rmin,
-                                                double rmax, int dimphi, int dimr, int scol, int srow, int ncol,
-                                                int nrow, const std::string &color_key,
+  std::shared_ptr<Element> createPolarCellArray(double x_org, double y_org, double theta_min, double theta_max,
+                                                double r_min, double r_max, int dim_theta, int dim_r, int s_col,
+                                                int s_row, int n_col, int n_row, const std::string &color_key,
                                                 std::optional<std::vector<int>> color,
                                                 const std::shared_ptr<Context> &ext_context = nullptr,
                                                 const std::shared_ptr<Element> &ext_element = nullptr);
@@ -340,14 +343,15 @@ public:
   std::shared_ptr<Element> createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y,
                                         const std::string &u_key, std::optional<std::vector<double>> u,
-                                        const std::string &v_key, std::optional<std::vector<double>> v, int color,
+                                        const std::string &v_key, std::optional<std::vector<double>> v, int colored,
                                         const std::shared_ptr<Context> &ext_context = nullptr);
 
   std::shared_ptr<Element> createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y,
                                         const std::shared_ptr<Context> &ext_context = nullptr);
 
-  std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &ext_context = nullptr,
+  std::shared_ptr<Element> createColorbar(unsigned int num_color_values,
+                                          const std::shared_ptr<Context> &ext_context = nullptr,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createNonUniformCellArray(const std::string &x_key, std::optional<std::vector<double>> x,
@@ -422,7 +426,7 @@ public:
 
   std::shared_ptr<Element> createSidePlotRegion(const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createRhoAxes(const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createRadialAxes(const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createThetaAxes(const std::shared_ptr<Element> &ext_element = nullptr);
 
@@ -523,6 +527,8 @@ public:
 
   void setBorderColorInd(const std::shared_ptr<Element> &element, int index);
 
+  void setBorderWidth(const std::shared_ptr<Element> &element, double width);
+
   void selectClipXForm(const std::shared_ptr<Element> &element, int form);
 
   void setCharHeight(const std::shared_ptr<Element> &element, double height);
@@ -535,7 +541,8 @@ public:
 
   void setProjectionType(const std::shared_ptr<Element> &element, int type);
 
-  void setPlot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
+  static void setViewportNormalized(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin,
+                                    double ymax);
 
   void setOriginPosition(const std::shared_ptr<Element> &element, const std::string &x_org_pos,
                          const std::string &y_org_pos);

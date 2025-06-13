@@ -1136,6 +1136,7 @@ if(Qt6Widgets_FOUND
 )
   add_library(
     grplotWidget SHARED
+    lib/grm/grplot/CollapsibleSection.cpp
     lib/grm/grplot/gredit/AddElementWidget.cpp
     lib/grm/grplot/gredit/BoundingLogic.cpp
     lib/grm/grplot/gredit/BoundingObject.cpp
@@ -1375,6 +1376,7 @@ if((Qt6Widgets_FOUND
     add_executable(
       grplot WIN32 MACOSX_BUNDLE
       "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc"
+      lib/grm/grplot/CollapsibleSection.cpp
       lib/grm/grplot/gredit/AddElementWidget.cpp
       lib/grm/grplot/gredit/BoundingLogic.cpp
       lib/grm/grplot/gredit/BoundingObject.cpp
@@ -1463,7 +1465,6 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx -o ${CMAKE_CURRENT_BINARY_DIR}/moc_Receiver.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx
       )
-
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cpp
         COMMAND
@@ -1520,6 +1521,14 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
@@ -1533,6 +1542,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_Receiver.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cpp
       )
     else()
       set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
@@ -1549,6 +1559,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
       )
     endif()
     if(APPLE)

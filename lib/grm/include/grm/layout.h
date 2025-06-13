@@ -47,10 +47,8 @@ GRM_EXPORT void grm_trim(grm_grid_t *a_grid);
 
 GRM_EXPORT grm_error_t grm_element_new(grm_element_t **a_element);
 GRM_EXPORT grm_error_t grm_element_set_abs_height(grm_element_t *a_element, double height);
-GRM_EXPORT grm_error_t grm_element_set_abs_height_pxl(grm_element_t *a_element, int height);
 GRM_EXPORT grm_error_t grm_element_set_relative_height(grm_element_t *a_element, double height);
 GRM_EXPORT grm_error_t grm_element_set_abs_width(grm_element_t *a_element, double width);
-GRM_EXPORT grm_error_t grm_element_set_abs_width_pxl(grm_element_t *a_element, int width);
 GRM_EXPORT grm_error_t grm_element_set_relative_width(grm_element_t *a_element, double width);
 GRM_EXPORT grm_error_t grm_element_set_aspect_ratio(grm_element_t *a_element, double ar);
 GRM_EXPORT void grm_element_set_fit_parents_height(grm_element_t *a_element, int fit_parents_height);
