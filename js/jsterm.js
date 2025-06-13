@@ -197,6 +197,7 @@ JSTerm = function(ispluto=false) {
         div.appendChild(canvas);
         disp.appendChild(div);
         widget.connectCanvas();
+        // TODO: Can cause Render to crash when loading saved data, as no data is loaded yet.
         widget.draw();
       }
     };

@@ -426,6 +426,8 @@ DLLEXPORT void gr_endgraphics(void);
 DLLEXPORT char *gr_getgraphics(void);
 DLLEXPORT int gr_drawgraphics(char *);
 DLLEXPORT int gr_startlistener(void);
+DLLEXPORT int gr_inqgrplotport(void);
+DLLEXPORT int gr_setgrplotport(int);
 DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
 DLLEXPORT void gr_mathtex3d(double, double, double, char *, int);

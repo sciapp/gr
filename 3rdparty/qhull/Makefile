@@ -3,10 +3,13 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
  CFLAGS = -O -fPIC -fno-common $(ARCHS)
+ifeq ($(notdir $(CC)), emcc)
+else ifndef OS
 ifeq ($(shell uname),Darwin)
-ifneq ($(notdir $(CC)),emcc)
 CFLAGS += -mmacosx-version-min=10.15
 endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
+CFLAGS += -mmacosx-version-min=10.15
 endif
 
    OBJS = \

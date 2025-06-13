@@ -34,8 +34,8 @@ class GRPlotWidget : public QWidget
   Q_OBJECT
 
 public:
-  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, bool test_mode = false,
-                        QString test_commands = "");
+  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, int listen_port = 8002,
+                        bool test_mode = false, QString test_commands = "");
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool full_redraw = false, bool tree_update = true);

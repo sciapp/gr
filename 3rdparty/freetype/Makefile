@@ -8,7 +8,11 @@ endif
 FTINCLUDES = -Isrc -Iinclude
   FTCFLAGS = -O -fPIC -fno-common $(FTINCLUDES) $(FTDEFINES) $(ARCHS)
 
-ifeq ($(shell uname -s),Darwin)
+ifndef OS
+ifeq ($(shell uname),Darwin)
+ FTCFLAGS += -mmacosx-version-min=10.15
+endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
  FTCFLAGS += -mmacosx-version-min=10.15
 endif
 

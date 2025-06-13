@@ -78,8 +78,8 @@ extern "C" void cmdCallbackWrapper(const grm_event_t *event)
 }
 
 
-GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, bool test_mode,
-                           QString test_commands)
+GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, int listen_port,
+                           bool test_mode, QString test_commands)
     : QWidget(parent), pixmap(), redraw_pixmap(RedrawType::NONE), args_(nullptr), rubber_band(nullptr)
 {
   args_ = grm_args_new();
@@ -214,7 +214,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
     {
       in_listen_mode = true;
       qRegisterMetaType<ArgsWrapper>("ArgsWrapper");
-      receiver = new Receiver();
+      receiver = new Receiver(listen_port);
       QObject::connect(receiver, SIGNAL(resultReady(ArgsWrapper)), this, SLOT(received(ArgsWrapper)),
                        Qt::QueuedConnection);
       QObject::connect(this, SIGNAL(pixmapRedrawn()), receiver, SLOT(dataProcessed()), Qt::QueuedConnection);

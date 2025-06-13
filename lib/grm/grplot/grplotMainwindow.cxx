@@ -5,8 +5,8 @@
 
 const unsigned int MAXPATHLEN = 1024;
 
-GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height, bool listen_mode, bool test_mode,
-                                   QString test_commands_file_path, bool help_mode)
+GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height, bool listen_mode, int listen_port,
+                                   bool test_mode, QString test_commands_file_path, bool help_mode)
     : QMainWindow(), grplot_widget_(nullptr)
 {
   bool hide_colormap = false;
@@ -38,7 +38,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
     }
   else
     {
-      grplot_widget_ = new GRPlotWidget(this, argc, argv, listen_mode, test_mode, test_commands_file_path);
+      grplot_widget_ = new GRPlotWidget(this, argc, argv, listen_mode, listen_port, test_mode, test_commands_file_path);
       setCentralWidget(grplot_widget_);
       grplot_widget_->resize(width, height);
       grplot_widget_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
