@@ -1,5 +1,6 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
+#include <gks.h>
 
 EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {
@@ -42,6 +43,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
   auto combo_box_attr = grplot_widget->getComboBoxAttributes();
   auto check_box_attr = grplot_widget->getCheckBoxAttributes();
+  auto color_ind_attr = grplot_widget->getColorIndAttributes();
+  auto color_rgb_attr = grplot_widget->getColorRGBAttributes();
   schema_tree = grplot_widget->getSchemaTree();
 
   std::string currently_clicked_name = (*current_selection)->getRef()->localName();
@@ -159,6 +162,96 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           ((QCheckBox *)line_edit)->setToolTip(tooltip_string);
           ((QCheckBox *)line_edit)
               ->setChecked(static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name)) == 1);
+        }
+      else if (color_ind_attr.contains(cur_attr_name.c_str()))
+        {
+          auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+          line_edit = new QPushButton(std::to_string(index).c_str(), this);
+          ((QPushButton *)line_edit)->setToolTip(tooltip_string);
+          ((QPushButton *)line_edit)->setObjectName(cur_attr_name.c_str());
+
+          QImage image(1, 1, QImage::Format_RGB32);
+          QRgb value;
+          int errind;
+          double r, g, b;
+
+          gks_inq_color_rep(-1, index, -1, &errind, &r, &g, &b);
+          value = qRgb(255 * r, 255 * g, 255 * b);
+          image.setPixel(0, 0, value);
+
+          auto color_pic = QPixmap::fromImage(image);
+          color_pic = color_pic.scaled(20, 20);
+          ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
+
+          QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
+          QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
+            QImage new_image(1, 1, QImage::Format_RGB32);
+            QRgb new_value;
+            int err;
+            double new_r, new_g, new_b;
+
+            auto new_index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+            ((QPushButton *)line_edit)->setText(std::to_string(new_index).c_str());
+
+            gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
+            new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+            new_image.setPixel(0, 0, new_value);
+
+            auto new_color_pic = QPixmap::fromImage(new_image);
+            new_color_pic = new_color_pic.scaled(20, 20);
+            ((QPushButton *)line_edit)->setIcon(QIcon(new_color_pic));
+          });
+        }
+      else if (color_rgb_attr.contains(cur_attr_name.c_str()))
+        {
+          line_edit = new QPushButton(this);
+          ((QPushButton *)line_edit)->setToolTip(tooltip_string);
+          ((QPushButton *)line_edit)->setObjectName(cur_attr_name.c_str());
+
+          double ref_r = 0, ref_g = 0, ref_b = 0;
+          std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+          if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+            {
+              auto context_ref = static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+              auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+              ref_r = rgb_vec.at(0);
+              ref_g = rgb_vec.at(1);
+              ref_b = rgb_vec.at(2);
+            }
+
+          QImage image(1, 1, QImage::Format_RGB32);
+          QRgb value;
+
+          value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
+          image.setPixel(0, 0, value);
+
+          auto color_pic = QPixmap::fromImage(image);
+          color_pic = color_pic.scaled(20, 20);
+          ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
+
+          QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorRGBSlot()));
+          QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
+            QImage new_image(1, 1, QImage::Format_RGB32);
+            QRgb new_value;
+            double ref_r_new = 0, ref_g_new = 0, ref_b_new = 0;
+            if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+              {
+                auto context_ref =
+                    static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+                ref_r_new = rgb_vec.at(0);
+                ref_g_new = rgb_vec.at(1);
+                ref_b_new = rgb_vec.at(2);
+                ((QPushButton *)line_edit)->setText(context_ref.c_str());
+              }
+
+            new_value = qRgb(255 * ref_r_new, 255 * ref_g_new, 255 * ref_b_new);
+            new_image.setPixel(0, 0, new_value);
+
+            auto new_color_pic = QPixmap::fromImage(new_image);
+            new_color_pic = new_color_pic.scaled(20, 20);
+            ((QPushButton *)line_edit)->setIcon(QIcon(new_color_pic));
+          });
         }
       else
         {
@@ -574,6 +667,63 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       ->setChecked(static_cast<int>(
                                                        (*current_selection)->getRef()->getAttribute(attr_name)) == 1);
                                 }
+                              else if (color_ind_attr.contains(attr_name.c_str()))
+                                {
+                                  auto index =
+                                      static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
+                                  line_edit = new QPushButton(std::to_string(index).c_str(), this);
+                                  ((QPushButton *)line_edit)->setToolTip(tooltip_string);
+                                  ((QPushButton *)line_edit)->setObjectName(attr_name.c_str());
+                                  QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this,
+                                                   SLOT(colorIndexSlot()));
+                                  QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
+                                    auto new_index =
+                                        static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
+                                    ((QPushButton *)line_edit)->setText(std::to_string(new_index).c_str());
+                                    QImage new_image(1, 1, QImage::Format_RGB32);
+                                    QRgb new_value;
+                                    int err;
+                                    double new_r, new_g, new_b;
+
+                                    gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
+                                    new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+                                    new_image.setPixel(0, 0, new_value);
+
+                                    auto new_color_pic = QPixmap::fromImage(new_image);
+                                    new_color_pic = new_color_pic.scaled(20, 20);
+                                    ((QPushButton *)line_edit)->setIcon(QIcon(new_color_pic));
+                                  });
+                                }
+                              else if (color_rgb_attr.contains(attr_name.c_str()))
+                                {
+                                  line_edit = new QPushButton(this);
+                                  ((QPushButton *)line_edit)->setToolTip(tooltip_string);
+                                  ((QPushButton *)line_edit)->setObjectName(attr_name.c_str());
+                                  QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this,
+                                                   SLOT(colorRGBSlot()));
+                                  QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
+                                    QImage new_image(1, 1, QImage::Format_RGB32);
+                                    QRgb new_value;
+                                    if ((*current_selection)->getRef()->hasAttribute(attr_name))
+                                      {
+                                        double ref_r = 0, ref_g = 0, ref_b = 0;
+                                        std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+                                        auto context_ref = static_cast<std::string>(
+                                            (*current_selection)->getRef()->getAttribute(attr_name));
+                                        auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+                                        ref_r = rgb_vec.at(0);
+                                        ref_g = rgb_vec.at(1);
+                                        ref_b = rgb_vec.at(2);
+                                        new_value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
+                                        new_image.setPixel(0, 0, new_value);
+
+                                        ((QPushButton *)line_edit)->setText(context_ref.c_str());
+                                        auto new_color_pic = QPixmap::fromImage(new_image);
+                                        new_color_pic = new_color_pic.scaled(20, 20);
+                                        ((QPushButton *)line_edit)->setIcon(QIcon(new_color_pic));
+                                      }
+                                  });
+                                }
                               else
                                 {
                                   line_edit = new QLineEdit(this);
@@ -777,6 +927,7 @@ void EditElementWidget::reject()
 void EditElementWidget::accept()
 {
   auto current_selection = grplot_widget->getCurrentSelection();
+  grplot_widget->createHistoryElement();
   for (int i = 0; i < labels.count(); i++)
     {
       auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
@@ -930,4 +1081,21 @@ void EditElementWidget::accept()
 void EditElementWidget::keyPressEvent(QKeyEvent *event)
 {
   if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) accept();
+}
+
+void EditElementWidget::colorIndexSlot()
+{
+  auto sender_ref = sender();
+  std::string attribute_name = sender_ref->objectName().toStdString();
+  auto current_selection = grplot_widget->getCurrentSelection();
+  auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attribute_name));
+  grplot_widget->colorIndexPopUp(attribute_name, index, (*current_selection)->getRef());
+}
+
+void EditElementWidget::colorRGBSlot()
+{
+  auto sender_ref = sender();
+  std::string attribute_name = sender_ref->objectName().toStdString();
+  auto current_selection = grplot_widget->getCurrentSelection();
+  grplot_widget->colorRGBPopUp(attribute_name, (*current_selection)->getRef());
 }

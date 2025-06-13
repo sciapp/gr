@@ -7,9 +7,9 @@
 #define NOMINMAX
 #endif
 
-// Todo: is a M_Pi definition enough?
-#define _USE_MATH_DEFINES
-
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #include <functional>
 #include <memory>
@@ -268,6 +268,7 @@ static bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"),
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 static bool first_call = true;
 static bool highlighted_attr_exist = false;
+static const char *grm_tmp_dir = nullptr;
 
 static StringMapEntry kind_to_fmt[] = {
     {"line", "xys"},           {"hexbin", "xys"},
@@ -11619,7 +11620,7 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
           if (element->hasAttribute("fill_style")) fill_style = static_cast<int>(element->getAttribute("fill_style"));
           if (element->hasAttribute("_fill_style_set_by_user"))
             fill_style = static_cast<int>(element->getAttribute("_fill_style_set_by_user"));
-          global_render->setFillStyle(fill_rect, fill_style);
+          if (fill_style != 0) global_render->setFillStyle(fill_rect, fill_style);
         }
 
       if (!bar_color_rgb.empty() && bar_color_rgb[0] != -1)
@@ -13962,7 +13963,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
                     fill_style = static_cast<int>(element->parentElement()->getAttribute("fill_style"));
                   if (element->hasAttribute("fill_style"))
                     fill_style = static_cast<int>(element->getAttribute("fill_style"));
-                  global_render->setFillStyle(arc, fill_style);
+                  if (fill_style != 0) global_render->setFillStyle(arc, fill_style);
                 }
               if (!arc->hasAttribute("_fill_color_ind_set_by_user")) global_render->setFillColorInd(arc, face_color);
             }
@@ -19189,7 +19190,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"1", "Determines whether the y-limits should be adjusted"}},
       {std::string("adjust_z_lim"),
        std::vector<std::string>{"1", "Determines whether the z-limits should be adjusted"}},
-      {std::string("aspect_ratio"), std::vector<std::string>{"None", "Aspect ratio"}},
+      {std::string("aspect_ratio"),
+         std::vector<std::string>{
+           "None", "Defines the aspect ratio of the layout element which will define its width and height"}},
       {std::string("algorithm"), std::vector<std::string>{"sum", "The algorithm used for the calculation"}},
       {std::string("ambient"), std::vector<std::string>{"0.2", "The ambient light"}},
       {std::string("angle_label"), std::vector<std::string>{"", "The angle labels for the theta axes"}},
@@ -19204,7 +19207,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("bins"), std::vector<std::string>{"None", "References the bin-values stored in the context"}},
       {std::string("border_color_ind"),
        std::vector<std::string>{"0", "Sets the color of the markers border according to the current colormap"}},
-      {std::string("border_width"), std::vector<std::string>{"None", "Sets the width of the markers border "}},
+      {std::string("border_width"), std::vector<std::string>{"None", "Sets the width of the markers border"}},
       {std::string("c"), std::vector<std::string>{"None", "References the color-values stored in the context"}},
       {std::string("c_lim_max"), std::vector<std::string>{"NAN", "The upper color-limit"}},
       {std::string("c_lim_min"), std::vector<std::string>{"NAN", "The lower color-limit"}},
@@ -19213,8 +19216,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("cap_y_max"), std::vector<std::string>{"None", "The y-value for the upwards cap"}},
       {std::string("cap_y_min"), std::vector<std::string>{"None", "The y-value for the downwards cap"}},
       {std::string("char_height"), std::vector<std::string>{"None", "The height of the chars"}},
-      {std::string("char_up_x"), std::vector<std::string>{"None", "X component of the character up vector"}},
-      {std::string("char_up_y"), std::vector<std::string>{"None", "Y Component of the character up vector"}},
+      {std::string("char_up_x"),
+         std::vector<std::string>{"None", "X component of the character up vector. Used to rotate the text"}},
+      {std::string("char_up_y"),
+         std::vector<std::string>{"None", "Y Component of the character up vector. Used to rotate the text"}},
       {std::string("class_nr"), std::vector<std::string>{"None", "Specify the polar bar by a number"}},
       {std::string("classes"),
        std::vector<std::string>{"None", "References the histogram classes stored in the context"}},
@@ -19308,7 +19313,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
       {std::string("line_color_ind"), std::vector<std::string>{"1", "The line color index"}},
-      {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the edges in rgb format"}},
+      {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the lines in rgb format"}},
       {std::string("line_spec"), std::vector<std::string>{"", "Sets the string specifier for line styles"}},
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
       {std::string("line_width"), std::vector<std::string>{"None", "The width of the line"}},
@@ -19420,14 +19425,15 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("space_z_min"), std::vector<std::string>{"None", "The lower z-coordinate for space"}},
       {std::string("space_3d_camera_distance"),
        std::vector<std::string>{"None", "The camera distance for the 3D space"}},
-      {std::string("space_3d_fov"), std::vector<std::string>{"None", "The field of view for the 3D space"}},
+      {std::string("space_3d_fov"), std::vector<std::string>{"None", "The field of view for the 3D space. If the fov is NaN or 0 an orthographic projection will be used, while every other value will apply a perspective projection to the displayed plot"}},
       {std::string("space_3d_phi"), std::vector<std::string>{"40.0", "The phi angle for the 3D space"}},
       {std::string("space_3d_theta"), std::vector<std::string>{"60.0", "The theta angle for the 3D space"}},
       {std::string("specs"), std::vector<std::string>{"None", "The string specifiers for styles"}},
       {std::string("specular"), std::vector<std::string>{"0.7", "The specular light"}},
       {std::string("specular_power"), std::vector<std::string>{"128", "The specular light power"}},
       {std::string("set_text_color_for_background"),
-       std::vector<std::string>{"None", "The background color for the text"}},
+       std::vector<std::string>{"False", "0 or 1. If this flag is true, the text color will be changed depending on "
+                                         "the color of the background to increase the contrast"}},
       {std::string("stairs"),
        std::vector<std::string>{"0", "This is a format of the polar histogram where only outline edges are drawn"}},
       {std::string("start_angle"), std::vector<std::string>{"None", "The start angle of the element"}},
@@ -24317,4 +24323,14 @@ void GRM::cleanupElement(GRM::Element &element)
       idPool().release(bbox_id);
       boundingMap().erase(bbox_id);
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ history ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+const char *GRM::Render::initializeHistory()
+{
+  if (grm_tmp_dir == nullptr) grm_tmp_dir = createTmpDir();
+  if (grm_tmp_dir == nullptr) throw(std::runtime_error("Tmp directory couldnt be created"));
+
+  return grm_tmp_dir;
 }

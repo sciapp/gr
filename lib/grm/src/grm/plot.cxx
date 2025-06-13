@@ -6030,6 +6030,9 @@ public:
           {
             new_attribute_name = *original_attribute_name;
           }
+        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
+        // shouldnt be exported
+        if (attribute_name == "_highlighted") return false;
         return true;
       }
 

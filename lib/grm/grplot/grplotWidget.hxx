@@ -19,6 +19,7 @@ class GRPlotWidget;
 #include "gredit/AddElementWidget.hxx"
 #include "gredit/EditElementWidget.hxx"
 #include "gredit/TableWidget.hxx"
+#include "gredit/ColorPickerRGB.hxx"
 #include "qtterm/Receiver.hxx"
 #include "qtterm/ArgsWrapper.hxx"
 #include "util.hxx"
@@ -55,11 +56,17 @@ public:
   void setCurrentSelection(BoundingObject *current_selection);
   void setTreeUpdate(bool status);
   void setReferencedElements(std::vector<BoundingObject> referenced_elements);
+  void colorIndexPopUp(std::string attribute_name, int current_index, const std::shared_ptr<GRM::Element> element);
+  void colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element);
+  void createHistoryElement(std::string flag = "");
+  void removeHistoryElement();
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();
   QStringList getCheckBoxAttributes();
   QStringList getComboBoxAttributes();
+  QStringList getColorIndAttributes();
+  QStringList getColorRGBAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
   QAction *getPdfAct();
@@ -96,7 +103,6 @@ public:
   QAction *getSaveFileAct();
   QAction *getLoadFileAct();
   QAction *getShowContainerAct();
-  QAction *getShowBoundingBoxesAct();
   QAction *getAddElementAct();
   QAction *getShowContextAct();
   QAction *getAddContextAct();
@@ -139,6 +145,8 @@ public:
   QAction *getTwinXAxisAct();
   QAction *getTwinYAxisAct();
   QAction *getColormapAct();
+  QAction *getUndoAct();
+  QAction *getRedoAct();
 
 protected:
   virtual void draw();
@@ -191,7 +199,6 @@ private slots:
   void svg();
   void moveableMode();
   void showContainerSlot();
-  void showBoundingBoxesSlot();
   void saveFileSlot();
   void loadFileSlot();
   void enableEditorFunctions();
@@ -225,6 +232,8 @@ private slots:
   void twinXAxisSlot();
   void twinYAxisSlot();
   void colormapSlot();
+  void undoSlot();
+  void redoSlot();
 
 private:
   struct MouseState
@@ -334,9 +343,10 @@ private:
   std::shared_ptr<GRM::Document> schema_tree;
   bool tree_update = true;
   QSize size_hint;
-  QStringList check_box_attr, combo_box_attr;
+  QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr;
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
+  ColorPickerRGB *color_picker_rgb;
 
   QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
   QAction *sum_act, *max_act;
@@ -348,14 +358,13 @@ private:
   QAction *shade_act, *hexbin_act;
   QAction *polar_line_act, *polar_scatter_act;
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
-  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
-      *add_element_action;
+  QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
   QAction *moveable_mode_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
       *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
-      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act;
+      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act, *undo_action, *redo_action;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;

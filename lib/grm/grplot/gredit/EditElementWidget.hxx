@@ -10,6 +10,8 @@
 #include <QFormLayout>
 #include <QDialogButtonBox>
 #include <QAction>
+#include <QPushButton>
+#include <QObject>
 #include <vector>
 #include <QKeyEvent>
 #include "grm.h"
@@ -28,6 +30,8 @@ public:
 private slots:
   void reject();
   void accept();
+  void colorIndexSlot();
+  void colorRGBSlot();
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;
