@@ -511,6 +511,11 @@ static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, 
 #ifdef HAVE_ZLIB
   if (p->compress)
     {
+      if (gkss->debug)
+        {
+          fprintf(stdout, "ZLIB version %s\n", zlibVersion());
+        }
+
       compress_chunkwise2d(&image->rgb, &image->rgb_length, (Byte *)image_rgba, width * sizeof(int), height,
                            dimx * sizeof(int), swapx, swapy, rgb_mask, sizeof(rgb_mask));
       compress_chunkwise2d(&image->alpha, &image->alpha_length, (Byte *)image_rgba, width * sizeof(int), height,
@@ -520,6 +525,11 @@ static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, 
 #endif
     {
       int i, j, iy, ix;
+
+      if (gkss->debug)
+        {
+          if (p->compress) fprintf(stderr, "missing ZLIB compression library\n");
+        }
 
       image->alpha = (Byte *)pdf_calloc(width * height, sizeof(Byte));
       image->rgb = (Byte *)pdf_calloc(width * height, 3 * sizeof(Byte));
