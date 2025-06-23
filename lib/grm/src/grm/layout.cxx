@@ -37,19 +37,53 @@ GridElement::GridElement()
   plot = new double[4]{0.0, 0.0, 0.0, 0.0};
 };
 
-GridElement::GridElement(double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl,
-                         int fit_parents_height, int fit_parents_width, double relative_height, double relative_width,
-                         double aspect_ratio)
-    : abs_height(abs_height), abs_width(abs_width), abs_height_pxl(abs_height_pxl), abs_width_pxl(abs_width_pxl),
-      fit_parents_height(fit_parents_height), fit_parents_width(fit_parents_width), relative_height(relative_height),
-      relative_width(relative_width), aspect_ratio(aspect_ratio)
+GridElement::GridElement(double abs_height, double abs_width, int fit_parents_height, int fit_parents_width,
+                         double relative_height, double relative_width, double aspect_ratio)
+    : abs_height(abs_height), abs_width(abs_width), fit_parents_height(fit_parents_height),
+      fit_parents_width(fit_parents_width), relative_height(relative_height), relative_width(relative_width),
+      aspect_ratio(aspect_ratio)
 {
-  setAbsHeight(abs_height);
-  setAbsWidth(abs_width);
-  setAbsHeightPxl(abs_height_pxl);
-  setAbsWidthPxl(abs_width_pxl);
-  setRelativeHeight(relative_height);
-  setRelativeWidth(relative_width);
+
+  try
+    {
+      setAbsHeight(abs_height);
+    }
+  catch (std::invalid_argument &e)
+    {
+      fprintf(stderr, "%s\n", e.what());
+    }
+  try
+    {
+      setAbsWidth(abs_width);
+    }
+  catch (InvalidArgumentRange &e)
+    {
+      fprintf(stderr, "%s\n", e.what());
+    }
+  try
+    {
+      setRelativeHeight(relative_height);
+    }
+  catch (InvalidArgumentRange &e)
+    {
+      fprintf(stderr, "%s\n", e.what());
+    }
+  try
+    {
+      setRelativeWidth(relative_width);
+    }
+  catch (InvalidArgumentRange &e)
+    {
+      fprintf(stderr, "%s\n", e.what());
+    }
+  try
+    {
+      setAspectRatio(aspect_ratio);
+    }
+  catch (InvalidArgumentRange &e)
+    {
+      fprintf(stderr, "%s\n", e.what());
+    }
   plot = new double[4]{0.0, 0.0, 0.0, 0.0};
 }
 
@@ -86,17 +120,6 @@ void GridElement::setAbsHeight(double height)
   height_set = (height != -1) ? 1 : 0;
 }
 
-void GridElement::setAbsHeightPxl(int height)
-{
-  if (height_set && height != -1) throw ContradictingAttributes("Can only set one height attribute");
-  if (height <= 0 && height != -1) throw InvalidArgumentRange("Pixel height has to be an positive integer or be -1");
-  if (ar_set && width_set && height != -1)
-    throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
-
-  abs_height_pxl = height;
-  height_set = (height != -1) ? 1 : 0;
-}
-
 void GridElement::setRelativeHeight(double height)
 {
   if (height_set && height != -1) throw ContradictingAttributes("Can only set one height attribute");
@@ -117,17 +140,6 @@ void GridElement::setAbsWidth(double width)
     throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
 
   abs_width = width;
-  width_set = (width != -1) ? 1 : 0;
-}
-
-void GridElement::setAbsWidthPxl(int width)
-{
-  if (width_set && width != -1) throw ContradictingAttributes("Can only set one width attribute");
-  if (width <= 0 && width != -1) throw InvalidArgumentRange("Pixel Width has to be an positive integer or be -1");
-  if (ar_set && height_set && width != -1)
-    throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
-
-  abs_width_pxl = width;
   width_set = (width != -1) ? 1 : 0;
 }
 
@@ -160,7 +172,10 @@ void GridElement::finalizePlot()
     {
       double available_height = plot[3] - plot[2];
       if (abs_height > available_height + epsilon)
-        throw ContradictingAttributes("Absolute height is bigger than available height");
+        {
+          fprintf(stderr, "Absolute height is bigger than available height\n");
+          return;
+        }
       double middle = plot[2] + available_height / 2;
       plot[2] = middle - abs_height / 2;
       plot[3] = middle + abs_height / 2;
@@ -170,7 +185,10 @@ void GridElement::finalizePlot()
     {
       double available_width = plot[1] - plot[0];
       if (abs_width > available_width + epsilon)
-        throw ContradictingAttributes("Absolute width is bigger than available width");
+        {
+          fprintf(stderr, "Absolute width is bigger than available width\n");
+          return;
+        }
       double middle = plot[0] + available_width / 2;
       plot[0] = middle - abs_width / 2;
       plot[1] = middle + abs_width / 2;
@@ -205,14 +223,14 @@ void GridElement::finalizePlot()
       if (current_ar < aspect_ratio)
         {
           double new_height = current_width / aspect_ratio;
-          double middle = plot[2] + current_height / 2;
-          plot[2] = middle - new_height / 2;
-          plot[3] = middle + new_height / 2;
+          double middle = plot[2] + current_height / 2.0;
+          plot[2] = middle - new_height / 2.0;
+          plot[3] = middle + new_height / 2.0;
         }
       else
         {
           double new_width = current_height * aspect_ratio;
-          double middle = plot[0] + current_width / 2;
+          double middle = plot[0] + current_width / 2.0;
           plot[0] = middle - new_width;
           plot[1] = middle + new_width;
         }
@@ -222,10 +240,30 @@ void GridElement::finalizePlot()
 
   if (element_in_dom != nullptr)
     {
-      element_in_dom->setAttribute("plot_x_min", plot[0]);
-      element_in_dom->setAttribute("plot_x_max", plot[1]);
-      element_in_dom->setAttribute("plot_y_min", plot[2]);
-      element_in_dom->setAttribute("plot_y_max", plot[3]);
+      if (!element_in_dom->hasAttribute("_viewport_normalized_x_min_set_by_user") ||
+          !static_cast<int>(element_in_dom->getAttribute("_viewport_normalized_x_min_set_by_user")))
+        {
+          element_in_dom->setAttribute("viewport_normalized_x_min", plot[0]);
+          element_in_dom->setAttribute("_viewport_normalized_x_min_org", plot[0]);
+        }
+      if (!element_in_dom->hasAttribute("_viewport_normalized_x_max_set_by_user") ||
+          !static_cast<int>(element_in_dom->getAttribute("_viewport_normalized_x_max_set_by_user")))
+        {
+          element_in_dom->setAttribute("viewport_normalized_x_max", plot[1]);
+          element_in_dom->setAttribute("_viewport_normalized_x_max_org", plot[1]);
+        }
+      if (!element_in_dom->hasAttribute("_viewport_normalized_y_min_set_by_user") ||
+          !static_cast<int>(element_in_dom->getAttribute("_viewport_normalized_y_min_set_by_user")))
+        {
+          element_in_dom->setAttribute("viewport_normalized_y_min", plot[2]);
+          element_in_dom->setAttribute("_viewport_normalized_y_min_org", plot[2]);
+        }
+      if (!element_in_dom->hasAttribute("_viewport_normalized_y_max_set_by_user") ||
+          !static_cast<int>(element_in_dom->getAttribute("_viewport_normalized_y_max_set_by_user")))
+        {
+          element_in_dom->setAttribute("viewport_normalized_y_max", plot[3]);
+          element_in_dom->setAttribute("_viewport_normalized_y_max_org", plot[3]);
+        }
     }
 
   finalized = 1;
@@ -251,13 +289,12 @@ bool GridElement::isGrid()
   return false;
 }
 
-Grid::Grid(int n_rows, int n_cols) : Grid(n_rows, n_cols, -1, -1, -1, -1, 0, 1, -1, -1, -1) {}
+Grid::Grid(int n_rows, int n_cols) : Grid(n_rows, n_cols, -1, -1, 0, 1, -1, -1, -1) {}
 
-Grid::Grid(int n_rows, int n_cols, double abs_height, double abs_width, int abs_height_pxl, int abs_width_pxl,
-           int fit_parents_height, int fit_parents_width, double relative_height, double relative_width,
-           double aspect_ratio)
-    : GridElement(abs_height, abs_width, abs_height_pxl, abs_width_pxl, fit_parents_height, fit_parents_width,
-                  relative_height, relative_width, aspect_ratio),
+Grid::Grid(int n_rows, int n_cols, double abs_height, double abs_width, int fit_parents_height, int fit_parents_width,
+           double relative_height, double relative_width, double aspect_ratio)
+    : GridElement(abs_height, abs_width, fit_parents_height, fit_parents_width, relative_height, relative_width,
+                  aspect_ratio),
       n_rows(n_rows), n_cols(n_cols)
 {
   if (n_rows < 1 || n_cols < 1)

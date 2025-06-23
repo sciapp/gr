@@ -4,8 +4,12 @@ endif
 
 VERSION = 4.7.0
 TIFF_EXTRA_CONFIGURE_FLAGS ?=
+ifndef OS
 ifeq ($(shell uname),Darwin)
- TIFF_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+TIFF_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
+TIFF_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

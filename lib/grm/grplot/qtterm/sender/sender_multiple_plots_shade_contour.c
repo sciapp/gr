@@ -76,11 +76,23 @@ static grm_args_t *test_contourf(void)
   return subplot;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_multiple_plots_shade_contour <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+
   void *handle;
   grm_args_t *plots = grm_args_new();
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");

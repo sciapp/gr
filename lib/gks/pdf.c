@@ -511,6 +511,11 @@ static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, 
 #ifdef HAVE_ZLIB
   if (p->compress)
     {
+      if (gkss->debug)
+        {
+          fprintf(stdout, "[DEBUG:GKS] ZLIB version %s\n", zlibVersion());
+        }
+
       compress_chunkwise2d(&image->rgb, &image->rgb_length, (Byte *)image_rgba, width * sizeof(int), height,
                            dimx * sizeof(int), swapx, swapy, rgb_mask, sizeof(rgb_mask));
       compress_chunkwise2d(&image->alpha, &image->alpha_length, (Byte *)image_rgba, width * sizeof(int), height,
@@ -520,6 +525,11 @@ static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, 
 #endif
     {
       int i, j, iy, ix;
+
+      if (gkss->debug)
+        {
+          if (p->compress) fprintf(stdout, "[DEBUG:GKS] missing ZLIB compression library\n");
+        }
 
       image->alpha = (Byte *)pdf_calloc(width * height, sizeof(Byte));
       image->rgb = (Byte *)pdf_calloc(width * height, 3 * sizeof(Byte));
@@ -1702,7 +1712,6 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   PDF_image *image;
   int swapx, swapy, count, chars_per_line;
   unsigned char data[3];
-  int have_alpha;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1725,18 +1734,6 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   pdf_save(p);
   set_clip_rect(gkss->cntnr);
-
-  have_alpha = 0;
-  if (true_color)
-    {
-      for (j = 0; j < dy; j++)
-        for (i = 0; i < dx; i++)
-          if ((colia[j * dimx + i] & 0xff000000) != 0xff000000)
-            {
-              have_alpha = 1;
-              break;
-            }
-    }
 
   if (p->preview_fix)
     {
@@ -1774,7 +1771,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
             }
         }
     }
-  else if (true_color && have_alpha)
+  else if (true_color)
     {
       pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
 

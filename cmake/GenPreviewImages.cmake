@@ -536,12 +536,12 @@ static void create_marker_types(void)\n\
   gr_setlinewidth(MARKER_SIZE);\n\
   gr_setborderwidth(0.4 * MARKER_SIZE);\n\
   gr_setcolormap(MARKER_BORDER_COLORMAP);\n\
-  gr_setbordercolorind(MARKER_BORDER_COLOR);\n\
   while (marker_type->name != NULL)\n\
     {\n\
       snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cmarker_types%c%s.png\", PATH_SEP, PATH_SEP,\n\
                marker_type->name);\n\
       gr_beginprint(out_pathname);\n\
+      gr_setbordercolorind(MARKER_BORDER_COLOR);\n\
       gr_setwswindow(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
       gr_setwsviewport(0.0, MARKER_TYPE_WIDTH / 600.0 * 0.0254, 0.0, MARKER_TYPE_HEIGHT / 600.0 * 0.0254);\n\
       gr_setmarkertype(marker_type->id);\n\

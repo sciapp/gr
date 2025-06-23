@@ -3,10 +3,16 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
-ifeq ($(shell uname),Darwin)
-ifneq ($(notdir $(CC)),emcc)
- CFLAGS += -mmacosx-version-min=10.15
-endif
+ifndef OS
+ ifeq ($(shell uname),Darwin)
+  ifneq ($(notdir $(CC)),emcc)
+   CFLAGS += -mmacosx-version-min=10.15
+  endif
+ endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
+ ifneq ($(notdir $(CC)),emcc)
+  CFLAGS += -mmacosx-version-min=10.15
+ endif
 endif
     OBJS = \
         jaricom.o \

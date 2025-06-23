@@ -16,7 +16,7 @@
 #define LENGTH 2000
 #define NBINS 40
 
-static void test_plot(void)
+static void test_plot(int port)
 {
   double plot[LENGTH];
   double weights[LENGTH];
@@ -25,7 +25,7 @@ static void test_plot(void)
 
   grm_args_t *args, *error, *series[2];
   int i;
-  void *handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  void *handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -65,14 +65,14 @@ static void test_plot(void)
   //    Not yet supported:
   //    grm_args_push(series[1], "bar_color", "ddd", 0.5, 1.,0.5);
   //    grm_args_push(series[1], "edge_color", "ddd", 0., 0., 0.);
-  grm_args_push(series[1], "nbins", "i", NBINS / 3);
+  grm_args_push(series[1], "num_bins", "i", NBINS / 3);
 
 
   grm_args_push(args, "series", "nA", 2, series);
   //  Color on per subplot basis:
   grm_args_push(args, "bar_color", "ddd", 1., 0., 0.);
   grm_args_push(args, "edge_color", "ddd", 0., 0., 1.);
-  grm_args_push(args, "kind", "s", "hist");
+  grm_args_push(args, "kind", "s", "histogram");
   grm_args_push(args, "title", "s", "Histogram of two sine waves [0; 2pi] with 40 and 13 bins");
 
   printf("plotting data...\n");
@@ -82,9 +82,20 @@ static void test_plot(void)
   grm_args_delete(args);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-  test_plot();
+  if (argc != 2)
+    {
+      fprintf(stderr, "usage: sender_hist <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "port must be between 1 and 65536\n");
+      return 1;
+    }
+  test_plot(port);
   grm_finalize();
 
   return 0;

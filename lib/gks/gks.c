@@ -68,7 +68,8 @@ static ws_descr_t ws_types[] = {
     {145, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "bmp", NULL, "Cairo BMP"},
     {146, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "tif", NULL, "Cairo TIFF"},
     {150, GKS_K_METERS, 0.20320, 0.15240, 560, 420, 0, "six", NULL, "Sixel"},
-    {151, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "PNG"},
+    {151, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "iTerm PNG"},
+    {152, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "Kitty PNG"},
     {160, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mp4", NULL, "MPEG-4"},
     {161, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "webm", NULL, "WEBM"},
     {162, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "ogg", NULL, "OGG"},
@@ -304,6 +305,7 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
             case 146:
             case 150:
             case 151:
+            case 152:
               gks_cairo_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                                ptr);
               break;
@@ -783,7 +785,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
 #endif
                           ws->vp[0] = 0;
                           ws->vp[2] = 0;
-                          if ((wtype >= 140 && wtype <= 146) || wtype == 150 || wtype == 151)
+                          if ((wtype >= 140 && wtype <= 146) || (wtype >= 150 && wtype <= 152))
                             {
                               ws->vp[1] = 2400.0 / p->unitsx * p->sizex;
                               ws->vp[3] = 2400.0 / p->unitsy * p->sizey;

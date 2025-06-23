@@ -46,7 +46,7 @@ static const char *static_tmp_dir = NULL;
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
-void binData(unsigned int n, double *x, unsigned int num_bins, double *bins, double *weights)
+void binData(unsigned int n, double *x, unsigned int num_bins, double *bins, double *weights, double ymin)
 {
   double x_min = DBL_MAX, x_max = -DBL_MAX;
   unsigned int i;
@@ -58,6 +58,10 @@ void binData(unsigned int n, double *x, unsigned int num_bins, double *bins, dou
       x_max = grm_max(x[i], x_max);
     }
   memset(bins, 0, num_bins * sizeof(double));
+  for (i = 0; i < num_bins; i++)
+    {
+      bins[i] += ymin;
+    }
   for (i = 0; i < n; ++i)
     {
       if (isnan(x[i])) continue;

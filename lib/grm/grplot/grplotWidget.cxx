@@ -30,6 +30,76 @@
 #define GR_UNUSED(x) (void)(x)
 #endif
 
+QStringList axis_type_list{
+    "x",
+    "y",
+};
+QStringList clip_region_list{
+    "quadratic",
+    "elliptic",
+};
+QStringList orientation_list{
+    "vertical",
+    "horizontal",
+};
+QStringList algorithm_marginal_heatmap_list{
+    "sum",
+    "max",
+};
+QStringList error_bar_style_list{
+    "line",
+    "area",
+};
+QStringList marginal_heatmap_kind_list{
+    "all",
+    "line",
+};
+QStringList norm_list{
+    "count", "countdensity", "pdf", "probability", "cumcount", "cdf",
+};
+QStringList plot_type_list{
+    "2d",
+    "3d",
+    "polar",
+};
+QStringList resample_method_list{
+    "default",
+    "nearest",
+    "linear",
+    "lanczos",
+};
+QStringList size_type_list{
+    "double",
+    "int",
+};
+QStringList style_list{
+    "default",
+    "lined",
+    "stacked",
+};
+QStringList text_encoding_list{
+    "latin1",
+    "utf8",
+};
+QStringList org_pos_list{
+    "low",
+    "high",
+};
+QStringList scientific_format_list{
+    "textex",
+    "mathtex",
+};
+QStringList tick_orientation_list{
+    "up",
+    "down",
+};
+QStringList side_region_location_list{"top", "right", "bottom", "left"};
+QStringList step_where_list{
+    "pre",
+    "post",
+    "mid",
+};
+
 static std::string file_export;
 static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
@@ -78,8 +148,8 @@ extern "C" void cmdCallbackWrapper(const grm_event_t *event)
 }
 
 
-GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, bool test_mode,
-                           QString test_commands)
+GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode, int listen_port,
+                           bool test_mode, QString test_commands)
     : QWidget(parent), pixmap(), redraw_pixmap(RedrawType::NONE), args_(nullptr), rubber_band(nullptr)
 {
   args_ = grm_args_new();
@@ -117,7 +187,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "model",
       "norm",
       "orientation",
-      "projection_type",
       "ref_x_axis_location",
       "ref_y_axis_location",
       "resample_method",
@@ -126,11 +195,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "size_y_type",
       "size_x_unit",
       "size_y_unit",
+      "step_where",
       "style",
       "text_encoding",
       "text_align_horizontal",
       "text_align_vertical",
       "tick_orientation",
+      "transformation",
       "x_org_pos",
       "y_org_pos",
       "z_org_pos",
@@ -142,11 +213,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "adjust_y_lim",
       "adjust_z_lim",
       "clip_negative",
+      "colored",
       "colormap_inverted",
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
       "flip_col_and_row",
+      "fit_parents_height",
+      "fit_parents_width",
       "grplot",
       "hide",
       "is_major",
@@ -159,12 +233,12 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "mirrored_axis",
       "movable",
       "only_quadratic_aspect_ratio",
-      "phi_flip",
       "polar_with_pan",
       "set_text_color_for_background",
       "space",
       "stairs",
       "text_is_title",
+      "theta_flip",
       "trim_col",
       "trim_row",
       "x_flip",
@@ -214,7 +288,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
     {
       in_listen_mode = true;
       qRegisterMetaType<ArgsWrapper>("ArgsWrapper");
-      receiver = new Receiver();
+      receiver = new Receiver(listen_port);
       QObject::connect(receiver, SIGNAL(resultReady(ArgsWrapper)), this, SLOT(received(ArgsWrapper)),
                        Qt::QueuedConnection);
       QObject::connect(this, SIGNAL(pixmapRedrawn()), receiver, SLOT(dataProcessed()), Qt::QueuedConnection);
@@ -290,8 +364,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       connect(tricont_act, &QAction::triggered, this, &GRPlotWidget::tricont);
       scatter3_act = new QAction(tr("&Scatter3"), this);
       connect(scatter3_act, &QAction::triggered, this, &GRPlotWidget::scatter3);
-      histogram_act = new QAction(tr("&Histogram"), this);
-      connect(histogram_act, &QAction::triggered, this, &GRPlotWidget::histogram);
       barplot_act = new QAction(tr("&Barplot"), this);
       connect(barplot_act, &QAction::triggered, this, &GRPlotWidget::barplot);
       stairs_act = new QAction(tr("&Stairs"), this);
@@ -323,8 +395,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       connect(y_flip_act, &QAction::triggered, this, &GRPlotWidget::yFlipSlot);
       z_flip_act = new QAction(tr("&Z Flip"), this);
       connect(z_flip_act, &QAction::triggered, this, &GRPlotWidget::zFlipSlot);
-      phi_flip_act = new QAction(tr("&Phi Flip"), this);
-      connect(phi_flip_act, &QAction::triggered, this, &GRPlotWidget::phiFlipSlot);
+      theta_flip_act = new QAction(tr("&Theta Flip"), this);
+      connect(theta_flip_act, &QAction::triggered, this, &GRPlotWidget::thetaFlipSlot);
 
       accelerate_act = new QAction(tr("&Accelerate"), this);
       connect(accelerate_act, &QAction::triggered, this, &GRPlotWidget::accelerateSlot);
@@ -492,7 +564,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
       x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
       text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list, fill_style_list,
-      fill_int_style_list;
+      fill_int_style_list, transformation_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -583,6 +655,12 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
     {
       fill_int_style_list.push_back(i.c_str());
     }
+  auto transformation_vec = GRM::getTransformation();
+  transformation_list.reserve((int)transformation_vec.size());
+  for (auto &i : transformation_vec)
+    {
+      transformation_list.push_back(i.c_str());
+    }
   table_widget->extractContextNames(grm_get_render()->getContext());
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve((int)context_attr_vec.size());
@@ -591,75 +669,6 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       context_attr_list.push_back(i.c_str());
     }
 
-  QStringList axis_type_list{
-      "x",
-      "y",
-  };
-  QStringList clip_region_list{
-      "quadratic",
-      "elliptic",
-  };
-  QStringList orientation_list{
-      "vertical",
-      "horizontal",
-  };
-  QStringList algorithm_marginal_heatmap_list{
-      "sum",
-      "max",
-  };
-  QStringList error_bar_style_list{
-      "line",
-      "area",
-  };
-  QStringList marginal_heatmap_kind_list{
-      "all",
-      "line",
-  };
-  QStringList norm_list{
-      "count", "countdensity", "pdf", "probability", "cumcount", "cdf",
-  };
-  QStringList plot_type_list{
-      "2d",
-      "3d",
-      "polar",
-  };
-  QStringList projection_type_list{
-      "default",
-      "orthographic",
-      "perspective",
-  };
-  QStringList resample_method_list{
-      "default",
-      "nearest",
-      "linear",
-      "lanczos",
-  };
-  QStringList size_type_list{
-      "double",
-      "int",
-  };
-  QStringList style_list{
-      "default",
-      "lined",
-      "stacked",
-  };
-  QStringList text_encoding_list{
-      "latin1",
-      "utf8",
-  };
-  QStringList org_pos_list{
-      "low",
-      "high",
-  };
-  QStringList scientific_format_list{
-      "textex",
-      "mathtex",
-  };
-  QStringList tick_orientation_list{
-      "up",
-      "down",
-  };
-  QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attribute_to_list{
       {"axis_type", axis_type_list},
       {"error_bar_style", error_bar_style_list},
@@ -680,19 +689,20 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"model", model_list},
       {"norm", norm_list},
       {"plot_type", plot_type_list},
-      {"projection_type", projection_type_list},
       {"ref_x_axis_location", x_axis_location_list},
       {"ref_y_axis_location", y_axis_location_list},
       {"resample_method", resample_method_list},
       {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
+      {"step_where", step_where_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
       {"x_org_pos", org_pos_list},
       {"y_org_pos", org_pos_list},
       {"z_org_pos", org_pos_list},
       {"tick_orientation", tick_orientation_list},
+      {"transformation", transformation_list},
   };
   // add for all context attributes all possible values
   for (const auto &attr : GRM::getContextAttributes())
@@ -715,8 +725,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
             {
               const auto global_root = grm_get_document_root();
               const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-              const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                                : global_root->querySelectors("figure[active=1]");
+              const auto figure_elem =
+                  (layout_grid != nullptr && layout_grid->querySelectors("[_selected_for_menu]") != nullptr)
+                      ? layout_grid->querySelectors("[_selected_for_menu]")
+                      : global_root->querySelectors("figure[active=1]");
               const auto plot_elem = figure_elem->querySelectors("plot");
 
               auto colormap = QPixmap((":/preview_images/colormaps/" + elem.toStdString() + ".png").c_str());
@@ -808,10 +820,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                    "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
       QStringList line3_group = {"line3", "scatter", "scatter3", "tricontour", "trisurface"};
-      QStringList barplot_group = {"barplot", "histogram", "stem", "stairs"};
+      QStringList barplot_group = {"barplot", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList polar_line_group = {"polar_line", "polar_scatter"};
-      QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "quiver"};
+      QStringList other_kinds = {"histogram", "pie", "polar_heatmap", "polar_histogram", "quiver"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -927,11 +939,6 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = GRM::modelIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "projection_type" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
-    {
-      current_text =
-          GRM::projectionTypeIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
-    }
   else if (cur_attr_name == "location" &&
            !(current_selection->getRef()->localName() == "side_region" ||
              current_selection->getRef()->localName() == "side_plot_region" ||
@@ -1021,6 +1028,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::fillIntStyleIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "transformation" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::transformationIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
 
   int index = ((QComboBox *)*line_edit)->findText(current_text.c_str());
   if (index == -1) index += ((QComboBox *)*line_edit)->count();
@@ -1034,99 +1046,199 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
 void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
                                            const std::string &value, const std::string &label)
 {
-  if (attr_type == "xs:string" || (attr_type == "strint" && !util::isDigits(value)))
+  if (attr_type == "xs:string" && !util::isDigits(value))
     {
-      element->setAttribute(label, value);
-    }
-  else if (attr_type == "xs:integer" || (attr_type == "strint" && util::isDigits(value)))
-    {
-      if (label == "text_align_vertical")
+      auto context_attributes = GRM::getContextAttributes();
+      if (label == "algorithm" && element->localName() == "marginal_heatmap_plot")
         {
-          element->setAttribute(label, GRM::textAlignVerticalStringToInt(value));
-        }
-      else if (label == "text_align_horizontal")
-        {
-          element->setAttribute(label, GRM::textAlignHorizontalStringToInt(value));
-        }
-      else if (label == "algorithm")
-        {
-          element->setAttribute(label, GRM::algorithmStringToInt(value));
-        }
-      else if (label == "model")
-        {
-          element->setAttribute(label, GRM::modelStringToInt(value));
-        }
-      else if (label == "projection_type")
-        {
-          element->setAttribute(label, GRM::projectionTypeStringToInt(value));
-        }
-      else if (label == "location" && element->localName() != "axis")
-        {
-          element->setAttribute(label, GRM::locationStringToInt(value));
-        }
-      else if (label == "location" && element->localName() == "axis")
-        {
-          auto type = static_cast<std::string>(current_selection->getRef()->getAttribute("axis_type"));
-          if (type == "x")
-            element->setAttribute(label, GRM::xAxisLocationStringToInt(value));
+          if (algorithm_marginal_heatmap_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
           else
-            element->setAttribute(label, GRM::yAxisLocationStringToInt(value));
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "clip_region")
+      else if (label == "axis_type")
         {
-          element->setAttribute(label, GRM::clipRegionStringToInt(value));
+          if (axis_type_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "colormap")
+      else if (label == "orientation")
         {
-          element->setAttribute(label, GRM::colormapStringToInt(value));
+          if (orientation_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "text_encoding")
+      else if (label == "marginal_heatmap_kind")
         {
-          element->setAttribute(label, GRM::textEncodingStringToInt(value));
+          if (marginal_heatmap_kind_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "marker_type")
+      else if (label == "norm")
         {
-          element->setAttribute(label, GRM::markerTypeStringToInt(value));
+          if (norm_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "font")
+      else if (label == "plot_type")
         {
-          element->setAttribute(label, GRM::fontStringToInt(value));
+          if (plot_type_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "font_precision")
+      else if ((label == "size_x_type" || label == "size_y_type"))
         {
-          element->setAttribute(label, GRM::fontPrecisionStringToInt(value));
+          if (size_type_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "line_type")
+      else if (label == "style")
         {
-          element->setAttribute(label, GRM::lineTypeStringToInt(value));
+          if (style_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "resample_method")
+      else if ((label == "x_org_pos" || label == "y_org_pos" || label == "z_org_pos"))
         {
-          element->setAttribute(label, GRM::resampleMethodStringToInt(value));
+          if (org_pos_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "tick_orientation")
+      else if (std::find(context_attributes.begin(), context_attributes.end(), label) != context_attributes.end())
         {
-          element->setAttribute(label, GRM::tickOrientationStringToInt(value));
+          QStringList context_attr_list;
+          table_widget->extractContextNames(grm_get_render()->getContext());
+          auto context_attr_vec = table_widget->getContextNames();
+          context_attr_list.reserve((int)context_attr_vec.size());
+          for (auto &i : context_attr_vec)
+            {
+              context_attr_list.push_back(i.c_str());
+            }
+
+          if (context_attr_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if (label == "scientific_format")
+      else if (label == "step_where")
         {
-          element->setAttribute(label, GRM::scientificFormatStringToInt(value));
-        }
-      else if (label == "error_bar_style")
-        {
-          element->setAttribute(label, GRM::errorBarStyleStringToInt(value));
-        }
-      else if (label == "fill_style")
-        {
-          element->setAttribute(label, GRM::fillStyleStringToInt(value));
-        }
-      else if (label == "fill_int_style")
-        {
-          element->setAttribute(label, GRM::fillIntStyleStringToInt(value));
+          if (step_where_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
       else
         {
-          element->setAttribute(label, std::stoi(value));
+          element->setAttribute(label, value);
+        }
+    }
+  else if ((attr_type == "xs:integer" || attr_type == "strint") && !util::isDigits(value))
+    {
+      try
+        {
+          if (label == "text_align_vertical")
+            {
+              element->setAttribute(label, GRM::textAlignVerticalStringToInt(value));
+            }
+          else if (label == "text_align_horizontal")
+            {
+              element->setAttribute(label, GRM::textAlignHorizontalStringToInt(value));
+            }
+          else if (label == "algorithm")
+            {
+              element->setAttribute(label, GRM::algorithmStringToInt(value));
+            }
+          else if (label == "model")
+            {
+              element->setAttribute(label, GRM::modelStringToInt(value));
+            }
+          else if (label == "location" && element->localName() != "legend" && element->localName() != "axis")
+            {
+              if (side_region_location_list.contains(QString::fromStdString(value)))
+                element->setAttribute(label, value);
+              else
+                fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
+            }
+          else if (label == "location" && element->localName() == "legend")
+            {
+              element->setAttribute(label, GRM::locationStringToInt(value));
+            }
+          else if (label == "location" && element->localName() == "axis")
+            {
+              auto type = static_cast<std::string>(current_selection->getRef()->getAttribute("axis_type"));
+              if (type == "x")
+                element->setAttribute(label, GRM::xAxisLocationStringToInt(value));
+              else
+                element->setAttribute(label, GRM::yAxisLocationStringToInt(value));
+            }
+          else if (label == "clip_region")
+            {
+              element->setAttribute(label, GRM::clipRegionStringToInt(value));
+            }
+          else if (label == "colormap")
+            {
+              element->setAttribute(label, GRM::colormapStringToInt(value));
+            }
+          else if (label == "text_encoding")
+            {
+              element->setAttribute(label, GRM::textEncodingStringToInt(value));
+            }
+          else if (label == "marker_type")
+            {
+              element->setAttribute(label, GRM::markerTypeStringToInt(value));
+            }
+          else if (label == "font")
+            {
+              element->setAttribute(label, GRM::fontStringToInt(value));
+            }
+          else if (label == "font_precision")
+            {
+              element->setAttribute(label, GRM::fontPrecisionStringToInt(value));
+            }
+          else if (label == "line_type")
+            {
+              element->setAttribute(label, GRM::lineTypeStringToInt(value));
+            }
+          else if (label == "resample_method")
+            {
+              element->setAttribute(label, GRM::resampleMethodStringToInt(value));
+            }
+          else if (label == "tick_orientation")
+            {
+              element->setAttribute(label, GRM::tickOrientationStringToInt(value));
+            }
+          else if (label == "scientific_format")
+            {
+              element->setAttribute(label, GRM::scientificFormatStringToInt(value));
+            }
+          else if (label == "error_bar_style")
+            {
+              element->setAttribute(label, GRM::errorBarStyleStringToInt(value));
+            }
+          else if (label == "fill_style")
+            {
+              element->setAttribute(label, GRM::fillStyleStringToInt(value));
+            }
+          else if (label == "fill_int_style")
+            {
+              element->setAttribute(label, GRM::fillIntStyleStringToInt(value));
+            }
+          else if (label == "transformation")
+            {
+              element->setAttribute(label, GRM::transformationStringToInt(value));
+            }
+        }
+      catch (std::logic_error &e)
+        {
+          fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
     }
 }
@@ -1164,7 +1276,13 @@ void GRPlotWidget::draw()
     {
       was_successful = grm_render();
     }
-  assert(was_successful);
+  if (!was_successful)
+    {
+      // Todo: detailed error message according to the specific error
+      fprintf(stderr,
+              "An error occured, the application will be closed. Please verify ur input is correct and try it again\n");
+      exit(1);
+    }
   draw_called_at_least_once = true;
 }
 
@@ -2320,38 +2438,13 @@ void GRPlotWidget::scatter()
   redraw();
 }
 
-void GRPlotWidget::histogram()
-{
-  const auto global_root = grm_get_document_root();
-  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                  : global_root->querySelectors("figure[active=1]");
-  std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_stairs"};
-
-  for (const auto &name : valid_series_names)
-    {
-      auto series_elements = plot_elem->querySelectorsAll(name);
-      for (const auto &series_elem : series_elements)
-        {
-          series_elem->setAttribute("kind", "histogram");
-        }
-    }
-
-  // to get the same bars then before all bars have to exist during render call so that the line_spec work properly
-  for (const auto &elem : plot_elem->querySelectorsAll("series_histogram"))
-    {
-      elem->setAttribute("_update_required", true);
-    }
-  redraw();
-}
-
 void GRPlotWidget::barplot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                   : global_root->querySelectors("figure[active=1]");
-  const std::vector<std::string> valid_series_names = {"series_histogram", "series_stem", "series_stairs"};
+  const std::vector<std::string> valid_series_names = {"series_stem", "series_stairs"};
 
   for (const auto &name : valid_series_names)
     {
@@ -2377,7 +2470,7 @@ void GRPlotWidget::stairs()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                   : global_root->querySelectors("figure[active=1]");
-  const std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_histogram"};
+  const std::vector<std::string> valid_series_names = {"series_barplot", "series_stem"};
 
   for (const auto &name : valid_series_names)
     {
@@ -2402,7 +2495,7 @@ void GRPlotWidget::stem()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                   : global_root->querySelectors("figure[active=1]");
-  const std::vector<std::string> valid_series_names = {"series_barplot", "series_histogram", "series_stairs"};
+  const std::vector<std::string> valid_series_names = {"series_barplot", "series_stairs"};
 
   for (const auto &name : valid_series_names)
     {
@@ -2584,7 +2677,7 @@ void GRPlotWidget::zFlipSlot()
   redraw();
 }
 
-void GRPlotWidget::phiFlipSlot()
+void GRPlotWidget::thetaFlipSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
@@ -2592,8 +2685,8 @@ void GRPlotWidget::phiFlipSlot()
                                                     : global_root->querySelectors("figure[active=1]");
   const auto plot_elem = figure_elem->querySelectors("plot");
 
-  bool phi_flip = plot_elem->hasAttribute("phi_flip") && static_cast<int>(plot_elem->getAttribute("phi_flip"));
-  plot_elem->setAttribute("phi_flip", !phi_flip);
+  bool theta_flip = plot_elem->hasAttribute("theta_flip") && static_cast<int>(plot_elem->getAttribute("theta_flip"));
+  plot_elem->setAttribute("theta_flip", !theta_flip);
 
   redraw();
 }
@@ -3582,7 +3675,7 @@ void GRPlotWidget::processTestCommandsFile()
                       elem->setAttribute("_update_required", true);
                     }
                 }
-              if (strcmp(value, "barplot") == 0 || strcmp(value, "histogram") == 0 || strcmp(value, "stairs") == 0)
+              if (strcmp(value, "barplot") == 0 || strcmp(value, "stairs") == 0)
                 {
                   // to get the same barplots then before all lines have to exist during render call so that the
                   // line_spec work properly
@@ -3923,7 +4016,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
       polar_with_pan_act->setVisible(false);
       z_flip_act->setVisible(false);
       z_log_act->setVisible(false);
-      phi_flip_act->setVisible(false);
+      theta_flip_act->setVisible(false);
       legend_act->setVisible(false);
       colorbar_act->setVisible(false);
       left_axis_act->setVisible(false);
@@ -4047,9 +4140,8 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   scatter3_act->setVisible(true);
                   scatter_act->setVisible(true);
                 }
-              else if ((kind == "histogram" || kind == "barplot" || kind == "stairs" || kind == "stem") && !error)
+              else if ((kind == "barplot" || kind == "stairs" || kind == "stem") && !error)
                 {
-                  histogram_act->setVisible(true);
                   barplot_act->setVisible(true);
                   stairs_act->setVisible(true);
                   stem_act->setVisible(true);
@@ -4065,12 +4157,16 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   polar_line_act->setVisible(true);
                   polar_scatter_act->setVisible(true);
                   polar_with_pan_act->setVisible(true);
-                  phi_flip_act->setVisible(true);
+                  theta_flip_act->setVisible(true);
                 }
               else if (kind == "polar_heatmap" || kind == "polar_histogram")
                 {
                   polar_with_pan_act->setVisible(true);
-                  phi_flip_act->setVisible(true);
+                  theta_flip_act->setVisible(true);
+                }
+              else if (kind == "histogram")
+                {
+                  show_orientation_sub_menu_act->trigger();
                 }
               add_seperator_act->trigger();
             }
@@ -4094,7 +4190,6 @@ void GRPlotWidget::hidePlotTypeMenuElements()
   trisurf_act->setVisible(false);
   tricont_act->setVisible(false);
   scatter3_act->setVisible(false);
-  histogram_act->setVisible(false);
   barplot_act->setVisible(false);
   stairs_act->setVisible(false);
   stem_act->setVisible(false);
@@ -4142,11 +4237,6 @@ QAction *GRPlotWidget::getTricontAct()
 QAction *GRPlotWidget::getScatter3Act()
 {
   return scatter3_act;
-}
-
-QAction *GRPlotWidget::getHistogramAct()
-{
-  return histogram_act;
 }
 
 QAction *GRPlotWidget::getBarplotAct()
@@ -4409,9 +4499,9 @@ QAction *GRPlotWidget::getZFlipAct()
   return z_flip_act;
 }
 
-QAction *GRPlotWidget::getPhiFlipAct()
+QAction *GRPlotWidget::getThetaFlipAct()
 {
-  return phi_flip_act;
+  return theta_flip_act;
 }
 
 QAction *GRPlotWidget::getAccelerateAct()

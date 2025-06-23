@@ -34,8 +34,8 @@ class GRPlotWidget : public QWidget
   Q_OBJECT
 
 public:
-  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, bool test_mode = false,
-                        QString test_commands = "");
+  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, int listen_port = 8002,
+                        bool test_mode = false, QString test_commands = "");
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool full_redraw = false, bool tree_update = true);
@@ -70,7 +70,6 @@ public:
   QAction *getTrisurfAct();
   QAction *getTricontAct();
   QAction *getScatter3Act();
-  QAction *getHistogramAct();
   QAction *getBarplotAct();
   QAction *getStairsAct();
   QAction *getStemAct();
@@ -123,7 +122,7 @@ public:
   QAction *getXFlipAct();
   QAction *getYFlipAct();
   QAction *getZFlipAct();
-  QAction *getPhiFlipAct();
+  QAction *getThetaFlipAct();
   QAction *getAccelerateAct();
   QAction *getPolarWithPanAct();
   QAction *getKeepWindowAct();
@@ -179,7 +178,6 @@ private slots:
   void tricont();
   void scatter3();
   void scatter();
-  void histogram();
   void barplot();
   void stairs();
   void stem();
@@ -210,7 +208,7 @@ private slots:
   void xFlipSlot();
   void yFlipSlot();
   void zFlipSlot();
-  void phiFlipSlot();
+  void thetaFlipSlot();
   void accelerateSlot();
   void polarWithPanSlot();
   void keepWindowSlot();
@@ -346,7 +344,7 @@ private:
   QAction *volume_act, *isosurface_act;
   QAction *heatmap_act, *surface_act, *wireframe_act, *contour_act, *imshow_act, *contourf_act;
   QAction *line3_act, *trisurf_act, *tricont_act, *scatter3_act;
-  QAction *histogram_act, *barplot_act, *stairs_act, *stem_act;
+  QAction *barplot_act, *stairs_act, *stem_act;
   QAction *shade_act, *hexbin_act;
   QAction *polar_line_act, *polar_scatter_act;
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
@@ -358,7 +356,7 @@ private:
       *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
       *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
       *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act;
-  QAction *x_flip_act, *y_flip_act, *z_flip_act, *phi_flip_act;
+  QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
   QAction *keep_aspect_ratio_act, *only_quadratic_aspect_ratio_act;

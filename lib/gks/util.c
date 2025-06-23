@@ -78,13 +78,13 @@ struct wstypes_t
 };
 
 static struct wstypes_t wstypes[] = {
-    {"win", 41},       {"ps", 62},      {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
-    {"gif", 130},      {"apng", 131},   {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145},
-    {"cairotif", 146}, {"six", 150},    {"iterm", 151},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},
-    {"x11", 211},      {"pgf", 314},    {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},      {"png", 140},
-    {"tiff", 146},     {"tif", 146},    {"gtk", 142},      {"wx", 380},       {"qt", 381},       {"svg", 382},
-    {"wmf", 390},      {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"qtcairo", 412},
-    {"qtagg", 413},    {"zmq", 415},    {"gl", 420},       {"opengl", 420},   {"ppm", 170}};
+    {"win", 41},       {"ps", 62},     {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
+    {"gif", 130},      {"apng", 131},  {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145},
+    {"cairotif", 146}, {"six", 150},   {"iterm", 151},    {"kitty", 152},    {"mp4", 160},      {"webm", 161},
+    {"ogg", 162},      {"x11", 211},   {"pgf", 314},      {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},
+    {"png", 140},      {"tiff", 146},  {"tif", 146},      {"gtk", 142},      {"wx", 380},       {"qt", 381},
+    {"svg", 382},      {"wmf", 390},   {"quartz", 400},   {"socket", 410},   {"sock", 410},     {"gksqt", 411},
+    {"qtcairo", 412},  {"qtagg", 413}, {"zmq", 415},      {"gl", 420},       {"opengl", 420},   {"ppm", 170}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 
@@ -1718,6 +1718,51 @@ static int have_iterm(void)
   return 0;
 }
 
+static int have_kitty(void)
+{
+  char *req;
+  int cc, len = 0;
+  char s[81];
+
+  switch (have_tmux())
+    {
+    case NESTED_TMUX_SESSION:
+      req = "\033Ptmux;\033\033Ptmux;\033\033\033\033P+q544e\033\033\033\033\\\033\033\\\033\\";
+      break;
+    case SINGLE_TMUX_SESSION:
+      req = "\033Ptmux;\033\033P+q544e\033\033\\\033\\";
+      break;
+    default:
+      /*
+       * Query the termcap name of the terminal emulator, will return `xterm-kitty` for kitty
+       * More details on <https://github.com/kovidgoyal/kitty/issues/957#issuecomment-420328980>
+       */
+      req = "\033P+q544e\033\\";
+      break;
+    }
+
+  if (isatty(STDIN_FILENO))
+    {
+      tcgetattr(STDIN_FILENO, &saved_term);
+      makeraw();
+
+      write(STDOUT_FILENO, req, strlen(req));
+      fflush(stdout);
+
+      while ((cc = read(STDIN_FILENO, s + len, 1)) == 1 && len < 80)
+        {
+          if (s[len++] == '\\') break;
+        }
+      s[len] = '\0';
+
+      tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_term);
+
+      /* `787465726d2d6b69747479` is the hex-encoded string `xterm-kitty` */
+      return strcmp(s, "\033P1+r544e=787465726d2d6b69747479\033\\") == 0;
+    }
+
+  return 0;
+}
 #endif
 
 static int get_default_ws_type(void)
@@ -1740,7 +1785,10 @@ static int get_default_ws_type(void)
       else
 #endif
         {
-          if (have_iterm()) default_wstype = 151;
+          if (have_iterm())
+            default_wstype = 151;
+          else if (have_kitty())
+            default_wstype = 152;
 #ifdef __APPLE__
           else if (access("/dev/console", R_OK) == 0)
             default_wstype = have_gksqt() ? 411 : 400;

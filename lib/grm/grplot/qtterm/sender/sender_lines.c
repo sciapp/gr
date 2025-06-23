@@ -5,7 +5,7 @@
 #include "grm.h"
 
 
-int test_plotmeta()
+int test_plotmeta(int port)
 {
   double plots[2][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
@@ -18,7 +18,7 @@ int test_plotmeta()
   printf("sending data...");
   fflush(stdout);
 
-  handle = grm_open(GRM_SENDER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_SENDER, "localhost", port, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "sender could not be created\n");
@@ -63,8 +63,19 @@ int test_plotmeta()
   return 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-  test_plotmeta();
+  if (argc != 2)
+    {
+      fprintf(stderr, "Usage: sender_lines <port>\n");
+      return 1;
+    }
+  int port = atoi(argv[1]);
+  if (port <= 0 || port > 65536)
+    {
+      fprintf(stderr, "Port must be between 1 and 65536\n");
+      return 1;
+    }
+  test_plotmeta(port);
   return 1;
 }

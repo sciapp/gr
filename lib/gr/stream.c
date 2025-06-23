@@ -36,8 +36,6 @@
 #define MAXPATHLEN 1024
 #endif
 
-#define PORT "8002"
-
 static int status = EXIT_SUCCESS;
 
 static FILE *stream = NULL;
@@ -53,6 +51,8 @@ static char *port = "4660"; /* 0x1234 */
 static int nbytes = 0, size = 0, static_size = 0;
 
 static int is_running = 0;
+
+static int grplot_port = 8002;
 
 static void close_socket(int s)
 {
@@ -418,11 +418,13 @@ static int start(void *cmd)
   return 0;
 }
 
-static int connect_socket(int quiet)
+static int connect_socket(int quiet, int used_port)
 {
   int rc, s;
   struct addrinfo hints, *res = NULL;
   int opt;
+  char port[6];
+  snprintf(port, 6, "%i", used_port);
 
 #if defined(_WIN32)
   WORD wVersionRequested = MAKEWORD(1, 1);
@@ -439,10 +441,10 @@ static int connect_socket(int quiet)
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
-  if ((rc = getaddrinfo("localhost", PORT, &hints, &res)) != 0)
+  if ((rc = getaddrinfo("localhost", port, &hints, &res)) != 0)
     {
       hints.ai_family = AF_INET6;
-      if ((rc = getaddrinfo("localhost", PORT, &hints, &res)) != 0)
+      if ((rc = getaddrinfo("localhost", port, &hints, &res)) != 0)
         {
           if (!quiet)
             {
@@ -477,6 +479,22 @@ static int connect_socket(int quiet)
   return s;
 }
 
+int gr_inqgrplotport()
+{
+  return grplot_port;
+}
+
+int gr_setgrplotport(int port)
+{
+  if (port <= 0 || port > 65535)
+    {
+      /* select a random port if port is invalid */
+      port = (rand() % 32768) + 30000;
+    }
+  grplot_port = port;
+  return grplot_port;
+}
+
 int gr_startlistener(void)
 {
 #ifdef _WIN32
@@ -502,11 +520,11 @@ int gr_startlistener(void)
     {
       if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\grplot.exe --listen", GRDIR);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\grplot.exe --listen %i", GRDIR, grplot_port);
         }
       else
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%s\\bin\\grplot.exe --listen", w_env);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%s\\bin\\grplot.exe --listen %i", w_env, grplot_port);
         }
     }
 #else
@@ -518,9 +536,9 @@ int gr_startlistener(void)
 
       cmd = (char *)gks_malloc(MAXPATHLEN);
 #ifdef __APPLE__
-      snprintf(cmd, MAXPATHLEN, "%s/Applications/grplot.app/Contents/MacOS/grplot --listen", env);
+      snprintf(cmd, MAXPATHLEN, "%s/Applications/grplot.app/Contents/MacOS/grplot --listen %i", env, grplot_port);
 #else
-      snprintf(cmd, MAXPATHLEN, "%s/bin/grplot --listen", env);
+      snprintf(cmd, MAXPATHLEN, "%s/bin/grplot --listen %i", env, grplot_port);
 #endif
       command = cmd;
     }
@@ -536,7 +554,7 @@ int gr_startlistener(void)
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
-      if ((s = connect_socket(retry_count != max_retry_count)) == -1)
+      if ((s = connect_socket(retry_count != max_retry_count, grplot_port)) == -1)
         {
           if (command != NULL && retry_count == 1)
             {

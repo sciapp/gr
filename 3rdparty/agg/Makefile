@@ -3,7 +3,11 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
  CXXFLAGS = -Wall -pedantic -O -Iinclude -std=c++11 -fPIC -fno-common $(ARCHS)
-ifeq ($(UNAME),Darwin)
+ifndef OS
+ifeq ($(shell uname),Darwin)
+CXXFLAGS += -mmacosx-version-min=10.11
+endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
 CXXFLAGS += -mmacosx-version-min=10.11
 endif
      OBJS = agg_arc.o \

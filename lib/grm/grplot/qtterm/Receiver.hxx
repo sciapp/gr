@@ -12,7 +12,7 @@ class Receiver : public QObject
   Q_OBJECT
 
 public:
-  Receiver();
+  Receiver(int listen_port);
   virtual ~Receiver();
   void start();
 
@@ -26,6 +26,7 @@ private slots:
 private:
   QThread thread_;
   void *grm_receiver_handle_ = nullptr;
+  int listen_port_;
 };
 
 #endif /* ifndef RECEIVER_THREAD_H_INCLUDED */

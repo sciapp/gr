@@ -3,16 +3,23 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
  PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(PNG_EXTRA_CFLAGS) $(ARCHS)
-ifeq ($(shell uname),Darwin)
-ifneq ($(notdir $(CC)),emcc)
-PNGCFLAGS += -mmacosx-version-min=10.15
-ifeq ($(shell arch),arm64)
-PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
-endif
-endif
-endif
-ifeq ($(shell arch),aarch64)
-PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+ifeq ($(notdir $(CC)), emcc)
+else ifndef OS
+ ifeq ($(shell uname),Darwin)
+  PNGCFLAGS += -mmacosx-version-min=10.15
+  ifeq ($(shell arch),arm64)
+   PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+  endif
+ else ifeq ($(shell arch),aarch64)
+  PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+ endif
+else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
+ PNGCFLAGS += -mmacosx-version-min=10.15
+ ifeq ($(shell arch),arm64)
+  PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+ endif
+else ifeq ($(shell [[ "$(OS)" =~ "aarch64" ]] && echo aarch64), aarch64)
+ PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
 endif
       OBJS = \
 	png.o \

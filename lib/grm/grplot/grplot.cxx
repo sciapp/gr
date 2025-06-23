@@ -18,7 +18,7 @@ static QString test_commands_file_path = "";
 int main(int argc, char **argv)
 {
   bool pass = false, listen_mode = false, test_mode = false, help_mode = false;
-  int width = WIDTH, height = HEIGHT;
+  int width = WIDTH, height = HEIGHT, listen_port = -1;
 
   // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
   try
@@ -77,6 +77,25 @@ int main(int argc, char **argv)
           else if (strcmp(argv[i], "--listen") == 0)
             {
               listen_mode = true;
+              if (argc > i + 1)
+                {
+                  listen_port = atoi(argv[i + 1]);
+                  if (listen_port <= 0 || listen_port > 65535)
+                    {
+                      fprintf(stderr,
+                              "Port to listen on given after \"--listen\" is invalid, using default port 8002\n");
+                      listen_port = 8002;
+                    }
+                  else
+                    {
+                      i += 1;
+                    }
+                }
+              else
+                {
+                  fprintf(stderr, "No port to listen on given after \"--listen\", using default port 8002\n");
+                  listen_port = 8002;
+                }
             }
           else if (strcmp(argv[i], "--test") == 0)
             {
@@ -133,7 +152,8 @@ int main(int argc, char **argv)
   if (!pass && getenv("GKS_WSTYPE") != nullptr) return (grm_plot_from_file(argc, argv) != 1);
 
   QApplication app(argc, argv);
-  GRPlotMainWindow window(argc, argv, width, height, listen_mode, test_mode, test_commands_file_path, help_mode);
+  GRPlotMainWindow window(argc, argv, width, height, listen_mode, listen_port, test_mode, test_commands_file_path,
+                          help_mode);
 
   if (!listen_mode) window.show();
   return app.exec();

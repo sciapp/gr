@@ -350,21 +350,24 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
   int width, height, max_width_height;
   std::string post_fix = "_wc";
-  std::vector<std::string> ndc_transformation_elems = {"figure",
-                                                       "plot",
-                                                       "colorbar",
-                                                       "label",
-                                                       "titles_3d",
-                                                       "text",
-                                                       "layout_grid_element",
-                                                       "layout_grid",
-                                                       "central_region",
-                                                       "side_region",
-                                                       "marginal_heatmap_plot",
-                                                       "legend",
-                                                       "axis",
-                                                       "side_plot_region",
-                                                       "text_region"};
+  std::vector<std::string> ndc_transformation_elems = {
+      "figure",
+      "plot",
+      "colorbar",
+      "label",
+      "titles_3d",
+      "text",
+      "layout_grid_element",
+      "layout_grid",
+      "central_region",
+      "side_region",
+      "marginal_heatmap_plot",
+      "legend",
+      "axis",
+      "side_plot_region",
+      "text_region",
+      "coordinate_system",
+  };
   auto render = grm_get_render();
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);

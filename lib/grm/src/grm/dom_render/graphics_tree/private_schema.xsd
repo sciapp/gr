@@ -32,6 +32,8 @@
             <xs:attribute name="_kind_changed" type="xs:integer"/>
             <xs:attribute name="_previous_pixel_height" type="xs:integer"/>
             <xs:attribute name="_previous_pixel_width" type="xs:integer"/>
+            <xs:attribute name="_ws_viewport_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_ws_window_set_by_user" type="xs:integer"/>
         </xs:complexType>
         <xs:unique name="plotidisunique">
             <xs:selector xpath="plot"/>
@@ -44,6 +46,14 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_viewport_normalized_x_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_x_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_min_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_min_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -55,6 +65,14 @@
             <xs:attribute name="_start_row" type="xs:integer"/>
             <xs:attribute name="_stop_col" type="xs:integer"/>
             <xs:attribute name="_stop_row" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_x_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_x_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_min_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_min_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -69,6 +87,9 @@
     <xs:element name="plot">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_active" type="xs:integer"/>
             <xs:attribute name="_active_through_update" type="xs:integer"/>
@@ -115,6 +136,10 @@
             <xs:attribute name="_twin_y_window_xform_b" type="xs:double"/>
             <xs:attribute name="_twin_y_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_update_limits" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_x_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_min_org" type="xs:double"/>
             <xs:attribute name="_x_lim_max" type="xs:double"/>
             <xs:attribute name="_x_lim_min" type="xs:double"/>
             <xs:attribute name="_y_lim_max" type="xs:double"/>
@@ -145,6 +170,7 @@
             <xs:attribute name="_before_centering_polar_vp_y_min" type="xs:double"/>
             <xs:attribute name="_bottom_axis_border" type="xs:double"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_diag_factor" type="xs:double"/>
             <xs:attribute name="_left_axis_border" type="xs:double"/>
             <xs:attribute name="_right_axis_border" type="xs:double"/>
             <xs:attribute name="_skip_calculations" type="xs:integer"/>
@@ -152,7 +178,8 @@
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
             <xs:attribute name="_top_axis_border" type="xs:double"/>
             <xs:attribute name="_vp_with_extent" type="xs:double"/>
-            <xs:attribute name="_zoomed" type="xs:int"/>
+            <xs:attribute name="_window_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_zoomed" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -165,6 +192,7 @@
             <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
             <xs:attribute name="_viewport_offset" type="xs:double"/>
             <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_window_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -174,9 +202,8 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
-            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
             <xs:attribute name="_viewport_offset" type="xs:double"/>
-            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_window_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -185,10 +212,9 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_char_up_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
-            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
-            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -196,6 +222,7 @@
     <xs:element name="coordinate_system">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
@@ -218,13 +245,25 @@
     <xs:element name="axis">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_axis_id" type="xs:integer" use="required"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_ignore_next_tick_orientation" type="xs:integer"/>
+            <xs:attribute name="_label_orientation_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_label_pos_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_major_count_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_max_value_set_by_user" type="xs:double"/>
+            <xs:attribute name="_min_value_set_by_user" type="xs:double"/>
+            <xs:attribute name="_num_tick_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_num_tick_labels_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_pos_set_by_user" type="xs:double"/>
+            <xs:attribute name="_tick_set_by_user" type="xs:double"/>
+            <xs:attribute name="_tick_orientation_set_by_user" type="xs:integer"/>
             <xs:attribute name="_tick_size_org" type="xs:double"/>
-            <xs:attribute name="_tick_size_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_tick_size_set_by_user" type="xs:double"/>
             <xs:attribute name="_twin_x_window_xform_a" type="xs:double"/>
             <xs:attribute name="_twin_x_window_xform_b" type="xs:double"/>
             <xs:attribute name="_twin_y_window_xform_a" type="xs:double"/>
@@ -233,6 +272,7 @@
             <xs:attribute name="_window_old_x_min" type="xs:double"/>
             <xs:attribute name="_window_old_y_max" type="xs:double"/>
             <xs:attribute name="_window_old_y_min" type="xs:double"/>
+            <xs:attribute name="_window_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -240,9 +280,13 @@
     <xs:element name="tick_group">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_tick_size_org" type="xs:double"/>
+            <xs:attribute name="_tick_size_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -251,6 +295,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_value_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -259,6 +304,8 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_is_major_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_value_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -267,15 +314,19 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_tick_orientation_set_by_user" type="xs:integer"/>
             <xs:attribute name="_tick_size_org" type="xs:double"/>
+            <xs:attribute name="_tick_size_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of title, label -->
+    <!-- definition of text -->
     <xs:element name="text">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_space_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -291,11 +342,15 @@
     <xs:element name="legend">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_initial_scale_factor" type="xs:double"/>
             <xs:attribute name="_legend_elems" type="xs:integer"/>
             <xs:attribute name="_scale_factor" type="xs:double"/>
+            <xs:attribute name="_scale_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_select_specific_xform_set_by_user" type="xs:integer"/>
             <xs:attribute name="_start_h" type="xs:double"/>
             <xs:attribute name="_start_w" type="xs:double"/>
         </xs:complexType>
@@ -305,14 +360,20 @@
     <xs:element name="label">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of rho_axes -->
-    <xs:element name="rho_axes">
+    <!-- definition of radial_axes -->
+    <xs:element name="radial_axes">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_r_max" type="xs:double"/>
             <xs:attribute name="_window_old_x_max" type="xs:double"/>
@@ -326,6 +387,8 @@
     <xs:element name="arc_grid_line">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -334,6 +397,8 @@
     <xs:element name="theta_axes">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -342,6 +407,8 @@
     <xs:element name="angle_line">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -350,6 +417,7 @@
     <xs:element name="error_bars">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
         </xs:complexType>
     </xs:element>
 
@@ -357,6 +425,7 @@
     <xs:element name="polyline_3d">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -365,6 +434,7 @@
     <xs:element name="polyline">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -373,6 +443,7 @@
     <xs:element name="polymarker">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -381,6 +452,7 @@
     <xs:element name="polymarker_3d">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -389,6 +461,7 @@
     <xs:element name="fill_rect">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -397,6 +470,7 @@
     <xs:element name="draw_rect">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -406,9 +480,10 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
-            <xs:attribute name="_max_char_height_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_diag_factor" type="xs:double"/>
             <xs:attribute name="_viewport_offset" type="xs:double"/>
         </xs:complexType>
     </xs:element>
@@ -418,14 +493,30 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_x_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_x_max_set_by_user" type="xs:double"/>
+            <xs:attribute name="_x_min_set_by_user" type="xs:double"/>
+            <xs:attribute name="_y_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_y_max_set_by_user" type="xs:double"/>
+            <xs:attribute name="_y_min_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformcell_array -->
+    <!-- definition of nonuniform_cell_array -->
     <xs:element name="nonuniform_cell_array">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_x_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_y_dim_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -434,6 +525,18 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_r_max_set_by_user" type="xs:double"/>
+            <xs:attribute name="_r_min_set_by_user" type="xs:double"/>
+            <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_theta_max_set_by_user" type="xs:double"/>
+            <xs:attribute name="_theta_min_set_by_user" type="xs:double"/>
+            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -442,6 +545,14 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -457,38 +568,44 @@
     <xs:element name="draw_arc">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of fillarc -->
+    <!-- definition of fill_arc -->
     <xs:element name="fill_arc">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of fillarea -->
+    <!-- definition of fill_area -->
     <xs:element name="fill_area">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- ||||||||||||||||||||||||||||| Plottypes |||||||||||||||||||||||||||||||||||||||| -->
 
-    <!-- definition of barplot -->
+    <!-- definition of series_barplot -->
     <xs:element name="series_barplot">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of contour -->
+    <!-- definition of series_contour -->
     <xs:element name="series_contour">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -497,16 +614,17 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of contourf -->
+    <!-- definition of series_contourf -->
     <xs:element name="series_contourf">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of heatmap -->
+    <!-- definition of series_heatmap -->
     <xs:element name="series_heatmap">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -515,7 +633,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of hexbin -->
+    <!-- definition of series_hexbin -->
     <xs:element name="series_hexbin">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -525,16 +643,18 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of histogram -->
+    <!-- definition of series_histogram -->
     <xs:element name="series_histogram">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of imshow -->
+    <!-- definition of series_imshow -->
     <xs:element name="series_imshow">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -543,7 +663,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of isosurface -->
+    <!-- definition of series_isosurface -->
     <xs:element name="series_isosurface">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -552,17 +672,19 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of line -->
+    <!-- definition of series_line -->
     <xs:element name="series_line">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformheatmap -->
-    <xs:element name="series_nonuniformheatmap">
+    <!-- definition of series_nonuniform_heatmap -->
+    <xs:element name="series_nonuniform_heatmap">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
@@ -570,7 +692,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformpolar_heatmap -->
+    <!-- definition of series_nonuniform_polar_heatmap -->
     <xs:element name="series_nonuniform_polar_heatmap">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -579,16 +701,18 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of pie -->
+    <!-- definition of series_pie -->
     <xs:element name="series_pie">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of line3 -->
+    <!-- definition of series_line3 -->
     <xs:element name="series_line3">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -597,7 +721,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_heatmap -->
+    <!-- definition of series_polar_heatmap -->
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -606,34 +730,40 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_histogram -->
+    <!-- definition of series_polar_histogram -->
     <xs:element name="series_polar_histogram">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_total" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_line -->
+    <!-- definition of series_polar_line -->
     <xs:element name="series_polar_line">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_scatter -->
+    <!-- definition of series_polar_scatter -->
     <xs:element name="series_polar_scatter">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of quiver -->
+    <!-- definition of series_quiver -->
     <xs:element name="series_quiver">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -642,25 +772,27 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of scatter -->
+    <!-- definition of series_scatter -->
     <xs:element name="series_scatter">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of scatter3 -->
+    <!-- definition of series_scatter3 -->
     <xs:element name="series_scatter3">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of shade -->
+    <!-- definition of series_shade -->
     <xs:element name="series_shade">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -669,25 +801,27 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of stairs -->
+    <!-- definition of series_stairs -->
     <xs:element name="series_stairs">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of stem -->
+    <!-- definition of series_stem -->
     <xs:element name="series_stem">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of surface -->
+    <!-- definition of series_surface -->
     <xs:element name="series_surface">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -696,7 +830,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of tricontour -->
+    <!-- definition of series_tricontour -->
     <xs:element name="series_tricontour">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -705,7 +839,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of trisurface -->
+    <!-- definition of series_trisurface -->
     <xs:element name="series_trisurface">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -714,7 +848,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of volume -->
+    <!-- definition of series_volume -->
     <xs:element name="series_volume">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
@@ -724,11 +858,12 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of wireframe -->
+    <!-- definition of series_wireframe -->
     <xs:element name="series_wireframe">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -747,7 +882,10 @@
     <xs:element name="bar">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_text_color_ind_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -755,6 +893,8 @@
     <xs:element name="integral">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -763,6 +903,7 @@
     <xs:element name="integral_group">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -771,6 +912,8 @@
     <xs:element name="polar_bar">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -779,6 +922,7 @@
     <xs:element name="pie_segment">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -823,5 +967,42 @@
         <xs:attribute name="_viewport_x_min_org" type="xs:double"/>
         <xs:attribute name="_viewport_y_max_org" type="xs:double"/>
         <xs:attribute name="_viewport_y_min_org" type="xs:double"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _line_modifications attributes -->
+    <xs:attributeGroup name="_line_modifications">
+        <xs:attribute name="_line_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_line_color_rgb_set_by_user" type="xs:string"/>
+        <xs:attribute name="_line_spec_set_by_user" type="xs:string"/>
+        <xs:attribute name="_line_type_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_line_width_set_by_user" type="xs:double"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _fill_modifications attributes -->
+    <xs:attributeGroup name="_fill_modifications">
+        <xs:attribute name="_fill_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_fill_color_rgb_set_by_user" type="xs:string"/>
+        <xs:attribute name="_fill_int_style_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_fill_style_set_by_user" type="xs:integer"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _text_modifications attributes -->
+    <xs:attributeGroup name="_text_modifications">
+        <xs:attribute name="_font_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_font_precision_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_text_align_horizontal_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_text_align_vertical_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_text_color_ind_set_by_user" type="xs:integer"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _marker_modifications attributes -->
+    <xs:attributeGroup name="_marker_modifications">
+        <xs:attribute name="_border_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_border_width_set_by_user" type="xs:double"/>
+        <xs:attribute name="_marker_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_marker_color_indices_set_by_user" type="xs:string"/>
+        <xs:attribute name="_marker_size_set_by_user" type="xs:double"/>
+        <xs:attribute name="_marker_sizes_set_by_user" type="xs:string"/>
+        <xs:attribute name="_marker_type_set_by_user" type="xs:integer"/>
     </xs:attributeGroup>
 </xs:schema>
