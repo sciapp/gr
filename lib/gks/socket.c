@@ -503,7 +503,10 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       wss->s = open_socket(ia[2]);
       if (wss->s == -1)
         {
-          gks_perror("can't connect to GKS socket application\n");
+          gks_perror("\
+the graphics window could not be opened because no connection to the GKS \
+Qt driver could be established. Please check all Qt warnings to determine \
+whether (or why) 'gksqt' could not be started.\n");
 
           gks_free(wss);
           wss = NULL;
