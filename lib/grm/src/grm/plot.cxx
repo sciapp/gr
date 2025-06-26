@@ -183,21 +183,35 @@ EventQueue *event_queue = nullptr;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static StringMapEntry kind_to_fmt[] = {
-    {"line", "xys"},           {"hexbin", "xys"},
-    {"polar_line", "xys"},     {"shade", "xys"},
-    {"stem", "xys"},           {"stairs", "xys"},
-    {"contour", "xyzc"},       {"contourf", "xyzc"},
-    {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
-    {"surface", "xyzc"},       {"wireframe", "xyzc"},
-    {"line3", "xyzc"},         {"scatter", "xyzc"},
-    {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-    {"heatmap", "xyzc"},       {"histogram", "x"},
-    {"barplot", "y"},          {"isosurface", "c"},
-    {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
-    {"polar_histogram", "x"},  {"pie", "x"},
-    {"volume", "c"},           {"marginal_heatmap", "xyzc"},
-    {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"},
-    {"polar_scatter", "xys"},
+    {"line", "xys"},
+    {"hexbin", "xys"},
+    {"polar_line", "thetars"},
+    {"shade", "xys"},
+    {"stem", "xys"},
+    {"stairs", "xys"},
+    {"contour", "xyzc"},
+    {"contourf", "xyzc"},
+    {"tricontour", "xyzc"},
+    {"trisurface", "xyzc"},
+    {"surface", "xyzc"},
+    {"wireframe", "xyzc"},
+    {"line3", "xyzc"},
+    {"scatter", "xyzc"},
+    {"scatter3", "xyzc"},
+    {"quiver", "xyuv"},
+    {"heatmap", "xyzc"},
+    {"histogram", "x"},
+    {"barplot", "y"},
+    {"isosurface", "c"},
+    {"imshow", "c"},
+    {"nonuniform_heatmap", "xyzc"},
+    {"polar_histogram", "theta"},
+    {"pie", "x"},
+    {"volume", "c"},
+    {"marginal_heatmap", "xyzc"},
+    {"polar_heatmap", "thetarzc"},
+    {"nonuniform_polar_heatmap", "thetarzc"},
+    {"polar_scatter", "thetars"},
 };
 
 
@@ -309,6 +323,8 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "only_quadratic_aspect_ratio",
                                     "orientation",
                                     "panzoom",
+                                    "r_lim",
+                                    "r_log",
                                     "rel_height",
                                     "rel_width",
                                     "resample_method",
@@ -320,6 +336,8 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "style",
                                     "subplot",
                                     "theta_flip",
+                                    "theta_lim",
+                                    "theta_log",
                                     "tilt",
                                     "title",
                                     "transformation",
@@ -370,23 +388,26 @@ const char *valid_series_keys[] = {"a",
                                    "line_spec",
                                    "marker_type",
                                    "num_bins",
+                                   "r",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
-                                   "r_lim",
+                                   "r_colormap",
+                                   "r_range",
                                    "s",
                                    "step_where",
                                    "stairs",
-                                   "theta_lim",
+                                   "theta",
+                                   "theta_colormap",
+                                   "theta_data_lim",
+                                   "theta_range",
                                    "transparency",
                                    "u",
                                    "v",
                                    "weights",
                                    "x",
-                                   "x_colormap",
                                    "x_range",
                                    "y",
-                                   "y_colormap",
                                    "y_labels",
                                    "y_line_pos",
                                    "y_range",
@@ -449,6 +470,10 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"only_quadratic_aspect_ratio", "i"},
                                           {"orientation", "s"},
                                           {"panzoom", "D"},
+                                          {"r", "D|I"},
+                                          {"r_colormap", "i"},
+                                          {"r_lim", "D"},
+                                          {"r_range", "D"},
                                           {"raw", "s"},
                                           {"ref_x_axis_location", "s"},
                                           {"ref_y_axis_location", "s"},
@@ -463,6 +488,10 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"step_where", "s"},
                                           {"style", "s"},
                                           {"subplot", "D"},
+                                          {"theta", "D|I"},
+                                          {"theta_colormap", "i"},
+                                          {"theta_lim", "D"},
+                                          {"theta_range", "D"},
                                           {"tilt", "d"},
                                           {"title", "s"},
                                           {"transformation", "i"},
@@ -472,7 +501,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"v", "D"},
                                           {"x", "D|I"},
                                           {"x_bins", "i"},
-                                          {"x_colormap", "i"},
                                           {"x_flip", "i"},
                                           {"x_grid", "i"},
                                           {"x_label", "s"},
@@ -482,7 +510,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"x_range", "D"},
                                           {"y", "D"},
                                           {"y_bins", "i"},
-                                          {"y_colormap", "i"},
                                           {"y_flip", "i"},
                                           {"y_form", "i"},
                                           {"y_grid", "i"},
@@ -1279,7 +1306,7 @@ void plotProcessWindow(grm_args_t *subplot_args)
 {
   int scale = 0;
   const char *kind, *orientation = PLOT_DEFAULT_ORIENTATION;
-  int x_log, y_log, z_log;
+  int x_log, y_log, z_log, theta_log, r_log;
   int x_flip, y_flip, z_flip;
   double rotation, tilt;
 
@@ -1300,8 +1327,16 @@ void plotProcessWindow(grm_args_t *subplot_args)
     }
   auto plot = strcmp(kind, "marginal_heatmap") != 0 ? central_region->parentElement()
                                                     : central_region->parentElement()->parentElement();
-  if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
-  if (grm_args_values(subplot_args, "y_log", "i", &y_log)) plot->setAttribute("y_log", y_log);
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
+    {
+      if (grm_args_values(subplot_args, "theta_log", "i", &theta_log)) plot->setAttribute("theta_log", theta_log);
+      if (grm_args_values(subplot_args, "r_log", "i", &r_log)) plot->setAttribute("r_log", r_log);
+    }
+  else
+    {
+      if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
+      if (grm_args_values(subplot_args, "y_log", "i", &y_log)) plot->setAttribute("y_log", y_log);
+    }
   if (grm_args_values(subplot_args, "z_log", "i", &z_log)) plot->setAttribute("z_log", z_log);
   if (grm_args_values(subplot_args, "x_flip", "i", &x_flip)) plot->setAttribute("x_flip", x_flip);
   if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) plot->setAttribute("y_flip", y_flip);
@@ -1333,7 +1368,7 @@ grm_error_t plotStoreCoordinateRanges(grm_args_t *subplot_args)
 {
   const char *kind;
   grm_error_t error = GRM_ERROR_NONE;
-  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
+  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, theta_min, theta_max, r_min, r_max;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
@@ -1352,25 +1387,42 @@ grm_error_t plotStoreCoordinateRanges(grm_args_t *subplot_args)
     }
   group->setAttribute("_kind", kind);
 
-  if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
-    {
-      group->setAttribute("x_lim_min", x_min);
-      group->setAttribute("x_lim_max", x_max);
-    }
-  if (grm_args_values(subplot_args, "y_lim", "dd", &y_min, &y_max))
-    {
-      group->setAttribute("y_lim_min", y_min);
-      group->setAttribute("y_lim_max", y_max);
-    }
-  if (grm_args_values(subplot_args, "z_lim", "dd", &z_min, &z_max))
-    {
-      group->setAttribute("z_lim_min", z_min);
-      group->setAttribute("z_lim_max", z_max);
-    }
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
     {
       group->setAttribute("c_lim_min", c_min);
       group->setAttribute("c_lim_max", c_max);
+    }
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
+    {
+      if (grm_args_values(subplot_args, "theta_lim", "dd", &theta_min, &theta_max))
+        {
+          group->setAttribute("theta_lim_min", theta_min);
+          group->setAttribute("theta_lim_max", theta_max);
+        }
+      if (grm_args_values(subplot_args, "r_lim", "dd", &r_min, &r_max))
+        {
+          group->setAttribute("r_lim_min", r_min);
+          group->setAttribute("r_lim_max", r_max);
+        }
+    }
+  else
+    {
+      if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
+        {
+          group->setAttribute("x_lim_min", x_min);
+          group->setAttribute("x_lim_max", x_max);
+        }
+      if (grm_args_values(subplot_args, "y_lim", "dd", &y_min, &y_max))
+        {
+          group->setAttribute("y_lim_min", y_min);
+          group->setAttribute("y_lim_max", y_max);
+        }
+    }
+
+  if (grm_args_values(subplot_args, "z_lim", "dd", &z_min, &z_max))
+    {
+      group->setAttribute("z_lim_min", z_min);
+      group->setAttribute("z_lim_max", z_max);
     }
 
   return error;
@@ -2448,7 +2500,7 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int z_log = 0;
   unsigned int cols, rows, z_length;
-  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
+  double *theta = nullptr, *r = nullptr, *z, theta_min, theta_max, r_min, r_max, z_min, z_max, c_min, c_max;
   grm_error_t error = GRM_ERROR_NONE;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
@@ -2460,26 +2512,26 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
       auto sub_group = global_render->createSeries("polar_heatmap");
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &cols);
-      grm_args_first_value(*current_series, "y", "D", &y, &rows);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &cols);
+      grm_args_first_value(*current_series, "r", "D", &r, &rows);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      if (x != nullptr)
+      if (theta != nullptr)
         {
-          std::vector<double> x_vec(x, x + cols);
-          (*context)["x" + str] = x_vec;
-          sub_group->setAttribute("x", "x" + str);
+          std::vector<double> theta_vec(theta, theta + cols);
+          (*context)["theta" + str] = theta_vec;
+          sub_group->setAttribute("theta", "theta" + str);
         }
 
-      if (y != nullptr)
+      if (r != nullptr)
         {
-          std::vector<double> y_vec(y, y + rows);
-          (*context)["y" + str] = y_vec;
-          sub_group->setAttribute("y", "y" + str);
+          std::vector<double> r_vec(r, r + rows);
+          (*context)["r" + str] = r_vec;
+          sub_group->setAttribute("r", "r" + str);
         }
 
       std::vector<double> z_vec(z, z + z_length);
@@ -2488,9 +2540,9 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
 
       group->parentElement()->setAttribute("z_log", z_log);
 
-      if (x == nullptr && y == nullptr)
+      if (theta == nullptr && r == nullptr)
         {
-          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          /* If neither `theta` nor `r` are given, we need more information about the shape of `z` */
           grm_args_values(*current_series, "z_dims", "ii", &cols, &rows);
 
           auto z_dims_vec = std::vector<int>{(int)cols, (int)rows};
@@ -2498,20 +2550,20 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
           (*context)[z_dims_key] = z_dims_vec;
           sub_group->setAttribute("z_dims", z_dims_key);
         }
-      if (x == nullptr)
+      if (theta == nullptr)
         {
-          if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+          if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
             {
-              sub_group->setAttribute("x_range_min", x_min);
-              sub_group->setAttribute("x_range_max", x_max);
+              sub_group->setAttribute("theta_range_min", theta_min);
+              sub_group->setAttribute("theta_range_max", theta_max);
             }
         }
-      if (y == nullptr)
+      if (r == nullptr)
         {
-          if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+          if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
             {
-              sub_group->setAttribute("y_range_min", y_min);
-              sub_group->setAttribute("y_range_max", y_max);
+              sub_group->setAttribute("r_range_min", r_min);
+              sub_group->setAttribute("r_range_max", r_max);
             }
         }
       if (grm_args_values(*current_series, "z_range", "dd", &z_min, &z_max))
@@ -3163,38 +3215,38 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *x, *y;
-      double y_min, y_max, x_min, x_max;
-      unsigned int y_length, x_length;
+      double *theta, *r;
+      double theta_min, theta_max, r_min, r_max;
+      unsigned int theta_length, r_length;
       char *spec;
       auto sub_group = global_render->createSeries("polar_line");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "r", "D", &r, &r_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + y_length);
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> r_vec(r, r + r_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)["theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", "theta" + str);
+      (*context)["r" + str] = r_vec;
+      sub_group->setAttribute("r", "r" + str);
 
-      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
-          sub_group->setAttribute("y_range_min", y_min);
-          sub_group->setAttribute("y_range_max", y_max);
+          sub_group->setAttribute("r_range_min", r_min);
+          sub_group->setAttribute("r_range_max", r_max);
         }
-      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+      if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
         {
-          sub_group->setAttribute("x_range_min", x_min);
-          sub_group->setAttribute("x_range_max", x_max);
+          sub_group->setAttribute("theta_range_min", theta_min);
+          sub_group->setAttribute("theta_range_max", theta_max);
         }
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
@@ -3221,37 +3273,37 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *x, *y;
-      double y_min, y_max, x_min, x_max;
-      unsigned int x_length, y_length;
+      double *theta, *r;
+      double theta_min, theta_max, r_min, r_max;
+      unsigned int theta_length, r_length;
       auto sub_group = global_render->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "r", "D", &r, &r_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + y_length);
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> r_vec(r, r + r_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)["theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", "theta" + str);
+      (*context)["r" + str] = r_vec;
+      sub_group->setAttribute("r", "r" + str);
 
-      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
-          sub_group->setAttribute("y_range_min", y_min);
-          sub_group->setAttribute("y_range_max", y_max);
+          sub_group->setAttribute("r_range_min", r_min);
+          sub_group->setAttribute("r_range_max", r_max);
         }
-      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+      if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
         {
-          sub_group->setAttribute("x_range_min", x_min);
-          sub_group->setAttribute("x_range_max", x_max);
+          sub_group->setAttribute("theta_range_min", theta_min);
+          sub_group->setAttribute("theta_range_max", theta_max);
         }
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
@@ -3335,14 +3387,12 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
  * */
 grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
 {
-  double *r_lim = nullptr;
-  unsigned int dummy;
   int stairs;
   int keep_radii_axes;
-  int x_colormap, y_colormap;
+  int theta_colormap, r_colormap;
   int draw_edges, theta_flip, edge_color, face_color;
   double transparency;
-  double xrange_min, xrange_max, ylim_min, ylim_max;
+  double theta_range_min, theta_range_max, r_lim_min, r_lim_max;
   grm_args_t **series;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
@@ -3375,26 +3425,21 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges)) series_group->setAttribute("draw_edges", draw_edges);
   if (grm_args_values(*series, "stairs", "i", &stairs)) series_group->setAttribute("stairs", stairs);
 
-  if (grm_args_first_value(*series, "r_lim", "D", &r_lim, &dummy))
+  if (grm_args_values(subplot_args, "r_lim", "dd", &r_lim_min, &r_lim_max))
     {
-      plot_group->setAttribute("r_lim_min", r_lim[0]);
-      plot_group->setAttribute("r_lim_max", r_lim[1]);
+      plot_group->setAttribute("r_lim_min", r_lim_min);
+      plot_group->setAttribute("r_lim_max", r_lim_max);
     }
 
-  if (grm_args_values(subplot_args, "y_lim", "dd", &ylim_min, &ylim_max))
+  if (grm_args_values(*series, "theta_range", "dd", &theta_range_min, &theta_range_max))
     {
-      plot_group->setAttribute("y_lim_min", ylim_min);
-      plot_group->setAttribute("y_lim_max", ylim_max);
+      series_group->setAttribute("theta_range_min", theta_range_min);
+      series_group->setAttribute("theta_range_max", theta_range_max);
     }
 
-  if (grm_args_values(*series, "x_range", "dd", &xrange_min, &xrange_max))
-    {
-      series_group->setAttribute("x_range_min", xrange_min);
-      series_group->setAttribute("x_range_max", xrange_max);
-    }
-
-  if (grm_args_values(*series, "x_colormap", "i", &x_colormap)) series_group->setAttribute("x_colormap", x_colormap);
-  if (grm_args_values(*series, "y_colormap", "i", &y_colormap)) series_group->setAttribute("y_colormap", y_colormap);
+  if (grm_args_values(*series, "theta_colormap", "i", &theta_colormap))
+    series_group->setAttribute("theta_colormap", theta_colormap);
+  if (grm_args_values(*series, "r_colormap", "i", &r_colormap)) series_group->setAttribute("r_colormap", r_colormap);
   global_root->setAttribute("_id", ++id);
 
   return GRM_ERROR_NONE;
@@ -4593,7 +4638,7 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
   unsigned int num_bins;
   unsigned int length, num_bin_edges, dummy;
   const char *norm = "count";
-  double *bin_edges = nullptr, *theta_lim = nullptr, *x = nullptr;
+  double *bin_edges = nullptr, *theta_data_lim = nullptr, *theta = nullptr;
   double bin_width;
   int is_bin_counts;
   int *bin_counts = nullptr;
@@ -4618,14 +4663,14 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "bin_counts", "i", &is_bin_counts) == 0)
     {
       is_bin_counts = 0;
-      grm_args_first_value(*series, "x", "D", &x, &length);
-      std::vector<double> x_vec(x, x + length);
-      (*context)["x" + str] = x_vec;
-      series_group->setAttribute("x", "x" + str);
+      grm_args_first_value(*series, "theta", "D", &theta, &length);
+      std::vector<double> theta_vec(theta, theta + length);
+      (*context)["theta" + str] = theta_vec;
+      series_group->setAttribute("theta", "theta" + str);
     }
   else
     {
-      grm_args_first_value(*series, "x", "I", &bin_counts, &length);
+      grm_args_first_value(*series, "theta", "I", &bin_counts, &length);
       std::vector<int> bin_counts_vec(bin_counts, bin_counts + length);
       (*context)["bin_counts" + str] = bin_counts_vec;
       series_group->setAttribute("bin_counts", "bin_counts" + str);
@@ -4636,16 +4681,15 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
       series_group->setAttribute("num_bins", static_cast<int>(num_bins));
     }
 
-  if (grm_args_first_value(*series, "theta_lim", "D", &theta_lim, &dummy))
+  if (grm_args_first_value(*series, "theta_data_lim", "D", &theta_data_lim, &dummy))
     {
-      plot_group->setAttribute("theta_lim_min", theta_lim[0]);
-      plot_group->setAttribute("theta_lim_max", theta_lim[1]);
+      series_group->setAttribute("theta_data_lim_min", theta_data_lim[0]);
+      series_group->setAttribute("theta_data_lim_max", theta_data_lim[1]);
     }
 
   /* bin_edges and nbins */
   if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
-
       if (grm_args_values(*series, "num_bins", "i", &num_bins))
         {
           series_group->setAttribute("num_bins", static_cast<int>(num_bins));
@@ -6044,7 +6088,7 @@ public:
         if (element.hasAttribute(potential_backup_attribute_name))
           {
             if (element.getAttribute(attribute_name) != element.getAttribute(potential_backup_attribute_name) &&
-                strEqualsAny(attribute_name, "x", "y", "z"))
+                strEqualsAny(attribute_name, "r", "theta", "x", "y", "z"))
               {
                 context_keys_to_discard_.insert(static_cast<std::string>(element.getAttribute(attribute_name)));
               }
@@ -6174,7 +6218,8 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   char *kind;
   int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
   double *subplot;
-  double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
+  double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max, theta_lim_min, theta_lim_max, r_lim_min,
+      r_lim_max;
   int grplot = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
@@ -6220,16 +6265,33 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       group->setAttribute("_viewport_normalized_y_max_org", subplot[3]);
     }
 
-  if (grm_args_values(subplot_args, "x_lim", "dd", &x_lim_min, &x_lim_max))
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
     {
-      group->setAttribute("x_lim_min", x_lim_min);
-      group->setAttribute("x_lim_max", x_lim_max);
+      if (grm_args_values(subplot_args, "theta_lim", "dd", &theta_lim_min, &theta_lim_max))
+        {
+          group->setAttribute("theta_lim_min", theta_lim_min);
+          group->setAttribute("theta_lim_max", theta_lim_max);
+        }
+      if (grm_args_values(subplot_args, "r_lim", "dd", &r_lim_min, &r_lim_max))
+        {
+          group->setAttribute("r_lim_min", r_lim_min);
+          group->setAttribute("r_lim_max", r_lim_max);
+        }
     }
-  if (grm_args_values(subplot_args, "y_lim", "dd", &y_lim_min, &y_lim_max))
+  else
     {
-      group->setAttribute("y_lim_min", y_lim_min);
-      group->setAttribute("y_lim_max", y_lim_max);
+      if (grm_args_values(subplot_args, "x_lim", "dd", &x_lim_min, &x_lim_max))
+        {
+          group->setAttribute("x_lim_min", x_lim_min);
+          group->setAttribute("x_lim_max", x_lim_max);
+        }
+      if (grm_args_values(subplot_args, "y_lim", "dd", &y_lim_min, &y_lim_max))
+        {
+          group->setAttribute("y_lim_min", y_lim_min);
+          group->setAttribute("y_lim_max", y_lim_max);
+        }
     }
+
   if (grm_args_values(subplot_args, "z_lim", "dd", &z_lim_min, &z_lim_max))
     {
       group->setAttribute("z_lim_min", z_lim_min);

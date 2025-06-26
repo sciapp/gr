@@ -243,6 +243,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "movable",
       "only_quadratic_aspect_ratio",
       "polar_with_pan",
+      "r_log",
       "set_text_color_for_background",
       "space",
       "stairs",
@@ -403,6 +404,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       connect(y_log_act, &QAction::triggered, this, &GRPlotWidget::yLogSlot);
       z_log_act = new QAction(tr("&Z Log"), this);
       connect(z_log_act, &QAction::triggered, this, &GRPlotWidget::zLogSlot);
+      r_log_act = new QAction(tr("&R Log"), this);
+      connect(r_log_act, &QAction::triggered, this, &GRPlotWidget::rLogSlot);
       x_flip_act = new QAction(tr("&X Flip"), this);
       connect(x_flip_act, &QAction::triggered, this, &GRPlotWidget::xFlipSlot);
       y_flip_act = new QAction(tr("&Y Flip"), this);
@@ -2673,6 +2676,20 @@ void GRPlotWidget::zLogSlot()
   redraw();
 }
 
+void GRPlotWidget::rLogSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool r_log = plot_elem->hasAttribute("r_log") && static_cast<int>(plot_elem->getAttribute("r_log"));
+  plot_elem->setAttribute("r_log", !r_log);
+
+  redraw();
+}
+
 void GRPlotWidget::xFlipSlot()
 {
   const auto global_root = grm_get_document_root();
@@ -4281,6 +4298,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
       polar_with_pan_act->setVisible(false);
       z_flip_act->setVisible(false);
       z_log_act->setVisible(false);
+      r_log_act->setVisible(false);
       theta_flip_act->setVisible(false);
       legend_act->setVisible(false);
       colorbar_act->setVisible(false);
@@ -4423,11 +4441,13 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   polar_scatter_act->setVisible(true);
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
+                  r_log_act->setVisible(true);
                 }
               else if (kind == "polar_heatmap" || kind == "polar_histogram")
                 {
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
+                  r_log_act->setVisible(true);
                 }
               else if (kind == "histogram")
                 {
@@ -4742,6 +4762,11 @@ QAction *GRPlotWidget::getYLogAct()
 QAction *GRPlotWidget::getZLogAct()
 {
   return z_log_act;
+}
+
+QAction *GRPlotWidget::getRLogAct()
+{
+  return r_log_act;
 }
 
 QAction *GRPlotWidget::getXFlipAct()

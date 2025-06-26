@@ -56,6 +56,8 @@ static std::map<std::string, const char *> key_to_types{
     {"orientation", "s"},
     {"resample_method", "s"},
     {"r_lim", "dd"},
+    {"r_log", "i"},
+    {"r_range", "dd"},
     {"rotation", "d"},
     {"scale", "i"},
     {"scatter_z", "i"},
@@ -64,6 +66,8 @@ static std::map<std::string, const char *> key_to_types{
     {"style", "s"},
     {"theta_flip", "i"},
     {"theta_lim", "dd"},
+    {"theta_log", "i"},
+    {"theta_range", "dd"},
     {"tilt", "d"},
     {"title", "s"},
     {"transformation", "i"},
@@ -1893,7 +1897,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       else if (strcmp(kind, "polar_histogram") == 0)
         {
           if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
-          grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
+          grm_args_push(plot[plot_i], "theta", "nD", rows, file_data[depth][0].data());
         }
       else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
         {
@@ -1913,33 +1917,33 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           for (col = 0; col <= cols / 2; col += 2)
             {
               series[col / 2] = grm_args_new();
-              grm_args_push(series[col / 2], "x", "nD", rows, file_data[depth][col].data());
-              grm_args_push(series[col / 2], "y", "nD", rows, file_data[depth][col + 1].data());
+              grm_args_push(series[col / 2], "theta", "nD", rows, file_data[depth][col].data());
+              grm_args_push(series[col / 2], "r", "nD", rows, file_data[depth][col + 1].data());
             }
           grm_args_push(plot[plot_i], "series", "nA", cols / 2, series.data());
         }
       else if (strcmp(kind, "polar_heatmap") == 0)
         {
           std::vector<double> xi(cols), yi(rows), zi(rows * cols);
-          double xmin, xmax, ymin, ymax;
+          double theta_min, theta_max, r_min, r_max;
 
           if (cols <= 1)
             {
               fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
               return 0;
             }
-          if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
+          if (!grm_args_values(plot[plot_i], "theta_range", "dd", &theta_min, &theta_max))
             {
-              xmin = 0.0;
-              xmax = 360.0;
+              theta_min = 0.0;
+              theta_max = 360.0;
             }
-          if (!grm_args_values(plot[plot_i], "y_range", "dd", &ymin, &ymax))
+          if (!grm_args_values(plot[plot_i], "r_range", "dd", &r_min, &r_max))
             {
-              ymin = 0.0;
-              ymax = 3.0;
+              r_min = 0.0;
+              r_max = 3.0;
             }
-          adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
-          adjustRanges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+          adjustRanges(&ranges.xmin, &ranges.xmax, theta_min, theta_max);
+          adjustRanges(&ranges.ymin, &ranges.ymax, r_min, r_max);
           ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
 
           for (col = 0; col < cols; ++col)
@@ -1954,8 +1958,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   zi[row * cols + col] = file_data[depth][col][row];
                 }
             }
-          grm_args_push(plot[plot_i], "x", "nD", cols, xi.data());
-          grm_args_push(plot[plot_i], "y", "nD", rows, yi.data());
+          grm_args_push(plot[plot_i], "theta", "nD", cols, xi.data());
+          grm_args_push(plot[plot_i], "r", "nD", rows, yi.data());
           grm_args_push(plot[plot_i], "z", "nD", cols * rows, zi.data());
         }
       else if (strcmp(kind, "quiver") == 0)
@@ -2291,6 +2295,16 @@ std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange 
                                       ranges->zmin = std::stod(x);
                                       ranges->zmax = std::stod(y);
                                     }
+                                  else if (search->first == "theta_range")
+                                    {
+                                      ranges->xmin = std::stod(x);
+                                      ranges->xmax = std::stod(y);
+                                    }
+                                  else if (search->first == "r_range")
+                                    {
+                                      ranges->ymin = std::stod(x);
+                                      ranges->ymax = std::stod(y);
+                                    }
                                 }
                               else if (strcmp(con->second, "ddd") == 0)
                                 {
@@ -2420,6 +2434,16 @@ std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange 
                             {
                               ranges->zmin = std::stod(x);
                               ranges->zmax = std::stod(y);
+                            }
+                          else if (search->first == "theta_range")
+                            {
+                              ranges->xmin = std::stod(x);
+                              ranges->xmax = std::stod(y);
+                            }
+                          else if (search->first == "r_range")
+                            {
+                              ranges->ymin = std::stod(x);
+                              ranges->ymax = std::stod(y);
                             }
                         }
                     }

@@ -125,6 +125,7 @@ public:
   QAction *getXLogAct();
   QAction *getYLogAct();
   QAction *getZLogAct();
+  QAction *getRLogAct();
   QAction *getXFlipAct();
   QAction *getYFlipAct();
   QAction *getZFlipAct();
@@ -212,6 +213,7 @@ private slots:
   void xLogSlot();
   void yLogSlot();
   void zLogSlot();
+  void rLogSlot();
   void xFlipSlot();
   void yFlipSlot();
   void zFlipSlot();
@@ -366,7 +368,7 @@ private:
       *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
       *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act, *undo_action, *redo_action;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
-  QAction *x_log_act, *y_log_act, *z_log_act;
+  QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
   QAction *keep_aspect_ratio_act, *only_quadratic_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;

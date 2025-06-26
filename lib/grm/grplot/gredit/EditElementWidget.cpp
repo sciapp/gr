@@ -360,7 +360,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
         }
       else if (cur_attr_name == "x_range_min" || cur_attr_name == "x_range_max" || cur_attr_name == "y_range_min" ||
                cur_attr_name == "y_range_max" || cur_attr_name == "z_range_min" || cur_attr_name == "z_range_max" ||
-               cur_attr_name == "c_range_min" || cur_attr_name == "c_range_max")
+               cur_attr_name == "c_range_min" || cur_attr_name == "c_range_max" || cur_attr_name == "r_range_min" ||
+               cur_attr_name == "r_range_max" || cur_attr_name == "theta_range_min" ||
+               cur_attr_name == "theta_range_max")
         {
           text_label = QString(cur_attr_name.c_str());
           if (!range_modification_added)
@@ -371,7 +373,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
           range_modification_form->addRow(text_label, line_edit);
         }
-      else if (cur_attr_name == "x_log" || cur_attr_name == "y_log" || cur_attr_name == "z_log")
+      else if (cur_attr_name == "x_log" || cur_attr_name == "y_log" || cur_attr_name == "z_log" ||
+               cur_attr_name == "r_log" || cur_attr_name == "theta_log")
         {
           text_label = QString(cur_attr_name.c_str());
           if (!log_modification_added)
@@ -575,7 +578,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
                       window_form->addRow(text_label, line_edit);
                     }
-                  else if (attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log")
+                  else if (attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log" ||
+                           attr_name == "r_log" || attr_name == "theta_log")
                     {
                       if (!log_modification_added)
                         {
@@ -805,7 +809,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                               else if (attr_name == "x_range_min" || attr_name == "x_range_max" ||
                                        attr_name == "y_range_min" || attr_name == "y_range_max" ||
                                        attr_name == "z_range_min" || attr_name == "z_range_max" ||
-                                       attr_name == "c_range_min" || attr_name == "c_range_max")
+                                       attr_name == "c_range_min" || attr_name == "c_range_max" ||
+                                       attr_name == "r_range_min" || attr_name == "r_range_max" ||
+                                       attr_name == "theta_range_min" || attr_name == "theta_range_max")
                                 {
                                   if (!range_modification_added)
                                     {

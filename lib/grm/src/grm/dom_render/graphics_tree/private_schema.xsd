@@ -117,12 +117,16 @@
             <xs:attribute name="_original_y_min" type="xs:double"/>
             <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
             <xs:attribute name="_plot_id" type="xs:string" use="required"/>
+            <xs:attribute name="_r_lim_max" type="xs:double"/>
+            <xs:attribute name="_r_lim_min" type="xs:double"/>
             <xs:attribute name="_right_window_xform_a" type="xs:double"/>
             <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_selected_for_menu" type="xs:integer"/>
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
+            <xs:attribute name="_theta_lim_max" type="xs:double"/>
+            <xs:attribute name="_theta_lim_min" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_top_window_xform_b" type="xs:double"/>
@@ -530,13 +534,13 @@
             <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
             <xs:attribute name="_r_max_set_by_user" type="xs:double"/>
             <xs:attribute name="_r_min_set_by_user" type="xs:double"/>
+            <xs:attribute name="_r_org_set_by_user" type="xs:double"/>
             <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_max_set_by_user" type="xs:double"/>
             <xs:attribute name="_theta_min_set_by_user" type="xs:double"/>
-            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
-            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_theta_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -548,11 +552,11 @@
             <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_r_org_set_by_user" type="xs:double"/>
             <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
-            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
-            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_theta_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -945,6 +949,9 @@
 
     <!-- definition of _data attributes -->
     <xs:attributeGroup name="_data">
+        <xs:attribute name="_r_org" type="xs:string"/>
+        <xs:attribute name="_r_range_max_org" type="xs:double"/>
+        <xs:attribute name="_r_range_min_org" type="xs:double"/>
         <xs:attribute name="_x_org" type="xs:string"/>
         <xs:attribute name="_x_range_max_org" type="xs:double"/>
         <xs:attribute name="_x_range_min_org" type="xs:double"/>

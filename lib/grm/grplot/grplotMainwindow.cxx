@@ -115,6 +115,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       log_sub_menu->addAction(grplot_widget_->getXLogAct());
       log_sub_menu->addAction(grplot_widget_->getYLogAct());
       log_sub_menu->addAction(grplot_widget_->getZLogAct());
+      log_sub_menu->addAction(grplot_widget_->getRLogAct());
       flip_sub_menu->addAction(grplot_widget_->getXFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getYFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getZFlipAct());

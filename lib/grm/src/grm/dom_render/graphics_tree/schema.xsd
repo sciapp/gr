@@ -138,6 +138,7 @@
             <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
+            <xs:attribute name="r_log" type="xs:integer"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="theta_flip" type="xs:integer"/>
             <xs:attribute name="theta_lim_max" type="xs:double"/>
@@ -575,10 +576,10 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="angle_label" type="xs:string"/>
+            <xs:attribute name="r" type="xs:double"/>
             <xs:attribute name="text_x0" type="xs:double"/>
             <xs:attribute name="text_y0" type="xs:double"/>
-            <xs:attribute name="x" type="xs:double"/>
-            <xs:attribute name="y" type="xs:double"/>
+            <xs:attribute name="theta" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -726,11 +727,11 @@
             <xs:attribute name="r_dim" type="xs:integer" use="required"/>
             <xs:attribute name="r_max" type="xs:double" use="required"/>
             <xs:attribute name="r_min" type="xs:double" use="required"/>
+            <xs:attribute name="r_org" type="xs:double" use="required"/>
             <xs:attribute name="theta_dim" type="xs:integer" use="required"/>
             <xs:attribute name="theta_max" type="xs:double" use="required"/>
             <xs:attribute name="theta_min" type="xs:double" use="required"/>
-            <xs:attribute name="x_org" type="xs:double" use="required"/>
-            <xs:attribute name="y_org" type="xs:double" use="required"/>
+            <xs:attribute name="theta_org" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -741,10 +742,10 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="r_org" type="xs:double" use="required"/>
             <xs:attribute name="theta" type="xs:string" use="required"/>
             <xs:attribute name="theta_dim" type="xs:integer" use="required"/>
-            <xs:attribute name="x_org" type="xs:double" use="required"/>
-            <xs:attribute name="y_org" type="xs:double" use="required"/>
+            <xs:attribute name="theta_org" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -1025,10 +1026,19 @@
                 <xs:element ref="nonuniform_polar_cell_array" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_cell_array" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="r" type="xs:string"/>
+            <xs:attribute name="r_range_max" type="xs:double"/>
+            <xs:attribute name="r_range_min" type="xs:double"/>
+            <xs:attribute name="theta" type="xs:string"/>
+            <xs:attribute name="theta_range_max" type="xs:double"/>
+            <xs:attribute name="theta_range_min" type="xs:double"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_dims" type="xs:string"/>
+            <xs:attribute name="z_range_max" type="xs:double"/>
+            <xs:attribute name="z_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1053,18 +1063,20 @@
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
+            <xs:attribute name="r_colormap" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
+            <xs:attribute name="r_range_max" type="xs:double"/>
+            <xs:attribute name="r_range_min" type="xs:double"/>
             <xs:attribute name="stairs" type="xs:integer"/>
             <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="transparency" type="xs:double"/>
-            <xs:attribute name="x" type="xs:string"/>
-            <xs:attribute name="x_colormap" type="xs:integer"/>
-            <xs:attribute name="x_range_max" type="xs:double"/>
-            <xs:attribute name="x_range_min" type="xs:double"/>
-            <xs:attribute name="y_colormap" type="xs:integer"/>
-            <xs:attribute name="y_range_max" type="xs:double"/>
-            <xs:attribute name="y_range_min" type="xs:double"/>
+            <xs:attribute name="theta" type="xs:string"/>
+            <xs:attribute name="theta_colormap" type="xs:integer"/>
+            <xs:attribute name="theta_data_lim_max" type="xs:double"/>
+            <xs:attribute name="theta_data_lim_min" type="xs:double"/>
+            <xs:attribute name="theta_range_max" type="xs:double"/>
+            <xs:attribute name="theta_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1078,14 +1090,17 @@
             <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="r_range_max" type="xs:double"/>
+            <xs:attribute name="r_range_min" type="xs:double"/>
+            <xs:attribute name="theta" type="xs:string" use="required"/>
+            <xs:attribute name="theta_range_max" type="xs:double"/>
+            <xs:attribute name="theta_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1097,14 +1112,17 @@
             </xs:choice>
             <xs:attributeGroup ref="marker_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="r_range_max" type="xs:double"/>
+            <xs:attribute name="r_range_min" type="xs:double"/>
+            <xs:attribute name="theta" type="xs:string" use="required"/>
+            <xs:attribute name="theta_range_max" type="xs:double"/>
+            <xs:attribute name="theta_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1365,8 +1383,8 @@
             <xs:attribute name="draw_edges" type="xs:integer"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="theta_flip" type="xs:integer"/>
-            <xs:attribute name="x_colormap" type="xs:integer"/>
-            <xs:attribute name="y_colormap" type="xs:integer"/>
+            <xs:attribute name="theta_colormap" type="xs:integer"/>
+            <xs:attribute name="r_colormap" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
