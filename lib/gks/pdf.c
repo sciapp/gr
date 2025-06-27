@@ -1062,7 +1062,7 @@ static void set_clip_rect(int tnr)
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
       x = 0.5 * (x0 + x1);
       y = 0.5 * (y0 + y1);

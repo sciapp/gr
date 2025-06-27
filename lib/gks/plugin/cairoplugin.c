@@ -917,7 +917,7 @@ static void set_clip_rect(int tnr)
   w = p->rect[tnr][1][0] - p->rect[tnr][0][0];
   h = p->rect[tnr][1][1] - p->rect[tnr][0][1];
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
     {
       cairo_save(p->cr);
       cairo_translate(p->cr, x + 0.5 * w, y + 0.5 * h);
