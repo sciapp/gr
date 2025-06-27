@@ -1053,16 +1053,15 @@ static void set_clip_rect(int tnr)
   double x, y, xr, yr;
 
   if (gkss->clip_tnr != 0)
-    clrt = gkss->viewport[gkss->clip_tnr];
-  else if (gkss->clip == GKS_K_CLIP)
-    clrt = gkss->viewport[tnr];
-  else
-    clrt = gkss->viewport[0];
+    tnr = gkss->clip_tnr;
+  else if (gkss->clip == GKS_K_NOCLIP)
+    tnr = 0;
 
+  clrt = gkss->viewport[tnr];
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
     {
       x = 0.5 * (x0 + x1);
       y = 0.5 * (y0 + y1);
