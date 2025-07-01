@@ -69,6 +69,7 @@ public:
   QStringList getColorRGBAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
+  bool getEnableAdvancedEditor();
   QAction *getPdfAct();
   QAction *getPngAct();
   QAction *getJpegAct();
@@ -149,6 +150,7 @@ public:
   QAction *getUndoAct();
   QAction *getRedoAct();
   QAction *getSelectableGridAct();
+  QAction *getAdvancedEditorAct();
 
 protected:
   virtual void draw();
@@ -238,6 +240,7 @@ private slots:
   void undoSlot();
   void redoSlot();
   void selectableGridSlot();
+  void advancedEditorSlot();
 
 private:
   struct MouseState
@@ -352,6 +355,7 @@ private:
   EditElementWidget *edit_element_widget;
   ColorPickerRGB *color_picker_rgb;
   bool hide_grid_bbox = true;
+  bool enable_advanced_editor = false;
 
   QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
   QAction *sum_act, *max_act;
@@ -369,7 +373,8 @@ private:
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
       *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
-      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act, *undo_action, *redo_action;
+      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act, *undo_action, *redo_action,
+      *advanced_editor_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;

@@ -162,6 +162,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   args_ = grm_args_new();
 
   enable_editor = false;
+  enable_advanced_editor = false;
   highlight_bounding_objects = false;
   bounding_logic = new BoundingLogic();
   current_selection = nullptr;
@@ -474,7 +475,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       add_element_widget->hide();
 
       editor_action = new QAction(tr("&Enable Editorview"));
-      editor_action->setCheckable(true);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enableEditorFunctions()));
 
       save_file_action = new QAction("&Save");
@@ -546,6 +546,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       selectable_grid_act->setCheckable(true);
       selectable_grid_act->setChecked(false);
 
+      advanced_editor_act = new QAction(tr("&Enable Advanced Editor"));
+      QObject::connect(advanced_editor_act, SIGNAL(triggered()), this, SLOT(advancedEditorSlot()));
+      advanced_editor_act->setVisible(false);
+
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
     }
@@ -557,6 +561,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
   args_ = args;
 
   enable_editor = false;
+  enable_advanced_editor = false;
   highlight_bounding_objects = false;
   bounding_logic = new BoundingLogic();
   current_selection = nullptr;
@@ -3573,11 +3578,12 @@ void GRPlotWidget::showContainerSlot()
 
 void GRPlotWidget::enableEditorFunctions()
 {
-  if (editor_action->isChecked())
+  if (editor_action->text() == "&Enable Editorview")
     {
       enable_editor = true;
       grm_tmp_dir = grm_get_render()->initializeHistory();
       add_element_action->setVisible(true);
+      advanced_editor_act->setVisible(true);
       show_container_action->setVisible(true);
       show_container_action->setChecked(false);
       show_configuration_menu_act->trigger();
@@ -3597,6 +3603,8 @@ void GRPlotWidget::enableEditorFunctions()
   else
     {
       enable_editor = false;
+      enable_advanced_editor = false;
+      advanced_editor_act->setVisible(false);
       add_element_action->setVisible(false);
       show_container_action->setVisible(false);
       show_container_action->setChecked(false);
@@ -3619,6 +3627,19 @@ void GRPlotWidget::enableEditorFunctions()
       prev_selection.reset();
       current_selections.clear();
       redraw();
+    }
+}
+
+void GRPlotWidget::advancedEditorSlot()
+{
+  if (advanced_editor_act->text() == "&Enable Advanced Editor")
+    {
+      advanced_editor_act->setText(tr("&Disable Advanced Editor"));
+      enable_advanced_editor = true;
+    }
+  else
+    {
+      enable_advanced_editor = false;
     }
 }
 
@@ -4900,6 +4921,11 @@ QAction *GRPlotWidget::getSelectableGridAct()
   return selectable_grid_act;
 }
 
+QAction *GRPlotWidget::getAdvancedEditorAct()
+{
+  return advanced_editor_act;
+}
+
 void GRPlotWidget::cursorHandler(int x, int y)
 {
   if (!enable_editor)
@@ -4919,4 +4945,9 @@ void GRPlotWidget::cursorHandler(int x, int y)
         }
       setCursor(*csr);
     }
+}
+
+bool GRPlotWidget::getEnableAdvancedEditor()
+{
+  return enable_advanced_editor;
 }

@@ -47,16 +47,57 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
 
   for (const auto &entry : context_data)
     {
-      int row = 1;
-      this->setItem(0, col, new QTableWidgetItem(entry.first.c_str()));
-      max_rows = std::max(max_rows, (int)entry.second.size() + 1);
-      this->setRowCount(max_rows);
-      for (const auto &str : entry.second)
+      bool skip_elem = false;
+      auto tree_str = GRM::toXML(
+          grm_get_document_root(),
+          GRM::SerializerOptions{std::string(2, ' '), GRM::SerializerOptions::InternalAttributesFormat::PLAIN});
+      std::string token = "=\"" + std::string(entry.first.c_str()) + "\"";
+
+      while (tree_str.find(token) != std::string::npos)
         {
-          this->setItem(row, col, new QTableWidgetItem(str.c_str()));
-          row += 1;
+          int max_attr_length = 50;
+          auto pos = tree_str.find(token);
+          auto interesting_part =
+              tree_str.substr(std::max<int>(0, pos - max_attr_length), max_attr_length + token.size());
+          auto start = interesting_part.find_last_of(" ");
+          auto selector_token = interesting_part.substr(start + 1, (max_attr_length - start - 1) + token.size());
+          tree_str = tree_str.substr(pos + token.size(), std::string::npos);
+
+          auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
+          for (const auto &elem : grm_get_document_root()->querySelectorsAll("[" + selector_token + "]"))
+            {
+              auto elem_name = elem->localName();
+              if (!advanced_editor &&
+                  (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
+                   elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
+                   elem_name == "cell_array" || elem_name == "nonuniform_cell_array" ||
+                   elem_name == "polar_cell_array" || elem_name == "nonuniform_polar_cell_array" ||
+                   elem_name == "draw_image" || elem_name == "draw_arc" || elem_name == "fill_arc" ||
+                   elem_name == "fill_area"))
+                {
+                  skip_elem = true;
+                }
+              else
+                {
+                  skip_elem = false;
+                }
+            }
+          if (skip_elem) break;
         }
-      col += 1;
+
+      if (!skip_elem)
+        {
+          int row = 1;
+          this->setItem(0, col, new QTableWidgetItem(entry.first.c_str()));
+          max_rows = std::max(max_rows, (int)entry.second.size() + 1);
+          this->setRowCount(max_rows);
+          for (const auto &str : entry.second)
+            {
+              this->setItem(row, col, new QTableWidgetItem(str.c_str()));
+              row += 1;
+            }
+          col += 1;
+        }
     }
 
   for (int i = 1; i <= max_rows; i++)

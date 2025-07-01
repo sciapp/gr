@@ -34,6 +34,15 @@ void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
 
 void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *parent)
 {
+  auto elem_name = ref->localName();
+  auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
+  if (!advanced_editor &&
+      (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" || elem_name == "polyline_3d" ||
+       elem_name == "polymarker_3d" || elem_name == "fill_rect" || elem_name == "cell_array" ||
+       elem_name == "nonuniform_cell_array" || elem_name == "polar_cell_array" ||
+       elem_name == "nonuniform_polar_cell_array" || elem_name == "draw_image" || elem_name == "draw_arc" ||
+       elem_name == "fill_arc" || elem_name == "fill_area"))
+    return;
   auto *item = new CustomTreeWidgetItem(parent, ref);
   std::string name = ref->localName();
 
@@ -55,16 +64,23 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
     }
 
   // checkboxes for _selected attribute
-  if (item->getRef()->localName() != "coordinate_system" &&
-      !(item->getRef()->localName() == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
+  if (advanced_editor || (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+                          elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+                          elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
+                          elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
+                          elem_name == "axis" || elem_name == "text_region"))
     {
-      if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+      if (elem_name != "coordinate_system" &&
+          !(elem_name == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
         {
-          item->setCheckState(0, Qt::Checked);
-        }
-      else
-        {
-          item->setCheckState(0, Qt::Unchecked);
+          if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+            {
+              item->setCheckState(0, Qt::Checked);
+            }
+          else
+            {
+              item->setCheckState(0, Qt::Unchecked);
+            }
         }
     }
   parent->addChild(item);
