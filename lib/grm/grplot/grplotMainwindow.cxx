@@ -181,6 +181,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           add_context_data->addAction(grplot_widget_->getAddContextAct());
           add_context_data->addAction(grplot_widget_->getAddGRplotDataContextAct());
           add_context_data->addAction(grplot_widget_->getGenerateLinearContextAct());
+          modi_menu->addAction(grplot_widget_->getSelectableGridAct());
 
           location_sub_menu->addAction(grplot_widget_->getLegendAct());
           location_sub_menu->addAction(grplot_widget_->getColorbarAct());

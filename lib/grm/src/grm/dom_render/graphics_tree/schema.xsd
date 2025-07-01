@@ -1058,7 +1058,7 @@
             <xs:attribute name="bin_edges" type="xs:string"/>
             <xs:attribute name="bin_width" type="xs:double"/>
             <xs:attribute name="bin_widths" type="xs:string"/>
-            <xs:attribute name="classes" type="xs:string"/>
+            <xs:attribute name="counts" type="xs:string"/>
             <xs:attribute name="draw_edges" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>

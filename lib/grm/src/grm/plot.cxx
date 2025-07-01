@@ -3400,8 +3400,8 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
   group->append(series_group);
 
-  // Call classes -> set attributes and data
-  classesPolarHistogram(subplot_args);
+  // Call counts -> set attributes and data
+  countsPolarHistogram(subplot_args);
 
   auto context = global_render->getContext();
 
@@ -4631,9 +4631,9 @@ grm_args_t *getSubplotFromNdcPoints(unsigned int n, const double *x, const doubl
 }
 
 /*
- * Calculates the classes for polar histogram
+ * Calculates the counts for polar histogram
  * */
-grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
+grm_error_t countsPolarHistogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
   unsigned int length, num_bin_edges, dummy;

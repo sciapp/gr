@@ -171,9 +171,9 @@ static std::set<std::string> valid_context_attributes = {"absolute_downwards",
                                                          "c",
                                                          "c_rgb",
                                                          "c_ind",
-                                                         "classes",
                                                          "color_ind_values",
                                                          "color_rgb_values",
+                                                         "counts",
                                                          "data",
                                                          "directions",
                                                          "fill_color_rgb",
@@ -12899,7 +12899,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
   unsigned int num_bins, length, num_bin_edges = 0, i;
   std::vector<double> theta;
   std::string norm = "count";
-  std::vector<int> classes, bin_counts;
+  std::vector<int> counts, bin_counts;
   double r_max, temp_max, bin_width, theta_range_min, theta_range_max;
   double *theta_lim = nullptr;
   int max_observations = 0, total_observations = 0;
@@ -12911,7 +12911,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   auto str = std::to_string(id);
   global_root->setAttribute("_id", id + 1);
-  std::string bin_widths_key = "bin_widths" + str, bin_edges_key = "bin_edges" + str, classes_key = "classes" + str;
+  std::string bin_widths_key = "bin_widths" + str, bin_edges_key = "bin_edges" + str, counts_key = "counts" + str;
 
   if (series->hasAttribute("bin_counts"))
     {
@@ -13170,24 +13170,24 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
             temp_max_bc = bin_counts[i];
         }
 
-      classes.resize(num_bins);
+      counts.resize(num_bins);
 
       // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
       if (strEqualsAny(norm, "cdf", "cumcount"))
         {
           for (i = 0; i < num_bins; ++i)
             {
-              classes[i] = bin_counts[i];
-              if (i != 0) classes[i] += classes[i - 1];
+              counts[i] = bin_counts[i];
+              if (i != 0) counts[i] += counts[i - 1];
             }
         }
       else
         {
-          classes = bin_counts;
+          counts = bin_counts;
         }
 
-      series->setAttribute("classes", classes_key);
-      (*context)[classes_key] = classes;
+      series->setAttribute("counts", counts_key);
+      (*context)[counts_key] = counts;
       series->setAttribute("_total", total);
 
       if (norm == "probability")
@@ -13202,7 +13202,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
   else /* no is_bin_counts */
     {
       r_max = 0.0;
-      classes.resize(num_bins);
+      counts.resize(num_bins);
 
       // prepare bin_edges
       if (num_bin_edges == 0) // no bin_edges --> create bin_edges for uniform code later
@@ -13223,7 +13223,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
           length = theta.size();
         }
 
-      // calc classes
+      // calc counts
       for (i = 0; i < num_bins; ++i)
         {
           int observations = 0;
@@ -13235,17 +13235,17 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
             }
 
           // differentiate between cumulative and non-cumulative norms
-          classes[i] = observations;
-          if (i != 0 && strEqualsAny(norm, "cdf", "cumcount")) classes[i] += classes[i - 1];
+          counts[i] = observations;
+          if (i != 0 && strEqualsAny(norm, "cdf", "cumcount")) counts[i] += counts[i - 1];
           // update the total number of observations; used for some norms
           total_observations += observations;
         }
 
       // get maximum number of observation from all bins
-      max_observations = *std::max_element(classes.begin(), classes.end());
+      max_observations = *std::max_element(counts.begin(), counts.end());
 
-      series->setAttribute("classes", classes_key);
-      (*context)[classes_key] = classes;
+      series->setAttribute("counts", counts_key);
+      (*context)[counts_key] = counts;
       series->setAttribute("_total", total_observations);
 
       // calculate the maximum from max_observations respecting the norms
@@ -13258,7 +13258,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
           for (i = 0; i < num_bins; i++)
             {
               // temporary maximum respecting norm
-              temp_max = classes[i];
+              temp_max = counts[i];
               if (norm == "pdf")
                 temp_max /= total_observations * bin_widths[i];
               else if (norm == "countdensity")
@@ -13294,13 +13294,13 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   bool draw_edges = false, stairs = false, theta_flip = false, keep_radii_axes = false, rlims = false, r_log = false;
   std::string norm = "count";
   std::vector<double> r_lim_vec, bin_edges, bin_widths, rect_list;
-  std::vector<int> classes;
+  std::vector<int> counts;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   std::shared_ptr<GRM::Element> plot_group = element->parentElement();
   getPlotParent(plot_group);
 
-  auto classes_key = static_cast<std::string>(element->getAttribute("classes"));
-  classes = GRM::get<std::vector<int>>((*context)[classes_key]);
+  auto counts_key = static_cast<std::string>(element->getAttribute("counts"));
+  counts = GRM::get<std::vector<int>>((*context)[counts_key]);
 
   /* clear old polar-histogram children */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -13368,7 +13368,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       if (stairs) rect_list.resize(num_bins);
     }
 
-  if (theta_flip) std::reverse(classes.begin(), classes.end());
+  if (theta_flip) std::reverse(counts.begin(), counts.end());
 
   /* if theta_flip and bin_edges are given --> invert the angles */
   if (theta_flip && num_bin_edges > 0)
@@ -13398,11 +13398,11 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       r_colormap = static_cast<int>(element->getAttribute("r_colormap"));
     }
 
-  // Iterate through the classes and create for every bar a polar_bar element
+  // Iterate through the counts and create for every bar a polar_bar element
   // main loop used for each bar (and arc in stairs, but not the lines in stairs)
-  for (int class_nr = 0; class_nr < classes.size(); class_nr++)
+  for (int class_nr = 0; class_nr < counts.size(); class_nr++)
     {
-      double count = classes[class_nr];
+      double count = counts[class_nr];
 
       if (r_log)
         {
@@ -13566,7 +13566,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
           else
             {
-              if (class_nr == classes.size()) break;
+              if (class_nr == counts.size()) break;
               arc_pos = rect;
             }
 
@@ -13588,7 +13588,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                 }
             }
         }
-    } /* end of classes for loop */
+    } /* end of counts for loop */
 
   // this is for drawing the stair lines
   if (stairs && !draw_edges && (theta_colormap == -2 && r_colormap == -2))
@@ -13608,7 +13608,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         {
           start_x = grm_max(rect_list[0], rlims ? (r_lim_min / r_lim_max) : (r_min / r_max));
           start_y = 0.0;
-          linSpace(0.0, 2 * M_PI, (int)classes.size() + 1, angles_vec);
+          linSpace(0.0, 2 * M_PI, (int)counts.size() + 1, angles_vec);
         }
 
       auto start_angle = angles_vec[0];
@@ -19258,7 +19258,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("adjust_z_lim"),
        std::vector<std::string>{"1", "Determines whether the z-limits should be adjusted"}},
       {std::string("aspect_ratio"),
-         std::vector<std::string>{
+       std::vector<std::string>{
            "None", "Defines the aspect ratio of the layout element which will define its width and height"}},
       {std::string("algorithm"), std::vector<std::string>{"sum", "The algorithm used for the calculation"}},
       {std::string("ambient"), std::vector<std::string>{"0.2", "The ambient light"}},
@@ -19284,12 +19284,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("cap_y_min"), std::vector<std::string>{"None", "The y-value for the downwards cap"}},
       {std::string("char_height"), std::vector<std::string>{"None", "The height of the chars"}},
       {std::string("char_up_x"),
-         std::vector<std::string>{"None", "X component of the character up vector. Used to rotate the text"}},
+       std::vector<std::string>{"None", "X component of the character up vector. Used to rotate the text"}},
       {std::string("char_up_y"),
-         std::vector<std::string>{"None", "Y Component of the character up vector. Used to rotate the text"}},
+       std::vector<std::string>{"None", "Y Component of the character up vector. Used to rotate the text"}},
       {std::string("class_nr"), std::vector<std::string>{"None", "Specify the polar bar by a number"}},
-      {std::string("classes"),
-       std::vector<std::string>{"None", "References the histogram classes stored in the context"}},
       {std::string("clip_transformation"), std::vector<std::string>{"None", "The transformation for clipping"}},
       {std::string("clip_negative"),
        std::vector<std::string>{"False",
@@ -19308,6 +19306,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("colormap_inverted"),
        std::vector<std::string>{"0", "Determines whether the colormap should be inverted"}},
       {std::string("count"), std::vector<std::string>{"None", "The total number of bars"}},
+      {std::string("counts"),
+       std::vector<std::string>{"None", "References the polar histogram counts stored in the context"}},
       {std::string("data"), std::vector<std::string>{"None", "Data which is displayed in the graphic"}},
       {std::string("diffuse"), std::vector<std::string>{"0.8", "The diffuse light"}},
       {std::string("d_max"), std::vector<std::string>{"None", "The upper dimension for the volume"}},
@@ -19496,7 +19496,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("space_z_min"), std::vector<std::string>{"None", "The lower z-coordinate for space"}},
       {std::string("space_3d_camera_distance"),
        std::vector<std::string>{"None", "The camera distance for the 3D space"}},
-      {std::string("space_3d_fov"), std::vector<std::string>{"None", "The field of view for the 3D space. If the fov is NaN or 0 an orthographic projection will be used, while every other value will apply a perspective projection to the displayed plot"}},
+      {std::string("space_3d_fov"),
+       std::vector<std::string>{
+           "None", "The field of view for the 3D space. If the fov is NaN or 0 an orthographic projection will be "
+                   "used, while every other value will apply a perspective projection to the displayed plot"}},
       {std::string("space_3d_phi"), std::vector<std::string>{"40.0", "The phi angle for the 3D space"}},
       {std::string("space_3d_theta"), std::vector<std::string>{"60.0", "The theta angle for the 3D space"}},
       {std::string("specs"), std::vector<std::string>{"None", "The string specifiers for styles"}},
@@ -19529,8 +19532,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("theta_colormap"), std::vector<std::string>{"None", "The used colormap in theta-direction"}},
       {std::string("theta_dim"), std::vector<std::string>{"None", "The dimension of the theta-values"}},
       {std::string("theta_data_lim_max"), std::vector<std::string>{"None", "The upper theta limit only for the data"}},
-      {std::string("theta_data_lim_min"),
-       std::vector<std::string>{"None", "The lower theta limit only for the data"}},
+      {std::string("theta_data_lim_min"), std::vector<std::string>{"None", "The lower theta limit only for the data"}},
       {std::string("theta_flip"), std::vector<std::string>{"0", "Set if the theta-values gets flipped"}},
       {std::string("theta_lim_max"), std::vector<std::string>{"None", "The upper theta limit"}},
       {std::string("theta_lim_min"), std::vector<std::string>{"None", "The lower theta limit"}},
@@ -21624,9 +21626,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   };
   std::vector<std::string> series_polar_heatmap = series_nonuniform_polar_heatmap;
   std::vector<std::string> series_polar_histogram{
-      "bin_counts", "bin_edges",      "bin_width",       "bin_widths",      "classes", "draw_edges",  "keep_radii_axes",
-      "num_bins",   "norm",           "r_colormap",      "r_max",           "r_min",   "r_range_max", "r_range_min",
-      "theta",      "theta_colormap", "theta_range_max", "theta_range_min", "stairs",  "tick",        "transparency",
+      "bin_counts", "bin_edges",      "bin_width",       "bin_widths",      "counts", "draw_edges",  "keep_radii_axes",
+      "num_bins",   "norm",           "r_colormap",      "r_max",           "r_min",  "r_range_max", "r_range_min",
+      "theta",      "theta_colormap", "theta_range_max", "theta_range_min", "stairs", "tick",        "transparency",
 
   };
   std::vector<std::string> series_polar_line{
@@ -22633,7 +22635,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           child->setAttribute("_update_required", true);
 
                           // reset data when log is set to false
-                          if (attr == "x_log")
+                          if (attr == "x_log" || attr == "x_flip")
                             {
                               element->setAttribute("_update_limits", true);
 
@@ -22664,7 +22666,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                     }
                                 }
                             }
-                          if (attr == "y_log")
+                          if (attr == "y_log" || attr == "y_flip")
                             {
                               element->setAttribute("_update_limits", true);
 
@@ -22694,7 +22696,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                     }
                                 }
                             }
-                          if (attr == "z_log")
+                          if (attr == "z_log" || attr == "z_flip")
                             {
                               element->setAttribute("_update_limits", true);
 

@@ -541,6 +541,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       generate_linear_context_action = new QAction(tr("&Generate linear Data-Context"));
       QObject::connect(generate_linear_context_action, SIGNAL(triggered()), this, SLOT(generateLinearContextSlot()));
 
+      selectable_grid_act = new QAction(tr("&Selectable Grid"));
+      QObject::connect(selectable_grid_act, SIGNAL(triggered()), this, SLOT(selectableGridSlot()));
+      selectable_grid_act->setCheckable(true);
+      selectable_grid_act->setChecked(false);
+
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
     }
@@ -1737,7 +1742,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else
         {
-          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y);
+          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
 
           if (current_selection == nullptr)
             {
@@ -1898,7 +1903,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
       if (enable_editor)
         {
           amount_scrolled = 0;
-          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y);
+          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
           if (cur_clicked.empty())
             {
               clicked.clear();
@@ -2872,6 +2877,12 @@ void GRPlotWidget::colormapSlot()
   redraw();
 }
 
+void GRPlotWidget::selectableGridSlot()
+{
+  hide_grid_bbox = !hide_grid_bbox;
+  selectable_grid_act->setChecked(!hide_grid_bbox);
+}
+
 void GRPlotWidget::colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element)
 {
   color_picker_rgb->show();
@@ -3545,9 +3556,15 @@ void GRPlotWidget::showContainerSlot()
   if (enable_editor)
     {
       if (show_container_action->isChecked())
-        tree_widget->show();
+        {
+          tree_widget->show();
+          tree_widget->updateData(grm_get_document_root());
+        }
       else
-        tree_widget->hide();
+        {
+          tree_widget->hide();
+          tree_widget->clearContractElements();
+        }
       tree_widget->resize(350, height());
       tree_widget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
                         this->pos().y() - 28 + tree_widget->geometry().y());
@@ -4876,6 +4893,11 @@ QAction *GRPlotWidget::getUndoAct()
 QAction *GRPlotWidget::getRedoAct()
 {
   return redo_action;
+}
+
+QAction *GRPlotWidget::getSelectableGridAct()
+{
+  return selectable_grid_act;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)

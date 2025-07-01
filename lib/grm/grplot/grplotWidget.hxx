@@ -148,6 +148,7 @@ public:
   QAction *getColormapAct();
   QAction *getUndoAct();
   QAction *getRedoAct();
+  QAction *getSelectableGridAct();
 
 protected:
   virtual void draw();
@@ -236,6 +237,7 @@ private slots:
   void colormapSlot();
   void undoSlot();
   void redoSlot();
+  void selectableGridSlot();
 
 private:
   struct MouseState
@@ -349,6 +351,7 @@ private:
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
   ColorPickerRGB *color_picker_rgb;
+  bool hide_grid_bbox = true;
 
   QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
   QAction *sum_act, *max_act;
@@ -361,7 +364,7 @@ private:
   QAction *polar_line_act, *polar_scatter_act;
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
   QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
-  QAction *moveable_mode_act;
+  QAction *moveable_mode_act, *selectable_grid_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
