@@ -32,6 +32,7 @@ private slots:
   void accept();
   void colorIndexSlot();
   void colorRGBSlot();
+  void openDataContext();
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;

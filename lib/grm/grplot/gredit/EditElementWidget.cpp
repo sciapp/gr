@@ -2,6 +2,8 @@
 #include "../CollapsibleSection.hxx"
 #include <gks.h>
 
+static std::string context_name;
+
 EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {
   grplot_widget = widget;
@@ -41,12 +43,15 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
       attr_type.clear();
     }
 
+  context_name = "";
+
   auto combo_box_attr = grplot_widget->getComboBoxAttributes();
   auto check_box_attr = grplot_widget->getCheckBoxAttributes();
   auto color_ind_attr = grplot_widget->getColorIndAttributes();
   auto color_rgb_attr = grplot_widget->getColorRGBAttributes();
   schema_tree = grplot_widget->getSchemaTree();
   auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
+  auto context_attributes = GRM::getContextAttributes();
 
   std::string currently_clicked_name = (*current_selection)->getRef()->localName();
   QString title("Selected: ");
@@ -278,79 +283,93 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           cur_attr_name == "line_type" || cur_attr_name == "line_width")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!line_modification_added)
             {
               form->addRow(line_modification);
               line_modification_added = true;
             }
 
-          line_modification_form->addRow(text_label, line_edit);
+          line_modification_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "marker_color_ind" || cur_attr_name == "marker_color_indices" ||
                cur_attr_name == "marker_size" || cur_attr_name == "marker_sizes" || cur_attr_name == "marker_type" ||
                cur_attr_name == "border_color_ind" || cur_attr_name == "border_width")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!marker_modification_added)
             {
               form->addRow(marker_modification);
               marker_modification_added = true;
             }
 
-          marker_modification_form->addRow(text_label, line_edit);
+          marker_modification_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "text_align_horizontal" || cur_attr_name == "text_align_vertical" ||
                cur_attr_name == "text_color_ind" || cur_attr_name == "font" || cur_attr_name == "font_precision")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!text_modification_added)
             {
               form->addRow(text_modification);
               text_modification_added = true;
             }
 
-          text_modification_form->addRow(text_label, line_edit);
+          text_modification_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "fill_color_ind" || cur_attr_name == "fill_color_rgb" ||
                cur_attr_name == "fill_int_style" || cur_attr_name == "fill_style")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!fill_modification_added)
             {
               form->addRow(fill_modification);
               fill_modification_added = true;
             }
 
-          fill_modification_form->addRow(text_label, line_edit);
+          fill_modification_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "viewport_x_min" || cur_attr_name == "viewport_x_max" ||
                cur_attr_name == "viewport_y_min" || cur_attr_name == "viewport_y_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!viewport_added && advanced_editor)
             {
               form->addRow(viewport);
               viewport_added = true;
             }
 
-          viewport_form->addRow(text_label, line_edit);
+          viewport_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "viewport_normalized_x_min" || cur_attr_name == "viewport_normalized_x_max" ||
                cur_attr_name == "viewport_normalized_y_min" || cur_attr_name == "viewport_normalized_y_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!viewport_normalized_added && advanced_editor)
             {
               form->addRow(viewport_normalized);
               viewport_normalized_added = true;
             }
 
-          viewport_normalized_form->addRow(text_label, line_edit);
+          viewport_normalized_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "window_x_min" || cur_attr_name == "window_x_max" || cur_attr_name == "window_y_min" ||
                cur_attr_name == "window_y_max" || cur_attr_name == "window_z_min" || cur_attr_name == "window_z_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!window_added)
             {
               form->addRow(window);
@@ -358,13 +377,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          window_form->addRow(text_label, line_edit);
+          window_form->addRow(label, line_edit);
           if (!advanced_editor)
             window_form->setRowVisible(window_form->rowCount() - 1,
                                        !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            window_form->addRow(text_label, line_edit);
+            window_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "x_range_min" || cur_attr_name == "x_range_max" || cur_attr_name == "y_range_min" ||
@@ -374,6 +393,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "theta_range_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!range_modification_added)
             {
               form->addRow(range_modification);
@@ -381,19 +402,21 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          range_modification_form->addRow(text_label, line_edit);
+          range_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             range_modification_form->setRowVisible(range_modification_form->rowCount() - 1,
                                                    !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            range_modification_form->addRow(text_label, line_edit);
+            range_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "x_log" || cur_attr_name == "y_log" || cur_attr_name == "z_log" ||
                cur_attr_name == "r_log" || cur_attr_name == "theta_log")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!log_modification_added)
             {
               form->addRow(log_modification);
@@ -401,19 +424,21 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          log_modification_form->addRow(text_label, line_edit);
+          log_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             log_modification_form->setRowVisible(log_modification_form->rowCount() - 1,
                                                  !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            log_modification_form->addRow(text_label, line_edit);
+            log_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "x_flip" || cur_attr_name == "y_flip" || cur_attr_name == "z_flip" ||
                cur_attr_name == "theta_flip")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!flip_modification_added)
             {
               form->addRow(flip_modification);
@@ -421,13 +446,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          flip_modification_form->addRow(text_label, line_edit);
+          flip_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             flip_modification_form->setRowVisible(flip_modification_form->rowCount() - 1,
                                                   !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            flip_modification_form->addRow(text_label, line_edit);
+            flip_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "x_lim_min" || cur_attr_name == "x_lim_max" || cur_attr_name == "y_lim_min" ||
@@ -437,6 +462,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "r_lim_max" || cur_attr_name == "theta_lim_min" || cur_attr_name == "theta_lim_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!lim_modification_added)
             {
               form->addRow(lim_modification);
@@ -444,13 +471,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          lim_modification_form->addRow(text_label, line_edit);
+          lim_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             lim_modification_form->setRowVisible(lim_modification_form->rowCount() - 1,
                                                  !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            lim_modification_form->addRow(text_label, line_edit);
+            lim_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "x_scale_ndc" || cur_attr_name == "x_shift_ndc" || cur_attr_name == "x_scale_wc" ||
@@ -458,6 +485,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "y_scale_wc" || cur_attr_name == "y_shift_wc")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!element_movement_modification_added)
             {
               if (advanced_editor || (cur_attr_name != "x_scale_wc" && cur_attr_name != "x_shift_wc" &&
@@ -469,14 +498,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          element_movement_modification_form->addRow(text_label, line_edit);
+          element_movement_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             element_movement_modification_form->setRowVisible(
                 element_movement_modification_form->rowCount() - 1,
                 !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            element_movement_modification_form->addRow(text_label, line_edit);
+            element_movement_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "space_rotation" || cur_attr_name == "space_tilt" || cur_attr_name == "space_z_min" ||
@@ -484,6 +513,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "space_3d_fov" || cur_attr_name == "space_3d_phi" || cur_attr_name == "space_3d_theta")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!space_modification_added)
             {
               form->addRow(space_modification);
@@ -491,13 +522,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             }
 
 #if QT_VERSION >= 0x060000
-          space_modification_form->addRow(text_label, line_edit);
+          space_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             space_modification_form->setRowVisible(space_modification_form->rowCount() - 1,
                                                    !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            space_modification_form->addRow(text_label, line_edit);
+            space_modification_form->addRow(label, line_edit);
 #endif
         }
       else if (cur_attr_name == "ws_window_x_min" || cur_attr_name == "ws_window_x_max" ||
@@ -506,30 +537,80 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "ws_viewport_y_min" || cur_attr_name == "ws_viewport_y_max")
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
           if (!ws_modification_added && advanced_editor)
             {
               form->addRow(ws_modification);
               ws_modification_added = true;
             }
 
-          ws_modification_form->addRow(text_label, line_edit);
+          ws_modification_form->addRow(label, line_edit);
         }
       else if (highlight_location && cur_attr_name == "location")
         {
           text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(cur_attr_name.c_str());
-          form->addRow(text_label, line_edit);
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
+          form->addRow(label, line_edit);
         }
       else
         {
           text_label = QString(cur_attr_name.c_str());
+          auto label = new QLabel(text_label);
+          label->setToolTip(tooltip_string);
 #if QT_VERSION >= 0x060000
-          form->addRow(text_label, line_edit);
+          if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
+              context_attributes.end())
+            {
+              auto widget = new QWidget();
+              auto grid_layout = new QGridLayout();
+              auto button = new QPushButton();
+              connect(button, &QPushButton::clicked, [=]() {
+                if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+                  context_name = static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+              });
+              connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+              button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+              grid_layout->addWidget(label, 0, 0, 1, 2);
+              grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+              grid_layout->addWidget(button, 0, 4);
+              widget->setLayout(grid_layout);
+              form->addRow(widget);
+            }
+          else
+            {
+              form->addRow(label, line_edit);
+            }
           if (!advanced_editor)
             form->setRowVisible(form->rowCount() - 1,
                                 !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            form->addRow(text_label, line_edit);
+            {
+              if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
+                  context_attributes.end())
+                {
+                  auto widget = new QWidget();
+                  auto grid_layout = new QGridLayout();
+                  auto button = new QPushButton("Ref");
+                  connect(button, &QPushButton::clicked, [=]() {
+                    if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+                      context_name =
+                          static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                  });
+                  connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+                  grid_layout->addWidget(label, 0, 0, 1, 2);
+                  grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+                  grid_layout->addWidget(button, 0, 4);
+                  widget->setLayout(grid_layout);
+                  form->addRow(widget);
+                }
+              else
+                {
+                  form->addRow(label, line_edit);
+                }
+            }
 #endif
         }
 
@@ -595,10 +676,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       ((QLineEdit *)line_edit)->setText("");
                     }
                   QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                  auto label = new QLabel(text_label);
+                  label->setToolTip(tooltip_string);
                   if (highlight_location && attr_name == "location")
                     {
                       text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(attr_name.c_str());
-                      form->addRow(text_label, line_edit);
+                      label = new QLabel(text_label);
+                      label->setToolTip(tooltip_string);
+                      form->addRow(label, line_edit);
                     }
                   else if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "y_lim_min" ||
                            attr_name == "y_lim_max" || attr_name == "z_lim_min" || attr_name == "z_lim_max" ||
@@ -613,14 +698,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         }
 
 #if QT_VERSION >= 0x060000
-                      lim_modification_form->addRow(text_label, line_edit);
+                      lim_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         lim_modification_form->setRowVisible(
                             lim_modification_form->rowCount() - 1,
                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        lim_modification_form->addRow(text_label, line_edit);
+                        lim_modification_form->addRow(label, line_edit);
 #endif
                     }
                   else if (attr_name == "x_flip" || attr_name == "y_flip" || attr_name == "z_flip" ||
@@ -633,14 +718,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         }
 
 #if QT_VERSION >= 0x060000
-                      flip_modification_form->addRow(text_label, line_edit);
+                      flip_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         flip_modification_form->setRowVisible(
                             flip_modification_form->rowCount() - 1,
                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        flip_modification_form->addRow(text_label, line_edit);
+                        flip_modification_form->addRow(label, line_edit);
 #endif
                     }
                   else if (attr_name == "space_rotation" || attr_name == "space_tilt" || attr_name == "space_z_min" ||
@@ -654,14 +739,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         }
 
 #if QT_VERSION >= 0x060000
-                      space_modification_form->addRow(text_label, line_edit);
+                      space_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         space_modification_form->setRowVisible(
                             space_modification_form->rowCount() - 1,
                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        space_modification_form->addRow(text_label, line_edit);
+                        space_modification_form->addRow(label, line_edit);
 #endif
                     }
                   else if (attr_name == "window_x_min" || attr_name == "window_x_max" || attr_name == "window_y_min" ||
@@ -674,13 +759,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         }
 
 #if QT_VERSION >= 0x060000
-                      window_form->addRow(text_label, line_edit);
+                      window_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         window_form->setRowVisible(window_form->rowCount() - 1,
                                                    !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        window_form->addRow(text_label, line_edit);
+                        window_form->addRow(label, line_edit);
 #endif
                     }
                   else if (attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log" ||
@@ -693,14 +778,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         }
 
 #if QT_VERSION >= 0x060000
-                      log_modification_form->addRow(text_label, line_edit);
+                      log_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         log_modification_form->setRowVisible(
                             log_modification_form->rowCount() - 1,
                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        log_modification_form->addRow(text_label, line_edit);
+                        log_modification_form->addRow(label, line_edit);
 #endif
                     }
                   else if (attr_name == "ws_window_x_min" || attr_name == "ws_window_x_max" ||
@@ -715,18 +800,63 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           ws_modification_added = true;
                         }
 
-                      ws_modification_form->addRow(text_label, line_edit);
+                      ws_modification_form->addRow(label, line_edit);
                     }
                   else
                     {
 #if QT_VERSION >= 0x060000
-                      form->addRow(text_label, line_edit);
+                      if (std::find(context_attributes.begin(), context_attributes.end(), attr_name) !=
+                          context_attributes.end())
+                        {
+                          auto widget = new QWidget();
+                          auto grid_layout = new QGridLayout();
+                          auto button = new QPushButton();
+                          button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+                          connect(button, &QPushButton::clicked, [=]() {
+                            if ((*current_selection)->getRef()->hasAttribute(attr_name))
+                              context_name =
+                                  static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
+                          });
+                          connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+                          grid_layout->addWidget(label, 0, 0, 1, 2);
+                          grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+                          grid_layout->addWidget(button, 0, 4);
+                          widget->setLayout(grid_layout);
+                          form->addRow(widget);
+                        }
+                      else
+                        {
+                          form->addRow(label, line_edit);
+                        }
                       if (!advanced_editor)
                         form->setRowVisible(form->rowCount() - 1,
                                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
                       if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        form->addRow(text_label, line_edit);
+                        {
+                          if (std::find(context_attributes.begin(), context_attributes.end(), attr_name) !=
+                              context_attributes.end())
+                            {
+                              auto widget = new QWidget();
+                              auto grid_layout = new QGridLayout();
+                              auto button = new QPushButton("Ref");
+                              connect(button, &QPushButton::clicked, [=]() {
+                                if ((*current_selection)->getRef()->hasAttribute(attr_name))
+                                  context_name =
+                                      static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
+                              });
+                              connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+                              grid_layout->addWidget(label, 0, 0, 1, 2);
+                              grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+                              grid_layout->addWidget(button, 0, 4);
+                              widget->setLayout(grid_layout);
+                              form->addRow(widget);
+                            }
+                          else
+                            {
+                              form->addRow(label, line_edit);
+                            }
+                        }
 #endif
                     }
 
@@ -858,6 +988,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                 }
                               QString text_label =
                                   QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                              auto label = new QLabel(text_label);
+                              label->setToolTip(tooltip_string);
                               if (attr_name == "line_color_ind" || attr_name == "line_color_rgb" ||
                                   attr_name == "line_spec" || attr_name == "line_type" || attr_name == "line_width")
                                 {
@@ -866,7 +998,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       form->addRow(line_modification);
                                       line_modification_added = true;
                                     }
-                                  line_modification_form->addRow(text_label, line_edit);
+                                  line_modification_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "marker_color_ind" || attr_name == "marker_color_indices" ||
                                        attr_name == "marker_size" || attr_name == "marker_sizes" ||
@@ -879,7 +1011,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       marker_modification_added = true;
                                     }
 
-                                  marker_modification_form->addRow(text_label, line_edit);
+                                  marker_modification_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "text_align_horizontal" || attr_name == "text_align_vertical" ||
                                        attr_name == "text_color_ind" || attr_name == "font" ||
@@ -891,7 +1023,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       text_modification_added = true;
                                     }
 
-                                  text_modification_form->addRow(text_label, line_edit);
+                                  text_modification_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "fill_color_ind" || attr_name == "fill_color_rgb" ||
                                        attr_name == "fill_int_style" || attr_name == "fill_style")
@@ -902,7 +1034,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       fill_modification_added = true;
                                     }
 
-                                  fill_modification_form->addRow(text_label, line_edit);
+                                  fill_modification_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "viewport_x_min" || attr_name == "viewport_x_max" ||
                                        attr_name == "viewport_y_min" || attr_name == "viewport_y_max")
@@ -913,7 +1045,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       viewport_added = true;
                                     }
 
-                                  viewport_form->addRow(text_label, line_edit);
+                                  viewport_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "viewport_normalized_x_min" ||
                                        attr_name == "viewport_normalized_x_max" ||
@@ -926,7 +1058,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       viewport_normalized_added = true;
                                     }
 
-                                  viewport_normalized_form->addRow(text_label, line_edit);
+                                  viewport_normalized_form->addRow(label, line_edit);
                                 }
                               else if (attr_name == "x_range_min" || attr_name == "x_range_max" ||
                                        attr_name == "y_range_min" || attr_name == "y_range_max" ||
@@ -942,7 +1074,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                     }
 
 #if QT_VERSION >= 0x060000
-                                  range_modification_form->addRow(text_label, line_edit);
+                                  range_modification_form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     range_modification_form->setRowVisible(
                                         range_modification_form->rowCount() - 1,
@@ -950,7 +1082,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 #else
                                   if (advanced_editor ||
                                       !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                                    range_modification_form->addRow(text_label, line_edit);
+                                    range_modification_form->addRow(label, line_edit);
 #endif
                                 }
                               else if (attr_name == "x_scale_ndc" || attr_name == "x_shift_ndc" ||
@@ -969,7 +1101,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                     }
 
 #if QT_VERSION >= 0x060000
-                                  element_movement_modification_form->addRow(text_label, line_edit);
+                                  element_movement_modification_form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     element_movement_modification_form->setRowVisible(
                                         element_movement_modification_form->rowCount() - 1,
@@ -977,13 +1109,13 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 #else
                                   if (advanced_editor ||
                                       !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                                    element_movement_modification_form->addRow(text_label, line_edit);
+                                    element_movement_modification_form->addRow(label, line_edit);
 #endif
                                 }
                               else
                                 {
 #if QT_VERSION >= 0x060000
-                                  form->addRow(text_label, line_edit);
+                                  form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     form->setRowVisible(
                                         form->rowCount() - 1,
@@ -991,7 +1123,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 #else
                                   if (advanced_editor ||
                                       !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                                    form->addRow(text_label, line_edit);
+                                    form->addRow(label, line_edit);
 #endif
                                 }
 
@@ -2152,4 +2284,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
         }
     }
   return false;
+}
+
+void EditElementWidget::openDataContext()
+{
+  grplot_widget->highlightTableWidgetAt(context_name);
 }

@@ -60,6 +60,7 @@ public:
   void colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element);
   void createHistoryElement(std::string flag = "");
   void removeHistoryElement();
+  void highlightTableWidgetAt(std::string column_name);
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();

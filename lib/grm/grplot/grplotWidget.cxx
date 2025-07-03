@@ -4951,3 +4951,18 @@ bool GRPlotWidget::getEnableAdvancedEditor()
 {
   return enable_advanced_editor;
 }
+
+void GRPlotWidget::highlightTableWidgetAt(std::string column_name)
+{
+  auto context = grm_get_render()->getContext();
+  table_widget->updateData(context);
+  table_widget->show();
+  table_widget->resize(width(), 350);
+  table_widget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
+                     this->pos().y() - 28 + table_widget->geometry().y());
+  show_context_action->setChecked(true);
+  for (const auto &item : table_widget->findItems(column_name.c_str(), Qt::MatchExactly))
+    {
+      table_widget->selectColumn(item->column());
+    }
+}

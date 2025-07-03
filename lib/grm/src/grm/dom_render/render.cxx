@@ -19321,7 +19321,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("hide"), std::vector<std::string>{"1", "Determines whether the element will be visible or not"}},
       {std::string("draw_edges"),
        std::vector<std::string>{
-           "0", "Used in combination with x and y colormap to determine whether edges should be drawn"}},
+           "0", "Used in combination with theta and r colormap to determine whether edges should be drawn"}},
       {std::string("draw_grid"), std::vector<std::string>{"None", "Determines whether the axis has grid lines or not"}},
       {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
       {std::string("e_upwards"), std::vector<std::string>{"None", "The x-value for the upward error"}},
