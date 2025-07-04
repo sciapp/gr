@@ -176,7 +176,7 @@ const char *getCompatibleFormat(const char *key, const char *given_format);
 int getIdFromArgs(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 grm_args_t *getSubplotFromNdcPoint(double x, double y);
 grm_args_t *getSubplotFromNdcPoints(unsigned int n, const double *x, const double *y);
-grm_error_t classesPolarHistogram(grm_args_t *subplot_args);
+grm_error_t countsPolarHistogram(grm_args_t *subplot_args);
 
 int getFreeIdFromFigureElements();
 

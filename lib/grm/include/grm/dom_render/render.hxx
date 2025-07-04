@@ -226,6 +226,8 @@ class GRM_EXPORT Render : public Document
    */
 
 public:
+  const char *initializeHistory();
+
   /* ------------------------------- create functions ----------------------------------------------------------------*/
 
   static std::shared_ptr<Render> createRender();

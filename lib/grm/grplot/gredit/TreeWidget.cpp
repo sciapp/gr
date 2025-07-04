@@ -7,6 +7,7 @@
 TreeWidget::TreeWidget(GRPlotWidget *widget, QWidget *parent) : QTreeWidget(parent)
 {
   grplot_widget = widget;
+  plot_tree = nullptr;
   this->setWindowTitle("DOM-Tree Elements");
   this->setColumnCount(1);
   this->header()->setSectionResizeMode(QHeaderView::Stretch);
@@ -15,6 +16,8 @@ TreeWidget::TreeWidget(GRPlotWidget *widget, QWidget *parent) : QTreeWidget(pare
 
 void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
 {
+  if (plot_tree != nullptr && !cleared) checkIfCollapsed(plot_tree->getRef(), plot_tree);
+
   this->clear();
   auto tmp = new QTreeWidgetItem(this);
   tmp->setExpanded(true);
@@ -26,6 +29,7 @@ void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
     {
       updateDataRecursion(cur_elem, plot_tree);
     }
+  cleared = false;
 }
 
 void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *parent)
@@ -35,7 +39,21 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
 
   if (ref->hasAttribute("name")) name += " (" + static_cast<std::string>(ref->getAttribute("name")) + ")";
   item->setText(0, tr(name.c_str()));
+
   item->setExpanded(true);
+  if (!contract_elements.empty())
+    {
+      for (const auto &elem : contract_elements)
+        {
+          auto elem_locked = elem.lock();
+          if (elem_locked == ref)
+            {
+              item->setExpanded(false);
+              break;
+            }
+        }
+    }
+
   // checkboxes for _selected attribute
   if (item->getRef()->localName() != "coordinate_system" &&
       !(item->getRef()->localName() == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
@@ -49,6 +67,7 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
           item->setCheckState(0, Qt::Unchecked);
         }
     }
+  parent->addChild(item);
 
   for (const auto &cur_elem : ref->children())
     {
@@ -163,4 +182,21 @@ bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetI
       return true;
     }
   return false;
+}
+
+void TreeWidget::clearContractElements()
+{
+  contract_elements.clear();
+  cleared = true;
+}
+
+void TreeWidget::checkIfCollapsed(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem)
+{
+  if (!tree_elem->isExpanded()) contract_elements.emplace_back(ref);
+
+  for (int i = 0; i < tree_elem->childCount(); i++)
+    {
+      auto cur_elem = tree_elem->child(i);
+      checkIfCollapsed(((CustomTreeWidgetItem *)cur_elem)->getRef(), (CustomTreeWidgetItem *)cur_elem);
+    }
 }

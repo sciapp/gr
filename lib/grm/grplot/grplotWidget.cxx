@@ -23,8 +23,12 @@
 #include <QWindow>
 #include <QCompleter>
 #include <QCursor>
+#include <QStyle>
+#include <QIcon>
 
 #include "grplotWidget.hxx"
+
+#include <gks.h>
 
 #ifndef GR_UNUSED
 #define GR_UNUSED(x) (void)(x)
@@ -112,6 +116,9 @@ static std::weak_ptr<GRM::Element> previous_active_plot;
 static bool active_plot_changed = false;
 static bool draw_called_at_least_once = false;
 static std::weak_ptr<GRM::Element> prev_selection;
+static const char *grm_tmp_dir = nullptr;
+static int history_count = 0;
+static int history_forward_count = 0;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -163,6 +170,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   tree_widget->hide();
   table_widget = new TableWidget(this);
   table_widget->hide();
+  color_picker_rgb = new ColorPickerRGB(this);
+  color_picker_rgb->hide();
   edit_element_widget = new EditElementWidget(this);
   edit_element_widget->hide();
   selected_parent = nullptr;
@@ -234,6 +243,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "movable",
       "only_quadratic_aspect_ratio",
       "polar_with_pan",
+      "r_log",
       "set_text_color_for_background",
       "space",
       "stairs",
@@ -252,11 +262,16 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "z_grid",
       "z_log",
   };
+  color_ind_attr = QStringList{
+      "border_color_ind", "fill_color_ind", "line_color_ind", "marker_color_ind", "text_color_ind",
+  };
+  color_rgb_attr = QStringList{"line_color_rgb", "fill_color_rgb"};
 
   // add context attributes to combobox list
   auto context_attributes = GRM::getContextAttributes();
   for (const auto &attr : context_attributes)
     {
+      if (attr == "line_color_rgb" || attr == "fill_color_rgb") continue;
       combo_box_attr.push_back(attr.c_str());
     }
 
@@ -389,6 +404,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       connect(y_log_act, &QAction::triggered, this, &GRPlotWidget::yLogSlot);
       z_log_act = new QAction(tr("&Z Log"), this);
       connect(z_log_act, &QAction::triggered, this, &GRPlotWidget::zLogSlot);
+      r_log_act = new QAction(tr("&R Log"), this);
+      connect(r_log_act, &QAction::triggered, this, &GRPlotWidget::rLogSlot);
       x_flip_act = new QAction(tr("&X Flip"), this);
       connect(x_flip_act, &QAction::triggered, this, &GRPlotWidget::xFlipSlot);
       y_flip_act = new QAction(tr("&Y Flip"), this);
@@ -462,10 +479,18 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       save_file_action = new QAction("&Save");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
+#if QT_VERSION >= 0x060000
+      save_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave));
+      save_file_action->setIconVisibleInMenu(true);
+#endif
       QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(saveFileSlot()));
 
       load_file_action = new QAction("&Load");
       load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
+#if QT_VERSION >= 0x060000
+      load_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen));
+      load_file_action->setIconVisibleInMenu(true);
+#endif
       QObject::connect(load_file_action, SIGNAL(triggered()), this, SLOT(loadFileSlot()));
 
       show_container_action = new QAction(tr("&GRM Container"));
@@ -474,20 +499,40 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       show_container_action->setVisible(false);
       QObject::connect(show_container_action, SIGNAL(triggered()), this, SLOT(showContainerSlot()));
 
-      show_bounding_boxes_action = new QAction(tr("&Bounding Boxes"));
-      show_bounding_boxes_action->setCheckable(true);
-      show_bounding_boxes_action->setShortcut(Qt::CTRL | Qt::Key_B);
-      show_bounding_boxes_action->setVisible(false);
-      QObject::connect(show_bounding_boxes_action, SIGNAL(triggered()), this, SLOT(showBoundingBoxesSlot()));
-
       add_element_action = new QAction("&Add Element");
+#if QT_VERSION >= 0x060000
+      add_element_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd));
+      add_element_action->setIconVisibleInMenu(true);
+#endif
       add_element_action->setCheckable(true);
       add_element_action->setShortcut(Qt::CTRL | Qt::Key_Plus);
       QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(addElementSlot()));
       add_element_action->setVisible(false);
 
+      undo_action = new QAction("&Undo");
+      undo_action->setShortcut(Qt::CTRL | Qt::Key_Z);
+#if QT_VERSION >= 0x060000
+      undo_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditUndo));
+      undo_action->setIconVisibleInMenu(true);
+#endif
+      QObject::connect(undo_action, SIGNAL(triggered()), this, SLOT(undoSlot()));
+      undo_action->setVisible(false);
+
+      redo_action = new QAction("&Redo");
+      redo_action->setShortcut(Qt::CTRL | Qt::Key_Y);
+#if QT_VERSION >= 0x060000
+      redo_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditRedo));
+      redo_action->setIconVisibleInMenu(true);
+#endif
+      QObject::connect(redo_action, SIGNAL(triggered()), this, SLOT(redoSlot()));
+      redo_action->setVisible(false);
+
       show_context_action = new QAction(tr("&Display Data-Context"));
       show_context_action->setCheckable(true);
+#if QT_VERSION >= 0x060000
+      show_context_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation));
+      show_context_action->setIconVisibleInMenu(true);
+#endif
       QObject::connect(show_context_action, SIGNAL(triggered()), this, SLOT(showContextSlot()));
       add_context_action = new QAction(tr("&Column files"));
       QObject::connect(add_context_action, SIGNAL(triggered()), this, SLOT(addContextSlot()));
@@ -495,6 +540,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(add_grplot_data_context, SIGNAL(triggered()), this, SLOT(addGRPlotDataContextSlot()));
       generate_linear_context_action = new QAction(tr("&Generate linear Data-Context"));
       QObject::connect(generate_linear_context_action, SIGNAL(triggered()), this, SLOT(generateLinearContextSlot()));
+
+      selectable_grid_act = new QAction(tr("&Selectable Grid"));
+      QObject::connect(selectable_grid_act, SIGNAL(triggered()), this, SLOT(selectableGridSlot()));
+      selectable_grid_act->setCheckable(true);
+      selectable_grid_act->setChecked(false);
 
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
@@ -1562,10 +1612,6 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           tree_widget->updateData(grm_get_document_root());
           redraw();
         }
-      else if (event->key() == Qt::Key_Space)
-        {
-          show_bounding_boxes_action->trigger();
-        }
       else if (event->key() == Qt::Key_Return)
         {
           attributeEditEvent();
@@ -1696,7 +1742,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else
         {
-          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y);
+          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
 
           if (current_selection == nullptr)
             {
@@ -1857,7 +1903,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
       if (enable_editor)
         {
           amount_scrolled = 0;
-          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y);
+          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
           if (cur_clicked.empty())
             {
               clicked.clear();
@@ -2635,6 +2681,20 @@ void GRPlotWidget::zLogSlot()
   redraw();
 }
 
+void GRPlotWidget::rLogSlot()
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  bool r_log = plot_elem->hasAttribute("r_log") && static_cast<int>(plot_elem->getAttribute("r_log"));
+  plot_elem->setAttribute("r_log", !r_log);
+
+  redraw();
+}
+
 void GRPlotWidget::xFlipSlot()
 {
   const auto global_root = grm_get_document_root();
@@ -2803,6 +2863,8 @@ void GRPlotWidget::colormapSlot()
       std::vector<double> data_vec;
       std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
+      if (enable_editor) createHistoryElement();
+
       for (int i = 0; i < colormap_names.size(); i++)
         {
           if (radio_buttons[i]->isChecked())
@@ -2813,6 +2875,150 @@ void GRPlotWidget::colormapSlot()
     }
 
   redraw();
+}
+
+void GRPlotWidget::selectableGridSlot()
+{
+  hide_grid_bbox = !hide_grid_bbox;
+  selectable_grid_act->setChecked(!hide_grid_bbox);
+}
+
+void GRPlotWidget::colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element)
+{
+  color_picker_rgb->show();
+  color_picker_rgb->start(attribute_name, element);
+  if (color_picker_rgb->exec() == QDialog::Accepted) redraw();
+}
+
+void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index,
+                                   const std::shared_ptr<GRM::Element> element)
+{
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elem = figure_elem->querySelectors("plot");
+
+  QList<QRadioButton *> radio_buttons;
+  QDialog dialog(this);
+  QString title(attribute_name.c_str());
+  dialog.setWindowTitle(title);
+  auto grid_layout = new QGridLayout;
+
+  int col = 0;
+  for (int index = 0; index < 1255; index++)
+    {
+      int errind;
+      double r, g, b;
+      QImage image(1, 1, QImage::Format_RGB32);
+      QRgb value;
+
+      if (plot_elem->hasAttribute("colormap"))
+        {
+          auto colormap = static_cast<int>(plot_elem->getAttribute("colormap"));
+          gr_setcolormap(colormap);
+        }
+      gks_inq_color_rep(-1, index, -1, &errind, &r, &g, &b);
+      value = qRgb(255 * r, 255 * g, 255 * b);
+      image.setPixel(0, 0, value);
+
+      auto label_pix = new QLabel();
+      auto color_pic = QPixmap::fromImage(image);
+      color_pic = color_pic.scaled(20, 20);
+      label_pix->setPixmap(color_pic);
+      auto button = new QRadioButton(this);
+      auto label = new QLabel(std::to_string(index).c_str());
+
+      if (index == current_index) button->setChecked(true);
+
+      grid_layout->addWidget(button, index / 6, col++ % 18);
+      grid_layout->addWidget(label_pix, index / 6, col++ % 18);
+      grid_layout->addWidget(label, index / 6, col++ % 18);
+
+      radio_buttons << button;
+    }
+
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  grid_layout->addWidget(&button_box, 210, 0, 1, 18);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  auto scroll_area_content = new QWidget;
+  scroll_area_content->setLayout(grid_layout);
+  auto scroll_area = new QScrollArea;
+  scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  scroll_area->setWidgetResizable(true);
+  scroll_area->setWidget(scroll_area_content);
+
+  auto group_box_layout = new QVBoxLayout;
+  group_box_layout->addWidget(scroll_area);
+  dialog.setLayout(group_box_layout);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      std::vector<std::string> values;
+      std::vector<double> data_vec;
+      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+      createHistoryElement();
+
+      for (int i = 0; i < 1255; i++)
+        {
+          if (radio_buttons[i]->isChecked()) element->setAttribute(attribute_name, i);
+        }
+    }
+
+  redraw();
+}
+
+void GRPlotWidget::createHistoryElement(std::string flag)
+{
+  if (grm_get_render() == nullptr)
+    {
+      QApplication::beep();
+      return;
+    }
+
+  // keep history element number at <= 10
+  if (history_count > 10)
+    {
+      std::string file_name = std::string(grm_tmp_dir) + "_history" + std::to_string(history_count - 10);
+      std::ofstream open_file_stream(file_name);
+      if (open_file_stream) std::remove(file_name.c_str());
+    }
+
+  std::string save_file_name;
+  if (flag == "_forward")
+    save_file_name = std::string(grm_tmp_dir) + flag + "_history" + std::to_string(history_forward_count++);
+  else
+    save_file_name = std::string(grm_tmp_dir) + "_history" + std::to_string(history_count++);
+  std::ofstream save_file_stream(save_file_name);
+  if (!save_file_stream)
+    {
+      std::stringstream text_stream;
+      text_stream << "Could not create history entry \"" << save_file_name << "\".";
+      QMessageBox::critical(this, "History creation not possible", QString::fromStdString(text_stream.str()));
+      return;
+    }
+  auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+  save_file_stream << graphics_tree_str.get() << std::endl;
+  save_file_stream.close();
+  undo_action->setVisible(true);
+  redo_action->setVisible(false);
+}
+
+void GRPlotWidget::removeHistoryElement()
+{
+  if (grm_get_render() == nullptr)
+    {
+      QApplication::beep();
+      return;
+    }
+
+  std::string file_name = std::string(grm_tmp_dir) + "_history" + std::to_string(--history_count);
+  std::ofstream open_file_stream(file_name);
+  if (open_file_stream) std::remove(file_name.c_str());
 }
 
 void GRPlotWidget::keepAspectRatioSlot()
@@ -3289,15 +3495,6 @@ void GRPlotWidget::resetPixmap()
   update();
 }
 
-void GRPlotWidget::showBoundingBoxesSlot()
-{
-  if (enable_editor)
-    {
-      highlight_bounding_objects = show_bounding_boxes_action->isChecked();
-      update();
-    }
-}
-
 void GRPlotWidget::loadFileSlot()
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
@@ -3315,6 +3512,7 @@ void GRPlotWidget::loadFileSlot()
           QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
           return;
         }
+      if (enable_editor) createHistoryElement();
       grm_load_graphics_tree(file);
       redraw();
       if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
@@ -3358,9 +3556,15 @@ void GRPlotWidget::showContainerSlot()
   if (enable_editor)
     {
       if (show_container_action->isChecked())
-        tree_widget->show();
+        {
+          tree_widget->show();
+          tree_widget->updateData(grm_get_document_root());
+        }
       else
-        tree_widget->hide();
+        {
+          tree_widget->hide();
+          tree_widget->clearContractElements();
+        }
       tree_widget->resize(350, height());
       tree_widget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
                         this->pos().y() - 28 + tree_widget->geometry().y());
@@ -3372,9 +3576,8 @@ void GRPlotWidget::enableEditorFunctions()
   if (editor_action->isChecked())
     {
       enable_editor = true;
+      grm_tmp_dir = grm_get_render()->initializeHistory();
       add_element_action->setVisible(true);
-      show_bounding_boxes_action->setVisible(true);
-      show_bounding_boxes_action->setChecked(false);
       show_container_action->setVisible(true);
       show_container_action->setChecked(false);
       show_configuration_menu_act->trigger();
@@ -3395,8 +3598,6 @@ void GRPlotWidget::enableEditorFunctions()
     {
       enable_editor = false;
       add_element_action->setVisible(false);
-      show_bounding_boxes_action->setVisible(false);
-      show_bounding_boxes_action->setChecked(false);
       show_container_action->setVisible(false);
       show_container_action->setChecked(false);
       hide_configuration_menu_act->trigger();
@@ -3598,6 +3799,94 @@ void GRPlotWidget::generateLinearContextSlot()
         {
           fprintf(stderr, "Invalid argument for generate linear context parameter\n");
         }
+    }
+}
+
+void GRPlotWidget::undoSlot()
+{
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+    {
+#ifndef NO_XERCES_C
+      std::string path = std::string(grm_tmp_dir) + "_history" + std::to_string(--history_count);
+
+      auto file = fopen(path.c_str(), "r");
+      if (!file)
+        {
+          std::stringstream text_stream;
+          text_stream << "Could not go back in history";
+          QMessageBox::critical(this, "Going back in history not possible", QString::fromStdString(text_stream.str()));
+          undo_action->setVisible(false);
+          return;
+        }
+      createHistoryElement("_forward");
+      grm_load_graphics_tree(file);
+      redraw();
+      if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
+
+      if (edit_element_widget->isVisible()) edit_element_widget->hide();
+      current_selections.clear();
+      current_selection = nullptr;
+      if (add_element_widget->isVisible()) add_element_widget->hide();
+      redo_action->setVisible(true);
+      if (history_count == 0) undo_action->setVisible(false);
+#else
+      std::stringstream text_stream;
+      text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
+      QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+
+      if (edit_element_widget->isVisible()) edit_element_widget->hide();
+      current_selections.clear();
+      current_selection = nullptr;
+      if (add_element_widget->isVisible()) add_element_widget->hide();
+      redo_action->setVisible(true);
+      if (history_count == 0) undo_action->setVisible(false);
+      return;
+#endif
+    }
+}
+
+void GRPlotWidget::redoSlot()
+{
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+    {
+#ifndef NO_XERCES_C
+      std::string path = std::string(grm_tmp_dir) + "_forward_history" + std::to_string(--history_forward_count);
+
+      auto file = fopen(path.c_str(), "r");
+      if (!file)
+        {
+          std::stringstream text_stream;
+          text_stream << "Could not go forward in history";
+          QMessageBox::critical(this, "Going forward in history not possible",
+                                QString::fromStdString(text_stream.str()));
+          redo_action->setVisible(false);
+          return;
+        }
+      grm_load_graphics_tree(file);
+      redraw();
+      if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
+
+      if (edit_element_widget->isVisible()) edit_element_widget->hide();
+      current_selections.clear();
+      current_selection = nullptr;
+      if (add_element_widget->isVisible()) add_element_widget->hide();
+      if (history_forward_count == 0) redo_action->setVisible(false);
+      undo_action->setVisible(true);
+      history_count += 1;
+#else
+      std::stringstream text_stream;
+      text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
+      QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+
+      if (edit_element_widget->isVisible()) edit_element_widget->hide();
+      current_selections.clear();
+      current_selection = nullptr;
+      if (add_element_widget->isVisible()) add_element_widget->hide();
+      if (history_forward_count == 0) redo_action->setVisible(false);
+      undo_action->setVisible(true);
+      history_count += 1;
+      return;
+#endif
     }
 }
 
@@ -3924,6 +4213,16 @@ QStringList GRPlotWidget::getComboBoxAttributes()
   return combo_box_attr;
 }
 
+QStringList GRPlotWidget::getColorIndAttributes()
+{
+  return color_ind_attr;
+}
+
+QStringList GRPlotWidget::getColorRGBAttributes()
+{
+  return color_rgb_attr;
+}
+
 void GRPlotWidget::addCurrentSelection(std::unique_ptr<BoundingObject> curr_selection)
 {
   current_selections.emplace_back(std::move(curr_selection));
@@ -4016,6 +4315,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
       polar_with_pan_act->setVisible(false);
       z_flip_act->setVisible(false);
       z_log_act->setVisible(false);
+      r_log_act->setVisible(false);
       theta_flip_act->setVisible(false);
       legend_act->setVisible(false);
       colorbar_act->setVisible(false);
@@ -4158,11 +4458,13 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   polar_scatter_act->setVisible(true);
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
+                  r_log_act->setVisible(true);
                 }
               else if (kind == "polar_heatmap" || kind == "polar_histogram")
                 {
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
+                  r_log_act->setVisible(true);
                 }
               else if (kind == "histogram")
                 {
@@ -4369,11 +4671,6 @@ QAction *GRPlotWidget::getShowContainerAct()
   return show_container_action;
 }
 
-QAction *GRPlotWidget::getShowBoundingBoxesAct()
-{
-  return show_bounding_boxes_action;
-}
-
 QAction *GRPlotWidget::getAddElementAct()
 {
   return add_element_action;
@@ -4484,6 +4781,11 @@ QAction *GRPlotWidget::getZLogAct()
   return z_log_act;
 }
 
+QAction *GRPlotWidget::getRLogAct()
+{
+  return r_log_act;
+}
+
 QAction *GRPlotWidget::getXFlipAct()
 {
   return x_flip_act;
@@ -4581,6 +4883,21 @@ QAction *GRPlotWidget::getTwinYAxisAct()
 QAction *GRPlotWidget::getColormapAct()
 {
   return colormap_act;
+}
+
+QAction *GRPlotWidget::getUndoAct()
+{
+  return undo_action;
+}
+
+QAction *GRPlotWidget::getRedoAct()
+{
+  return redo_action;
+}
+
+QAction *GRPlotWidget::getSelectableGridAct()
+{
+  return selectable_grid_act;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)

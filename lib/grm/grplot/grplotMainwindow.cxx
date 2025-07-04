@@ -68,6 +68,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       menu = menuBar();
       file_menu = new QMenu("&File");
       export_menu = file_menu->addMenu("&Export");
+#if QT_VERSION >= 0x060000
+      export_menu->menuAction()->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::CameraPhoto));
+      export_menu->menuAction()->setIconVisibleInMenu(true);
+#endif
       modi_menu = new QMenu("&Modi");
       options_menu = new QMenu("&Options");
       type_sub_menu = options_menu->addMenu("&Plot type");
@@ -111,6 +115,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       log_sub_menu->addAction(grplot_widget_->getXLogAct());
       log_sub_menu->addAction(grplot_widget_->getYLogAct());
       log_sub_menu->addAction(grplot_widget_->getZLogAct());
+      log_sub_menu->addAction(grplot_widget_->getRLogAct());
       flip_sub_menu->addAction(grplot_widget_->getXFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getYFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getZFlipAct());
@@ -159,18 +164,24 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           configuration_menu = editor_menu->addMenu(tr("&Show"));
           context_menu = new QMenu("&Data");
           add_context_data = new QMenu("&Add Data-Context");
+#if QT_VERSION >= 0x060000
+          add_context_data->menuAction()->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd));
+          add_context_data->menuAction()->setIconVisibleInMenu(true);
+#endif
           location_sub_menu = options_menu->addMenu("&Location");
 
           editor_menu->addAction(grplot_widget_->getEditorAct());
           file_menu->addAction(grplot_widget_->getSaveFileAct());
           file_menu->addAction(grplot_widget_->getLoadFileAct());
           configuration_menu->addAction(grplot_widget_->getShowContainerAct());
-          configuration_menu->addAction(grplot_widget_->getShowBoundingBoxesAct());
           editor_menu->addAction(grplot_widget_->getAddElementAct());
+          editor_menu->addAction(grplot_widget_->getUndoAct());
+          editor_menu->addAction(grplot_widget_->getRedoAct());
           context_menu->addAction(grplot_widget_->getShowContextAct());
           add_context_data->addAction(grplot_widget_->getAddContextAct());
           add_context_data->addAction(grplot_widget_->getAddGRplotDataContextAct());
           add_context_data->addAction(grplot_widget_->getGenerateLinearContextAct());
+          modi_menu->addAction(grplot_widget_->getSelectableGridAct());
 
           location_sub_menu->addAction(grplot_widget_->getLegendAct());
           location_sub_menu->addAction(grplot_widget_->getColorbarAct());

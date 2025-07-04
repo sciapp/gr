@@ -400,10 +400,12 @@ void AddElementWidget::accept()
     }
   else
     {
+      grplot_widget->createHistoryElement();
       grplot_ref->getRef()->append(new_element);
       if (!grm_validate())
         {
           msg = new QLabel("Element could not be created. Missing required attributes.");
+          grplot_widget->removeHistoryElement();
           error = true;
         }
       else
@@ -415,6 +417,7 @@ void AddElementWidget::accept()
           catch (NotFoundError &err)
             {
               msg = new QLabel("Element could not be created. Missing or wrong attributes.");
+              grplot_widget->removeHistoryElement();
               error = true;
             }
         }

@@ -32,11 +32,15 @@ bool boundingObjectCompareFunction(const BoundingObject &i, const BoundingObject
          j.boundingRect().width() * j.boundingRect().height() * j_index;
 }
 
-std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int y)
+std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int y, bool grid_hidden)
 {
   std::vector<BoundingObject> ret;
   for (auto &bounding_object : bounding_objects)
     {
+      if (grid_hidden &&
+          (bounding_object.getRef()->localName() == "grid_line" || bounding_object.getRef()->localName() == "tick" ||
+           bounding_object.getRef()->localName() == "tick_group"))
+        continue;
       if (bounding_object.containsPoint(x, y))
         {
           bounding_object.setCam(x, y);
