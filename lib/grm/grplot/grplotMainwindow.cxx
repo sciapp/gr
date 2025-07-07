@@ -1,6 +1,9 @@
 #include <sstream>
 #include <iostream>
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#include <QIcon>
+#endif
 #include "grplotMainwindow.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
@@ -68,7 +71,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       menu = menuBar();
       file_menu = new QMenu("&File");
       export_menu = file_menu->addMenu("&Export");
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       export_menu->menuAction()->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::CameraPhoto));
       export_menu->menuAction()->setIconVisibleInMenu(true);
 #endif
@@ -164,7 +167,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           configuration_menu = editor_menu->addMenu(tr("&Show"));
           context_menu = new QMenu("&Data");
           add_context_data = new QMenu("&Add Data-Context");
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
           add_context_data->menuAction()->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd));
           add_context_data->menuAction()->setIconVisibleInMenu(true);
 #endif
