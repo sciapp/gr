@@ -29,6 +29,7 @@ class GRPlotWidget;
 #define DEFAULT_HOVER_MODE 0
 #define MOVABLE_HOVER_MODE 1
 #define INTEGRAL_SIDE_HOVER_MODE 2
+#define LEGEND_ELEMENT_HOVER_MODE 3
 
 class GRPlotWidget : public QWidget
 {
@@ -253,6 +254,7 @@ private:
       BOXZOOM,
       MOVABLE_XFORM,
       MOVE_SELECTED,
+      LEGEND_SELECTED,
     };
     Mode mode;
     QPoint pressed;

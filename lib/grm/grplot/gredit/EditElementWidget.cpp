@@ -376,7 +376,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               window_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           window_form->addRow(label, line_edit);
           if (!advanced_editor)
             window_form->setRowVisible(window_form->rowCount() - 1,
@@ -401,7 +401,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               range_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           range_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             range_modification_form->setRowVisible(range_modification_form->rowCount() - 1,
@@ -423,7 +423,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               log_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           log_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             log_modification_form->setRowVisible(log_modification_form->rowCount() - 1,
@@ -445,7 +445,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               flip_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           flip_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             flip_modification_form->setRowVisible(flip_modification_form->rowCount() - 1,
@@ -470,7 +470,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               lim_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           lim_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             lim_modification_form->setRowVisible(lim_modification_form->rowCount() - 1,
@@ -497,7 +497,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                 }
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           element_movement_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             element_movement_modification_form->setRowVisible(
@@ -521,7 +521,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               space_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           space_modification_form->addRow(label, line_edit);
           if (!advanced_editor)
             space_modification_form->setRowVisible(space_modification_form->rowCount() - 1,
@@ -559,7 +559,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           text_label = QString(cur_attr_name.c_str());
           auto label = new QLabel(text_label);
           label->setToolTip(tooltip_string);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
               context_attributes.end())
             {
@@ -571,7 +571,11 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   context_name = static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
               });
               connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
               button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+#else
+              button->setText("Ref");
+#endif
               grid_layout->addWidget(label, 0, 0, 1, 2);
               grid_layout->addWidget(line_edit, 0, 2, 1, 2);
               grid_layout->addWidget(button, 0, 4);
@@ -697,7 +701,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           lim_modification_added = true;
                         }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       lim_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         lim_modification_form->setRowVisible(
@@ -717,7 +721,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           flip_modification_added = true;
                         }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       flip_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         flip_modification_form->setRowVisible(
@@ -738,7 +742,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           space_modification_added = true;
                         }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       space_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         space_modification_form->setRowVisible(
@@ -758,7 +762,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           window_added = true;
                         }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       window_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         window_form->setRowVisible(window_form->rowCount() - 1,
@@ -777,7 +781,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                           log_modification_added = true;
                         }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       log_modification_form->addRow(label, line_edit);
                       if (!advanced_editor)
                         log_modification_form->setRowVisible(
@@ -803,15 +807,21 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       ws_modification_form->addRow(label, line_edit);
                     }
                   else
+#if QT_VERSION < QT_VERSION_CHECK(6, 4, 0)
+                      if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+#endif
                     {
-#if QT_VERSION >= 0x060000
                       if (std::find(context_attributes.begin(), context_attributes.end(), attr_name) !=
                           context_attributes.end())
                         {
                           auto widget = new QWidget();
                           auto grid_layout = new QGridLayout();
                           auto button = new QPushButton();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
                           button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+#else
+                          button->setText("Ref");
+#endif
                           connect(button, &QPushButton::clicked, [=]() {
                             if ((*current_selection)->getRef()->hasAttribute(attr_name))
                               context_name =
@@ -828,35 +838,10 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                         {
                           form->addRow(label, line_edit);
                         }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       if (!advanced_editor)
                         form->setRowVisible(form->rowCount() - 1,
                                             !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
-#else
-                      if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                        {
-                          if (std::find(context_attributes.begin(), context_attributes.end(), attr_name) !=
-                              context_attributes.end())
-                            {
-                              auto widget = new QWidget();
-                              auto grid_layout = new QGridLayout();
-                              auto button = new QPushButton("Ref");
-                              connect(button, &QPushButton::clicked, [=]() {
-                                if ((*current_selection)->getRef()->hasAttribute(attr_name))
-                                  context_name =
-                                      static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
-                              });
-                              connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
-                              grid_layout->addWidget(label, 0, 0, 1, 2);
-                              grid_layout->addWidget(line_edit, 0, 2, 1, 2);
-                              grid_layout->addWidget(button, 0, 4);
-                              widget->setLayout(grid_layout);
-                              form->addRow(widget);
-                            }
-                          else
-                            {
-                              form->addRow(label, line_edit);
-                            }
-                        }
 #endif
                     }
 
@@ -1073,7 +1058,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                       range_modification_added = true;
                                     }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                                   range_modification_form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     range_modification_form->setRowVisible(
@@ -1100,7 +1085,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                         }
                                     }
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                                   element_movement_modification_form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     element_movement_modification_form->setRowVisible(
@@ -1114,7 +1099,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                 }
                               else
                                 {
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                                   form->addRow(label, line_edit);
                                   if (!advanced_editor)
                                     form->setRowVisible(

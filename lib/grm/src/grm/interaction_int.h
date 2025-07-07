@@ -32,6 +32,7 @@ DECLARE_LIST_TYPE(Tooltip, grm_tooltip_info_t *)
 #define DEFAULT_HOVER_MODE 0
 #define MOVABLE_HOVER_MODE 1
 #define INTEGRAL_SIDE_HOVER_MODE 2
+#define LEGEND_ELEMENT_HOVER_MODE 3
 
 
 /* ========================= functions ============================================================================== */

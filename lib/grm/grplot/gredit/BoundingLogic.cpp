@@ -1,6 +1,13 @@
-#include "BoundingLogic.hxx"
+#ifdef _WIN32
+/*
+ * Headers on Windows can define `min` and `max` as macros which causes
+ * problem when using `std::min` and `std::max`
+ * -> Define `NOMINMAX` to prevent the definition of these macros
+ */
+#define NOMINMAX
+#endif
 
-#include "../util.hxx"
+#include "BoundingLogic.hxx"
 
 #include <algorithm>
 #include <vector>
@@ -35,16 +42,17 @@ bool boundingObjectCompareFunction(const BoundingObject &i, const BoundingObject
          j.boundingRect().width() * j.boundingRect().height() * j_index;
 }
 
-std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int y, bool grid_hidden)
+std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int y, bool grid_hidden,
+                                                                     bool advanced_editor)
 {
   std::vector<BoundingObject> ret;
   double x_px, y_px, x_range_min, x_range_max, y_range_min, y_range_max, dx, dy;
   double x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
-  int width, height, max_width_height;
+  int width = 0, height = 0;
   std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
-  max_width_height = std::max(width, height);
+  auto max_width_height = std::max(width, height);
   dx = (double)x / max_width_height;
   dy = (double)(height - y) / max_width_height;
 
@@ -94,9 +102,14 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
 
   for (auto &bounding_object : bounding_objects)
     {
-      if (grid_hidden &&
-          (bounding_object.getRef()->localName() == "grid_line" || bounding_object.getRef()->localName() == "tick" ||
-           bounding_object.getRef()->localName() == "tick_group"))
+      auto elem_name = bounding_object.getRef()->localName();
+      if (grid_hidden && (elem_name == "grid_line" || elem_name == "tick" || elem_name == "tick_group")) continue;
+      if (!advanced_editor &&
+          ((elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
+            elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
+            elem_name == "cell_array" || elem_name == "nonuniform_cell_array" || elem_name == "polar_cell_array" ||
+            elem_name == "nonuniform_polar_cell_array" || elem_name == "draw_image" || elem_name == "draw_arc" ||
+            elem_name == "fill_arc" || elem_name == "fill_area")))
         continue;
 
       if (subplot_element && (bounding_object.getRef()->localName() == "series_line" ||
@@ -153,9 +166,14 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
 
   for (auto &bounding_object : bounding_objects)
     {
-      if (grid_hidden &&
-          (bounding_object.getRef()->localName() == "grid_line" || bounding_object.getRef()->localName() == "tick" ||
-           bounding_object.getRef()->localName() == "tick_group"))
+      auto elem_name = bounding_object.getRef()->localName();
+      if (grid_hidden && (elem_name == "grid_line" || elem_name == "tick" || elem_name == "tick_group")) continue;
+      if (!advanced_editor &&
+          ((elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
+            elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
+            elem_name == "cell_array" || elem_name == "nonuniform_cell_array" || elem_name == "polar_cell_array" ||
+            elem_name == "nonuniform_polar_cell_array" || elem_name == "draw_image" || elem_name == "draw_arc" ||
+            elem_name == "fill_arc" || elem_name == "fill_area")))
         continue;
 
       if (bounding_object.containsPoint(x, y))

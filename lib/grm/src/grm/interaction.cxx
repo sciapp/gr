@@ -455,6 +455,9 @@ int inputImpl(const grm_args_t *input_args)
    * - `disable_movable_trans`: disable movable transformation
    * - `movable_state`: the status from grm_get_hover_mode
    * - `clear_locked_state`: clear movable_obj_ref pointer
+   * legend_selected:
+   * - `x`, `y`: mouse cursor position
+   * - `movable_state`: the status from grm_get_hover_mode
    *
    * All coordinates are expected to be given as workstation coordinates (integer type)
    */
@@ -950,6 +953,34 @@ int inputImpl(const grm_args_t *input_args)
                   gr_restorestate();
                 }
             }
+          else if (grm_args_values(input_args, "movable_state", "i", &movable_status) &&
+                   movable_status == LEGEND_ELEMENT_HOVER_MODE)
+            {
+              auto legend = subplot_element->querySelectors("legend");
+              if (legend != nullptr && kind != "pie")
+                {
+                  for (const auto &label : legend->children())
+                    {
+                      if (label->localName() != "label" || !label->hasAttribute("_bbox_x_min")) continue;
+                      auto bbox_x_min = static_cast<double>(label->getAttribute("_bbox_x_min"));
+                      auto bbox_x_max = static_cast<double>(label->getAttribute("_bbox_x_max"));
+                      auto bbox_y_min = static_cast<double>(label->getAttribute("_bbox_y_min"));
+                      auto bbox_y_max = static_cast<double>(label->getAttribute("_bbox_y_max"));
+                      if (bbox_x_min <= x && bbox_x_max >= x && bbox_y_min <= y && bbox_y_max >= y)
+                        {
+                          if (label->hasAttribute("hidden"))
+                            {
+                              label->removeAttribute("hidden");
+                              label->removeAttribute("transparency");
+                            }
+                          else
+                            {
+                              label->setAttribute("hidden", true);
+                            }
+                        }
+                    }
+                }
+            }
           gr_restorestate();
         }
     }
@@ -1269,10 +1300,9 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
   double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
-  std::vector<std::string> labels;
-  unsigned int num_labels = 0;
   std::string kind, orientation = PLOT_DEFAULT_ORIENTATION;
   unsigned int x_length, y_length, series_i = 0, i;
+  static std::vector<std::string> labels;
 
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   returnErrorIf(info == nullptr, GRM_ERROR_MALLOC);
@@ -1372,15 +1402,6 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
 
   std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
-  auto draw_legend_element_vec = subplot_element->querySelectorsAll("legend");
-  num_labels = 0;
-  if (!draw_legend_element_vec.empty())
-    {
-      auto &draw_legend_element = draw_legend_element_vec[0];
-      std::string labels_key = static_cast<std::string>(draw_legend_element->getAttribute("labels"));
-      labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
-      num_labels = labels.size();
-    }
   if (kind == "pie")
     {
       static char output[50];
@@ -1453,6 +1474,11 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
                   current_series_vec.push_back(current_series_group_child);
                 }
             }
+
+          if (current_series_group->hasAttribute("label"))
+            {
+              labels.push_back(static_cast<std::string>(current_series_group->getAttribute("label")));
+            }
         }
     }
   else
@@ -1506,54 +1532,59 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
 
       if (!strEqualsAny(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf", "quiver"))
         {
-          for (i = 0; i < x_series_vec.size(); i++)
+          if (!(current_series->hasAttribute("_hidden") && static_cast<int>(current_series->getAttribute("_hidden"))))
             {
-              x_px = x_series_vec[i];
-              if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
-                  static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) != "x")
+              for (i = 0; i < x_series_vec.size(); i++)
                 {
-                  auto location =
-                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location"));
-                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
-                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
-
-                  x_px = (x_px - b) / a;
-                }
-              if (x_px < x_range_min || x_px > x_range_max) continue;
-
-              y_px = y_series_vec[i];
-              if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
-                  static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) != "y")
-                {
-                  auto location =
-                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location"));
-                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
-                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
-
-                  y_px = (y_px - b) / a;
-                }
-              if (!accumulated && (y_px < y_range_min || y_px > y_range_max)) continue;
-
-              gr_wctondc(&x_px, &y_px);
-              x_px = x_px * max_width_height;
-              y_px = y_px * max_width_height;
-              diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
-              if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
-              if (diff < mindiff && diff <= MAX_MOUSE_DIST)
-                {
-                  mindiff = diff;
-                  info->x = x_series_vec[i];
-                  info->y = y_series_vec[i];
-                  info->x_px = (int)x_px;
-                  info->y_px = height - (int)y_px;
-                  if (num_labels > series_i)
+                  x_px = x_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) !=
+                          "x")
                     {
-                      static std::vector<std::string> line_label = labels;
-                      info->label = (char *)line_label[series_i].c_str();
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_x_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      x_px = (x_px - b) / a;
                     }
-                  else
+                  if (x_px < x_range_min || x_px > x_range_max) continue;
+
+                  y_px = y_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) !=
+                          "y")
                     {
-                      info->label = (char *)"";
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_y_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      y_px = (y_px - b) / a;
+                    }
+                  if (!accumulated && (y_px < y_range_min || y_px > y_range_max)) continue;
+
+                  gr_wctondc(&x_px, &y_px);
+                  x_px = x_px * max_width_height;
+                  y_px = y_px * max_width_height;
+                  diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
+                  if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
+                  if (diff < mindiff && diff <= MAX_MOUSE_DIST)
+                    {
+                      mindiff = diff;
+                      info->x = x_series_vec[i];
+                      info->y = y_series_vec[i];
+                      info->x_px = (int)x_px;
+                      info->y_px = height - (int)y_px;
+                      if (current_series->parentElement()->hasAttribute("label"))
+                        {
+                          static std::vector<std::string> line_label = labels;
+                          info->label = (char *)line_label[series_i].c_str();
+                        }
+                      else
+                        {
+                          info->label = (char *)"";
+                        }
                     }
                 }
             }
@@ -1778,16 +1809,16 @@ grm_error_t getTooltips(int mouse_x, int mouse_y, grm_error_t (*tooltip_callback
 
 int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
 {
+  int width, height, max_width_height;
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  max_width_height = grm_max(width, height);
+
+  auto ndc_x = (double)mouse_x / max_width_height;
+  auto ndc_y = (double)(height - mouse_y) / max_width_height;
+  auto subplot_element = grm_get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
+
   if (!disable_movable_xform)
     {
-      int width, height, max_width_height;
-      GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
-      max_width_height = grm_max(width, height);
-
-      auto ndc_x = (double)mouse_x / max_width_height;
-      auto ndc_y = (double)(height - mouse_y) / max_width_height;
-
-      auto subplot_element = grm_get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
       if (subplot_element != nullptr)
         {
           std::shared_ptr<GRM::Element> movable = nullptr;
@@ -1812,6 +1843,25 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
                       return MOVABLE_HOVER_MODE;
                     }
                 }
+            }
+        }
+    }
+
+  if (subplot_element != nullptr)
+    {
+      auto legend = subplot_element->querySelectors("legend");
+      auto kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
+      if (legend != nullptr && kind != "pie")
+        {
+          for (const auto &label : legend->children())
+            {
+              if (label->localName() != "label" || !label->hasAttribute("_bbox_x_min")) continue;
+              auto bbox_x_min = static_cast<double>(label->getAttribute("_bbox_x_min"));
+              auto bbox_x_max = static_cast<double>(label->getAttribute("_bbox_x_max"));
+              auto bbox_y_min = static_cast<double>(label->getAttribute("_bbox_y_min"));
+              auto bbox_y_max = static_cast<double>(label->getAttribute("_bbox_y_max"));
+              if (bbox_x_min <= mouse_x && bbox_x_max >= mouse_x && bbox_y_min <= mouse_y && bbox_y_max >= mouse_y)
+                return LEGEND_ELEMENT_HOVER_MODE;
             }
         }
     }

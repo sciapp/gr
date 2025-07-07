@@ -165,7 +165,6 @@ grm_error_t plotRaw(grm_args_t *subplot_args);
 grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass);
 grm_error_t plotDrawPolarAxes(grm_args_t *args);
 grm_error_t plotDrawLegend(grm_args_t *args);
-grm_error_t plotDrawPieLegend(grm_args_t *args);
 grm_error_t plotDrawColorbar(grm_args_t *args, double off, unsigned int colors);
 grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length);
 

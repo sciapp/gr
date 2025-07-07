@@ -493,11 +493,9 @@
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="labels" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="select_specific_xform" type="xs:integer"/>
-            <xs:attribute name="specs" type="xs:string"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -518,6 +516,7 @@
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="char_height" type="xs:double"/>
+            <xs:attribute name="hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -824,6 +823,7 @@
             <xs:attribute name="edge_width" type="xs:double"/>
             <xs:attribute name="indices" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="series_index" type="xs:integer"/>
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="transparency" type="xs:double"/>
@@ -958,6 +958,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -999,6 +1000,7 @@
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="labels" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -1013,6 +1015,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -1093,6 +1096,7 @@
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
@@ -1115,6 +1119,7 @@
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="r" type="xs:string" use="required"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
@@ -1153,6 +1158,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
             <xs:attributeGroup ref="series"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -1168,6 +1174,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
             <xs:attributeGroup ref="series"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -1199,6 +1206,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="x_dummy" type="xs:string"/>
@@ -1219,6 +1227,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>

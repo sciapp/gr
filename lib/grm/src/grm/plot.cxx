@@ -315,7 +315,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "keep_aspect_ratio",
                                     "keep_radii_axes",
                                     "kind",
-                                    "labels",
                                     "levels",
                                     "location",
                                     "major_h",
@@ -385,6 +384,8 @@ const char *valid_series_keys[] = {"a",
                                    "int_limits_high",
                                    "int_limits_low",
                                    "isovalue",
+                                   "label",
+                                   "labels",
                                    "line_spec",
                                    "marker_type",
                                    "num_bins",
@@ -460,6 +461,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"isovalue", "d"},
                                           {"keep_aspect_ratio", "i"},
                                           {"kind", "s"},
+                                          {"label", "s"},
                                           {"labels", "S"},
                                           {"levels", "i"},
                                           {"line_spec", "s"},
@@ -1449,17 +1451,6 @@ void plotPostSubplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (grm_args_contains(subplot_args, "labels"))
-    {
-      if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "polar_line", "polar_scatter", "scatter3", "line3"))
-        {
-          plotDrawLegend(subplot_args);
-        }
-      else if (strcmp(kind, "pie") == 0)
-        {
-          plotDrawPieLegend(subplot_args);
-        }
-    }
   if (strcmp(kind, "barplot") == 0)
     {
       plotDrawAxes(subplot_args, 2);
@@ -1558,7 +1549,7 @@ grm_error_t plotLine(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *int_limits_high = nullptr, *int_limits_low = nullptr;
       unsigned int x_length = 0, y_length = 0, limits_high_num = 0, limits_low_num = 0;
-      char *spec;
+      char *spec, *label;
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
       auto sub_group = global_render->createSeries("line");
@@ -1600,6 +1591,11 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         sub_group->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
 
@@ -1664,7 +1660,7 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       unsigned int x_length, y_length;
-      char *spec;
+      char *spec, *label;
       const char *where;
       double y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
@@ -1706,7 +1702,11 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
-
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
       if (grm_args_values(*current_series, "step_where", "s", &where)) sub_group->setAttribute("step_where", where);
 
       global_root->setAttribute("_id", ++id);
@@ -1741,6 +1741,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       int c_index = -1, marker_type;
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
+      char *label;
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1776,6 +1777,11 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
           sub_group->setAttribute("marker_color_ind", c_index);
+        }
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
         }
 
       if (z != nullptr || c != nullptr)
@@ -1877,7 +1883,7 @@ grm_error_t plotStem(grm_args_t *subplot_args)
     {
       double *x, *y;
       unsigned int x_length, y_length;
-      char *spec;
+      char *spec, *label;
       double y_min, y_max, y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
 
@@ -1914,6 +1920,11 @@ grm_error_t plotStem(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -2910,6 +2921,7 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      char *label;
       auto sub_group = global_render->createSeries("line3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2948,6 +2960,12 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
           sub_group->setAttribute("z_range_max", z_max);
         }
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       global_root->setAttribute("_id", ++id);
       ++current_series;
     }
@@ -2968,6 +2986,7 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      char *label;
       auto sub_group = global_render->createSeries("scatter3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3016,6 +3035,11 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
               group->parentElement()->setAttribute("c_lim_min", c_min);
               group->parentElement()->setAttribute("c_lim_max", c_max);
             }
+        }
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
         }
 
       global_root->setAttribute("_id", ++id);
@@ -3218,7 +3242,7 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       double *theta, *r;
       double theta_min, theta_max, r_min, r_max;
       unsigned int theta_length, r_length;
-      char *spec;
+      char *spec, *label;
       auto sub_group = global_render->createSeries("polar_line");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
@@ -3256,6 +3280,11 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -3276,6 +3305,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       double *theta, *r;
       double theta_min, theta_max, r_min, r_max;
       unsigned int theta_length, r_length;
+      char *label;
       auto sub_group = global_render->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       group->append(sub_group);
@@ -3310,6 +3340,11 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
           sub_group->setAttribute("clip_negative", clip_negative);
         }
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
 
@@ -3449,11 +3484,12 @@ grm_error_t plotPie(grm_args_t *subplot_args)
 {
   grm_args_t *series;
   double *x;
-  unsigned int x_length;
+  unsigned int x_length, num_labels;
   const char *title;
   static unsigned int color_array_length = -1;
   const int *color_indices = nullptr;
   const double *color_rgb_values = nullptr;
+  const char **labels;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
@@ -3502,6 +3538,15 @@ grm_error_t plotPie(grm_args_t *subplot_args)
       side_region->setAttribute("text_content", title);
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
+    }
+  if (grm_args_first_value(series, "labels", "nS", &labels, &num_labels))
+    {
+      std::string labels_key = "labels" + std::to_string(id);
+      std::vector<std::string> labels_vec(labels, labels + num_labels);
+
+      (*context)["labels" + str] = labels_vec;
+      sub_group->setAttribute("labels", "labels" + str);
+      plotDrawLegend(subplot_args);
     }
   global_root->setAttribute("_id", ++id);
 
@@ -4214,66 +4259,14 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args)
 
 grm_error_t plotDrawLegend(grm_args_t *subplot_args)
 {
-  const char **labels;
-  unsigned int num_labels, num_series;
-  grm_args_t **current_series;
   int location;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
-  returnErrorIf(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels),
-                GRM_ERROR_PLOT_MISSING_LABELS);
-  logger((stderr, "Draw a legend with %d labels\n", num_labels));
-  grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
-
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", ++id);
-
-  std::string labels_key = "labels" + std::to_string(id);
-  std::string specs_key = "specs" + std::to_string(id);
-  std::vector<std::string> labels_vec(labels, labels + num_labels);
-
-  std::vector<std::string> specs_vec;
-  while (*current_series != nullptr)
-    {
-      char *spec;
-      if (grm_args_values(*current_series, "line_spec", "s", &spec))
-        {
-          specs_vec.emplace_back(spec);
-        }
-      else
-        {
-          specs_vec.emplace_back("");
-        }
-      ++current_series;
-    }
-
-  auto legend = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
+  auto legend = group->querySelectors("legend");
+  legend = global_render->createLegend(legend);
   if (grm_args_values(subplot_args, "location", "i", &location)) legend->setAttribute("location", location);
   group->append(legend);
-
-  return GRM_ERROR_NONE;
-}
-
-grm_error_t plotDrawPieLegend(grm_args_t *subplot_args)
-{
-  const char **labels;
-  unsigned int num_labels;
-  grm_args_t *series;
-
-  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
-
-  returnErrorIf(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels),
-                GRM_ERROR_PLOT_MISSING_LABELS);
-  grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
-
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", ++id);
-  std::string labels_key = "labels" + std::to_string(id);
-  std::vector<std::string> labels_vec(labels, labels + num_labels);
-
-  auto draw_pie_legend_element = global_render->createPieLegend(labels_key, labels_vec);
-  group->append(draw_pie_legend_element);
 
   return GRM_ERROR_NONE;
 }
