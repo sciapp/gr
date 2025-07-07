@@ -1,8 +1,11 @@
 #include "BoundingLogic.hxx"
 
+#include "../util.hxx"
+
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <cfloat>
 #include <grm.h>
 
 bool boundingObjectCompareFunction(const BoundingObject &i, const BoundingObject &j)
@@ -35,12 +38,126 @@ bool boundingObjectCompareFunction(const BoundingObject &i, const BoundingObject
 std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int y, bool grid_hidden)
 {
   std::vector<BoundingObject> ret;
+  double x_px, y_px, x_range_min, x_range_max, y_range_min, y_range_max, dx, dy;
+  double x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
+  int width, height, max_width_height;
+  std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  max_width_height = std::max(width, height);
+  dx = (double)x / max_width_height;
+  dy = (double)(height - y) / max_width_height;
+
+  auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &dx, &dy);
+
+  if (subplot_element)
+    {
+      GRM::Render::processLimits(subplot_element);
+      auto central_region = subplot_element->querySelectors("central_region");
+      GRM::Render::processWindow(central_region);
+      if (central_region->hasAttribute("viewport_x_min"))
+        {
+          double viewport[4];
+          if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
+            throw NotFoundError("Central region doesn't have a viewport but it should.\n");
+          gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        }
+      if (central_region->hasAttribute("window_x_min"))
+        {
+          gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                       static_cast<double>(central_region->getAttribute("window_x_max")),
+                       static_cast<double>(central_region->getAttribute("window_y_min")),
+                       static_cast<double>(central_region->getAttribute("window_y_max")));
+        }
+      GRM::Render::calculateCharHeight(central_region);
+      gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
+      gr_ndctowc(&dx, &dy);
+
+      x_range_min = (double)(x - 50) / max_width_height;
+      x_range_max = (double)(x + 50) / max_width_height;
+      y_range_min = (double)(height - (y + 50)) / max_width_height;
+      y_range_max = (double)(height - (y - 50)) / max_width_height;
+
+      gr_ndctowc(&x_range_min, &y_range_min);
+      gr_ndctowc(&x_range_max, &y_range_max);
+
+      x_min = static_cast<double>(subplot_element->getAttribute("_x_lim_min"));
+      x_max = static_cast<double>(subplot_element->getAttribute("_x_lim_max"));
+      y_min = static_cast<double>(subplot_element->getAttribute("_y_lim_min"));
+      y_max = static_cast<double>(subplot_element->getAttribute("_y_lim_max"));
+
+      x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
+      y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
+      x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
+      y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
+    }
+
   for (auto &bounding_object : bounding_objects)
     {
       if (grid_hidden &&
           (bounding_object.getRef()->localName() == "grid_line" || bounding_object.getRef()->localName() == "tick" ||
            bounding_object.getRef()->localName() == "tick_group"))
         continue;
+
+      if (subplot_element && (bounding_object.getRef()->localName() == "series_line" ||
+                              bounding_object.getRef()->localName() == "series_scatter"))
+        {
+          auto x_key = static_cast<std::string>(bounding_object.getRef()->getAttribute("x"));
+          auto y_key = static_cast<std::string>(bounding_object.getRef()->getAttribute("y"));
+          auto x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+          auto y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+
+          for (int i = 0; i < x_series_vec.size(); i++)
+            {
+              x_px = x_series_vec[i];
+              if (bounding_object.getRef()->hasAttribute("ref_x_axis_location") &&
+                  static_cast<std::string>(bounding_object.getRef()->getAttribute("ref_x_axis_location")) != "x")
+                {
+                  auto location =
+                      static_cast<std::string>(bounding_object.getRef()->getAttribute("ref_x_axis_location"));
+                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                  x_px = (x_px - b) / a;
+                }
+              if (x_px < x_range_min || x_px > x_range_max) continue;
+
+              y_px = y_series_vec[i];
+              if (bounding_object.getRef()->hasAttribute("ref_y_axis_location") &&
+                  static_cast<std::string>(bounding_object.getRef()->getAttribute("ref_y_axis_location")) != "y")
+                {
+                  auto location =
+                      static_cast<std::string>(bounding_object.getRef()->getAttribute("ref_y_axis_location"));
+                  auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                  auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                  y_px = (y_px - b) / a;
+                }
+
+              if (y_px < y_range_min || y_px > y_range_max) continue;
+
+              gr_wctondc(&x_px, &y_px);
+              x_px = x_px * max_width_height;
+              y_px = y_px * max_width_height;
+              diff = sqrt(pow(x_px - x, 2) + pow((height - y_px) - y, 2));
+              if (diff < mindiff && diff <= 50)
+                {
+                  mindiff = diff;
+                  ret.clear();
+                  ret.push_back(bounding_object);
+                }
+            }
+        }
+    }
+  if (!ret.empty()) return ret;
+
+  for (auto &bounding_object : bounding_objects)
+    {
+      if (grid_hidden &&
+          (bounding_object.getRef()->localName() == "grid_line" || bounding_object.getRef()->localName() == "tick" ||
+           bounding_object.getRef()->localName() == "tick_group"))
+        continue;
+
       if (bounding_object.containsPoint(x, y))
         {
           bounding_object.setCam(x, y);
