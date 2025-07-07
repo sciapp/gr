@@ -479,7 +479,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       save_file_action = new QAction("&Save");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       save_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave));
       save_file_action->setIconVisibleInMenu(true);
 #endif
@@ -487,7 +487,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       load_file_action = new QAction("&Load");
       load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       load_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen));
       load_file_action->setIconVisibleInMenu(true);
 #endif
@@ -500,7 +500,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(show_container_action, SIGNAL(triggered()), this, SLOT(showContainerSlot()));
 
       add_element_action = new QAction("&Add Element");
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       add_element_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd));
       add_element_action->setIconVisibleInMenu(true);
 #endif
@@ -511,7 +511,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       undo_action = new QAction("&Undo");
       undo_action->setShortcut(Qt::CTRL | Qt::Key_Z);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       undo_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditUndo));
       undo_action->setIconVisibleInMenu(true);
 #endif
@@ -520,7 +520,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       redo_action = new QAction("&Redo");
       redo_action->setShortcut(Qt::CTRL | Qt::Key_Y);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       redo_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditRedo));
       redo_action->setIconVisibleInMenu(true);
 #endif
@@ -529,7 +529,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       show_context_action = new QAction(tr("&Display Data-Context"));
       show_context_action->setCheckable(true);
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
       show_context_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation));
       show_context_action->setIconVisibleInMenu(true);
 #endif
