@@ -52,7 +52,7 @@ static std::map<std::string, const char *> key_to_types{
     {"marker_type", "i"},
     {"num_bins", "i"},
     {"normalization", "s"},
-    {"only_quadratic_aspect_ratio", "i"},
+    {"only_square_aspect_ratio", "i"},
     {"orientation", "s"},
     {"resample_method", "s"},
     {"r_lim", "dd"},

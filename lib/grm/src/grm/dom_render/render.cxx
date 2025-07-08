@@ -465,7 +465,7 @@ static std::map<std::string, int> model_string_to_int{
     {"hsv", 1},
 };
 static std::map<std::string, int> clip_region_string_to_int{
-    {"quadratic", 0},
+    {"rectangular", 0},
     {"elliptic", 1},
 };
 static std::map<std::string, int> resample_method_string_to_int{
@@ -999,7 +999,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   bool left_text_margin = false, right_text_margin = false, bottom_text_margin = false, top_text_margin = false;
   bool top_text_is_title = false;
   std::string kind;
-  bool keep_aspect_ratio, uniform_data = true, only_quadratic_aspect_ratio = false;
+  bool keep_aspect_ratio, uniform_data = true, only_square_aspect_ratio = false;
   double metric_width, metric_height;
   double aspect_ratio_ws, start_aspect_ratio_ws;
   double vp0, vp1, vp2, vp3;
@@ -1014,7 +1014,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
 
   kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-  only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+  only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
 
   left_side_region = plot_parent->querySelectors("side_region[location=\"left\"]");
   right_side_region = plot_parent->querySelectors("side_region[location=\"right\"]");
@@ -1052,8 +1052,8 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       metric_height *= (figure_viewport[3] - figure_viewport[2]);
       aspect_ratio_ws = metric_width / metric_height;
     }
-  if (keep_aspect_ratio && (!only_quadratic_aspect_ratio || (only_quadratic_aspect_ratio && !uniform_data)) &&
-      !diag_factor && kind != "imshow" && kinds_3d.count(kind) == 0)
+  if (keep_aspect_ratio && (!only_square_aspect_ratio || (only_square_aspect_ratio && !uniform_data)) && !diag_factor &&
+      kind != "imshow" && kinds_3d.count(kind) == 0)
     {
       if (aspect_ratio_ws > start_aspect_ratio_ws)
         {
@@ -1072,7 +1072,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
           *vp_y_max -= diff;
         }
     }
-  else if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio && !diag_factor && kind != "imshow" &&
+  else if (keep_aspect_ratio && uniform_data && only_square_aspect_ratio && !diag_factor && kind != "imshow" &&
            kinds_3d.count(kind) == 0)
     {
       if (aspect_ratio_ws > 1)
@@ -1155,7 +1155,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
     {
       top_margin += (right_margin - top_margin) + (top_text_margin ? top_text_is_title ? 0.1 : 0.075 : 0.025);
 
-      if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio)
+      if (keep_aspect_ratio && uniform_data && only_square_aspect_ratio)
         {
           if (bottom_margin != left_margin)
             {
@@ -1175,7 +1175,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   else
     {
       top_margin += (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.0);
-      if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio)
+      if (keep_aspect_ratio && uniform_data && only_square_aspect_ratio)
         {
           if (bottom_margin != left_margin)
             {
@@ -1352,7 +1352,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   double max_vp, min_vp;
   double offset_rel, width_rel;
   double metric_width, metric_height, start_aspect_ratio_ws;
-  bool keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
+  bool keep_aspect_ratio = false, only_square_aspect_ratio = false;
   std::shared_ptr<GRM::Element> plot_parent = element, central_region, side_region = element;
   getPlotParent(plot_parent);
 
@@ -1386,7 +1386,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
         throw NotFoundError(element->parentElement()->localName() + " doesn't have a viewport but it should.\n");
     }
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-  only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+  only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
   location = static_cast<std::string>(side_region->getAttribute("location"));
   kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
@@ -1445,7 +1445,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
     }
 
   // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
-  if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || !keep_aspect_ratio)
+  if ((keep_aspect_ratio && uniform_data && only_square_aspect_ratio) || !keep_aspect_ratio)
     {
       auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
                                    ? plot_parent->parentElement()
@@ -1732,7 +1732,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       double viewport_normalized[4];
       double offset = PLOT_DEFAULT_SIDEREGION_OFFSET, width = PLOT_DEFAULT_SIDEREGION_WIDTH;
       std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION, kind;
-      bool keep_aspect_ratio = false, uniform_data = true, only_quadratic_aspect_ratio = false, x_flip = false;
+      bool keep_aspect_ratio = false, uniform_data = true, only_square_aspect_ratio = false, x_flip = false;
 
       auto plot_parent = element;
       getPlotParent(plot_parent);
@@ -1750,13 +1750,13 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                                (DEFAULT_ASPECT_RATIO_FOR_SCALING);
 
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-      only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+      only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
       kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
       if (kind == "marginal_heatmap") width /= 1.5;
       if (element->querySelectors("colorbar")) width = PLOT_DEFAULT_COLORBAR_WIDTH;
 
-      if (keep_aspect_ratio && only_quadratic_aspect_ratio)
+      if (keep_aspect_ratio && only_square_aspect_ratio)
         {
           for (const auto &series : plot_parent->querySelectors("central_region")->children())
             {
@@ -1937,7 +1937,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       double viewport_normalized[4];
       double offset = 0.0, width = PLOT_DEFAULT_SIDEREGION_WIDTH;
       std::string kind, location;
-      bool keep_aspect_ratio = false, uniform_data = true, only_quadratic_aspect_ratio = false;
+      bool keep_aspect_ratio = false, uniform_data = true, only_square_aspect_ratio = false;
       auto plot_parent = element;
       getPlotParent(plot_parent);
 
@@ -1949,11 +1949,11 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                                (DEFAULT_ASPECT_RATIO_FOR_SCALING);
 
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-      only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+      only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
       location = static_cast<std::string>(element->parentElement()->getAttribute("location"));
       kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
-      if (keep_aspect_ratio && only_quadratic_aspect_ratio)
+      if (keep_aspect_ratio && only_square_aspect_ratio)
         {
           for (const auto &series : plot_parent->querySelectors("central_region")->children())
             {
@@ -3446,7 +3446,7 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
     {
       double tick_size_rel;
       double metric_width, metric_height;
-      bool keep_aspect_ratio = false, uniform_data = true, only_quadratic_aspect_ratio = false;
+      bool keep_aspect_ratio = false, uniform_data = true, only_square_aspect_ratio = false;
       std::shared_ptr<GRM::Element> figure_vp_element;
       auto plot_parent = element->parentElement();
       getPlotParent(plot_parent);
@@ -3500,9 +3500,9 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
         }
 
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-      only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+      only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
       // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
-      if (keep_aspect_ratio && only_quadratic_aspect_ratio)
+      if (keep_aspect_ratio && only_square_aspect_ratio)
         {
           auto render = grm_get_render();
           for (const auto &series : plot_parent->querySelectors("central_region")->children())
@@ -3515,7 +3515,7 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
             uniform_data = isUniformData(plot_parent->children()[0], render->getContext());
         }
 
-      if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || kinds_3d.count(kind) > 0 ||
+      if ((keep_aspect_ratio && uniform_data && only_square_aspect_ratio) || kinds_3d.count(kind) > 0 ||
           !keep_aspect_ratio)
         {
           if (aspect_ratio_ws <= 1)
@@ -6696,7 +6696,7 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
   auto kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
   double diag_factor;
   double metric_width, metric_height;
-  bool uniform_data = true, keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
+  bool uniform_data = true, keep_aspect_ratio = false, only_square_aspect_ratio = false;
 
   // special case where the figure vp is not stored inside the plot element
   figure_vp_element = (plot_parent->parentElement()->localName() == "layout_grid_element")
@@ -6740,10 +6740,10 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
       plot_viewport[3] *= (aspect_ratio_ws / start_aspect_ratio_ws);
     }
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
-  only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+  only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
 
   // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
-  if (keep_aspect_ratio && only_quadratic_aspect_ratio)
+  if (keep_aspect_ratio && only_square_aspect_ratio)
     {
       auto render = grm_get_render();
       for (const auto &series : plot_parent->querySelectors("central_region")->children())
@@ -6763,8 +6763,7 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
         }
     }
 
-  if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || kinds_3d.count(kind) > 0 ||
-      !keep_aspect_ratio)
+  if ((keep_aspect_ratio && uniform_data && only_square_aspect_ratio) || kinds_3d.count(kind) > 0 || !keep_aspect_ratio)
     {
       auto initial_size_x = static_cast<double>(active_figure->getAttribute("_initial_width"));
       auto initial_size_y = static_cast<double>(active_figure->getAttribute("_initial_height"));
@@ -7032,7 +7031,7 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
             }
           char_height *= diag_factor;
 
-          if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || kinds_3d.count(kind) > 0 ||
+          if ((keep_aspect_ratio && uniform_data && only_square_aspect_ratio) || kinds_3d.count(kind) > 0 ||
               !keep_aspect_ratio)
             {
               if (aspect_ratio_ws > 1)
@@ -7063,7 +7062,7 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
       if (!element->hasAttribute("_char_height_set_by_user"))
         {
           double char_height_rel;
-          if ((keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio) || kinds_3d.count(kind) > 0 ||
+          if ((keep_aspect_ratio && uniform_data && only_square_aspect_ratio) || kinds_3d.count(kind) > 0 ||
               !keep_aspect_ratio)
             {
               if (plot_parent->parentElement()->localName() != "layout_grid_element")
@@ -18915,8 +18914,8 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
 {
   if (!plot->hasAttribute("_kind")) plot->setAttribute("_kind", PLOT_DEFAULT_KIND);
   if (!plot->hasAttribute("keep_aspect_ratio")) plot->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-  if (!plot->hasAttribute("only_quadratic_aspect_ratio"))
-    plot->setAttribute("only_quadratic_aspect_ratio", PLOT_DEFAULT_ONLY_QUADRATIC_ASPECT_RATIO);
+  if (!plot->hasAttribute("only_square_aspect_ratio"))
+    plot->setAttribute("only_square_aspect_ratio", PLOT_DEFAULT_ONLY_SQUARE_ASPECT_RATIO);
   if (!plot->hasAttribute("viewport_normalized_x_min"))
     plot->setAttribute("viewport_normalized_x_min", PLOT_DEFAULT_VIEWPORT_NORMALIZED_MIN_X);
   if (!plot->hasAttribute("_viewport_normalized_x_min_org"))
@@ -19294,7 +19293,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                 "Determines whether negative radii are clipped, otherwise they will be mirrored"}},
       {std::string("clip_region"),
        std::vector<std::string>{
-           "0", "Defines whether a quadratic(0) or elliptic(1) clip region will be used to clip the displayed plot"}},
+           "0", "Defines whether a rectangular(0) or elliptic(1) clip region will be used to clip the displayed plot"}},
       {std::string("col_span"),
        std::vector<std::string>{"None", "Define the number of columns the grid element contains"}},
       {std::string("color_ind_values"),
@@ -19418,7 +19417,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("num_ticks"), std::vector<std::string>{"None", "Number of ticks"}},
       {std::string("norm"), std::vector<std::string>{"None", "Specify the used normalisation"}},
       {std::string("offset"), std::vector<std::string>{"None", "The offset for the side region viewport"}},
-      {std::string("only_quadratic_aspect_ratio"),
+      {std::string("only_square_aspect_ratio"),
        std::vector<std::string>{"0", "Determines whether the aspect ratio must be square and should be retained"}},
       {std::string("org"), std::vector<std::string>{"None", "The org of the axis. Needed if org != min_value"}},
       {std::string("orientation"),
@@ -21729,7 +21728,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   // TODO: critical update in plot means critical update inside childs, extend the following lists
   std::vector<std::string> plot_bbox_attributes{
       "keep_aspect_ratio",
-      "only_quadratic_aspect_ratio",
+      "only_square_aspect_ratio",
       "reset_ranges",
   };
   std::vector<std::string> plot_critical_attributes{
@@ -22588,7 +22587,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
             {
               // when the ranges gets reseted the bounding boxes of the series can be wrong, to solve this problem
               // they get calculated again out of their children
-              if (strEqualsAny(attr, "keep_aspect_ratio", "only_quadratic_aspect_ratio")) gr_clearws();
+              if (strEqualsAny(attr, "keep_aspect_ratio", "only_square_aspect_ratio")) gr_clearws();
               if (attr == "reset_ranges")
                 {
                   for (const auto &child : element->children())
