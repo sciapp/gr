@@ -133,7 +133,7 @@
             <xs:attribute name="keep_radii_axes" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="max_y_length" type="xs:integer"/>
-            <xs:attribute name="only_quadratic_aspect_ratio" type="xs:integer"/>
+            <xs:attribute name="only_square_aspect_ratio" type="xs:integer"/>
             <xs:attribute name="plot_group" type="xs:integer"/>
             <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>

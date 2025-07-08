@@ -320,7 +320,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "location",
                                     "major_h",
                                     "normalization",
-                                    "only_quadratic_aspect_ratio",
+                                    "only_square_aspect_ratio",
                                     "orientation",
                                     "panzoom",
                                     "r_lim",
@@ -467,7 +467,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"marginal_heatmap_kind", "s"},
                                           {"marker_type", "i|D"},
                                           {"num_bins", "i"},
-                                          {"only_quadratic_aspect_ratio", "i"},
+                                          {"only_square_aspect_ratio", "i"},
                                           {"orientation", "s"},
                                           {"panzoom", "D"},
                                           {"r", "D|I"},
@@ -6216,7 +6216,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
 {
   PlotFunc plot_func;
   char *kind;
-  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
+  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_square_aspect_ratio;
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max, theta_lim_min, theta_lim_max, r_lim_min,
       r_lim_max;
@@ -6245,9 +6245,9 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
     }
-  if (grm_args_values(subplot_args, "only_quadratic_aspect_ratio", "i", &only_quadratic_aspect_ratio))
+  if (grm_args_values(subplot_args, "only_square_aspect_ratio", "i", &only_square_aspect_ratio))
     {
-      group->setAttribute("only_quadratic_aspect_ratio", only_quadratic_aspect_ratio);
+      group->setAttribute("only_square_aspect_ratio", only_square_aspect_ratio);
     }
   if (grm_args_values(subplot_args, "location", "i", &location))
     {
