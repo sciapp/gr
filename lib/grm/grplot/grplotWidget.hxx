@@ -134,7 +134,7 @@ public:
   QAction *getPolarWithPanAct();
   QAction *getKeepWindowAct();
   QAction *getKeepAspectRatioAct();
-  QAction *getOnlyQuadraticAspectRatioAct();
+  QAction *getOnlySquareAspectRatioAct();
   QAction *getVerticalOrientationAct();
   QAction *getHorizontalOrientationAct();
   QAction *getLegendAct();
@@ -222,7 +222,7 @@ private slots:
   void accelerateSlot();
   void polarWithPanSlot();
   void keepWindowSlot();
-  void onlyQuadraticAspectRatioSlot();
+  void onlySquareAspectRatioSlot();
   void keepAspectRatioSlot();
   void verticalOrientationSlot();
   void horizontalOrientationSlot();
@@ -373,7 +373,7 @@ private:
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
-  QAction *keep_aspect_ratio_act, *only_quadratic_aspect_ratio_act;
+  QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
       *twin_x_axis_act, *twin_y_axis_act;
