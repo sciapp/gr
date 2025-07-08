@@ -78,12 +78,12 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       modi_menu = new QMenu("&Modi");
       options_menu = new QMenu("&Options");
       type_sub_menu = options_menu->addMenu("&Plot type");
-      marginal_sub_menu = type_sub_menu->addMenu("&Marginal-heatmap");
+      marginal_sub_menu = type_sub_menu->addMenu("&Marginal Heatmap");
       algo_sub_menu = options_menu->addMenu("&Algorithm");
-      log_sub_menu = options_menu->addMenu("&Logarithm");
+      log_sub_menu = options_menu->addMenu("&Scale");
       flip_sub_menu = options_menu->addMenu("&Flip");
       orientation_sub_menu = options_menu->addMenu("&Orientation");
-      aspect_ratio_sub_menu = options_menu->addMenu("&Aspectratio");
+      aspect_ratio_sub_menu = options_menu->addMenu("&Aspect Ratio");
 
       export_menu->addAction(grplot_widget_->getPdfAct());
       export_menu->addAction(grplot_widget_->getPngAct());
@@ -129,7 +129,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       orientation_sub_menu->addAction(grplot_widget_->getVerticalOrientationAct());
       orientation_sub_menu->addAction(grplot_widget_->getHorizontalOrientationAct());
       aspect_ratio_sub_menu->addAction(grplot_widget_->getKeepAspectRatioAct());
-      aspect_ratio_sub_menu->addAction(grplot_widget_->getOnlyQuadraticAspectRatioAct());
+      aspect_ratio_sub_menu->addAction(grplot_widget_->getOnlySquareAspectRatioAct());
       options_menu->addAction(grplot_widget_->getColormapAct());
 
       marginal_sub_menu->menuAction()->setVisible(false);

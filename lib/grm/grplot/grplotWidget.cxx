@@ -39,7 +39,7 @@ QStringList axis_type_list{
     "y",
 };
 QStringList clip_region_list{
-    "quadratic",
+    "rectangular",
     "elliptic",
 };
 QStringList orientation_list{
@@ -241,7 +241,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "marginal_heatmap_side_plot",
       "mirrored_axis",
       "movable",
-      "only_quadratic_aspect_ratio",
+      "only_square_aspect_ratio",
       "polar_with_pan",
       "r_log",
       "set_text_color_for_background",
@@ -430,8 +430,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       connect(horizontal_orientation_act, &QAction::triggered, this, &GRPlotWidget::horizontalOrientationSlot);
       keep_aspect_ratio_act = new QAction(tr("&Keep Aspectratio"), this);
       connect(keep_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::keepAspectRatioSlot);
-      only_quadratic_aspect_ratio_act = new QAction(tr("&Quadratic Aspectratio"), this);
-      connect(only_quadratic_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::onlyQuadraticAspectRatioSlot);
+      only_square_aspect_ratio_act = new QAction(tr("&Square Aspect Ratio"), this);
+      connect(only_square_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::onlySquareAspectRatioSlot);
 
       legend_act = new QAction(tr("&Legend"), this);
       connect(legend_act, &QAction::triggered, this, &GRPlotWidget::legendSlot);
@@ -3036,7 +3036,7 @@ void GRPlotWidget::keepAspectRatioSlot()
   redraw();
 }
 
-void GRPlotWidget::onlyQuadraticAspectRatioSlot()
+void GRPlotWidget::onlySquareAspectRatioSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
@@ -3044,9 +3044,9 @@ void GRPlotWidget::onlyQuadraticAspectRatioSlot()
                                                     : global_root->querySelectors("figure[active=1]");
   const auto plot_elem = figure_elem->querySelectors("plot");
 
-  bool only_quadratic_aspect_ratio = plot_elem->hasAttribute("only_quadratic_aspect_ratio") &&
-                                     static_cast<int>(plot_elem->getAttribute("only_quadratic_aspect_ratio"));
-  plot_elem->setAttribute("only_quadratic_aspect_ratio", !only_quadratic_aspect_ratio);
+  bool only_square_aspect_ratio = plot_elem->hasAttribute("only_square_aspect_ratio") &&
+                                  static_cast<int>(plot_elem->getAttribute("only_square_aspect_ratio"));
+  plot_elem->setAttribute("only_square_aspect_ratio", !only_square_aspect_ratio);
 
   redraw();
 }
@@ -4826,9 +4826,9 @@ QAction *GRPlotWidget::getKeepAspectRatioAct()
   return keep_aspect_ratio_act;
 }
 
-QAction *GRPlotWidget::getOnlyQuadraticAspectRatioAct()
+QAction *GRPlotWidget::getOnlySquareAspectRatioAct()
 {
-  return only_quadratic_aspect_ratio_act;
+  return only_square_aspect_ratio_act;
 }
 
 QAction *GRPlotWidget::getVerticalOrientationAct()
