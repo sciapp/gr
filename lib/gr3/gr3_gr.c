@@ -13,7 +13,6 @@ extern float __cdecl sqrtf(float);
 #include "gr.h"
 #include "gr3.h"
 #include "gr3_internals.h"
-#include "gks.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -307,7 +306,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   float *new_vertices = NULL;
   float *new_normals = NULL;
   float *new_colors = NULL;
-  int new_idx, skipped_quads, l, errind;
+  int new_idx, skipped_quads, l;
   float linewidth_y = 0;
   float linewidth_x = 0;
 
@@ -579,12 +578,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
           free(new_normals);
           RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
         }
-      gks_inq_pline_linewidth(&errind, &linewidth);
+      gr_inqlinewidth(&linewidth);
       linewidth *= 2 * ssaa_factor;
-      if (errind != GKS_K_NO_ERROR)
-        {
-          RETURN_ERROR(errind);
-        }
       linewidth_x = (float)linewidth;
       linewidth_y = (float)linewidth;
       if (context_struct_.option == GR_OPTION_LINES)
@@ -733,14 +728,13 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   float *modelscales, *modelpos;
   int i, j;
   int projection_type;
-  int errind;
   double clrt[4];
   int clsw = 0;
 
   GR3_DO_INIT;
 
-  gks_inq_clip(&errind, &clsw, clrt);
-  if (clsw == GKS_K_CLIP)
+  gr_inqclip(&clsw, clrt);
+  if (clsw == 1) /* GKS_K_CLIP */
     {
       gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
       gr3_setclipping(xmin, xmax, ymin, ymax, zmin, zmax);
@@ -812,7 +806,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
       grscales[0] = (float)x_axis_scale;
       grscales[1] = (float)y_axis_scale;
       grscales[2] = (float)z_axis_scale;
-      if (clsw == GKS_K_CLIP && context_struct_.use_software_renderer)
+      if (clsw == 1 && context_struct_.use_software_renderer)
         {
           /* axis scales should only affect the viewmatrix cause of that the clipping ranges gets multiplied with the
            * axis scales */
