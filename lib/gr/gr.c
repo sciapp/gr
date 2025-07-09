@@ -14612,6 +14612,15 @@ void gr_inqclipxform(int *tnr)
   gks_inq_clip_xform(&errind, tnr);
 }
 
+void gr_inqclip(int *clsw, double *clrt)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip(&errind, clsw, clrt);
+}
+
 void gr_setclipregion(int region)
 {
   check_autoinit;
