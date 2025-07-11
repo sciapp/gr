@@ -87,6 +87,8 @@ static std::set<std::string> parent_types = {
     "layout_grid",
     "layout_grid_element",
     "legend",
+    "overlay",
+    "overlay_element",
     "pie_segment",
     "plot",
     "polar_bar",
@@ -2602,6 +2604,37 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       element->setAttribute("_viewport_y_min_org", vp_y_min);
       element->setAttribute("_viewport_y_max_org", vp_y_max);
     }
+  else if (element->localName() == "overlay")
+    {
+      double vp[4];
+      double metric_width, metric_height;
+      double aspect_ratio_ws;
+
+      vp[0] = static_cast<double>(element->getAttribute("_viewport_normalized_x_min_org"));
+      vp[1] = static_cast<double>(element->getAttribute("_viewport_normalized_x_max_org"));
+      vp[2] = static_cast<double>(element->getAttribute("_viewport_normalized_y_min_org"));
+      vp[3] = static_cast<double>(element->getAttribute("_viewport_normalized_y_max_org"));
+
+      GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+      aspect_ratio_ws = metric_width / metric_height;
+      // plot viewport fits into the window, for this the complete window must be considered in aspect_ratio_ws
+      if (aspect_ratio_ws > 1)
+        {
+          vp[2] /= aspect_ratio_ws;
+          vp[3] /= aspect_ratio_ws;
+        }
+      else
+        {
+          vp[0] *= aspect_ratio_ws;
+          vp[1] *= aspect_ratio_ws;
+        }
+
+      render->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
+      element->setAttribute("_viewport_x_min_org", vp[0]);
+      element->setAttribute("_viewport_x_max_org", vp[1]);
+      element->setAttribute("_viewport_y_min_org", vp[2]);
+      element->setAttribute("_viewport_y_max_org", vp[3]);
+    }
   GRM::Render::processViewport(element);
 }
 
@@ -2630,6 +2663,7 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       "side_plot_region",
       "text_region",
       "coordinate_system",
+      "overlay_element",
   };
 
   if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
@@ -11928,6 +11962,43 @@ static void processNonuniformCellArray(const std::shared_ptr<GRM::Element> &elem
   if (redraw_ws) gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
 }
 
+static void processOverlayElement(const std::shared_ptr<GRM::Element> &element,
+                                  const std::shared_ptr<GRM::Context> &context)
+{
+  DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
+  int child_id = 0;
+
+  auto type = static_cast<std::string>(element->getAttribute("element_type"));
+  auto x = static_cast<double>(element->getAttribute("x"));
+  auto y = static_cast<double>(element->getAttribute("y"));
+
+  /* clear old childs */
+  del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
+  if (type == "text")
+    {
+      std::shared_ptr<GRM::Element> text;
+      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+        {
+          text = global_render->createText(x, y, "");
+          text->setAttribute("_child_id", child_id++);
+          element->append(text);
+        }
+      else
+        {
+          text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
+          if (text != nullptr) global_render->createText(x, y, "");
+        }
+      if (text != nullptr)
+        {
+          if (!text->hasAttribute("font")) text->setAttribute("font", PLOT_DEFAULT_FONT);
+          if (!text->hasAttribute("font_precision")) text->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
+          if (!text->hasAttribute("char_height")) text->setAttribute("char_height", PLOT_2D_CHAR_HEIGHT);
+        }
+    }
+}
+
 static void processPanzoom(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   ; /* panzoom is being processed in the processLimits routine */
@@ -18483,6 +18554,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("marginal_heatmap_plot"), processMarginalHeatmapPlot},
           {std::string("nonuniform_polar_cell_array"), GRM::PushDrawableToZQueue(processNonUniformPolarCellArray)},
           {std::string("nonuniform_cell_array"), GRM::PushDrawableToZQueue(processNonuniformCellArray)},
+          {std::string("overlay_element"), processOverlayElement},
           {std::string("panzoom"), GRM::PushDrawableToZQueue(processPanzoom)},
           {std::string("pie_segment"), processPieSegment},
           {std::string("polar_bar"), processPolarBar},
@@ -18506,7 +18578,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   /* Modifier */
   if (strEqualsAny(element->localName(), "axis", "central_region", "figure", "plot", "label", "root",
                    "layout_grid_element", "radial_axes", "side_region", "text_region", "side_plot_region", "tick_group",
-                   "theta_axes", "arc_grid_line", "angle_line", "layout_grid"))
+                   "theta_axes", "arc_grid_line", "angle_line", "layout_grid", "overlay"))
     {
       bool old_state = automatic_update;
       automatic_update = false;
@@ -18882,7 +18954,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       custom_color_index_manager.selectContext(drawable->getGrContextId());
       drawable->draw();
 
-      if (bounding_boxes) gr_cancelbboxcallback();
+      gr_cancelbboxcallback();
     }
   gr_context_id_manager.markAllIdsAsUnused();
   parent_to_context = {};
@@ -20850,6 +20922,31 @@ std::shared_ptr<GRM::Element> GRM::Render::createArcGridLine(double value,
 
   return element;
 }
+
+std::shared_ptr<GRM::Element> GRM::Render::createOverlay(const std::shared_ptr<GRM::Element> &ext_element)
+{
+  std::shared_ptr<GRM::Element> overlay = (ext_element == nullptr) ? createElement("overlay") : ext_element;
+
+  overlay->setAttribute("_viewport_normalized_x_min_org", 0.0);
+  overlay->setAttribute("_viewport_normalized_x_max_org", 1.0);
+  overlay->setAttribute("_viewport_normalized_y_min_org", 0.0);
+  overlay->setAttribute("_viewport_normalized_y_max_org", 1.0);
+  return overlay;
+}
+
+std::shared_ptr<GRM::Element> GRM::Render::createOverlayElement(double x, double y, std::string type,
+                                                                const std::shared_ptr<GRM::Element> &ext_element)
+{
+  std::shared_ptr<GRM::Element> overlay_element =
+      (ext_element == nullptr) ? createElement("overlay_element") : ext_element;
+
+  overlay_element->setAttribute("x", x);
+  overlay_element->setAttribute("y", y);
+  overlay_element->setAttribute("element_type", type);
+
+  return overlay_element;
+}
+
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

@@ -367,6 +367,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
       "side_plot_region",
       "text_region",
       "coordinate_system",
+      "overlay_element",
   };
   auto render = grm_get_render();
 

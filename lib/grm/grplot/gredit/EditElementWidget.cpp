@@ -143,7 +143,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
       tooltip_string.append(
           GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), cur_attr_name)[0].c_str());
 
-      if (combo_box_attr.contains(cur_attr_name.c_str()))
+      if (combo_box_attr.contains(cur_attr_name.c_str()) &&
+          ((cur_attr_name != "x" && cur_attr_name != "y") ||
+           static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3))
         {
           line_edit = new QComboBox(this);
           grplot_widget->advancedAttributeComboBoxHandler(cur_attr_name, (*current_selection)->getRef()->localName(),
@@ -561,7 +563,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           label->setToolTip(tooltip_string);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
-              context_attributes.end())
+                  context_attributes.end() &&
+              static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
             {
               auto widget = new QWidget();
               auto grid_layout = new QGridLayout();
@@ -593,7 +596,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
             {
               if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
-                  context_attributes.end())
+                      context_attributes.end() &&
+                  static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
                 {
                   auto widget = new QWidget();
                   auto grid_layout = new QGridLayout();
@@ -659,7 +663,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   tooltip_string.append(
                       GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[0].c_str());
 
-                  if (combo_box_attr.contains(attr_name.c_str()))
+                  if (combo_box_attr.contains(attr_name.c_str()) &&
+                      ((attr_name != "x" && attr_name != "y") || type_name == "xs:string"))
                     {
                       line_edit = new QComboBox(this);
                       grplot_widget->advancedAttributeComboBoxHandler(
@@ -812,7 +817,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 #endif
                     {
                       if (std::find(context_attributes.begin(), context_attributes.end(), attr_name) !=
-                          context_attributes.end())
+                              context_attributes.end() &&
+                          type_name == "xs:string")
                         {
                           auto widget = new QWidget();
                           auto grid_layout = new QGridLayout();
@@ -893,7 +899,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                   GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[0]
                                       .c_str());
 
-                              if (combo_box_attr.contains(attr_name.c_str()))
+                              if (combo_box_attr.contains(attr_name.c_str()) &&
+                                  ((attr_name != "x" && attr_name != "y") || type_name == "xs:string"))
                                 {
                                   line_edit = new QComboBox(this);
                                   grplot_widget->advancedAttributeComboBoxHandler(

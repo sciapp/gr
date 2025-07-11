@@ -430,6 +430,11 @@ public:
 
   std::shared_ptr<Element> createArcGridLine(double value, const std::shared_ptr<Element> &ext_element = nullptr);
 
+  std::shared_ptr<Element> createOverlay(const std::shared_ptr<Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createOverlayElement(double x, double y, std::string type,
+                                                const std::shared_ptr<Element> &ext_element = nullptr);
+
   //! Modifierfunctions
 
   /* ------------------------------- setter functions ----------------------------------------------------------------*/

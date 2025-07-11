@@ -18,6 +18,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_graphics" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="layout_grid" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="overlay" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:integer"/>
@@ -101,6 +102,31 @@
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="data" type="xs:string" use="required"/>
             <xs:attribute name="name" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of overlay -->
+    <xs:element name="overlay">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="overlay_element" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of overlay_element -->
+    <xs:element name="overlay_element">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- extend the list -->
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="text_modifications"/>
+            <xs:attribute name="element_type" type="strint"/>
+            <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="x" type="xs:double"/> <!-- string if more complex childs are possible -->
+            <xs:attribute name="y" type="xs:double"/> <!-- string if more complex childs are possible -->
         </xs:complexType>
     </xs:element>
 

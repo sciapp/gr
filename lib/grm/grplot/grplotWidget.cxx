@@ -550,6 +550,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(advanced_editor_act, SIGNAL(triggered()), this, SLOT(advancedEditorSlot()));
       advanced_editor_act->setVisible(false);
 
+      add_text_act = new QAction(tr("&Add Text"));
+      QObject::connect(add_text_act, SIGNAL(triggered()), this, SLOT(addTextSlot()));
+      add_overlay_menu = new QMenu(this);
+      add_overlay_menu->addAction(add_text_act);
+
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
     }
@@ -1593,6 +1598,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
             }
         }
     }
+  if (overlay_element_edit) overlayElementEdit();
   painter.end();
 }
 
@@ -1875,9 +1881,19 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
   mouse_state.pressed = event->pos();
   if (event->button() == Qt::MouseButton::RightButton)
     {
-      mouse_state.mode = MouseState::Mode::BOXZOOM;
-      rubber_band->setGeometry(QRect(mouse_state.pressed, QSize()));
-      rubber_band->show();
+      if (enable_editor)
+        {
+          auto pos = event->pos();
+          add_pos_x = pos.x();
+          add_pos_y = pos.y();
+          add_overlay_menu->exec(this->mapToGlobal(pos));
+        }
+      else
+        {
+          mouse_state.mode = MouseState::Mode::BOXZOOM;
+          rubber_band->setGeometry(QRect(mouse_state.pressed, QSize()));
+          rubber_band->show();
+        }
     }
   else if (event->button() == Qt::MouseButton::LeftButton)
     {
@@ -3958,6 +3974,33 @@ void GRPlotWidget::redoSlot()
     }
 }
 
+void GRPlotWidget::addTextSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  auto overlay = figure_elem->querySelectors("overlay");
+
+  if (overlay == nullptr)
+    {
+      overlay = render->createOverlay();
+      figure_elem->appendChild(overlay);
+    }
+
+  int width = this->size().width(), height = this->size().height();
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  auto max_width_height = std::max(width, height);
+  auto ndc_x = (double)add_pos_x / max_width_height;
+  auto ndc_y = (double)(height - add_pos_y) / max_width_height;
+  auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "text");
+  overlay->appendChild(overlay_element);
+
+  overlay_element_edit = true;
+  redraw();
+}
+
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -5016,4 +5059,30 @@ void GRPlotWidget::highlightTableWidgetAt(std::string column_name)
     {
       table_widget->selectColumn(item->column());
     }
+}
+
+void GRPlotWidget::overlayElementEdit()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  auto overlay = figure_elem->querySelectors("overlay");
+  auto tmp = overlay->querySelectorsAll("overlay_element");
+  auto overlay_element = tmp[tmp.size() - 1];
+
+  auto text = overlay_element->querySelectors("text"); // cause its only texts atm
+  if (text != nullptr)
+    {
+      auto bbox_id = static_cast<int>(text->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(text->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(text->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(text->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(text->getAttribute("_bbox_y_max"));
+      auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, text);
+      current_selection = bbox;
+      attributeEditEvent(false);
+    }
+  overlay_element_edit = false;
 }
