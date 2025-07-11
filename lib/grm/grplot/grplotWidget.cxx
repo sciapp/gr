@@ -162,6 +162,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   args_ = grm_args_new();
 
   enable_editor = false;
+  enable_advanced_editor = false;
   highlight_bounding_objects = false;
   bounding_logic = new BoundingLogic();
   current_selection = nullptr;
@@ -474,7 +475,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       add_element_widget->hide();
 
       editor_action = new QAction(tr("&Enable Editorview"));
-      editor_action->setCheckable(true);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enableEditorFunctions()));
 
       save_file_action = new QAction("&Save");
@@ -546,6 +546,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       selectable_grid_act->setCheckable(true);
       selectable_grid_act->setChecked(false);
 
+      advanced_editor_act = new QAction(tr("&Enable Advanced Editor"));
+      QObject::connect(advanced_editor_act, SIGNAL(triggered()), this, SLOT(advancedEditorSlot()));
+      advanced_editor_act->setVisible(false);
+
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
     }
@@ -557,6 +561,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
   args_ = args;
 
   enable_editor = false;
+  enable_advanced_editor = false;
   highlight_bounding_objects = false;
   bounding_logic = new BoundingLogic();
   current_selection = nullptr;
@@ -1742,7 +1747,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else
         {
-          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
+          cur_moved = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
 
           if (current_selection == nullptr)
             {
@@ -1859,7 +1864,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                 }
             }
 
-          cursorHandler(x, y); // get the correct cursor and sets it
+          cursorHandler(mouse_x, mouse_y); // get the correct cursor and sets it
           update();
         }
     }
@@ -1890,7 +1895,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
       mouse_state.anchor.setY(y);
 
       int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
-      if (cursor_state != DEFAULT_HOVER_MODE)
+      if (cursor_state != DEFAULT_HOVER_MODE && cursor_state != LEGEND_ELEMENT_HOVER_MODE)
         {
           grm_args_t *args = grm_args_new();
           grm_args_push(args, "clear_locked_state", "i", 1);
@@ -1903,7 +1908,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
       if (enable_editor)
         {
           amount_scrolled = 0;
-          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox);
+          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
           if (cur_clicked.empty())
             {
               clicked.clear();
@@ -1963,6 +1968,8 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 }
             }
 
+          if (cursor_state == LEGEND_ELEMENT_HOVER_MODE) mouse_state.mode = MouseState::Mode::LEGEND_SELECTED;
+
           cursorHandler(x, y);
         }
     }
@@ -1999,6 +2006,16 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   else if (mouse_state.mode == MouseState::Mode::MOVE_SELECTED)
     {
       mouse_state.mode = MouseState::Mode::NORMAL;
+    }
+  else if (mouse_state.mode == MouseState::Mode::LEGEND_SELECTED)
+    {
+      mouse_state.mode = MouseState::Mode::NORMAL;
+
+      grm_args_push(args, "x", "i", x);
+      grm_args_push(args, "y", "i", y);
+      grm_args_push(args, "movable_state", "i", LEGEND_ELEMENT_HOVER_MODE);
+
+      cursorHandler(x, y);
     }
 
   grm_input(args);
@@ -3361,7 +3378,12 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
               if (highlight_bounding_objects)
                 {
                   painter.drawRect(bounding_rect);
-                  painter.drawText(bounding_rect.topLeft() + QPointF(5, 10), cur_child->localName().c_str());
+                  if (enable_advanced_editor)
+                    {
+                      int x_pos = 5, y_pos = 10;
+                      if (cur_child->localName() == "text") y_pos = 0;
+                      painter.drawText(bounding_rect.topLeft() + QPointF(x_pos, y_pos), cur_child->localName().c_str());
+                    }
                 }
             }
         }
@@ -3382,9 +3404,13 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
           for (const auto &selection : current_selections)
             {
               painter.fillRect(selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::Dense7Pattern));
-              if (selection->getRef() != nullptr)
-                painter.drawText(selection->boundingRect().topLeft() + QPointF(5, 10),
-                                 selection->getRef()->localName().c_str());
+              if (selection->getRef() != nullptr && enable_advanced_editor)
+                {
+                  int x_pos = 5, y_pos = 10;
+                  if (selection->getRef()->localName() == "text") y_pos = 0;
+                  painter.drawText(selection->boundingRect().topLeft() + QPointF(x_pos, y_pos),
+                                   selection->getRef()->localName().c_str());
+                }
             }
         }
 
@@ -3397,8 +3423,11 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
               painter.drawRect(current_selection->boundingRect().toRect());
               if (current_selection->getRef() != nullptr)
                 {
-                  painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
-                                   current_selection->getRef()->localName().c_str());
+                  int x_pos = 5, y_pos = 10;
+                  if (current_selection->getRef()->localName() == "text") y_pos = 0;
+                  if (enable_advanced_editor)
+                    painter.drawText(current_selection->boundingRect().topLeft() + QPointF(x_pos, y_pos),
+                                     current_selection->getRef()->localName().c_str());
                   current_selection->getRef()->setAttribute("_highlighted", true);
                   if (prev_selection.lock() == nullptr || prev_selection.lock() != current_selection->getRef())
                     redraw();
@@ -3409,9 +3438,13 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
             {
               painter.fillRect(mouse_move_selection->boundingRect(),
                                QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
-              if (mouse_move_selection->getRef() != nullptr)
-                painter.drawText(mouse_move_selection->boundingRect().topLeft() + QPointF(5, 10),
-                                 mouse_move_selection->getRef()->localName().c_str());
+              if (mouse_move_selection->getRef() != nullptr && enable_advanced_editor)
+                {
+                  int x_pos = 5, y_pos = 10;
+                  if (mouse_move_selection->getRef()->localName() == "text") y_pos = 0;
+                  painter.drawText(mouse_move_selection->boundingRect().topLeft() + QPointF(x_pos, y_pos),
+                                   mouse_move_selection->getRef()->localName().c_str());
+                }
             }
         }
       if (selected_parent != nullptr)
@@ -3424,7 +3457,14 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
               auto bbox_ymin = static_cast<double>(selected_parent->getRef()->getAttribute("_bbox_y_min"));
               auto bbox_ymax = static_cast<double>(selected_parent->getRef()->getAttribute("_bbox_y_max"));
               rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
-              painter.drawText(rect.topLeft() + QPointF(5, 10), selected_parent->getRef()->localName().c_str());
+
+              if (enable_advanced_editor)
+                {
+                  int x_pos = 5, y_pos = 10;
+                  if (selected_parent->getRef()->localName() == "text") y_pos = 0;
+                  painter.drawText(rect.topLeft() + QPointF(x_pos, y_pos),
+                                   selected_parent->getRef()->localName().c_str());
+                }
             }
           painter.fillRect(rect, QBrush(QColor(255, 0, 0, 30), Qt::SolidPattern));
         }
@@ -3440,7 +3480,12 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                   auto bbox_ymin = static_cast<double>(elem.getRef()->getAttribute("_bbox_y_min"));
                   auto bbox_ymax = static_cast<double>(elem.getRef()->getAttribute("_bbox_y_max"));
                   rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
-                  painter.drawText(rect.topLeft() + QPointF(5, 10), elem.getRef()->localName().c_str());
+                  if (enable_advanced_editor)
+                    {
+                      int x_pos = 5, y_pos = 10;
+                      if (elem.getRef()->localName() == "text") y_pos = 0;
+                      painter.drawText(rect.topLeft() + QPointF(x_pos, y_pos), elem.getRef()->localName().c_str());
+                    }
                 }
               painter.fillRect(rect, QBrush(QColor(243, 224, 59, 40), Qt::SolidPattern));
             }
@@ -3573,11 +3618,12 @@ void GRPlotWidget::showContainerSlot()
 
 void GRPlotWidget::enableEditorFunctions()
 {
-  if (editor_action->isChecked())
+  if (editor_action->text() == "&Enable Editorview")
     {
       enable_editor = true;
       grm_tmp_dir = grm_get_render()->initializeHistory();
       add_element_action->setVisible(true);
+      advanced_editor_act->setVisible(true);
       show_container_action->setVisible(true);
       show_container_action->setChecked(false);
       show_configuration_menu_act->trigger();
@@ -3597,6 +3643,8 @@ void GRPlotWidget::enableEditorFunctions()
   else
     {
       enable_editor = false;
+      enable_advanced_editor = false;
+      advanced_editor_act->setVisible(false);
       add_element_action->setVisible(false);
       show_container_action->setVisible(false);
       show_container_action->setChecked(false);
@@ -3622,17 +3670,37 @@ void GRPlotWidget::enableEditorFunctions()
     }
 }
 
+void GRPlotWidget::advancedEditorSlot()
+{
+  if (advanced_editor_act->text() == "&Enable Advanced Editor")
+    {
+      advanced_editor_act->setText(tr("&Disable Advanced Editor"));
+      enable_advanced_editor = true;
+    }
+  else
+    {
+      enable_advanced_editor = false;
+    }
+}
+
 void GRPlotWidget::addElementSlot()
 {
   if (enable_editor)
     {
-      if (add_element_action->isChecked())
-        add_element_widget->show();
+      if (enable_advanced_editor)
+        {
+          if (add_element_action->isChecked())
+            add_element_widget->show();
+          else
+            add_element_widget->hide();
+          add_element_widget->resize(400, height());
+          add_element_widget->move(this->pos().x() + this->width() + add_element_widget->width(),
+                                   this->pos().y() + add_element_widget->geometry().y() - 28);
+        }
       else
-        add_element_widget->hide();
-      add_element_widget->resize(400, height());
-      add_element_widget->move(this->pos().x() + this->width() + add_element_widget->width(),
-                               this->pos().y() + add_element_widget->geometry().y() - 28);
+        {
+          fprintf(stderr, "Todo: Add simple variant\n");
+        }
     }
 }
 
@@ -4900,6 +4968,11 @@ QAction *GRPlotWidget::getSelectableGridAct()
   return selectable_grid_act;
 }
 
+QAction *GRPlotWidget::getAdvancedEditorAct()
+{
+  return advanced_editor_act;
+}
+
 void GRPlotWidget::cursorHandler(int x, int y)
 {
   if (!enable_editor)
@@ -4917,6 +4990,30 @@ void GRPlotWidget::cursorHandler(int x, int y)
         {
           csr->setShape(Qt::SizeHorCursor);
         }
+      else if (cursor_state == LEGEND_ELEMENT_HOVER_MODE)
+        {
+          csr->setShape(Qt::PointingHandCursor);
+        }
       setCursor(*csr);
+    }
+}
+
+bool GRPlotWidget::getEnableAdvancedEditor()
+{
+  return enable_advanced_editor;
+}
+
+void GRPlotWidget::highlightTableWidgetAt(std::string column_name)
+{
+  auto context = grm_get_render()->getContext();
+  table_widget->updateData(context);
+  table_widget->show();
+  table_widget->resize(width(), 350);
+  table_widget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
+                     this->pos().y() - 28 + table_widget->geometry().y());
+  show_context_action->setChecked(true);
+  for (const auto &item : table_widget->findItems(column_name.c_str(), Qt::MatchExactly))
+    {
+      table_widget->selectColumn(item->column());
     }
 }

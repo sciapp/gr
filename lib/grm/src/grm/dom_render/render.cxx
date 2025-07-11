@@ -857,40 +857,88 @@ static void clearOldChildren(DelValues *del, const std::shared_ptr<GRM::Element>
 static void legendSize(const std::shared_ptr<GRM::Element> &element, double *w, double *h)
 {
   double tbx[4], tby[4];
-  std::vector<std::string> labels;
+  auto plot_parent = element;
+  getPlotParent(plot_parent);
+  auto kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
   *w = 0;
   *h = 0;
 
-  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
+  if (kind != "pie")
     {
-      auto context = render->getContext();
-      auto key = static_cast<std::string>(element->getAttribute("labels"));
-      labels = GRM::get<std::vector<std::string>>((*context)[key]);
-    }
-
-  for (auto current_label : labels)
-    {
-      gr_inqtext(0, 0, current_label.data(), tbx, tby);
-      *w = grm_max(*w, tbx[2] - tbx[0]);
-      *h += grm_max(tby[2] - tby[0], 0.03);
-    }
-}
-
-static void legendSize(const std::vector<std::string> &labels, double *w, double *h)
-{
-  double tbx[4], tby[4];
-
-  *w = 0;
-  *h = 0;
-
-  if (!labels.empty())
-    {
-      for (auto current_label : labels)
+      int legend_elems = 0;
+      auto central_region = plot_parent->querySelectors("central_region");
+      for (auto series : central_region->children())
         {
-          gr_inqtext(0, 0, current_label.data(), tbx, tby);
-          *w = grm_max(*w, tbx[2] - tbx[0]);
-          *h += grm_max(tby[2] - tby[0], 0.03);
+          bool has_valid_child = false;
+          if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
+                            "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3"))
+            continue;
+          if (!series->hasAttribute("label")) continue;
+
+          for (const auto &child : series->children())
+            {
+              if (child->localName() != "polyline" && child->localName() != "polymarker" &&
+                  child->localName() != "polyline_3d" && child->localName() != "polymarker_3d")
+                continue;
+              has_valid_child = true;
+              break;
+            }
+
+          if (has_valid_child)
+            {
+              auto current_label = static_cast<std::string>(series->getAttribute("label"));
+              gr_inqtext(0, 0, current_label.data(), tbx, tby);
+              *w = grm_max(*w, tbx[2] - tbx[0]);
+              *h += grm_max(tby[2] - tby[0], 0.03);
+            }
+          legend_elems += 1;
+        }
+
+      // if a series gets removed _start_w and _start_h must be reseted so the legend box adjust to its new shrinked
+      // size
+      if (element->hasAttribute("_legend_elems"))
+        {
+          if (static_cast<int>(element->getAttribute("_legend_elems")) != legend_elems)
+            {
+              if (element->hasAttribute("_start_w")) element->removeAttribute("_start_w");
+              if (element->hasAttribute("_start_h")) element->removeAttribute("_start_h");
+            }
+        }
+    }
+  else
+    {
+      std::vector<std::string> labels;
+      int num_labels;
+
+      if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
+        {
+          auto context = render->getContext();
+          auto key = static_cast<std::string>(plot_parent->querySelectors("series_pie")->getAttribute("labels"));
+          labels = GRM::get<std::vector<std::string>>((*context)[key]);
+          num_labels = labels.size();
+        }
+
+      if (!labels.empty())
+        {
+          for (auto current_label : labels)
+            {
+              gr_inqtext(0, 0, current_label.data(), tbx, tby);
+              *w += tbx[2] - tbx[0];
+              *h = grm_max(*h, tby[2] - tby[0]);
+            }
+          *w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+        }
+
+      // if a series gets removed _start_w and _start_h must be reseted so the legend box adjust to its new shrinked
+      // size
+      if (element->hasAttribute("_legend_elems"))
+        {
+          if (static_cast<int>(element->getAttribute("_legend_elems")) != num_labels)
+            {
+              if (element->hasAttribute("_start_w")) element->removeAttribute("_start_w");
+              if (element->hasAttribute("_start_h")) element->removeAttribute("_start_h");
+            }
         }
     }
 }
@@ -2032,8 +2080,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       double vp_x_min, vp_x_max, vp_y_min, vp_y_max;
       double scale_factor = 1.0, start_aspect_ratio_ws;
       const std::shared_ptr<GRM::Context> &context = render->getContext();
-      std::string kind, labels_key = static_cast<std::string>(element->getAttribute("labels"));
-      auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
+      std::string kind;
       std::shared_ptr<GRM::Element> central_region, plot_parent = element;
       bool keep_aspect_ratio = false;
       double metric_width, metric_height;
@@ -2204,7 +2251,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
 
       if (kind != "pie")
         {
-          legendSize(labels, &w, &h);
+          legendSize(element, &w, &h);
           if (element->hasAttribute("_start_w"))
             {
               w = static_cast<double>(element->getAttribute("_start_w"));
@@ -2265,18 +2312,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         }
       else
         {
-          double tbx[4], tby[4];
-          auto num_labels = static_cast<int>(labels.size());
-
-          w = 0;
-          h = 0;
-          for (auto current_label : labels)
-            {
-              gr_inqtext(0, 0, current_label.data(), tbx, tby);
-              w += tbx[2] - tbx[0];
-              h = grm_max(h, tby[2] - tby[0]);
-            }
-          w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+          legendSize(element, &w, &h);
 
           if (element->hasAttribute("_start_w"))
             {
@@ -3192,6 +3228,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
   auto parent = element->parentElement();
   bool group = parent_types.count(parent->localName());
   auto attr = element->getAttribute("marker_types");
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
 
   if (attr.isString())
     {
@@ -3293,12 +3330,13 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
       applyMoveTransformation(element);
       if (str == "polymarker")
         {
-          if (redraw_ws) gr_polymarker(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+          if (redraw_ws && !hidden) gr_polymarker(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
         }
       else if (str == "polymarker_3d")
         {
           processSpace3d(element->parentElement()->parentElement());
-          if (redraw_ws) gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
+          if (redraw_ws && !hidden)
+            gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -3321,6 +3359,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
 
   auto parent = element->parentElement();
   bool group = parent_types.count(parent->localName());
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
 
   auto attr = element->getAttribute("line_types");
   if (attr.isString())
@@ -3414,12 +3453,13 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
       applyMoveTransformation(element);
       if (str == "polyline")
         {
-          if (redraw_ws) gr_polyline(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+          if (redraw_ws && !hidden) gr_polyline(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
         }
       else if (str == "polyline_3d")
         {
           processSpace3d(element->parentElement()->parentElement());
-          if (redraw_ws) gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
+          if (redraw_ws && !hidden)
+            gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -9107,8 +9147,6 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
 {
   double tbx[4], tby[4];
   std::shared_ptr<GRM::Render> render;
-  std::string labels_key = static_cast<std::string>(element->getAttribute("labels"));
-  auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   int child_id = 0;
   auto plot_parent = element->parentElement();
@@ -9125,14 +9163,12 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
   if (kind != "pie")
     {
       double legend_symbol_x[2], legend_symbol_y[2];
-      int i, legend_elems = 0;
+      int legend_elems = 0;
       double viewport[4];
       std::shared_ptr<GRM::Element> fr, dr;
 
       gr_savestate();
 
-      auto specs_key = static_cast<std::string>(element->getAttribute("specs"));
-      std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
       auto scale_factor = static_cast<double>(element->getAttribute("_scale_factor"));
       auto initial_scale_factor = static_cast<double>(element->getAttribute("_initial_scale_factor"));
 
@@ -9150,6 +9186,7 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
               if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
                                 "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3"))
                 continue;
+              if (!series->hasAttribute("label")) continue;
               for (const auto &child : series->children())
                 {
                   if (child->localName() != "polyline" && child->localName() != "polymarker" &&
@@ -9239,414 +9276,410 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
             }
         }
 
-      i = 0;
       if (!element->hasAttribute("_line_spec_set_by_user")) render->setLineSpec(element, const_cast<char *>(" "));
 
-      int spec_i = 0;
-      for (const auto &plot_child : element->parentElement()->children()) // central_region childs
+      for (const auto &series : plot_parent->querySelectors("central_region")->children())
         {
-          if (plot_child->localName() != "central_region") continue;
-          for (const auto &series : plot_child->children())
+          int mask;
+          double dy;
+          bool got_polyline = false, got_polymarker = false;
+          std::string spec = "";
+
+          if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
+                            "series_scatter", "series_stairs", "series_stem", "series_scatter3", "series_line3"))
+            continue;
+          if (!series->hasAttribute("label")) continue;
+
+          auto label = static_cast<std::string>(series->getAttribute("label"));
+          gr_inqtext(0, 0, (char *)label.c_str(), tbx, tby);
+          dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
+          viewport[3] -= 0.5 * dy;
+
+          std::shared_ptr<GRM::Element> label_elem;
+          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
-              int mask;
-              double dy;
-              bool got_polyline = false, got_polymarker = false;
-
-              if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
-                                "series_scatter", "series_stairs", "series_stem", "series_scatter3", "series_line3"))
-                continue;
-
-              if (i < labels.size())
+              label_elem = render->createElement("label");
+              label_elem->setAttribute("_child_id", child_id++);
+              element->append(label_elem);
+            }
+          else
+            {
+              label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
+            }
+          if (label_elem != nullptr)
+            {
+              if (!label_elem->hasAttribute("_char_height_set_by_user"))
                 {
-                  gr_inqtext(0, 0, labels[i].data(), tbx, tby);
-                  dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
-                  viewport[3] -= 0.5 * dy;
+                  label_elem->setAttribute("char_height",
+                                           static_cast<double>(plot_parent->getAttribute("char_height")) *
+                                               initial_scale_factor);
                 }
               else
                 {
-                  // if there are less label than elements the calculation above won't work -> only include elemts to
-                  // the legend which also have a label
-                  continue;
+                  label_elem->setAttribute("char_height", static_cast<double>(label_elem->getAttribute("char_height")));
+                }
+              if (label_elem->hasAttribute("hidden"))
+                {
+                  label_elem->setAttribute("transparency", 0.5);
+                  series->setAttribute("_hidden", true);
+                }
+              else if (series->hasAttribute("_hidden"))
+                {
+                  series->removeAttribute("_hidden");
+                }
+              gr_savestate();
+              if (series->hasAttribute("line_spec")) spec = static_cast<std::string>(series->getAttribute("line_spec"));
+              const char *spec_char = spec.c_str();
+              mask = gr_uselinespec((char *)spec_char);
+              gr_restorestate();
+
+              if (intEqualsAny(mask, 5, 0, 1, 3, 4, 5))
+                {
+                  legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
+                  legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
+                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                  for (const auto &child : series->children())
+                    {
+                      std::shared_ptr<GRM::Element> pl;
+                      if (series->localName() == "series_stem")
+                        {
+                          if (got_polymarker && got_polyline) break;
+                          if (child->localName() == "polyline" && got_polyline) continue;
+                          if (child->localName() == "polymarker" && got_polymarker) continue;
+                        }
+
+                      if (label_elem->hasAttribute("hidden"))
+                        {
+                          child->setAttribute("_hidden", true);
+                        }
+                      else if (child->hasAttribute("_hidden"))
+                        {
+                          child->removeAttribute("_hidden");
+                        }
+
+                      if (child->localName() == "polyline")
+                        {
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                          legend_symbol_y[1]);
+                              pl->setAttribute("_child_id", 0);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
+                              if (pl != nullptr)
+                                render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                       legend_symbol_y[1], 0, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              render->setLineSpec(pl, spec);
+                              if (child->hasAttribute("line_color_ind"))
+                                {
+                                  pl->setAttribute("line_color_ind",
+                                                   static_cast<int>(child->getAttribute("line_color_ind")));
+                                }
+                              else
+                                {
+                                  pl->setAttribute("line_color_ind",
+                                                   static_cast<int>(series->getAttribute("line_color_ind")));
+                                }
+                              if (child->hasAttribute("line_type"))
+                                {
+                                  pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
+                                }
+                              else if (series->hasAttribute("line_type"))
+                                {
+                                  pl->setAttribute("line_type", static_cast<int>(series->getAttribute("line_type")));
+                                }
+                              got_polyline = true;
+                            }
+                        }
+                      else if (child->localName() == "polymarker")
+                        {
+                          int markertype;
+                          if (child->hasAttribute("marker_type"))
+                            {
+                              markertype = static_cast<int>(child->getAttribute("marker_type"));
+                            }
+                          else
+                            {
+                              markertype = static_cast<int>(series->getAttribute("marker_type"));
+                            }
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                            legend_symbol_y[0], markertype);
+                              pl->setAttribute("_child_id", 0);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
+                              if (pl != nullptr)
+                                render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor, legend_symbol_y[0],
+                                                         markertype, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              int marker_color_ind = 989;
+                              if (child->hasAttribute("marker_color_ind"))
+                                {
+                                  marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                }
+                              else if (series->hasAttribute("marker_color_ind"))
+                                {
+                                  marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                }
+                              render->setMarkerColorInd(pl, marker_color_ind);
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  pl->setAttribute("marker_type", static_cast<int>(child->getAttribute("marker_type")));
+                                }
+                              else if (series->hasAttribute("marker_type"))
+                                {
+                                  pl->setAttribute("marker_type",
+                                                   static_cast<int>(series->getAttribute("marker_type")));
+                                }
+                              if (child->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(child->getAttribute("border_color_ind")));
+                                }
+                              else if (series->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(series->getAttribute("border_color_ind")));
+                                }
+                              if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
+                              processMarkerColorInd(pl);
+                              got_polymarker = true;
+                            }
+                        }
+                      else if (child->localName() == "polyline_3d")
+                        {
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                          legend_symbol_y[1]);
+                              pl->setAttribute("_child_id", 0);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
+                              if (pl != nullptr)
+                                render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                       legend_symbol_y[1], 0, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              render->setLineSpec(pl, spec);
+                              if (child->hasAttribute("line_color_ind"))
+                                {
+                                  pl->setAttribute("line_color_ind",
+                                                   static_cast<int>(child->getAttribute("line_color_ind")));
+                                }
+                              else
+                                {
+                                  pl->setAttribute("line_color_ind",
+                                                   static_cast<int>(series->getAttribute("line_color_ind")));
+                                }
+                              if (child->hasAttribute("line_type"))
+                                {
+                                  pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
+                                }
+                              else if (series->hasAttribute("line_type"))
+                                {
+                                  pl->setAttribute("line_type", static_cast<int>(series->getAttribute("line_type")));
+                                }
+                              got_polyline = true;
+                            }
+                        }
+                      else if (child->localName() == "polymarker_3d")
+                        {
+                          int markertype;
+                          if (child->hasAttribute("marker_type"))
+                            {
+                              markertype = static_cast<int>(child->getAttribute("marker_type"));
+                            }
+                          else
+                            {
+                              markertype = static_cast<int>(series->getAttribute("marker_type"));
+                            }
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                            legend_symbol_y[0], markertype);
+                              pl->setAttribute("_child_id", 0);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
+                              if (pl != nullptr)
+                                render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor, legend_symbol_y[0],
+                                                         markertype, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              int marker_color_ind = 989;
+                              if (child->hasAttribute("marker_color_ind"))
+                                {
+                                  marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                }
+                              else if (series->hasAttribute("marker_color_ind"))
+                                {
+                                  marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                }
+                              render->setMarkerColorInd(pl, marker_color_ind);
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  pl->setAttribute("marker_type", static_cast<int>(child->getAttribute("marker_type")));
+                                }
+                              else if (series->hasAttribute("marker_type"))
+                                {
+                                  pl->setAttribute("marker_type",
+                                                   static_cast<int>(series->getAttribute("marker_type")));
+                                }
+                              if (child->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(child->getAttribute("border_color_ind")));
+                                }
+                              else if (series->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(series->getAttribute("border_color_ind")));
+                                }
+                              if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
+                              processMarkerColorInd(pl);
+                              got_polymarker = true;
+                            }
+                        }
+                    }
+                }
+              else if (mask & 2)
+                {
+                  legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
+                  legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
+                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                  for (const auto &child : series->children())
+                    {
+                      std::shared_ptr<GRM::Element> pl;
+                      if (child->localName() == "polyline")
+                        {
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                          legend_symbol_y[1]);
+                              pl->setAttribute("_child_id", 1);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polyline[_child_id=\"1\"]");
+                              if (pl != nullptr)
+                                render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                       legend_symbol_y[1], 0, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              render->setLineSpec(pl, spec);
+                              if (child->hasAttribute("line_color_ind"))
+                                {
+                                  render->setLineColorInd(pl, static_cast<int>(child->getAttribute("line_color_ind")));
+                                }
+                              else
+                                {
+                                  render->setLineColorInd(pl, static_cast<int>(series->getAttribute("line_color_ind")));
+                                }
+                            }
+                        }
+                      else if (child->localName() == "polymarker")
+                        {
+                          int markertype;
+                          if (child->hasAttribute("marker_type"))
+                            {
+                              markertype = static_cast<int>(child->getAttribute("marker_type"));
+                            }
+                          else
+                            {
+                              markertype = static_cast<int>(series->getAttribute("marker_type"));
+                            }
+                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                            {
+                              pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                            legend_symbol_y[0], markertype);
+                              pl->setAttribute("_child_id", 1);
+                              label_elem->append(pl);
+                            }
+                          else
+                            {
+                              pl = label_elem->querySelectors("polymarker[_child_id=\"1\"]");
+                              if (pl != nullptr)
+                                render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor, legend_symbol_y[0],
+                                                         markertype, 0.0, 0, pl);
+                            }
+                          if (pl != nullptr)
+                            {
+                              render->setMarkerColorInd(
+                                  pl, (series->hasAttribute("marker_color_ind")
+                                           ? static_cast<int>(series->getAttribute("marker_color_ind"))
+                                           : 989));
+                              if (child->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(child->getAttribute("border_color_ind")));
+                                }
+                              else if (series->hasAttribute("border_color_ind"))
+                                {
+                                  pl->setAttribute("border_color_ind",
+                                                   static_cast<int>(series->getAttribute("border_color_ind")));
+                                }
+                              processMarkerColorInd(pl);
+                            }
+                        }
+                    }
                 }
 
-              std::shared_ptr<GRM::Element> label_elem;
+              std::shared_ptr<GRM::Element> tx;
               if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
                 {
-                  label_elem = render->createElement("label");
-                  label_elem->setAttribute("_child_id", child_id++);
-                  element->append(label_elem);
+                  tx = render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor, label);
+                  tx->setAttribute("_child_id", 2);
+                  label_elem->append(tx);
                 }
               else
                 {
-                  label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
+                  tx = label_elem->querySelectors("text[_child_id=\"2\"]");
+                  if (tx != nullptr)
+                    render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor, label,
+                                       CoordinateSpace::NDC, tx);
                 }
-              if (label_elem != nullptr)
+              if (tx != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT)
                 {
-                  if (!label_elem->hasAttribute("_char_height_set_by_user"))
+                  if (!tx->hasAttribute("_text_align_vertical_set_by_user"))
                     {
-                      label_elem->setAttribute("char_height",
-                                               static_cast<double>(plot_parent->getAttribute("char_height")) *
-                                                   initial_scale_factor);
+                      auto text_align_vertical = GKS_K_TEXT_VALIGN_HALF;
+                      if (element->hasAttribute("text_align_vertical"))
+                        text_align_vertical = static_cast<int>(element->getAttribute("text_align_vertical"));
+                      tx->setAttribute("text_align_vertical", text_align_vertical);
                     }
-                  else
+                  if (!tx->hasAttribute("_text_align_horizontal_set_by_user"))
                     {
-                      label_elem->setAttribute("char_height",
-                                               static_cast<double>(label_elem->getAttribute("char_height")));
+                      auto text_align_horizontal = GKS_K_TEXT_HALIGN_LEFT;
+                      if (element->hasAttribute("text_align_horizontal"))
+                        text_align_horizontal = static_cast<int>(element->getAttribute("text_align_horizontal"));
+                      tx->setAttribute("text_align_horizontal", text_align_horizontal);
                     }
-                  gr_savestate();
-                  mask = gr_uselinespec(specs[spec_i].data());
-                  gr_restorestate();
-
-                  if (intEqualsAny(mask, 5, 0, 1, 3, 4, 5))
-                    {
-                      legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
-                      legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
-                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                      for (const auto &child : series->children())
-                        {
-                          std::shared_ptr<GRM::Element> pl;
-                          if (series->localName() == "series_stem")
-                            {
-                              if (got_polymarker && got_polyline) break;
-                              if (child->localName() == "polyline" && got_polyline) continue;
-                              if (child->localName() == "polymarker" && got_polymarker) continue;
-                            }
-                          if (child->localName() == "polyline")
-                            {
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                              legend_symbol_y[0], legend_symbol_y[1]);
-                                  pl->setAttribute("_child_id", 0);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
-                                  if (pl != nullptr)
-                                    render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                           legend_symbol_y[1], 0, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  render->setLineSpec(pl, specs[spec_i]);
-                                  if (child->hasAttribute("line_color_ind"))
-                                    {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(child->getAttribute("line_color_ind")));
-                                    }
-                                  else
-                                    {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(series->getAttribute("line_color_ind")));
-                                    }
-                                  if (child->hasAttribute("line_type"))
-                                    {
-                                      pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
-                                    }
-                                  else if (series->hasAttribute("line_type"))
-                                    {
-                                      pl->setAttribute("line_type",
-                                                       static_cast<int>(series->getAttribute("line_type")));
-                                    }
-                                  got_polyline = true;
-                                }
-                            }
-                          else if (child->localName() == "polymarker")
-                            {
-                              int markertype;
-                              if (child->hasAttribute("marker_type"))
-                                {
-                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
-                                }
-                              else
-                                {
-                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
-                                }
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                legend_symbol_y[0], markertype);
-                                  pl->setAttribute("_child_id", 0);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
-                                  if (pl != nullptr)
-                                    render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                             legend_symbol_y[0], markertype, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  int marker_color_ind = 989;
-                                  if (child->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                                    }
-                                  else if (series->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                                    }
-                                  render->setMarkerColorInd(pl, marker_color_ind);
-                                  if (child->hasAttribute("marker_type"))
-                                    {
-                                      pl->setAttribute("marker_type",
-                                                       static_cast<int>(child->getAttribute("marker_type")));
-                                    }
-                                  else if (series->hasAttribute("marker_type"))
-                                    {
-                                      pl->setAttribute("marker_type",
-                                                       static_cast<int>(series->getAttribute("marker_type")));
-                                    }
-                                  if (child->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
-                                    }
-                                  else if (series->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
-                                    }
-                                  if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                                  processMarkerColorInd(pl);
-                                  got_polymarker = true;
-                                }
-                            }
-                          else if (child->localName() == "polyline_3d")
-                            {
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                              legend_symbol_y[0], legend_symbol_y[1]);
-                                  pl->setAttribute("_child_id", 0);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
-                                  if (pl != nullptr)
-                                    render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                           legend_symbol_y[1], 0, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  render->setLineSpec(pl, specs[spec_i]);
-                                  if (child->hasAttribute("line_color_ind"))
-                                    {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(child->getAttribute("line_color_ind")));
-                                    }
-                                  else
-                                    {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(series->getAttribute("line_color_ind")));
-                                    }
-                                  if (child->hasAttribute("line_type"))
-                                    {
-                                      pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
-                                    }
-                                  else if (series->hasAttribute("line_type"))
-                                    {
-                                      pl->setAttribute("line_type",
-                                                       static_cast<int>(series->getAttribute("line_type")));
-                                    }
-                                  got_polyline = true;
-                                }
-                            }
-                          else if (child->localName() == "polymarker_3d")
-                            {
-                              int markertype;
-                              if (child->hasAttribute("marker_type"))
-                                {
-                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
-                                }
-                              else
-                                {
-                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
-                                }
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                legend_symbol_y[0], markertype);
-                                  pl->setAttribute("_child_id", 0);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
-                                  if (pl != nullptr)
-                                    render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                             legend_symbol_y[0], markertype, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  int marker_color_ind = 989;
-                                  if (child->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                                    }
-                                  else if (series->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                                    }
-                                  render->setMarkerColorInd(pl, marker_color_ind);
-                                  if (child->hasAttribute("marker_type"))
-                                    {
-                                      pl->setAttribute("marker_type",
-                                                       static_cast<int>(child->getAttribute("marker_type")));
-                                    }
-                                  else if (series->hasAttribute("marker_type"))
-                                    {
-                                      pl->setAttribute("marker_type",
-                                                       static_cast<int>(series->getAttribute("marker_type")));
-                                    }
-                                  if (child->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
-                                    }
-                                  else if (series->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
-                                    }
-                                  if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                                  processMarkerColorInd(pl);
-                                  got_polymarker = true;
-                                }
-                            }
-                        }
-                    }
-                  else if (mask & 2)
-                    {
-                      legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
-                      legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
-                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                      for (const auto &child : series->children())
-                        {
-                          std::shared_ptr<GRM::Element> pl;
-                          if (child->localName() == "polyline")
-                            {
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                              legend_symbol_y[0], legend_symbol_y[1]);
-                                  pl->setAttribute("_child_id", 1);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polyline[_child_id=\"1\"]");
-                                  if (pl != nullptr)
-                                    render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                           legend_symbol_y[1], 0, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  render->setLineSpec(pl, specs[spec_i]);
-                                  if (child->hasAttribute("line_color_ind"))
-                                    {
-                                      render->setLineColorInd(pl,
-                                                              static_cast<int>(child->getAttribute("line_color_ind")));
-                                    }
-                                  else
-                                    {
-                                      render->setLineColorInd(pl,
-                                                              static_cast<int>(series->getAttribute("line_color_ind")));
-                                    }
-                                }
-                            }
-                          else if (child->localName() == "polymarker")
-                            {
-                              int markertype;
-                              if (child->hasAttribute("marker_type"))
-                                {
-                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
-                                }
-                              else
-                                {
-                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
-                                }
-                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                                {
-                                  pl = render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                legend_symbol_y[0], markertype);
-                                  pl->setAttribute("_child_id", 1);
-                                  label_elem->append(pl);
-                                }
-                              else
-                                {
-                                  pl = label_elem->querySelectors("polymarker[_child_id=\"1\"]");
-                                  if (pl != nullptr)
-                                    render->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                             legend_symbol_y[0], markertype, 0.0, 0, pl);
-                                }
-                              if (pl != nullptr)
-                                {
-                                  render->setMarkerColorInd(
-                                      pl, (series->hasAttribute("marker_color_ind")
-                                               ? static_cast<int>(series->getAttribute("marker_color_ind"))
-                                               : 989));
-                                  if (child->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
-                                    }
-                                  else if (series->hasAttribute("border_color_ind"))
-                                    {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
-                                    }
-                                  processMarkerColorInd(pl);
-                                }
-                            }
-                        }
-                    }
-                  if (i < labels.size())
-                    {
-                      std::shared_ptr<GRM::Element> tx;
-                      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                        {
-                          tx = render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                                  labels[i]);
-                          tx->setAttribute("_child_id", 2);
-                          label_elem->append(tx);
-                        }
-                      else
-                        {
-                          tx = label_elem->querySelectors("text[_child_id=\"2\"]");
-                          if (tx != nullptr)
-                            render->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                               labels[i], CoordinateSpace::NDC, tx);
-                        }
-                      if (tx != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT)
-                        {
-                          if (!tx->hasAttribute("_text_align_vertical_set_by_user"))
-                            {
-                              auto text_align_vertical = GKS_K_TEXT_VALIGN_HALF;
-                              if (element->hasAttribute("text_align_vertical"))
-                                text_align_vertical = static_cast<int>(element->getAttribute("text_align_vertical"));
-                              tx->setAttribute("text_align_vertical", text_align_vertical);
-                            }
-                          if (!tx->hasAttribute("_text_align_horizontal_set_by_user"))
-                            {
-                              auto text_align_horizontal = GKS_K_TEXT_HALIGN_LEFT;
-                              if (element->hasAttribute("text_align_horizontal"))
-                                text_align_horizontal =
-                                    static_cast<int>(element->getAttribute("text_align_horizontal"));
-                              tx->setAttribute("text_align_horizontal", text_align_horizontal);
-                            }
-                        }
-                      viewport[3] -= 0.5 * dy;
-                      i += 1;
-                    }
-                  viewport[3] -= 0.03 * scale_factor;
-                  spec_i += 1;
                 }
+              viewport[3] -= 0.5 * dy;
+              viewport[3] -= 0.03 * scale_factor;
             }
         }
       gr_restorestate();
@@ -9657,6 +9690,9 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
     {
       std::shared_ptr<GRM::Element> fr, dr, text;
       double viewport[4];
+
+      auto labels_key = static_cast<std::string>(plot_parent->querySelectors("series_pie")->getAttribute("labels"));
+      auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
 
       /* clear child nodes */
       del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -9763,55 +9799,52 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
                 }
               if (fr != nullptr)
                 {
-                  for (const auto &plot_child : element->parentElement()->children()) // central_region childs
+                  auto central_region = plot_parent->querySelectors("central_region");
+                  for (const auto &child : central_region->children())
                     {
-                      if (plot_child->localName() != "central_region") continue;
-                      for (const auto &child : plot_child->children())
+                      if (child->localName() == "series_pie")
                         {
-                          if (child->localName() == "series_pie")
+                          std::shared_ptr<GRM::Element> pie_segment;
+                          pie_segment =
+                              child->querySelectors("pie_segment[_child_id=" + std::to_string(child_id - 3) + "]");
+                          if (pie_segment != nullptr)
                             {
-                              std::shared_ptr<GRM::Element> pie_segment;
-                              pie_segment =
-                                  child->querySelectors("pie_segment[_child_id=" + std::to_string(child_id - 3) + "]");
-                              if (pie_segment != nullptr)
+                              int color_ind = static_cast<int>(pie_segment->getAttribute("fill_color_ind"));
+                              auto color_rep = static_cast<std::string>(
+                                  pie_segment->getAttribute("colorrep." + std::to_string(color_ind)));
+                              fr->setAttribute("fill_color_ind", color_ind);
+                              if (!color_rep.empty())
+                                fr->setAttribute("colorrep." + std::to_string(color_ind), color_rep);
+                              if (!fr->hasAttribute("_fill_int_style_set_by_user"))
                                 {
-                                  int color_ind = static_cast<int>(pie_segment->getAttribute("fill_color_ind"));
-                                  auto color_rep = static_cast<std::string>(
-                                      pie_segment->getAttribute("colorrep." + std::to_string(color_ind)));
-                                  fr->setAttribute("fill_color_ind", color_ind);
-                                  if (!color_rep.empty())
-                                    fr->setAttribute("colorrep." + std::to_string(color_ind), color_rep);
-                                  if (!fr->hasAttribute("_fill_int_style_set_by_user"))
+                                  if (pie_segment->hasAttribute("fill_int_style"))
                                     {
-                                      if (pie_segment->hasAttribute("fill_int_style"))
-                                        {
-                                          fr->setAttribute("fill_int_style", static_cast<int>(pie_segment->getAttribute(
-                                                                                 "fill_int_style")));
-                                        }
-                                      else if (pie_segment->parentElement()->hasAttribute("fill_int_style"))
-                                        {
-                                          fr->setAttribute("fill_int_style",
-                                                           static_cast<int>(pie_segment->parentElement()->getAttribute(
-                                                               "fill_int_style")));
-                                        }
+                                      fr->setAttribute("fill_int_style",
+                                                       static_cast<int>(pie_segment->getAttribute("fill_int_style")));
                                     }
-                                  if (!fr->hasAttribute("_fill_style_set_by_user"))
+                                  else if (pie_segment->parentElement()->hasAttribute("fill_int_style"))
                                     {
-                                      if (pie_segment->hasAttribute("fill_style"))
-                                        {
-                                          fr->setAttribute("fill_style",
-                                                           static_cast<int>(pie_segment->getAttribute("fill_style")));
-                                        }
-                                      else if (pie_segment->parentElement()->hasAttribute("fill_style"))
-                                        {
-                                          fr->setAttribute("fill_style",
-                                                           static_cast<int>(pie_segment->parentElement()->getAttribute(
-                                                               "fill_style")));
-                                        }
+                                      fr->setAttribute("fill_int_style",
+                                                       static_cast<int>(pie_segment->parentElement()->getAttribute(
+                                                           "fill_int_style")));
                                     }
                                 }
-                              break;
+                              if (!fr->hasAttribute("_fill_style_set_by_user"))
+                                {
+                                  if (pie_segment->hasAttribute("fill_style"))
+                                    {
+                                      fr->setAttribute("fill_style",
+                                                       static_cast<int>(pie_segment->getAttribute("fill_style")));
+                                    }
+                                  else if (pie_segment->parentElement()->hasAttribute("fill_style"))
+                                    {
+                                      fr->setAttribute(
+                                          "fill_style",
+                                          static_cast<int>(pie_segment->parentElement()->getAttribute("fill_style")));
+                                    }
+                                }
                             }
+                          break;
                         }
                     }
                 }
@@ -11997,6 +12030,7 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
   applyMoveTransformation(element);
 
   auto name = static_cast<std::string>(element->getAttribute("name"));
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
 
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(0);
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
@@ -12018,7 +12052,7 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
         {
           lineHelper(element, context, "polyline");
         }
-      else if (redraw_ws)
+      else if (redraw_ws && !hidden)
         gr_polyline(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
     }
   else if (element->getAttribute("x1").isDouble() && element->getAttribute("x2").isDouble() &&
@@ -12032,7 +12066,7 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
       double y[2] = {y1, y2};
 
       if (element->hasAttribute("line_color_ind")) processLineColorInd(element);
-      if (redraw_ws) gr_polyline(2, x, y);
+      if (redraw_ws && !hidden) gr_polyline(2, x, y);
     }
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(1);
 }
@@ -12046,6 +12080,8 @@ static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
+
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto z = static_cast<std::string>(element->getAttribute("z"));
@@ -12071,7 +12107,7 @@ static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
   else
     {
       processSpace3d(element->parentElement()->parentElement());
-      if (redraw_ws) gr_polyline3d((int)x_vec.size(), x_p, y_p, z_p);
+      if (redraw_ws && !hidden) gr_polyline3d((int)x_vec.size(), x_p, y_p, z_p);
     }
 }
 
@@ -12086,6 +12122,7 @@ static void processPolymarker(const std::shared_ptr<GRM::Element> &element,
    */
 
   auto name = static_cast<std::string>(element->getAttribute("name"));
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
 
   applyMoveTransformation(element);
 
@@ -12110,7 +12147,7 @@ static void processPolymarker(const std::shared_ptr<GRM::Element> &element,
         }
       else
         {
-          if (redraw_ws) gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
+          if (redraw_ws && !hidden) gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
         }
     }
   else if (element->getAttribute("x").isDouble() && element->getAttribute("y").isDouble())
@@ -12131,6 +12168,8 @@ static void processPolymarker3d(const std::shared_ptr<GRM::Element> &element,
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
+
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto z = static_cast<std::string>(element->getAttribute("z"));
@@ -12156,7 +12195,7 @@ static void processPolymarker3d(const std::shared_ptr<GRM::Element> &element,
   else
     {
       processSpace3d(element->parentElement()->parentElement());
-      if (redraw_ws) gr_polymarker3d((int)x_vec.size(), x_p, y_p, z_p);
+      if (redraw_ws && !hidden) gr_polymarker3d((int)x_vec.size(), x_p, y_p, z_p);
     }
 }
 
@@ -14275,6 +14314,13 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
                 global_render->createPolymarker("x" + str, y_vec, "y" + str, x_vec, nullptr, 0, 0.0, 0, marker);
             }
         }
+      if (marker != nullptr)
+        {
+          if (element->hasAttribute("_hidden"))
+            marker->setAttribute("_hidden", true);
+          else
+            marker->removeAttribute("_hidden");
+        }
 
       if (!marker_sizes_vec.empty()) global_render->setMarkerSize(element, "marker_sizes" + str, marker_sizes_vec);
       if (!marker_color_inds_vec.empty())
@@ -14314,6 +14360,13 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
               if (marker != nullptr)
                 global_render->createPolymarker("x" + str, y_vec, "y" + str, x_vec, nullptr, 0, 0.0, 0, marker);
             }
+        }
+      if (marker != nullptr)
+        {
+          if (element->hasAttribute("_hidden"))
+            marker->setAttribute("_hidden", true);
+          else
+            marker->removeAttribute("_hidden");
         }
       global_root->setAttribute("_id", ++id);
     }
@@ -14408,6 +14461,13 @@ static void processScatter3(const std::shared_ptr<GRM::Element> &element, const 
       marker = element->querySelectors("polymarker_3d[_child_id=" + std::to_string(child_id++) + "]");
       if (marker != nullptr)
         global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec, nullptr, marker);
+    }
+  if (marker != nullptr)
+    {
+      if (element->hasAttribute("_hidden"))
+        marker->setAttribute("_hidden", true);
+      else
+        marker->removeAttribute("_hidden");
     }
 }
 
@@ -14541,6 +14601,13 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
                   if (line != nullptr)
                     global_render->createPolyline("x" + str, line_x, "y" + str, line_y, nullptr, 0, 0.0, 0, line);
                 }
+              if (line != nullptr)
+                {
+                  if (element->hasAttribute("_hidden"))
+                    line->setAttribute("_hidden", true);
+                  else
+                    line->removeAttribute("_hidden");
+                }
             }
           else if (where == "post")
             {
@@ -14571,6 +14638,13 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
                   line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
                   if (line != nullptr)
                     global_render->createPolyline("x" + str, line_x, "y" + str, line_y, nullptr, 0, 0.0, 0, line);
+                }
+              if (line != nullptr)
+                {
+                  if (element->hasAttribute("_hidden"))
+                    line->setAttribute("_hidden", true);
+                  else
+                    line->removeAttribute("_hidden");
                 }
             }
           else if (where == "mid")
@@ -14607,6 +14681,10 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
             {
               if (!line->hasAttribute("_line_color_ind_set_by_user"))
                 line->setAttribute("line_color_ind", current_line_color_ind);
+              if (element->hasAttribute("_hidden"))
+                line->setAttribute("_hidden", true);
+              else
+                line->removeAttribute("_hidden");
             }
         }
       if (mask & 2)
@@ -14654,6 +14732,11 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
                       if (*previous_line_marker_type == INT_MAX) previous_line_marker_type = plot_scatter_markertypes;
                     }
                 }
+
+              if (element->hasAttribute("_hidden"))
+                marker->setAttribute("_hidden", true);
+              else
+                marker->removeAttribute("_hidden");
             }
         }
     }
@@ -14752,6 +14835,10 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
             {
               if (!line->hasAttribute("_line_color_ind_set_by_user"))
                 line->setAttribute("line_color_ind", current_line_color_ind);
+              if (element->hasAttribute("_hidden"))
+                line->setAttribute("_hidden", true);
+              else
+                line->removeAttribute("_hidden");
             }
         }
     }
@@ -14781,6 +14868,10 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
       marker->setAttribute("z_index", 2);
       if (!marker->hasAttribute("_marker_color_ind_set_by_user"))
         marker->setAttribute("marker_color_ind", current_line_color_ind);
+      if (element->hasAttribute("_hidden"))
+        marker->setAttribute("_hidden", true);
+      else
+        marker->removeAttribute("_hidden");
     }
 }
 
@@ -15072,6 +15163,10 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
         {
           if (!line->hasAttribute("_line_width_set_by_user") && element->hasAttribute("line_width"))
             line->setAttribute("line_width", static_cast<double>(element->getAttribute("line_width")));
+          if (element->hasAttribute("_hidden"))
+            line->setAttribute("_hidden", true);
+          else
+            line->removeAttribute("_hidden");
         }
 
       global_root->setAttribute("_id", ++id);
@@ -15113,6 +15208,10 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
               marker->setAttribute("marker_type", *previous_line_marker_type++);
               if (*previous_line_marker_type == INT_MAX) previous_line_marker_type = plot_scatter_markertypes;
             }
+          if (element->hasAttribute("_hidden"))
+            marker->setAttribute("_hidden", true);
+          else
+            marker->removeAttribute("_hidden");
         }
       global_root->setAttribute("_id", ++id);
     }
@@ -15732,6 +15831,10 @@ static void processLine3(const std::shared_ptr<GRM::Element> &element, const std
   if (line != nullptr)
     {
       if (!line->hasAttribute("_line_color_ind_set_by_user")) line->setAttribute("line_color_ind", 989);
+      if (element->hasAttribute("_hidden"))
+        line->setAttribute("_hidden", true);
+      else
+        line->removeAttribute("_hidden");
     }
 }
 
@@ -19321,7 +19424,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("hide"), std::vector<std::string>{"1", "Determines whether the element will be visible or not"}},
       {std::string("draw_edges"),
        std::vector<std::string>{
-           "0", "Used in combination with x and y colormap to determine whether edges should be drawn"}},
+           "0", "Used in combination with theta and r colormap to determine whether edges should be drawn"}},
       {std::string("draw_grid"), std::vector<std::string>{"None", "Determines whether the axis has grid lines or not"}},
       {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
       {std::string("e_upwards"), std::vector<std::string>{"None", "The x-value for the upward error"}},
@@ -19374,7 +19477,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("kind"),
        std::vector<std::string>{
            "None", "Defines which kind the displayed series has. Depending on the set kind the kind can be changed"}},
-      {std::string("labels"), std::vector<std::string>{"None", "The labels which are displayed in the legend"}},
+      {std::string("label"),
+       std::vector<std::string>{"None", "The series label which will be displayed in the legend"}},
+      {std::string("labels"),
+       std::vector<std::string>{"None", "The labels for all pie segments which will be displayed in the legend"}},
       {std::string("label_pos"),
        std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
@@ -19999,45 +20105,18 @@ std::shared_ptr<GRM::Element> GRM::Render::createGridLine(int is_major, double v
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::string &labels_key,
-                                                        std::optional<std::vector<std::string>> labels,
-                                                        const std::string &specs_key,
-                                                        std::optional<std::vector<std::string>> specs,
-                                                        const std::shared_ptr<GRM::Context> &ext_context,
-                                                        const std::shared_ptr<GRM::Element> &ext_element)
+std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::shared_ptr<GRM::Element> &ext_element,
+                                                        const std::shared_ptr<GRM::Context> &ext_context)
 {
   /*!
    * This function can be used for creating a legend GRM::Element
    * This element is different compared to most of Render's GRM::Element, the legend GRM::Element will incorporate
    * plot_draw_legend code from plot.cxx and will create new GRM::Elements as child nodes in the render document
-   *
-   * \param[in] labels_key A std::string for the labels vector
-   * \param[in] labels May be an std::vector<std::string>> containing the labels
-   * \param[in] spec A std::string
    */
-
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("legend") : ext_element;
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
 
   element->setAttribute("z_index", 4);
-  element->setAttribute("specs", specs_key);
-  if (specs != std::nullopt) (*use_context)[specs_key] = *specs;
-  element->setAttribute("labels", labels_key);
-  if (labels != std::nullopt) (*use_context)[labels_key] = *labels;
-
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createPieLegend(const std::string &labels_key,
-                                                           std::optional<std::vector<std::string>> labels,
-                                                           const std::shared_ptr<GRM::Context> &ext_context,
-                                                           const std::shared_ptr<GRM::Element> &ext_element)
-{
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("legend") : ext_element;
-  std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-
-  element->setAttribute("labels", labels_key);
-  if (labels != std::nullopt) (*use_context)[labels_key] = *labels;
 
   return element;
 }
@@ -21786,6 +21865,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
+              if (element->hasAttribute("label")) new_series->setAttribute("label", element->getAttribute("label"));
               applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("ref_x_axis_location"))
                 new_series->setAttribute("ref_x_axis_location",
@@ -21966,6 +22046,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
+              if (element->hasAttribute("label")) new_series->setAttribute("label", element->getAttribute("label"));
               applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
@@ -21991,6 +22072,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               element->parentElement()->insertBefore(new_series, element);
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
+              if (element->hasAttribute("label")) new_series->setAttribute("label", element->getAttribute("label"));
               applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("ref_x_axis_location"))
                 new_series->setAttribute("ref_x_axis_location",
@@ -22053,6 +22135,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("theta", element->getAttribute("theta"));
               new_series->setAttribute("r", element->getAttribute("r"));
+              if (element->hasAttribute("label")) new_series->setAttribute("label", element->getAttribute("label"));
               applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("clip_negative"))
                 new_series->setAttribute("clip_negative", element->getAttribute("clip_negative"));
@@ -24307,6 +24390,42 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               element->setAttribute("_y_max_shift",
                                     old_shift + static_cast<double>(element->getAttribute(attr)) - std::stod(value));
               element->setAttribute("_update_required", true);
+            }
+          else if (attr == "labels" && element->localName() == "series_pie")
+            {
+              auto plot_parent = element;
+              getPlotParent(plot_parent);
+
+              auto legend = plot_parent->querySelectors("legend");
+              if (legend != nullptr)
+                {
+                  legend->setAttribute("_update_required", true);
+                  legend->setAttribute("_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                  legend->removeAttribute("_start_w");
+                  legend->removeAttribute("_start_h");
+                }
+              else
+                {
+                  global_render->createLegend();
+                }
+            }
+          else if (attr == "label")
+            {
+              auto plot_parent = element;
+              getPlotParent(plot_parent);
+
+              auto legend = plot_parent->querySelectors("legend");
+              if (legend != nullptr)
+                {
+                  legend->setAttribute("_update_required", true);
+                  legend->setAttribute("_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                  legend->removeAttribute("_start_w");
+                  legend->removeAttribute("_start_h");
+                }
+              else
+                {
+                  global_render->createLegend();
+                }
             }
 
           auto plot_parent = element;

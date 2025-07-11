@@ -301,15 +301,8 @@ public:
   std::shared_ptr<Element> createGridLine(int is_major, double value,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
-                                        const std::string &specs_key, std::optional<std::vector<std::string>> specs,
-                                        const std::shared_ptr<Context> &ext_context = nullptr,
-                                        const std::shared_ptr<Element> &ext_element = nullptr);
-
-  std::shared_ptr<Element> createPieLegend(const std::string &labels_key,
-                                           std::optional<std::vector<std::string>> labels,
-                                           const std::shared_ptr<Context> &ext_context = nullptr,
-                                           const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createLegend(const std::shared_ptr<Element> &ext_element = nullptr,
+                                        const std::shared_ptr<Context> &ext_context = nullptr);
 
   std::shared_ptr<Element> createPieSegment(const double start_angle, const double end_angle, const std::string &text,
                                             const int color_index,

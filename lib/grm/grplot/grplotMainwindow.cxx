@@ -178,6 +178,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           file_menu->addAction(grplot_widget_->getLoadFileAct());
           configuration_menu->addAction(grplot_widget_->getShowContainerAct());
           editor_menu->addAction(grplot_widget_->getAddElementAct());
+          editor_menu->addAction(grplot_widget_->getAdvancedEditorAct());
           editor_menu->addAction(grplot_widget_->getUndoAct());
           editor_menu->addAction(grplot_widget_->getRedoAct());
           context_menu->addAction(grplot_widget_->getShowContextAct());

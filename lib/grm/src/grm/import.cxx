@@ -1005,7 +1005,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       if (grm_args_values(plot[plot_i], "error_bar_style", "i", &error_bar_style))
                         grm_args_push(series[col], "error_bar_style", "i", error_bar_style);
                     }
-                  if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                  if (!labels.empty() && labels.size() > col)
+                    grm_args_push(series[col], "label", "s", labels[col].c_str());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
                 }
@@ -1030,7 +1031,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     {
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
-                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                      if (!labels.empty() && labels.size() > col)
+                        grm_args_push(series[y_cnt], "label", "s", labels[col].c_str());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
                       y_cnt += 1;
@@ -1052,8 +1054,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           cols -= x_data.size() + error_data.size();
           grm_args_push(plot[plot_i], "series", "nA", series_num, series.data());
-          if (!labels_c.empty())
-            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), series_num), labels_c.data());
         }
       else if (strEqualsAny(kind, "isosurface", "volume"))
         {
@@ -1143,10 +1143,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
           grm_args_push(plot[plot_i], "y", "nD", rows, file_data[depth][1].data());
           grm_args_push(plot[plot_i], "z", "nD", rows, file_data[depth][2].data());
-
-          if (!labels.empty() && 0 < labels.size()) labels_c.push_back(labels[0].c_str());
-          if (!labels_c.empty())
-            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), 1), labels_c.data());
+          if (!labels.empty()) grm_args_push(plot[plot_i], "label", "s", labels[0].c_str());
         }
       else if (strEqualsAny(kind, "barplot", "stem", "stairs"))
         {
@@ -1436,7 +1433,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               if (x_data.empty() && y_data.empty() && error_data.empty())
                 {
-                  if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                  if (!labels.empty() && labels.size() > col)
+                    grm_args_push(series[col], "label", "s", labels[col].c_str());
                   grm_args_push(series[col], "x", "nD", rows, x.data());
                   /* for barplot */
                   grm_args_push(series[col], "y", "nD", rows,
@@ -1476,7 +1474,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     }
                   else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     {
-                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                      if (!labels.empty() && labels.size() > col)
+                        grm_args_push(series[y_cnt], "label", "s", labels[col].c_str());
                       grm_args_push(series[y_cnt], "y", "nD", rows, file_data[depth][col].data());
                       /* for stairs */
                       grm_args_push(series[y_cnt], "z", "nD", rows, file_data[depth][col].data());
@@ -1503,9 +1502,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           cols -= x_data.size() + error_data.size();
           grm_args_push(plot[plot_i], "series", "nA", series_num, series.data());
-
-          if (!labels_c.empty())
-            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), series_num), labels_c.data());
         }
       else if (strEqualsAny(kind, "histogram"))
         {
@@ -1798,7 +1794,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               if (x_data.empty() && y_data.empty() && error_data.empty())
                 {
-                  if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                  if (!labels.empty() && labels.size() > col)
+                    grm_args_push(series[col], "label", "s", labels[col].c_str());
                   grm_args_push(series[col], "x", "nD", rows,
                                 file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
@@ -1832,7 +1829,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     }
                   else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
                     {
-                      if (!labels.empty() && labels.size() > col) labels_c.push_back(labels[col].c_str());
+                      if (!labels.empty() && labels.size() > col)
+                        grm_args_push(series[y_cnt], "label", "s", labels[col].c_str());
                       grm_args_push(series[y_cnt], "weights", "nD", rows, file_data[depth][col].data());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
@@ -1856,9 +1854,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           cols -= x_data.size() + error_data.size();
           grm_args_push(plot[plot_i], "series", "nA", series_num, series.data());
-
-          if (!labels_c.empty())
-            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), series_num), labels_c.data());
         }
       else if (strcmp(kind, "pie") == 0)
         {
@@ -1874,10 +1869,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
 
           grm_args_push(plot[plot_i], "x", "nD", cols, x.data());
-          if (!labels_c.empty())
-            {
-              grm_args_push(plot[plot_i], "labels", "nS", cols, labels_c.data());
-            }
+          grm_args_push(plot[plot_i], "labels", "nS", labels_c.size(), labels_c.data());
           if (rows >= 4)
             {
               for (col = 0; col < cols; col++)
@@ -1907,18 +1899,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                               "the number of columns is odd -> 1 column is missing.\n");
               cols -= 1;
             }
-          for (col = 0; col < cols; col++)
-            {
-              if (!labels.empty() && col < labels.size()) labels_c.push_back(labels[col].c_str());
-            }
-          if (!labels_c.empty())
-            grm_args_push(plot[plot_i], "labels", "nS", grm_min(labels_c.size(), cols), labels_c.data());
 
           for (col = 0; col <= cols / 2; col += 2)
             {
               series[col / 2] = grm_args_new();
               grm_args_push(series[col / 2], "theta", "nD", rows, file_data[depth][col].data());
               grm_args_push(series[col / 2], "r", "nD", rows, file_data[depth][col + 1].data());
+              if (!labels.empty() && col / 2 < labels.size())
+                grm_args_push(series[col / 2], "label", "s", labels[col / 2].c_str());
             }
           grm_args_push(plot[plot_i], "series", "nA", cols / 2, series.data());
         }
