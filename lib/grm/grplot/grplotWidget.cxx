@@ -464,7 +464,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       add_seperator_act = new QAction(this);
     }
 
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
 #if !defined(NO_XERCES_C)
       schema_tree = grm_load_graphics_tree_schema();
@@ -1411,7 +1411,7 @@ static const std::string ACCUMULATED_TOOLTIP_TEMPLATE{"\
 
 void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
       if (table_widget != nullptr && !table_widget->isVisible() && show_context_action->isChecked())
         show_context_action->setChecked(false);
@@ -2154,7 +2154,7 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
   if (enable_editor)
     {
-      if (event->button() == Qt::LeftButton) attributeEditEvent();
+      if (event->button() == Qt::MouseButton::LeftButton) attributeEditEvent();
     }
   else
     {
@@ -3558,7 +3558,7 @@ void GRPlotWidget::resetPixmap()
 
 void GRPlotWidget::loadFileSlot()
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
 #ifndef NO_XERCES_C
       std::string path =
@@ -3588,7 +3588,7 @@ void GRPlotWidget::loadFileSlot()
 
 void GRPlotWidget::saveFileSlot()
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
       if (grm_get_render() == nullptr)
         {
@@ -3888,7 +3888,7 @@ void GRPlotWidget::generateLinearContextSlot()
 
 void GRPlotWidget::undoSlot()
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
 #ifndef NO_XERCES_C
       std::string path = std::string(grm_tmp_dir) + "_history" + std::to_string(--history_count);
@@ -3931,7 +3931,7 @@ void GRPlotWidget::undoSlot()
 
 void GRPlotWidget::redoSlot()
 {
-  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
 #ifndef NO_XERCES_C
       std::string path = std::string(grm_tmp_dir) + "_forward_history" + std::to_string(--history_forward_count);
@@ -4382,7 +4382,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
   bool error = false;
   auto central_region = plot_parent->querySelectors("central_region");
   if (central_region == nullptr) return;
-  bool edit_enabled = getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0;
+  bool edit_enabled = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
 
   // hide all menu elements
   if (tree_widget != nullptr) // dummy elem which only exist in default grplot case

@@ -161,7 +161,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       menu->addMenu(options_menu);
       menu->addMenu(modi_menu);
 
-      if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+      if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
         {
           editor_menu = new QMenu(tr("&Editor"));
           configuration_menu = editor_menu->addMenu(tr("&Show"));

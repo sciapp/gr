@@ -267,7 +267,7 @@ std::map<int, std::weak_ptr<GRM::Element>> &boundingMap()
 static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
-static bool bounding_boxes = (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0);
+static bool bounding_boxes = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 static bool first_call = true;
 static bool highlighted_attr_exist = false;
@@ -5477,6 +5477,13 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   else
     {
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
+      if (kind == "pie")
+        {
+          xmin = 0.0;
+          xmax = 1.0;
+          ymin = 0.0;
+          ymax = 1.0;
+        }
       if (!central_region->hasAttribute("_window_set_by_user"))
         global_render->setWindow(central_region, xmin, xmax, ymin, ymax);
     }
@@ -6526,6 +6533,7 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
       auto kind = static_cast<std::string>(plot_element->getAttribute("_kind"));
 
       if (kind != "pie" && xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
+      if (kind == "pie") gr_setwindow(0, 1, 0, 1);
       if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
         {
           auto zmin = static_cast<double>(element->getAttribute("window_z_min"));
