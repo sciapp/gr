@@ -1,5 +1,7 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
+#include "PreviewTextWidget.hxx"
+
 #include <gks.h>
 
 static std::string context_name;
@@ -561,23 +563,48 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           text_label = QString(cur_attr_name.c_str());
           auto label = new QLabel(text_label);
           label->setToolTip(tooltip_string);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-          if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
-                  context_attributes.end() &&
-              static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
+#if QT_VERSION < QT_VERSION_CHECK(6, 4, 0)
+          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
+            {
+#endif
+              if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
+                      context_attributes.end() &&
+                  static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
+                {
+                  auto widget = new QWidget();
+                  auto grid_layout = new QGridLayout();
+                  auto button = new QPushButton();
+                  connect(button, &QPushButton::clicked, [=]() {
+                    if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+                      context_name =
+                          static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                  });
+                  connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+                  button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+#else
+              button->setText("Ref");
+#endif
+                  grid_layout->addWidget(label, 0, 0, 1, 2);
+                  grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+                  grid_layout->addWidget(button, 0, 4);
+                  widget->setLayout(grid_layout);
+                  form->addRow(widget);
+                }
+#if QT_VERSION < QT_VERSION_CHECK(6, 4, 0)
+            }
+#endif
+          else if (cur_attr_name == "text" || cur_attr_name == "x_label_3d" || cur_attr_name == "y_label_3d" ||
+                   cur_attr_name == "z_label_3d" || cur_attr_name == "tick_label")
             {
               auto widget = new QWidget();
               auto grid_layout = new QGridLayout();
               auto button = new QPushButton();
-              connect(button, &QPushButton::clicked, [=]() {
-                if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
-                  context_name = static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-              });
-              connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+              connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
               button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
 #else
-              button->setText("Ref");
+              button->setText("Preview");
 #endif
               grid_layout->addWidget(label, 0, 0, 1, 2);
               grid_layout->addWidget(line_edit, 0, 2, 1, 2);
@@ -589,36 +616,10 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             {
               form->addRow(label, line_edit);
             }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           if (!advanced_editor)
             form->setRowVisible(form->rowCount() - 1,
                                 !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
-#else
-          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-            {
-              if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
-                      context_attributes.end() &&
-                  static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
-                {
-                  auto widget = new QWidget();
-                  auto grid_layout = new QGridLayout();
-                  auto button = new QPushButton("Ref");
-                  connect(button, &QPushButton::clicked, [=]() {
-                    if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
-                      context_name =
-                          static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-                  });
-                  connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
-                  grid_layout->addWidget(label, 0, 0, 1, 2);
-                  grid_layout->addWidget(line_edit, 0, 2, 1, 2);
-                  grid_layout->addWidget(button, 0, 4);
-                  widget->setLayout(grid_layout);
-                  form->addRow(widget);
-                }
-              else
-                {
-                  form->addRow(label, line_edit);
-                }
-            }
 #endif
         }
 
@@ -834,6 +835,24 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                   static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
                           });
                           connect(button, SIGNAL(clicked()), this, SLOT(openDataContext()));
+                          grid_layout->addWidget(label, 0, 0, 1, 2);
+                          grid_layout->addWidget(line_edit, 0, 2, 1, 2);
+                          grid_layout->addWidget(button, 0, 4);
+                          widget->setLayout(grid_layout);
+                          form->addRow(widget);
+                        }
+                      else if (attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
+                               attr_name == "z_label_3d" || attr_name == "tick_label")
+                        {
+                          auto widget = new QWidget();
+                          auto grid_layout = new QGridLayout();
+                          auto button = new QPushButton();
+                          connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+                          button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+#else
+                          button->setText("Preview");
+#endif
                           grid_layout->addWidget(label, 0, 0, 1, 2);
                           grid_layout->addWidget(line_edit, 0, 2, 1, 2);
                           grid_layout->addWidget(button, 0, 4);
@@ -2281,4 +2300,53 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
 void EditElementWidget::openDataContext()
 {
   grplot_widget->highlightTableWidgetAt(context_name);
+}
+
+void EditElementWidget::openTextPreview()
+{
+  auto current_selection = grplot_widget->getCurrentSelection();
+  if (current_selection != nullptr)
+    {
+      std::string text;
+      int text_color = 1, scientific_format = 1;
+
+      for (const auto &attr : {"text", "x_label_3d", "y_label_3d", "z_label_3d", "tick_label"})
+        {
+          if ((*current_selection)->getRef()->hasAttribute(attr))
+            {
+              text = static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr));
+              break;
+            }
+        }
+      if ((*current_selection)->getRef()->hasAttribute("text_color_ind"))
+        text_color = static_cast<int>((*current_selection)->getRef()->getAttribute("text_color_ind"));
+
+      if ((*current_selection)->getRef()->hasAttribute("scientific_format"))
+        scientific_format = static_cast<int>((*current_selection)->getRef()->getAttribute("scientific_format"));
+
+      auto bbox_x_min = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_y_max"));
+      auto width = bbox_x_max - bbox_x_min, height = bbox_y_max - bbox_y_min;
+
+      if ((*current_selection)->getRef()->hasAttribute("char_up_x") ||
+          (*current_selection)->getRef()->hasAttribute("char_up_y"))
+        {
+          auto char_up_x = static_cast<int>((*current_selection)->getRef()->getAttribute("char_up_x"));
+          auto char_up_y = static_cast<int>((*current_selection)->getRef()->getAttribute("char_up_y"));
+
+          if (abs(char_up_x) > abs(char_up_y))
+            {
+              auto tmp = width;
+              width = height;
+              height = tmp;
+            }
+        }
+
+      QString title((text + " Preview").c_str());
+      auto widget = new PreviewTextWidget(text, scientific_format, text_color, width, height);
+      widget->setWindowTitle(title);
+      widget->show();
+    }
 }
