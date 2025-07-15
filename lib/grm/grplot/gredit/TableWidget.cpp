@@ -126,7 +126,7 @@ void TableWidget::applyTableChanges(int row, int column)
       if ((*this->context)[context_key].doubleUsed())
         {
           auto vec = GRM::get<std::vector<double>>((*this->context)[context_key]);
-          if (vec.size() > row)
+          if (vec.size() >= row)
             {
               vec[row - 1] = atof(new_value.c_str());
               (*this->context)[context_key] = vec;
@@ -140,7 +140,7 @@ void TableWidget::applyTableChanges(int row, int column)
       else if ((*this->context)[context_key].intUsed())
         {
           auto vec = GRM::get<std::vector<int>>((*this->context)[context_key]);
-          if (vec.size() > row)
+          if (vec.size() >= row)
             {
               vec[row - 1] = atoi(new_value.c_str());
               (*this->context)[context_key] = vec;
@@ -154,7 +154,7 @@ void TableWidget::applyTableChanges(int row, int column)
       else
         {
           auto vec = GRM::get<std::vector<std::string>>((*this->context)[context_key]);
-          if (vec.size() > row)
+          if (vec.size() >= row)
             {
               vec[row - 1] = new_value;
               (*this->context)[context_key] = vec;
@@ -164,6 +164,12 @@ void TableWidget::applyTableChanges(int row, int column)
               // only allow to edit non empty lines to prevent multiple complications with size mismatches
               this->item(row, column)->setText("");
             }
+        }
+
+      // update the element so the data changes get applied to the picture
+      for (const auto &referenced_elem : referenced_attributes)
+        {
+          referenced_elem.getRef()->setAttribute("_update_required", true);
         }
       this->grplot_widget->redraw();
     }
