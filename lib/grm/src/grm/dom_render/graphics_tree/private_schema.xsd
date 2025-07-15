@@ -83,6 +83,25 @@
         </xs:complexType>
     </xs:element>
 
+    <!-- definition of overlay -->
+    <xs:element name="overlay">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of overlay_element -->
+    <xs:element name="overlay_element">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
+            <xs:attributeGroup ref="_viewport"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- definition of plot -->
     <xs:element name="plot">
         <xs:complexType>

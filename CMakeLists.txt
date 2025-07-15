@@ -1157,6 +1157,7 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/gredit/ColorPickerRGB.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
     lib/grm/grplot/gredit/EditElementWidget.cpp
+    lib/grm/grplot/gredit/PreviewTextWidget.cpp
     lib/grm/grplot/gredit/TableWidget.cpp
     lib/grm/grplot/gredit/TreeWidget.cpp
     lib/grm/grplot/grplotWidget.cxx
@@ -1168,6 +1169,7 @@ if(Qt6Widgets_FOUND
   target_link_libraries(grplotWidget PUBLIC gks_shared)
   target_link_libraries(grplotWidget PUBLIC GR::GR)
   target_link_libraries(grplotWidget PUBLIC Qt6::Core Qt6::Widgets)
+  target_link_libraries(grplotWidget PUBLIC GR::qt6gr)
   target_include_directories(grplotWidget INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget>)
   target_compile_definitions(grplotWidget PRIVATE GRDIR="${GR_DIRECTORY}")
   if(NOT TARGET XercesC::XercesC)
@@ -1399,6 +1401,7 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/ColorPickerRGB.cpp
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
       lib/grm/grplot/gredit/EditElementWidget.cpp
+      lib/grm/grplot/gredit/PreviewTextWidget.cpp
       lib/grm/grplot/gredit/TableWidget.cpp
       lib/grm/grplot/gredit/TreeWidget.cpp
       lib/grm/grplot/grplot.cxx
@@ -1411,7 +1414,8 @@ if((Qt6Widgets_FOUND
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       target_link_libraries(
         grplot
-        PRIVATE Qt6::Widgets
+        PRIVATE GR::qt6gr
+                Qt6::Widgets
                 Qt6::Core
                 Qt6::Gui
                 grm_shared
@@ -1422,7 +1426,8 @@ if((Qt6Widgets_FOUND
     else()
       target_link_libraries(
         grplot
-        PRIVATE Qt5::Widgets
+        PRIVATE GR::qt5gr
+                Qt5::Widgets
                 Qt5::Core
                 Qt5::Gui
                 grm_shared
@@ -1556,6 +1561,14 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
@@ -1566,6 +1579,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cpp
@@ -1584,6 +1598,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx

@@ -243,6 +243,7 @@ private slots:
   void redoSlot();
   void selectableGridSlot();
   void advancedEditorSlot();
+  void addTextSlot();
 
 private:
   struct MouseState
@@ -359,6 +360,7 @@ private:
   ColorPickerRGB *color_picker_rgb;
   bool hide_grid_bbox = true;
   bool enable_advanced_editor = false;
+  int add_pos_x, add_pos_y;
 
   QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
   QAction *sum_act, *max_act;
@@ -386,6 +388,9 @@ private:
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
       *twin_x_axis_act, *twin_y_axis_act;
   QCursor *csr;
+  QMenu *add_overlay_menu;
+  QAction *add_text_act;
+  bool overlay_element_edit = false;
 
   void resetPixmap();
   void moveEvent(QMoveEvent *event) override;
@@ -399,6 +404,7 @@ private:
   void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);
+  void overlayElementEdit();
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
