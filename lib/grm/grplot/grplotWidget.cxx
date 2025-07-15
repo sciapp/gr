@@ -2246,6 +2246,7 @@ void GRPlotWidget::marginalHeatmapLine()
 
 void GRPlotWidget::line()
 {
+  bool update;
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
@@ -2257,10 +2258,14 @@ void GRPlotWidget::line()
     }
 
   // to get the same lines then before all lines have to exist during render call so that the line_spec work properly
+  grm_get_render()->getAutoUpdate(&update);
+  grm_get_render()->setAutoUpdate(false);
   for (const auto &elem : plot_elem->querySelectorsAll("series_line"))
     {
+      elem->removeAttribute("line_color_ind");
       elem->setAttribute("_update_required", true);
     }
+  grm_get_render()->setAutoUpdate(update);
   redraw();
 }
 
@@ -2519,6 +2524,7 @@ void GRPlotWidget::scatter()
 
 void GRPlotWidget::barplot()
 {
+  bool update;
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
@@ -2535,16 +2541,20 @@ void GRPlotWidget::barplot()
     }
 
   // to get the same bars then before all bars have to exist during render call so that the line_spec work properly
+  grm_get_render()->getAutoUpdate(&update);
+  grm_get_render()->setAutoUpdate(false);
   for (const auto &elem : plot_elem->querySelectorsAll("series_barplot"))
     {
       elem->removeAttribute("fill_color_ind");
       elem->setAttribute("_update_required", true);
     }
+  grm_get_render()->setAutoUpdate(update);
   redraw();
 }
 
 void GRPlotWidget::stairs()
 {
+  bool update;
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
@@ -2561,10 +2571,14 @@ void GRPlotWidget::stairs()
     }
 
   // to get the same lines then before all lines have to exist during render call so that the line_spec work properly
+  grm_get_render()->getAutoUpdate(&update);
+  grm_get_render()->setAutoUpdate(false);
   for (const auto &elem : plot_elem->querySelectorsAll("series_stairs"))
     {
       elem->setAttribute("_update_required", true);
+      elem->removeAttribute("line_color_ind");
     }
+  grm_get_render()->setAutoUpdate(update);
   redraw();
 }
 
@@ -4070,21 +4084,34 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   // to get the same lines then before all lines have to exist during render call so that the line_spec
                   // work properly
+                  bool update;
+                  grm_get_render()->getAutoUpdate(&update);
+                  grm_get_render()->setAutoUpdate(false);
                   for (const auto &elem : global_root->querySelectorsAll("series_line"))
                     {
                       elem->setAttribute("_update_required", true);
+                      elem->removeAttribute("line_color_ind");
                     }
+                  grm_get_render()->setAutoUpdate(update);
                 }
               if (strcmp(value, "barplot") == 0 || strcmp(value, "stairs") == 0)
                 {
                   // to get the same barplots then before all lines have to exist during render call so that the
                   // line_spec work properly
+                  bool update;
+                  grm_get_render()->getAutoUpdate(&update);
+                  grm_get_render()->setAutoUpdate(false);
                   for (const auto &elem : global_root->querySelectorsAll("series_" + std::string(value)))
                     {
-                      if (strcmp(value, "barplot") == 0) elem->removeAttribute("fill_color_ind");
+                      if (strcmp(value, "barplot") == 0)
+                        elem->removeAttribute("fill_color_ind");
+                      else
+                        elem->removeAttribute("line_color_ind");
                       elem->setAttribute("_update_required", true);
                     }
+                  grm_get_render()->setAutoUpdate(update);
                 }
+
               redraw();
             }
           else if (words[0] == "mouseMoveEvent" && words.size() == 3)

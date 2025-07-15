@@ -6090,6 +6090,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
    * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
    * functions like `gr_axis` modify the axis text based on the chosen encoding. */
   processTextEncoding(active_figure);
+  global_render->processScale(plot_parent);
 
   if (axis_elem->hasAttribute("location")) location = static_cast<std::string>(axis_elem->getAttribute("location"));
   axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
@@ -11483,6 +11484,8 @@ static void processHistogram(const std::shared_ptr<GRM::Element> &element, const
 
   if (element->hasAttribute("fill_color_ind"))
     bar_color_index = static_cast<int>(element->getAttribute("fill_color_ind"));
+  else
+    element->setAttribute("fill_color_ind", bar_color_index);
 
   plot_parent = element->parentElement();
   getPlotParent(plot_parent);
@@ -12547,7 +12550,8 @@ static void processPolarLine(const std::shared_ptr<GRM::Element> &element, const
       gr_inqlinecolorind(&current_line_color_ind);
       if (element->hasAttribute("line_color_ind"))
         current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-      element->setAttribute("line_color_ind", current_line_color_ind);
+      else
+        element->setAttribute("line_color_ind", current_line_color_ind);
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -12574,6 +12578,8 @@ static void processPolarLine(const std::shared_ptr<GRM::Element> &element, const
       gr_inqmarkercolorind(&current_marker_color_ind);
       if (element->hasAttribute("marker_color_ind"))
         current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
+      else
+        element->setAttribute("marker_color_ind", current_marker_color_ind);
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -12665,7 +12671,7 @@ static void processPolarScatter(const std::shared_ptr<GRM::Element> &element,
       gr_inqmarkercolorind(&current_marker_color_ind);
       if (element->hasAttribute("marker_color_ind"))
         current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
-      if (!marker->hasAttribute("_marker_color_ind_set_by_user"))
+      else
         marker->setAttribute("marker_color_ind", current_marker_color_ind);
       if (element->hasAttribute("marker_size") && !marker->hasAttribute("_marker_size_set_by_user"))
         {
@@ -14641,6 +14647,8 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
           gr_inqlinecolorind(&current_line_color_ind);
           if (element->hasAttribute("line_color_ind"))
             current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
+          else
+            element->setAttribute("line_color_ind", current_line_color_ind);
           if (element->hasAttribute("step_where"))
             {
               where = static_cast<std::string>(element->getAttribute("step_where"));
@@ -14777,6 +14785,8 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
           gr_inqmarkercolorind(&current_marker_color_ind);
           if (element->hasAttribute("line_color_ind"))
             current_marker_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
+          else
+            element->setAttribute("line_color_ind", current_marker_color_ind);
           if (is_vertical)
             {
               marker_x = y_vec, marker_y = x_vec;
@@ -14898,6 +14908,8 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
           gr_inqlinecolorind(&current_line_color_ind);
           if (element->hasAttribute("line_color_ind"))
             current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
+          else
+            element->setAttribute("line_color_ind", current_line_color_ind);
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
               line = global_render->createPolyline(stem_x[0], stem_x[1], stem_y[0], stem_y[1]);
@@ -15221,6 +15233,10 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
       gr_inqlinecolorind(&current_line_color_ind);
       if (element->hasAttribute("_line_color_ind_set_by_user"))
         current_line_color_ind = static_cast<int>(element->getAttribute("_line_color_ind_set_by_user"));
+      else if (element->hasAttribute("line_color_ind"))
+        current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
+      else
+        element->setAttribute("line_color_ind", current_line_color_ind);
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
 
@@ -15255,6 +15271,10 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
     {
       int current_marker_color_ind;
       gr_inqmarkercolorind(&current_marker_color_ind);
+      if (element->hasAttribute("marker_color_ind"))
+        current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
+      else
+        element->setAttribute("marker_color_ind", current_marker_color_ind);
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
 
