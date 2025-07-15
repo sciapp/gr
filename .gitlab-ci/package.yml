@@ -16,9 +16,9 @@ packages-tar:
       "artifacts-windows-32bit      | Windows-i686" \
       "artifacts-windows-64bit      | Windows-x86_64" \
       "artifacts-windows-64bit-msvc | Windows-x86_64-msvc" \
-      "artifacts-debian10           | Debian-x86_64" \
-      "artifacts-debian10-armhf     | Debian-armhf" \
-      "artifacts-debian10-aarch64   | Debian-aarch64" \
+      "artifacts-debian11           | Debian-x86_64" \
+      "artifacts-debian11-armhf     | Debian-armhf" \
+      "artifacts-debian11-aarch64   | Debian-aarch64" \
       "artifacts-ubuntu2004         | Ubuntu-x86_64" \
       "artifacts-centos7            | CentOS-x86_64" \
       "artifacts-centos7-32bit      | CentOS-i386" \

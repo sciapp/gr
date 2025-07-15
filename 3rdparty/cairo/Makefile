@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
@@ -10,6 +12,11 @@ CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=10.15
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
 CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=10.15
+endif
+
+CAIRO_EXTRA_CFLAGS ?=
+ifeq ($(shell [[ "$(CC)" =~ -mingw ]] && echo mingw),mingw)
+CAIRO_EXTRA_CFLAGS += -D_FORTIFY_SOURCE=0
 endif
 
 ifeq ($(DOWNLOAD_CMD),)
@@ -38,7 +45,7 @@ $(PREFIX)/src/cairo-$(VERSION)/configure: $(PREFIX)/src/cairo-$(VERSION).tar.xz
 
 $(PREFIX)/src/cairo-$(VERSION)/Makefile: $(PREFIX)/src/cairo-$(VERSION)/configure $(PREFIX)/lib/libz.a $(PREFIX)/lib/libpng.a $(PREFIX)/lib/libfreetype.a $(PREFIX)/lib/libpixman-1.a
 	cd $(PREFIX)/src/cairo-$(VERSION) && \
-	export CFLAGS="-O -fPIC" && \
+	export CFLAGS="-O -fPIC $(CAIRO_EXTRA_CFLAGS)" && \
 	export LIBS=$(PREFIX)/lib/libz.a && \
 	export png_REQUIRES=libpng16 && \
 	export png_CFLAGS=-I$(PREFIX)/include && \
@@ -80,7 +87,7 @@ $(PREFIX)/src/cairo-$(VERSION)/Makefile: $(PREFIX)/src/cairo-$(VERSION)/configur
 	touch $@
 
 $(PREFIX)/lib/libcairo.a: $(PREFIX)/src/cairo-$(VERSION)/Makefile
-	export CFLAGS="-O -fPIC" && \
+	export CFLAGS="-O -fPIC $(CAIRO_EXTRA_CFLAGS)" && \
 	export LIBS=$(PREFIX)/lib/libz.a && \
 	export png_REQUIRES=libpng16 && \
 	export png_CFLAGS=-I$(PREFIX)/include && \
