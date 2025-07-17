@@ -21936,7 +21936,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "reset_ranges",
   };
   std::vector<std::string> plot_critical_attributes{
-      "colormap", "colormap_inverted", "r_log", "theta_flip", "x_flip", "x_log", "y_flip", "y_log", "z_flip", "z_log",
+      "colormap", "colormap_inverted", "r_log",     "theta_flip", "x_flip", "x_lim_max", "x_lim_min", "x_log",
+      "y_flip",   "y_lim_max",         "y_lim_min", "y_log",      "z_flip", "z_lim_max", "z_lim_min", "z_log",
   };
   std::vector<std::string> integral_critical_attributes{
       "int_lim_high",
@@ -22842,7 +22843,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           child->setAttribute("_update_required", true);
 
                           // reset data when log is set to false
-                          if (attr == "x_log" || attr == "x_flip")
+                          if (attr == "x_log" || attr == "x_flip" || attr == "x_lim_max" || attr == "x_lim_min")
                             {
                               element->setAttribute("_update_limits", true);
 
@@ -22873,7 +22874,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                     }
                                 }
                             }
-                          if (attr == "y_log" || attr == "y_flip")
+                          if (attr == "y_log" || attr == "y_flip" || attr == "y_lim_max" || attr == "y_lim_min")
                             {
                               element->setAttribute("_update_limits", true);
 
@@ -22903,7 +22904,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                     }
                                 }
                             }
-                          if (attr == "z_log" || attr == "z_flip")
+                          if (attr == "z_log" || attr == "z_flip" || attr == "z_lim_max" || attr == "z_lim_min")
                             {
                               element->setAttribute("_update_limits", true);
 

@@ -16,6 +16,9 @@ public:
                             bool help_mode = false);
   ~GRPlotMainWindow() override;
 
+protected:
+  void keyPressEvent(QKeyEvent *event) override;
+
 private:
   GRPlotWidget *grplot_widget_;
   QMenuBar *menu;
@@ -23,6 +26,8 @@ private:
   QMenu *configuration_menu, *context_menu, *add_context_data;
   QMenu *type_sub_menu, *marginal_sub_menu, *algo_sub_menu, *log_sub_menu, *flip_sub_menu, *orientation_sub_menu,
       *aspect_ratio_sub_menu, *location_sub_menu;
+  QLineEdit *find_line_edit;
+  QTextBrowser *message;
 
 private slots:
   void hideAlgoMenu();
@@ -38,6 +43,7 @@ private slots:
   void hideLocationSubMenu();
   void showLocationSubMenu();
   void addSeperator();
+  void findButtonClickedSlot();
 };
 
 #endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */

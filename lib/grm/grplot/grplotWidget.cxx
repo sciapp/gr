@@ -343,126 +343,124 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
               QApplication::quit();
             }
         }
-
-      heatmap_act = new QAction(tr("&Heatmap"), this);
-      connect(heatmap_act, &QAction::triggered, this, &GRPlotWidget::heatmap);
-      marginal_heatmap_all_act = new QAction(tr("&Type 1 all"), this);
-      connect(marginal_heatmap_all_act, &QAction::triggered, this, &GRPlotWidget::marginalHeatmapAll);
-      marginal_heatmap_line_act = new QAction(tr("&Type 2 line"), this);
-      connect(marginal_heatmap_line_act, &QAction::triggered, this, &GRPlotWidget::marginalHeatmapLine);
-      surface_act = new QAction(tr("&Surface"), this);
-      connect(surface_act, &QAction::triggered, this, &GRPlotWidget::surface);
-      wireframe_act = new QAction(tr("&Wireframe"), this);
-      connect(wireframe_act, &QAction::triggered, this, &GRPlotWidget::wireframe);
-      contour_act = new QAction(tr("&Contour"), this);
-      connect(contour_act, &QAction::triggered, this, &GRPlotWidget::contour);
-      imshow_act = new QAction(tr("&Imshow"), this);
-      connect(imshow_act, &QAction::triggered, this, &GRPlotWidget::imshow);
-      sum_act = new QAction(tr("&Sum"), this);
-      connect(sum_act, &QAction::triggered, this, &GRPlotWidget::sumAlgorithm);
-      max_act = new QAction(tr("&Maximum"), this);
-      connect(max_act, &QAction::triggered, this, &GRPlotWidget::maxAlgorithm);
-      contourf_act = new QAction(tr("&Contourf"), this);
-      connect(contourf_act, &QAction::triggered, this, &GRPlotWidget::contourf);
-      line_act = new QAction(tr("&Line"), this);
-      connect(line_act, &QAction::triggered, this, &GRPlotWidget::line);
-      scatter_act = new QAction(tr("&Scatter"), this);
-      connect(scatter_act, &QAction::triggered, this, &GRPlotWidget::scatter);
-      volume_act = new QAction(tr("&Volume"), this);
-      connect(volume_act, &QAction::triggered, this, &GRPlotWidget::volume);
-      isosurface_act = new QAction(tr("&Isosurface"), this);
-      connect(isosurface_act, &QAction::triggered, this, &GRPlotWidget::isosurface);
-      line3_act = new QAction(tr("&Line3"), this);
-      connect(line3_act, &QAction::triggered, this, &GRPlotWidget::line3);
-      trisurf_act = new QAction(tr("&Trisurface"), this);
-      connect(trisurf_act, &QAction::triggered, this, &GRPlotWidget::trisurf);
-      tricont_act = new QAction(tr("&Tricontour"), this);
-      connect(tricont_act, &QAction::triggered, this, &GRPlotWidget::tricont);
-      scatter3_act = new QAction(tr("&Scatter3"), this);
-      connect(scatter3_act, &QAction::triggered, this, &GRPlotWidget::scatter3);
-      barplot_act = new QAction(tr("&Barplot"), this);
-      connect(barplot_act, &QAction::triggered, this, &GRPlotWidget::barplot);
-      stairs_act = new QAction(tr("&Stairs"), this);
-      connect(stairs_act, &QAction::triggered, this, &GRPlotWidget::stairs);
-      stem_act = new QAction(tr("&Stem"), this);
-      connect(stem_act, &QAction::triggered, this, &GRPlotWidget::stem);
-      shade_act = new QAction(tr("&Shade"), this);
-      connect(shade_act, &QAction::triggered, this, &GRPlotWidget::shade);
-      hexbin_act = new QAction(tr("&Hexbin"), this);
-      connect(hexbin_act, &QAction::triggered, this, &GRPlotWidget::hexbin);
-      polar_line_act = new QAction(tr("&Polar Line"), this);
-      connect(polar_line_act, &QAction::triggered, this, &GRPlotWidget::polarLine);
-      polar_scatter_act = new QAction(tr("&Polar Scatter"), this);
-      connect(polar_scatter_act, &QAction::triggered, this, &GRPlotWidget::polarScatter);
-
-      hidePlotTypeMenuElements();
-      moveable_mode_act = new QAction(tr("&Disable movable transformation"), this);
-      connect(moveable_mode_act, &QAction::triggered, this, &GRPlotWidget::moveableMode);
-
-      x_log_act = new QAction(tr("&X Log"), this);
-      connect(x_log_act, &QAction::triggered, this, &GRPlotWidget::xLogSlot);
-      y_log_act = new QAction(tr("&Y Log"), this);
-      connect(y_log_act, &QAction::triggered, this, &GRPlotWidget::yLogSlot);
-      z_log_act = new QAction(tr("&Z Log"), this);
-      connect(z_log_act, &QAction::triggered, this, &GRPlotWidget::zLogSlot);
-      r_log_act = new QAction(tr("&R Log"), this);
-      connect(r_log_act, &QAction::triggered, this, &GRPlotWidget::rLogSlot);
-      x_flip_act = new QAction(tr("&X Flip"), this);
-      connect(x_flip_act, &QAction::triggered, this, &GRPlotWidget::xFlipSlot);
-      y_flip_act = new QAction(tr("&Y Flip"), this);
-      connect(y_flip_act, &QAction::triggered, this, &GRPlotWidget::yFlipSlot);
-      z_flip_act = new QAction(tr("&Z Flip"), this);
-      connect(z_flip_act, &QAction::triggered, this, &GRPlotWidget::zFlipSlot);
-      theta_flip_act = new QAction(tr("&Theta Flip"), this);
-      connect(theta_flip_act, &QAction::triggered, this, &GRPlotWidget::thetaFlipSlot);
-
-      accelerate_act = new QAction(tr("&Accelerate"), this);
-      connect(accelerate_act, &QAction::triggered, this, &GRPlotWidget::accelerateSlot);
-      polar_with_pan_act = new QAction(tr("&Polar Pan"), this);
-      connect(polar_with_pan_act, &QAction::triggered, this, &GRPlotWidget::polarWithPanSlot);
-      keep_window_act = new QAction(tr("&Keep Window"), this);
-      connect(keep_window_act, &QAction::triggered, this, &GRPlotWidget::keepWindowSlot);
-      colormap_act = new QAction(tr("&Colormap"), this);
-      connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
-
-      vertical_orientation_act = new QAction(tr("&Vertical"), this);
-      connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
-      horizontal_orientation_act = new QAction(tr("&Horizontal"), this);
-      connect(horizontal_orientation_act, &QAction::triggered, this, &GRPlotWidget::horizontalOrientationSlot);
-      keep_aspect_ratio_act = new QAction(tr("&Keep Aspectratio"), this);
-      connect(keep_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::keepAspectRatioSlot);
-      only_square_aspect_ratio_act = new QAction(tr("&Square Aspect Ratio"), this);
-      connect(only_square_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::onlySquareAspectRatioSlot);
-
-      legend_act = new QAction(tr("&Legend"), this);
-      connect(legend_act, &QAction::triggered, this, &GRPlotWidget::legendSlot);
-      colorbar_act = new QAction(tr("&Colorbar"), this);
-      connect(colorbar_act, &QAction::triggered, this, &GRPlotWidget::colorbarSlot);
-      left_axis_act = new QAction(tr("&Left Axis"), this);
-      connect(left_axis_act, &QAction::triggered, this, &GRPlotWidget::leftAxisSlot);
-      right_axis_act = new QAction(tr("&Right Axis"), this);
-      connect(right_axis_act, &QAction::triggered, this, &GRPlotWidget::rightAxisSlot);
-      bottom_axis_act = new QAction(tr("&Bottom Axis"), this);
-      connect(bottom_axis_act, &QAction::triggered, this, &GRPlotWidget::bottomAxisSlot);
-      top_axis_act = new QAction(tr("&Top Axis"), this);
-      connect(top_axis_act, &QAction::triggered, this, &GRPlotWidget::topAxisSlot);
-      twin_x_axis_act = new QAction(tr("&Twin-X Axis"), this);
-      connect(twin_x_axis_act, &QAction::triggered, this, &GRPlotWidget::twinXAxisSlot);
-      twin_y_axis_act = new QAction(tr("&Twin-Y Axis"), this);
-      connect(twin_y_axis_act, &QAction::triggered, this, &GRPlotWidget::twinYAxisSlot);
-
-      hide_algo_menu_act = new QAction(this);
-      show_algo_menu_act = new QAction(this);
-      hide_marginal_sub_menu_act = new QAction(this);
-      show_marginal_sub_menu_act = new QAction(this);
-      hide_configuration_menu_act = new QAction(this);
-      show_configuration_menu_act = new QAction(this);
-      hide_orientation_sub_menu_act = new QAction(this);
-      show_orientation_sub_menu_act = new QAction(this);
-      hide_aspect_ratio_sub_menu_act = new QAction(this);
-      show_aspect_ratio_sub_menu_act = new QAction(this);
-      add_seperator_act = new QAction(this);
     }
+
+  heatmap_act = new QAction(tr("&Heatmap"), this);
+  connect(heatmap_act, &QAction::triggered, this, &GRPlotWidget::heatmap);
+  marginal_heatmap_all_act = new QAction(tr("&Type 1 all"), this);
+  connect(marginal_heatmap_all_act, &QAction::triggered, this, &GRPlotWidget::marginalHeatmapAll);
+  marginal_heatmap_line_act = new QAction(tr("&Type 2 line"), this);
+  connect(marginal_heatmap_line_act, &QAction::triggered, this, &GRPlotWidget::marginalHeatmapLine);
+  surface_act = new QAction(tr("&Surface"), this);
+  connect(surface_act, &QAction::triggered, this, &GRPlotWidget::surface);
+  wireframe_act = new QAction(tr("&Wireframe"), this);
+  connect(wireframe_act, &QAction::triggered, this, &GRPlotWidget::wireframe);
+  contour_act = new QAction(tr("&Contour"), this);
+  connect(contour_act, &QAction::triggered, this, &GRPlotWidget::contour);
+  imshow_act = new QAction(tr("&Imshow"), this);
+  connect(imshow_act, &QAction::triggered, this, &GRPlotWidget::imshow);
+  sum_act = new QAction(tr("&Sum"), this);
+  connect(sum_act, &QAction::triggered, this, &GRPlotWidget::sumAlgorithm);
+  max_act = new QAction(tr("&Maximum"), this);
+  connect(max_act, &QAction::triggered, this, &GRPlotWidget::maxAlgorithm);
+  contourf_act = new QAction(tr("&Contourf"), this);
+  connect(contourf_act, &QAction::triggered, this, &GRPlotWidget::contourf);
+  line_act = new QAction(tr("&Line"), this);
+  connect(line_act, &QAction::triggered, this, &GRPlotWidget::line);
+  scatter_act = new QAction(tr("&Scatter"), this);
+  connect(scatter_act, &QAction::triggered, this, &GRPlotWidget::scatter);
+  volume_act = new QAction(tr("&Volume"), this);
+  connect(volume_act, &QAction::triggered, this, &GRPlotWidget::volume);
+  isosurface_act = new QAction(tr("&Isosurface"), this);
+  connect(isosurface_act, &QAction::triggered, this, &GRPlotWidget::isosurface);
+  line3_act = new QAction(tr("&Line3"), this);
+  connect(line3_act, &QAction::triggered, this, &GRPlotWidget::line3);
+  trisurf_act = new QAction(tr("&Trisurface"), this);
+  connect(trisurf_act, &QAction::triggered, this, &GRPlotWidget::trisurf);
+  tricont_act = new QAction(tr("&Tricontour"), this);
+  connect(tricont_act, &QAction::triggered, this, &GRPlotWidget::tricont);
+  scatter3_act = new QAction(tr("&Scatter3"), this);
+  connect(scatter3_act, &QAction::triggered, this, &GRPlotWidget::scatter3);
+  barplot_act = new QAction(tr("&Barplot"), this);
+  connect(barplot_act, &QAction::triggered, this, &GRPlotWidget::barplot);
+  stairs_act = new QAction(tr("&Stairs"), this);
+  connect(stairs_act, &QAction::triggered, this, &GRPlotWidget::stairs);
+  stem_act = new QAction(tr("&Stem"), this);
+  connect(stem_act, &QAction::triggered, this, &GRPlotWidget::stem);
+  shade_act = new QAction(tr("&Shade"), this);
+  connect(shade_act, &QAction::triggered, this, &GRPlotWidget::shade);
+  hexbin_act = new QAction(tr("&Hexbin"), this);
+  connect(hexbin_act, &QAction::triggered, this, &GRPlotWidget::hexbin);
+  polar_line_act = new QAction(tr("&Polar Line"), this);
+  connect(polar_line_act, &QAction::triggered, this, &GRPlotWidget::polarLine);
+  polar_scatter_act = new QAction(tr("&Polar Scatter"), this);
+  connect(polar_scatter_act, &QAction::triggered, this, &GRPlotWidget::polarScatter);
+
+  hidePlotTypeMenuElements();
+  moveable_mode_act = new QAction(tr("&Disable movable transformation"), this);
+  connect(moveable_mode_act, &QAction::triggered, this, &GRPlotWidget::moveableMode);
+
+  x_log_act = new QAction(tr("&X Log"), this);
+  connect(x_log_act, &QAction::triggered, this, &GRPlotWidget::xLogSlot);
+  y_log_act = new QAction(tr("&Y Log"), this);
+  connect(y_log_act, &QAction::triggered, this, &GRPlotWidget::yLogSlot);
+  z_log_act = new QAction(tr("&Z Log"), this);
+  connect(z_log_act, &QAction::triggered, this, &GRPlotWidget::zLogSlot);
+  r_log_act = new QAction(tr("&R Log"), this);
+  connect(r_log_act, &QAction::triggered, this, &GRPlotWidget::rLogSlot);
+  x_flip_act = new QAction(tr("&X Flip"), this);
+  connect(x_flip_act, &QAction::triggered, this, &GRPlotWidget::xFlipSlot);
+  y_flip_act = new QAction(tr("&Y Flip"), this);
+  connect(y_flip_act, &QAction::triggered, this, &GRPlotWidget::yFlipSlot);
+  z_flip_act = new QAction(tr("&Z Flip"), this);
+  connect(z_flip_act, &QAction::triggered, this, &GRPlotWidget::zFlipSlot);
+  theta_flip_act = new QAction(tr("&Theta Flip"), this);
+  connect(theta_flip_act, &QAction::triggered, this, &GRPlotWidget::thetaFlipSlot);
+
+  accelerate_act = new QAction(tr("&Accelerate"), this);
+  connect(accelerate_act, &QAction::triggered, this, &GRPlotWidget::accelerateSlot);
+  polar_with_pan_act = new QAction(tr("&Polar Pan"), this);
+  connect(polar_with_pan_act, &QAction::triggered, this, &GRPlotWidget::polarWithPanSlot);
+  keep_window_act = new QAction(tr("&Keep Window"), this);
+  connect(keep_window_act, &QAction::triggered, this, &GRPlotWidget::keepWindowSlot);
+  colormap_act = new QAction(tr("&Colormap"), this);
+  connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
+
+  vertical_orientation_act = new QAction(tr("&Vertical"), this);
+  connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
+  horizontal_orientation_act = new QAction(tr("&Horizontal"), this);
+  connect(horizontal_orientation_act, &QAction::triggered, this, &GRPlotWidget::horizontalOrientationSlot);
+  keep_aspect_ratio_act = new QAction(tr("&Keep Aspectratio"), this);
+  connect(keep_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::keepAspectRatioSlot);
+  only_square_aspect_ratio_act = new QAction(tr("&Square Aspect Ratio"), this);
+  connect(only_square_aspect_ratio_act, &QAction::triggered, this, &GRPlotWidget::onlySquareAspectRatioSlot);
+
+  legend_act = new QAction(tr("&Legend"), this);
+  connect(legend_act, &QAction::triggered, this, &GRPlotWidget::legendSlot);
+  colorbar_act = new QAction(tr("&Colorbar"), this);
+  connect(colorbar_act, &QAction::triggered, this, &GRPlotWidget::colorbarSlot);
+  left_axis_act = new QAction(tr("&Left Axis"), this);
+  connect(left_axis_act, &QAction::triggered, this, &GRPlotWidget::leftAxisSlot);
+  right_axis_act = new QAction(tr("&Right Axis"), this);
+  connect(right_axis_act, &QAction::triggered, this, &GRPlotWidget::rightAxisSlot);
+  bottom_axis_act = new QAction(tr("&Bottom Axis"), this);
+  connect(bottom_axis_act, &QAction::triggered, this, &GRPlotWidget::bottomAxisSlot);
+  top_axis_act = new QAction(tr("&Top Axis"), this);
+  connect(top_axis_act, &QAction::triggered, this, &GRPlotWidget::topAxisSlot);
+  twin_x_axis_act = new QAction(tr("&Twin-X Axis"), this);
+  connect(twin_x_axis_act, &QAction::triggered, this, &GRPlotWidget::twinXAxisSlot);
+  twin_y_axis_act = new QAction(tr("&Twin-Y Axis"), this);
+  connect(twin_y_axis_act, &QAction::triggered, this, &GRPlotWidget::twinYAxisSlot);
+
+  hide_algo_menu_act = new QAction(this);
+  show_algo_menu_act = new QAction(this);
+  hide_marginal_sub_menu_act = new QAction(this);
+  show_marginal_sub_menu_act = new QAction(this);
+  hide_orientation_sub_menu_act = new QAction(this);
+  show_orientation_sub_menu_act = new QAction(this);
+  hide_aspect_ratio_sub_menu_act = new QAction(this);
+  show_aspect_ratio_sub_menu_act = new QAction(this);
+  add_seperator_act = new QAction(this);
 
   if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     {
@@ -554,6 +552,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(add_text_act, SIGNAL(triggered()), this, SLOT(addTextSlot()));
       add_overlay_menu = new QMenu(this);
       add_overlay_menu->addAction(add_text_act);
+
+      hide_configuration_menu_act = new QAction(this);
+      show_configuration_menu_act = new QAction(this);
 
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
@@ -1521,7 +1522,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   // Todo: only trigger this method in non multiplot case where 1 plot has different series when not all elements has to
   // be processed to figure out which kinds are all used
   auto global_root = grm_get_document_root();
-  if (!in_listen_mode && global_root->querySelectors("layout_grid") == nullptr)
+  if (global_root->querySelectors("layout_grid") == nullptr)
     adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot"));
   if (!tooltips.empty() && !enable_editor)
     {
@@ -2189,6 +2190,8 @@ void GRPlotWidget::heatmap()
           series_elem->setAttribute("kind", "heatmap");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2215,6 +2218,8 @@ void GRPlotWidget::marginalHeatmapAll()
     {
       series_elem->setAttribute("marginal_heatmap_kind", "all");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2241,6 +2246,8 @@ void GRPlotWidget::marginalHeatmapLine()
     {
       series_elem->setAttribute("marginal_heatmap_kind", "line");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2266,6 +2273,8 @@ void GRPlotWidget::line()
       elem->setAttribute("_update_required", true);
     }
   grm_get_render()->setAutoUpdate(update);
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2308,6 +2317,8 @@ void GRPlotWidget::volume()
     {
       elem->setAttribute("kind", "volume");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 void GRPlotWidget::isosurface()
@@ -2321,6 +2332,8 @@ void GRPlotWidget::isosurface()
     {
       elem->setAttribute("kind", "isosurface");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2342,6 +2355,8 @@ void GRPlotWidget::surface()
           series_elem->setAttribute("kind", "surface");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 void GRPlotWidget::wireframe()
@@ -2362,6 +2377,8 @@ void GRPlotWidget::wireframe()
           series_elem->setAttribute("kind", "wireframe");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2383,6 +2400,8 @@ void GRPlotWidget::contour()
           series_elem->setAttribute("kind", "contour");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2404,6 +2423,8 @@ void GRPlotWidget::imshow()
           series_elem->setAttribute("kind", "imshow");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2424,6 +2445,8 @@ void GRPlotWidget::line3()
           series_elem->setAttribute("kind", "line3");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2445,6 +2468,8 @@ void GRPlotWidget::contourf()
           series_elem->setAttribute("kind", "contourf");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2465,6 +2490,8 @@ void GRPlotWidget::trisurf()
           series_elem->setAttribute("kind", "trisurface");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2485,6 +2512,8 @@ void GRPlotWidget::tricont()
           series_elem->setAttribute("kind", "tricontour");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2505,6 +2534,8 @@ void GRPlotWidget::scatter3()
           series_elem->setAttribute("kind", "scatter3");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2519,6 +2550,8 @@ void GRPlotWidget::scatter()
     {
       elem->setAttribute("kind", "scatter");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2549,6 +2582,8 @@ void GRPlotWidget::barplot()
       elem->setAttribute("_update_required", true);
     }
   grm_get_render()->setAutoUpdate(update);
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2579,6 +2614,8 @@ void GRPlotWidget::stairs()
       elem->removeAttribute("line_color_ind");
     }
   grm_get_render()->setAutoUpdate(update);
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2598,6 +2635,8 @@ void GRPlotWidget::stem()
           series_elem->setAttribute("kind", "stem");
         }
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2612,6 +2651,8 @@ void GRPlotWidget::shade()
     {
       elem->setAttribute("kind", "shade");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2626,6 +2667,8 @@ void GRPlotWidget::hexbin()
     {
       elem->setAttribute("kind", "hexbin");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2640,6 +2683,8 @@ void GRPlotWidget::polarLine()
     {
       elem->setAttribute("kind", "polar_line");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
@@ -2654,6 +2699,8 @@ void GRPlotWidget::polarScatter()
     {
       elem->setAttribute("kind", "polar_scatter");
     }
+  current_selection = nullptr;
+  current_selections.clear();
   redraw();
 }
 
