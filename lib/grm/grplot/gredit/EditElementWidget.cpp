@@ -679,6 +679,30 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       ((QCheckBox *)line_edit)
                           ->setChecked(static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name)) == 1);
                     }
+                  else if (color_ind_attr.contains(attr_name.c_str()))
+                    {
+                      auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
+                      line_edit = new QPushButton(std::to_string(index).c_str(), this);
+                      ((QPushButton *)line_edit)->setToolTip(tooltip_string);
+                      ((QPushButton *)line_edit)->setObjectName(attr_name.c_str());
+                      QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
+                      QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
+                        auto new_index = static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
+                        ((QPushButton *)line_edit)->setText(std::to_string(new_index).c_str());
+                        QImage new_image(1, 1, QImage::Format_RGB32);
+                        QRgb new_value;
+                        int err;
+                        double new_r, new_g, new_b;
+
+                        gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
+                        new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+                        new_image.setPixel(0, 0, new_value);
+
+                        auto new_color_pic = QPixmap::fromImage(new_image);
+                        new_color_pic = new_color_pic.scaled(20, 20);
+                        ((QPushButton *)line_edit)->setIcon(QIcon(new_color_pic));
+                      });
+                    }
                   else
                     {
                       line_edit = new QLineEdit(this);
@@ -1441,7 +1465,10 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("plot"),
        std::vector<std::string>{
-           "",
+           "location",
+           "max_y_length",
+           "plot_group",
+           "scale",
        }},
       {std::string("marginal_heatmap_plot"),
        std::vector<std::string>{
@@ -1452,11 +1479,12 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("central_region"),
        std::vector<std::string>{
-           "",
+           "location",
+           "tick",
        }},
       {std::string("side_region"),
        std::vector<std::string>{
-           "",
+           "marginal_heatmap_side_plot",
        }},
       {std::string("side_plot_region"),
        std::vector<std::string>{
@@ -1482,6 +1510,8 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("axis"),
        std::vector<std::string>{
+           "max_value",
+           "min_value",
            "z_index",
        }},
       {std::string("tick_group"),
@@ -1523,6 +1553,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("text"),
        std::vector<std::string>{
+           "height",
+           "set_text_color_for_background",
+           "width",
            "z_index",
        }},
       {std::string("titles_3d"),
@@ -1531,6 +1564,8 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("legend"),
        std::vector<std::string>{
+           "scale",
+           "select_specific_xform",
            "z_index",
        }},
       {std::string("label"),
@@ -2223,14 +2258,16 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
               if (attr_name == "adjust_z_lim" || attr_name == "r_lim_max" || attr_name == "r_lim_min" ||
                   attr_name == "r_log" || attr_name == "theta_flip" || attr_name == "theta_lim_max" ||
                   attr_name == "theta_lim_min" || attr_name == "z_log" || attr_name == "z_flip" ||
-                  attr_name == "z_lim_max" || attr_name == "z_lim_min" || attr_name == "polar_with_pan")
+                  attr_name == "z_lim_max" || attr_name == "z_lim_min" || attr_name == "polar_with_pan" ||
+                  attr_name == "keep_radii_axes")
                 return true;
             }
           else if (plot_type == "3d")
             {
               if (attr_name == "r_lim_max" || attr_name == "r_lim_min" || attr_name == "r_log" ||
                   attr_name == "theta_flip" || attr_name == "theta_lim_max" || attr_name == "theta_lim_min" ||
-                  attr_name == "polar_with_pan")
+                  attr_name == "polar_with_pan" || attr_name == "keep_radii_axes" ||
+                  attr_name == "only_square_aspect_ratio")
                 return true;
             }
           else if (plot_type == "polar")
@@ -2239,7 +2276,8 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
                   attr_name == "c_lim_max" || attr_name == "c_lim_min" || attr_name == "x_lim_max" ||
                   attr_name == "x_lim_min" || attr_name == "x_log" || attr_name == "y_log" ||
                   attr_name == "y_lim_max" || attr_name == "y_lim_min" || attr_name == "z_flip" ||
-                  attr_name == "z_lim_max" || attr_name == "z_lim_min" || attr_name == "z_log")
+                  attr_name == "z_lim_max" || attr_name == "z_lim_min" || attr_name == "z_log" ||
+                  attr_name == "only_square_aspect_ratio")
                 return true;
             }
         }
@@ -2280,11 +2318,13 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
           auto plot_type = static_cast<std::string>(element->getAttribute("plot_type"));
           if (plot_type == "2d")
             {
-              if (attr_name == "theta_flip" || attr_name == "z_grid" || attr_name == "z_label") return true;
+              if (attr_name == "theta_flip" || attr_name == "z_grid" || attr_name == "z_label" ||
+                  attr_name == "angle_ticks")
+                return true;
             }
           else if (plot_type == "3d")
             {
-              if (attr_name == "theta_flip") return true;
+              if (attr_name == "theta_flip" || attr_name == "angle_ticks") return true;
             }
           else if (plot_type == "polar")
             {
