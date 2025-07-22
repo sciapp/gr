@@ -14,6 +14,7 @@
 
 #include "gredit/BoundingObject.hxx"
 #include "gredit/BoundingLogic.hxx"
+#include "gredit/PreviewTextWidget.hxx"
 class GRPlotWidget;
 #include "gredit/TreeWidget.hxx"
 #include "gredit/AddElementWidget.hxx"
@@ -62,6 +63,7 @@ public:
   void createHistoryElement(std::string flag = "");
   void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
+  void setUpPreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height);
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();
@@ -116,8 +118,6 @@ public:
   QAction *getShowAlgoMenuAct();
   QAction *getHideMarginalSubMenuAct();
   QAction *getShowMarginalSubMenuAct();
-  QAction *getHideConfigurationMenuAct();
-  QAction *getShowConfigurationMenuAct();
   QAction *getHideOrientationSubMenuAct();
   QAction *getShowOrientationSubMenuAct();
   QAction *getHideAspectRatioSubMenuAct();
@@ -153,6 +153,21 @@ public:
   QAction *getRedoAct();
   QAction *getSelectableGridAct();
   QAction *getAdvancedEditorAct();
+  QAction *getShowEditElementAct();
+  QAction *getShowTreeWidgetAct();
+  QAction *getShowTableWidgetAct();
+  QAction *getShowTextPreviewAct();
+  QAction *getHideEditElementAct();
+  QAction *getHideTreeWidgetAct();
+  QAction *getHideTableWidgetAct();
+  QAction *getHideTextPreviewAct();
+  QAction *getXLimAct();
+  QAction *getYLimAct();
+  QAction *getZLimAct();
+  QWidget *getEditElementWidget();
+  QWidget *getTreeWidget();
+  QWidget *getTableWidget();
+  QWidget *getTextPreviewWidget();
 
 protected:
   virtual void draw();
@@ -172,6 +187,7 @@ protected:
 
 signals:
   void pixmapRedrawn();
+  void signalMoved(QRect const &r);
 
 private slots:
   void heatmap();
@@ -244,6 +260,9 @@ private slots:
   void selectableGridSlot();
   void advancedEditorSlot();
   void addTextSlot();
+  void xLimSlot();
+  void yLimSlot();
+  void zLimSlot();
 
 private:
   struct MouseState
@@ -345,7 +364,6 @@ private:
   std::vector<BoundingObject> clicked, referenced_elements;
   BoundingObject *current_selection, *mouse_move_selection, *selected_parent;
   std::list<std::unique_ptr<BoundingObject>> current_selections;
-  bool highlight_bounding_objects;
   TreeWidget *tree_widget;
   AddElementWidget *add_element_widget;
   int amount_scrolled;
@@ -357,6 +375,7 @@ private:
   QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr;
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
+  PreviewTextWidget *preview_text_widget;
   ColorPickerRGB *color_picker_rgb;
   bool hide_grid_bbox = true;
   bool enable_advanced_editor = false;
@@ -376,10 +395,9 @@ private:
   QAction *moveable_mode_act, *selectable_grid_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
-      *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
-      *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
-      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act, *undo_action, *redo_action,
-      *advanced_editor_act;
+      *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
+      *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
+      *undo_action, *redo_action, *advanced_editor_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
@@ -390,10 +408,12 @@ private:
   QCursor *csr;
   QMenu *add_overlay_menu;
   QAction *add_text_act;
-  bool overlay_element_edit = false;
+  QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act;
+  QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act;
+  QAction *x_lim_act, *y_lim_act, *z_lim_act;
+  bool overlay_element_edit = false, called_by_location_change = false;
 
   void resetPixmap();
-  void moveEvent(QMoveEvent *event) override;
   void highlightCurrentSelection(QPainter &painter);
   void extractBoundingBoxesFromGRM(QPainter &painter);
   void showEvent(QShowEvent *) override;

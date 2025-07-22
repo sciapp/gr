@@ -1,3 +1,12 @@
+#ifdef _WIN32
+/*
+ * Headers on Windows can define `min` and `max` as macros which causes
+ * problem when using `std::min` and `std::max`
+ * -> Define `NOMINMAX` to prevent the definition of these macros
+ */
+#define NOMINMAX
+#endif
+
 #include "TableWidget.hxx"
 
 #include <QHeaderView>
@@ -237,6 +246,7 @@ void TableWidget::showUsagesOfContext(int row, int column)
   referenced_attributes.clear();
   if (row != 0) row = 0; // complety columns highlight this way not only the header line
 
+  if (this->item(row, column) == nullptr) return;
   auto context_ref_name = this->item(row, column)->text().toStdString();
 
   // get the plain XML-tree and use the string find option to get attr=value -> use this information to select the

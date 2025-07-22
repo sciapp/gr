@@ -842,7 +842,7 @@ int inputImpl(const grm_args_t *input_args)
                 }
               GRM::Render::calculateCharHeight(central_region);
 
-              for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected=1]"))
+              for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=1]"))
                 {
                   moveTransformationHelper(selection, ndc_x, ndc_y, xshift, yshift, false);
                 }

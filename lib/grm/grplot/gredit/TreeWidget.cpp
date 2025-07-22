@@ -19,10 +19,9 @@ void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
   if (plot_tree != nullptr && !cleared) checkIfCollapsed(plot_tree->getRef(), plot_tree);
 
   this->clear();
-  auto tmp = new QTreeWidgetItem(this);
-  tmp->setExpanded(true);
-  plot_tree = new CustomTreeWidgetItem(tmp, ref);
-  plot_tree->setText(0, tr("root"));
+
+  plot_tree = new CustomTreeWidgetItem(this, ref);
+  plot_tree->setText(0, tr(""));
   plot_tree->setExpanded(true);
 
   for (const auto &cur_elem : ref->children())
@@ -64,16 +63,18 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
     }
 
   // checkboxes for _selected attribute
-  if (advanced_editor || (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
-                          elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
-                          elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
-                          elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
-                          elem_name == "axis" || elem_name == "text_region"))
+  if (advanced_editor ||
+      (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+       elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+       elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" || elem_name == "side_region" ||
+       elem_name == "marginal_heatmap_plot" || elem_name == "legend" || elem_name == "axis" ||
+       elem_name == "text_region") ||
+      util::startsWith(elem_name, "series"))
     {
       if (elem_name != "coordinate_system" &&
           !(elem_name == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
         {
-          if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+          if (ref->hasAttribute("_selected_for_move") && static_cast<int>(ref->getAttribute("_selected_for_move")))
             {
               item->setCheckState(0, Qt::Checked);
             }
@@ -93,8 +94,8 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
 
 bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
 {
-  bool selected_status =
-      item->getRef()->hasAttribute("_selected") && static_cast<int>(item->getRef()->getAttribute("_selected"));
+  bool selected_status = item->getRef()->hasAttribute("_selected_for_move") &&
+                         static_cast<int>(item->getRef()->getAttribute("_selected_for_move"));
   if ((item->getRef()->localName() != "root" && item->getRef()->localName() != "coordinate_system" &&
        (item->getRef()->localName() != "layout_grid" &&
         item->getRef()->parentElement()->localName() != "layout_grid")) &&
@@ -124,7 +125,7 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
                 }
             }
         }
-      item->getRef()->setAttribute("_selected", !selected_status);
+      item->getRef()->setAttribute("_selected_for_move", !selected_status);
       grplot_widget->redraw(false, false);
     }
 

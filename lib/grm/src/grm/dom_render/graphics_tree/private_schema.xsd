@@ -142,7 +142,7 @@
             <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
-            <xs:attribute name="_selected_for_menu" type="xs:integer"/>
+            <xs:attribute name="_selected_for_menu" type="xs:integer"/> <!-- grplot attribute -->
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
             <xs:attribute name="_theta_lim_max" type="xs:double"/>
             <xs:attribute name="_theta_lim_min" type="xs:double"/>
@@ -973,8 +973,8 @@
         <xs:attribute name="_bbox_y_max" type="xs:double"/>
         <xs:attribute name="_bbox_y_min" type="xs:double"/>
         <xs:attribute name="_delete_children" type="xs:integer"/>
-        <xs:attribute name="_highlighted" type="xs:integer"/>
-        <xs:attribute name="_selected" type="xs:integer"/>
+        <xs:attribute name="_highlighted" type="xs:integer"/> <!-- grplot attribute -->
+        <xs:attribute name="_selected_for_move" type="xs:integer"/>  <!-- grplot attribute -->
         <xs:attribute name="_update_required" type="xs:integer"/>
     </xs:attributeGroup>
 
