@@ -264,7 +264,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "z_log",
   };
   color_ind_attr = QStringList{
-      "border_color_ind", "fill_color_ind", "line_color_ind", "marker_color_ind", "text_color_ind",
+      "background_color", "border_color_ind", "fill_color_ind", "line_color_ind", "marker_color_ind", "text_color_ind",
   };
   color_rgb_attr = QStringList{"line_color_rgb", "fill_color_rgb"};
 
@@ -1681,7 +1681,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 }
             }
           tree_widget->updateData(grm_get_document_root());
-          tree_widget->selectItem(current_selection->getRef());
+          if (current_selection != nullptr) tree_widget->selectItem(current_selection->getRef());
         }
       else if (event->key() == Qt::Key_Control)
         {

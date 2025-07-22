@@ -23,6 +23,7 @@ void PreviewTextWidget::draw()
   double dpm[2];
   double display_metric_width, display_metric_height;
   int display_pixel_width, display_pixel_height;
+
   gr_setwindow(vp[0], vp[1], vp[2], vp[3]);
 
   auto aspect_ratio = double(this->width_px) / double(this->height_px);
@@ -47,6 +48,8 @@ void PreviewTextWidget::draw()
                  ws_window[3] / (450 / (this->height_px + (this->height_px < 100 ? 5 : 0))));
   gr_setviewport(vp[0], vp[1], vp[2], vp[3]);
 
+  gr_settextencoding(301);
+  gr_settextfontprec(232, 3);
   gr_setscientificformat(scientific_format);
   gr_settextcolorind(this->text_color);
 

@@ -16230,7 +16230,7 @@ static void processTextRegion(const std::shared_ptr<GRM::Element> &element,
         text_elem->setAttribute("z_index", 2);
       else
         text_elem->setAttribute("z_index", 0);
-      if (!element->hasAttribute("_char_up_set_by_user"))
+      if (!text_elem->hasAttribute("_char_up_set_by_user"))
         {
           if (location == "left" || location == "right")
             global_render->setCharUp(text_elem, -1, 0);
