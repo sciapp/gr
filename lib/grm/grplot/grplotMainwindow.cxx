@@ -3,10 +3,16 @@
 #include <QTimer>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #include <QIcon>
+#else
+#include <QScreen>
+#include <QGuiApplication>
 #endif
 #include "grplotMainwindow.hxx"
+#include "grplotDockWidget.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
+const int LEFT_AREA_WIDTH = 300;
+const int RIGHT_AREA_WIDTH = 250;
 
 GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height, bool listen_mode, int listen_port,
                                    bool test_mode, QString test_commands_file_path, bool help_mode)
@@ -23,6 +29,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       static char path[MAXPATHLEN];
       std::snprintf(path, MAXPATHLEN, "%s/lib", GRDIR);
 
+      this->help_mode = help_mode;
       find_line_edit = new QLineEdit(w);
       find_line_edit->setPlaceholderText("Search in document");
       auto button = new QPushButton("Find", w);
@@ -62,9 +69,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
     {
       if (grplot_widget_)
         {
-          grplot_widget_->setMinimumSize(width, height);
-          adjustSize();
-          grplot_widget_->setMinimumSize(0, 0);
+          resizeGRPlotWidget(width, height);
         }
       else
         {
@@ -92,6 +97,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       algo_sub_menu = options_menu->addMenu("&Algorithm");
       log_sub_menu = options_menu->addMenu("&Scale");
       flip_sub_menu = options_menu->addMenu("&Flip");
+      lim_sub_menu = options_menu->addMenu("&Lim");
       orientation_sub_menu = options_menu->addMenu("&Orientation");
       aspect_ratio_sub_menu = options_menu->addMenu("&Aspect Ratio");
 
@@ -133,6 +139,9 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       flip_sub_menu->addAction(grplot_widget_->getYFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getZFlipAct());
       flip_sub_menu->addAction(grplot_widget_->getThetaFlipAct());
+      lim_sub_menu->addAction(grplot_widget_->getXLimAct());
+      lim_sub_menu->addAction(grplot_widget_->getYLimAct());
+      lim_sub_menu->addAction(grplot_widget_->getZLimAct());
       options_menu->addAction(grplot_widget_->getAccelerateAct());
       options_menu->addAction(grplot_widget_->getPolarWithPanAct());
       options_menu->addAction(grplot_widget_->getKeepWindowAct());
@@ -162,10 +171,6 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
               &GRPlotMainWindow::hideAspectRatioSubMenu);
       connect(grplot_widget_->getShowAspectRatioSubMenuAct(), &QAction::triggered, this,
               &GRPlotMainWindow::showAspectRatioSubMenu);
-      connect(grplot_widget_->getHideConfigurationMenuAct(), &QAction::triggered, this,
-              &GRPlotMainWindow::hideConfigurationMenu);
-      connect(grplot_widget_->getShowConfigurationMenuAct(), &QAction::triggered, this,
-              &GRPlotMainWindow::showConfigurationMenu);
 
       menu->addMenu(file_menu);
       menu->addMenu(options_menu);
@@ -174,7 +179,6 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
         {
           editor_menu = new QMenu(tr("&Editor"));
-          configuration_menu = editor_menu->addMenu(tr("&Show"));
           context_menu = new QMenu("&Data");
           add_context_data = new QMenu("&Add Data-Context");
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
@@ -186,9 +190,9 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           editor_menu->addAction(grplot_widget_->getEditorAct());
           file_menu->addAction(grplot_widget_->getSaveFileAct());
           file_menu->addAction(grplot_widget_->getLoadFileAct());
-          configuration_menu->addAction(grplot_widget_->getShowContainerAct());
-          editor_menu->addAction(grplot_widget_->getAddElementAct());
+          editor_menu->addAction(grplot_widget_->getShowContainerAct());
           editor_menu->addAction(grplot_widget_->getAdvancedEditorAct());
+          editor_menu->addAction(grplot_widget_->getAddElementAct());
           editor_menu->addAction(grplot_widget_->getUndoAct());
           editor_menu->addAction(grplot_widget_->getRedoAct());
           context_menu->addAction(grplot_widget_->getShowContextAct());
@@ -207,7 +211,6 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           location_sub_menu->addAction(grplot_widget_->getTwinYAxisAct());
 
           location_sub_menu->menuAction()->setVisible(false);
-          configuration_menu->menuAction()->setVisible(false);
           menu->addMenu(editor_menu);
           menu->addMenu(context_menu);
           context_menu->addMenu(add_context_data);
@@ -216,8 +219,65 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
                   &GRPlotMainWindow::hideLocationSubMenu);
           connect(grplot_widget_->getShowLocationSubMenuAct(), &QAction::triggered, this,
                   &GRPlotMainWindow::showLocationSubMenu);
+
+          edit_element_dock_widget = new GRPlotDockWidget("Edit Element:", RIGHT_AREA_WIDTH, height, this);
+          edit_element_dock_widget->setWidget(grplot_widget_->getEditElementWidget());
+          edit_element_dock_widget->setAllowedAreas(Qt::RightDockWidgetArea);
+          edit_element_dock_widget->hide();
+          addDockWidget(Qt::RightDockWidgetArea, edit_element_dock_widget);
+          QObject::connect(grplot_widget_->getHideEditElementAct(), SIGNAL(triggered()), this,
+                           SLOT(hideEditElementDockSlot()));
+          QObject::connect(grplot_widget_->getShowEditElementAct(), SIGNAL(triggered()), this,
+                           SLOT(showEditElementDockSlot()));
+          QObject::connect(edit_element_dock_widget, SIGNAL(resizeMainWindow()), this,
+                           SLOT(closeEditElementDockSlot()));
+
+          tree_dock_widget = new GRPlotDockWidget("DOM Tree Elements:", LEFT_AREA_WIDTH, height, this);
+          tree_dock_widget->setWidget(grplot_widget_->getTreeWidget());
+          tree_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
+          tree_dock_widget->hide();
+          addDockWidget(Qt::LeftDockWidgetArea, tree_dock_widget);
+          QObject::connect(grplot_widget_->getShowTreeWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(showTreeWidgetDockSlot()));
+          QObject::connect(grplot_widget_->getHideTreeWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(hideTreeWidgetDockSlot()));
+          QObject::connect(tree_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeTreeWidgetDockSlot()));
+
+          table_dock_widget = new GRPlotDockWidget("DOM Tree Data-Context Viewer:", LEFT_AREA_WIDTH, height, this);
+          table_dock_widget->setWidget(grplot_widget_->getTableWidget());
+          table_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
+          table_dock_widget->hide();
+          addDockWidget(Qt::LeftDockWidgetArea, table_dock_widget);
+          QObject::connect(grplot_widget_->getHideTableWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(hideTableWidgetDockSlot()));
+          QObject::connect(grplot_widget_->getShowTableWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(showTableWidgetDockSlot()));
+          QObject::connect(table_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeTableWidgetDockSlot()));
+
+          text_preview_dock_widget = new GRPlotDockWidget("Text Preview:", RIGHT_AREA_WIDTH, 30, this);
+          text_preview_dock_widget->setWidget(grplot_widget_->getTextPreviewWidget());
+          text_preview_dock_widget->setAllowedAreas(Qt::RightDockWidgetArea);
+          text_preview_dock_widget->hide();
+          addDockWidget(Qt::RightDockWidgetArea, text_preview_dock_widget);
+          QObject::connect(grplot_widget_->getHideTextPreviewAct(), SIGNAL(triggered()), this,
+                           SLOT(hideTextPreviewDockSlot()));
+          QObject::connect(grplot_widget_->getShowTextPreviewAct(), SIGNAL(triggered()), this,
+                           SLOT(showTextPreviewDockSlot()));
+          QObject::connect(text_preview_dock_widget, SIGNAL(resizeMainWindow()), this,
+                           SLOT(closeTextPreviewDockSlot()));
+
+          this->tabifyDockWidget(tree_dock_widget, table_dock_widget);
+
+          // this way the tabs is existing gets shown on the top side of the DockWidgetArea instead of the bottom side
+          this->setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
+          this->setTabPosition(Qt::BottomDockWidgetArea, QTabWidget::North);
+          this->setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
+          this->setTabPosition(Qt::TopDockWidgetArea, QTabWidget::North);
+
+          resizeGRPlotWidget(width, height);
         }
     }
+  center();
 }
 
 GRPlotMainWindow::~GRPlotMainWindow() = default;
@@ -240,16 +300,6 @@ void GRPlotMainWindow::hideMarginalSubMenu()
 void GRPlotMainWindow::showMarginalSubMenu()
 {
   marginal_sub_menu->menuAction()->setVisible(true);
-}
-
-void GRPlotMainWindow::hideConfigurationMenu()
-{
-  configuration_menu->menuAction()->setVisible(false);
-}
-
-void GRPlotMainWindow::showConfigurationMenu()
-{
-  configuration_menu->menuAction()->setVisible(true);
 }
 
 void GRPlotMainWindow::hideOrientationSubMenu()
@@ -295,8 +345,147 @@ void GRPlotMainWindow::findButtonClickedSlot()
 
 void GRPlotMainWindow::keyPressEvent(QKeyEvent *event)
 {
-  if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
+  if (this->help_mode)
     {
-      findButtonClickedSlot();
+      if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) findButtonClickedSlot();
     }
+}
+
+void GRPlotMainWindow::resizeGRPlotWidget(int w, int h)
+{
+  // the addition of a DockWidget will lead to a smaller grplotWidget
+  // -> resize the grplotWidget to its desired size
+  // -> GrPlotMainWindow will grow
+  if (grplot_widget_ != nullptr)
+    {
+      grplot_widget_->setMinimumSize(w, h);
+      adjustSize();
+      grplot_widget_->setMinimumSize(0, 0);
+    }
+}
+
+void GRPlotMainWindow::showEditElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  edit_element_dock_widget->show();
+  edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::showTreeWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  tree_dock_widget->show();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::showTableWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  table_dock_widget->show();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::showTextPreviewDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  text_preview_dock_widget->show();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideEditElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  edit_element_dock_widget->hide();
+  edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideTreeWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  tree_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideTableWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  table_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideTextPreviewDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  text_preview_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeEditElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  edit_element_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeTreeWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  tree_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeTableWidgetDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  table_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeTextPreviewDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  text_preview_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::center()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  auto new_dimensions = this->screen()->availableSize();
+  this->move((new_dimensions.width() - this->width()) / 2, (new_dimensions.height() - this->height()) / 2);
+#else
+  QScreen *screen = QGuiApplication::primaryScreen();
+  QRect screen_geometry = screen->geometry();
+  this->move((screen_geometry.width() - this->width()) / 2, (screen_geometry.height() - this->height()) / 2);
+#endif
 }

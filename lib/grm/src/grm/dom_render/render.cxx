@@ -539,7 +539,8 @@ void GRM::Render::getAutoUpdate(bool *update)
 static void getPlotParent(std::shared_ptr<GRM::Element> &element)
 {
   auto plot_parent = element;
-  if (strEqualsAny(plot_parent->localName(), "root", "figure", "layout_grid", "layout_grid_element", "draw_graphics"))
+  if (strEqualsAny(plot_parent->localName(), "root", "figure", "layout_grid", "layout_grid_element", "draw_graphics",
+                   "overlay", "overlay_element"))
     {
       element = nullptr;
       return;
@@ -7232,45 +7233,18 @@ static void processBackgroundColor(const std::shared_ptr<GRM::Element> &element)
   if (element->hasAttribute("background_color"))
     {
       double vp[4];
-      double metric_width, metric_height;
       std::shared_ptr<GRM::Element> plot_elem = element;
       getPlotParent(plot_elem);
       if (plot_elem->parentElement()->localName() == "layout_grid_element") plot_elem = plot_elem->parentElement();
 
-      vp[0] = static_cast<double>(plot_elem->getAttribute("_viewport_normalized_x_min_org"));
-      vp[1] = static_cast<double>(plot_elem->getAttribute("_viewport_normalized_x_max_org"));
-      vp[2] = static_cast<double>(plot_elem->getAttribute("_viewport_normalized_y_min_org"));
-      vp[3] = static_cast<double>(plot_elem->getAttribute("_viewport_normalized_y_max_org"));
-
-      GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
-      auto aspect_ratio_ws = metric_width / metric_height;
-      if (plot_elem->parentElement()->localName() == "layout_grid_element")
-        {
-          double figure_viewport[4];
-          auto figure_vp_element = plot_elem->parentElement();
-          figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_x_min_org"));
-          figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_x_max_org"));
-          figure_viewport[2] = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_y_min_org"));
-          figure_viewport[3] = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_y_max_org"));
-
-          metric_width *= (figure_viewport[1] - figure_viewport[0]);
-          metric_height *= (figure_viewport[3] - figure_viewport[2]);
-          aspect_ratio_ws = metric_width / metric_height;
-        }
+      if (!GRM::Render::getViewport(element, &vp[0], &vp[1], &vp[2], &vp[3])) return;
 
       auto background_color_index = static_cast<int>(element->getAttribute("background_color"));
       gr_savestate();
       gr_selntran(0);
       gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
       gr_setfillcolorind(background_color_index);
-      if (aspect_ratio_ws > 1)
-        {
-          if (redraw_ws) gr_fillrect(vp[0], vp[1], vp[2] / aspect_ratio_ws, vp[3] / aspect_ratio_ws);
-        }
-      else
-        {
-          if (redraw_ws) gr_fillrect(vp[0] * aspect_ratio_ws, vp[1] * aspect_ratio_ws, vp[2], vp[3]);
-        }
+      if (redraw_ws) gr_fillrect(vp[0], vp[1], vp[2], vp[3]);
       gr_selntran(1);
       gr_restorestate();
     }
@@ -24550,7 +24524,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                 }
               else
                 {
-                  global_render->createLegend();
+                  legend = global_render->createLegend();
+                  plot_parent->append(legend);
                 }
             }
 

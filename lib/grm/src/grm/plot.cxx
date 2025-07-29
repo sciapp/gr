@@ -366,6 +366,8 @@ const char *valid_series_keys[] = {"a",
                                    "bin_width",
                                    "bin_edges",
                                    "bin_counts",
+                                   "border_width",
+                                   "border_color_ind",
                                    "c",
                                    "c_dims",
                                    "c_range",
@@ -378,6 +380,8 @@ const char *valid_series_keys[] = {"a",
                                    "error",
                                    "error_bar_style",
                                    "face_color",
+                                   "fill_int_style",
+                                   "fill_style",
                                    "foreground_color",
                                    "indices",
                                    "inner_series",
@@ -386,7 +390,12 @@ const char *valid_series_keys[] = {"a",
                                    "isovalue",
                                    "label",
                                    "labels",
+                                   "line_color_ind",
                                    "line_spec",
+                                   "line_type",
+                                   "line_width",
+                                   "marker_color_ind",
+                                   "marker_size",
                                    "marker_type",
                                    "num_bins",
                                    "r",
@@ -436,6 +445,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"axes_mod", "a"},
                                           {"background_color", "i"},
                                           {"bar_color", "D|i"},
+                                          {"border_color_ind", "i"},
+                                          {"border_width", "d"},
                                           {"c", "D|I"},
                                           {"c_dims", "I"},
                                           {"c_range", "D"},
@@ -448,6 +459,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"edge_width", "d"},
                                           {"error", "a"},
                                           {"error_bar_style", "i"},
+                                          {"fill_int_style", "i"},
+                                          {"fill_style", "i"},
                                           {"fit_parents_height", "i"},
                                           {"fit_parents_width", "i"},
                                           {"font", "i"},
@@ -464,9 +477,14 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"label", "s"},
                                           {"labels", "S"},
                                           {"levels", "i"},
+                                          {"line_color_ind", "i"},
                                           {"line_spec", "s"},
+                                          {"line_type", "i"},
+                                          {"line_width", "d"},
                                           {"location", "i"},
                                           {"marginal_heatmap_kind", "s"},
+                                          {"marker_color_ind", "i"},
+                                          {"marker_size", "d"},
                                           {"marker_type", "i|D"},
                                           {"num_bins", "i"},
                                           {"only_square_aspect_ratio", "i"},
@@ -1552,6 +1570,8 @@ grm_error_t plotLine(grm_args_t *subplot_args)
       char *spec, *label;
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width, border_width, marker_size;
+      int line_color_ind, line_type, border_color_ind, marker_color_ind;
       auto sub_group = global_render->createSeries("line");
       group->append(sub_group);
 
@@ -1591,6 +1611,12 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         sub_group->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "label", "s", &label))
         {
           sub_group->setAttribute("label", label);
@@ -1598,6 +1624,14 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
 
       // check if there are any attributes for integrals which should be created
       if (grm_args_first_value(*current_series, "int_limits_high", "D", &int_limits_high, &limits_high_num))
@@ -1664,6 +1698,8 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       const char *where;
       double y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width;
+      int line_color_ind, line_type;
       auto sub_group = global_render->createSeries("stairs");
       group->append(sub_group);
 
@@ -1702,6 +1738,12 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "label", "s", &label))
         {
           sub_group->setAttribute("label", label);
@@ -1742,6 +1784,8 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
       char *label;
+      double marker_size, border_width;
+      int marker_color_ind, border_color_ind;
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1766,6 +1810,14 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
 
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
@@ -1886,6 +1938,8 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       char *spec, *label;
       double y_min, y_max, y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width;
+      int line_type, line_color_ind;
 
       auto sub_group = global_render->createSeries("stem");
       group->append(sub_group);
@@ -1920,6 +1974,12 @@ grm_error_t plotStem(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "label", "s", &label))
         {
           sub_group->setAttribute("label", label);
@@ -1953,6 +2013,7 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
       unsigned int num_bins = 0, x_length, num_weights;
       double transparency;
       const char *x_axis_ref, *y_axis_ref;
+      int fill_style, fill_int_style;
 
       auto sub_group = global_render->createSeries("histogram");
       group->append(sub_group);
@@ -1969,6 +2030,10 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color_index))
         sub_group->setAttribute("fill_color_ind", bar_color_index);
+      if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+        sub_group->setAttribute("fill_style", fill_style);
+      if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+        sub_group->setAttribute("fill_int_style", fill_int_style);
 
       if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
                           &edge_color_rgb[2]))
@@ -2077,6 +2142,7 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max, y_line_pos;
       double transparency;
       const char *x_axis_ref, *y_axis_ref;
+      int fill_style, fill_int_style;
 
       auto sub_group = global_render->createSeries("barplot");
       group->append(sub_group);
@@ -2090,21 +2156,15 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           sub_group->setAttribute("fill_color_rgb", "fill_color_rgb" + id_str);
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
-        {
-          sub_group->setAttribute("fill_color_ind", bar_color);
-        }
-      if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
-        {
-          sub_group->setAttribute("bar_width", bar_width);
-        }
-      if (grm_args_values(subplot_args, "style", "s", &style))
-        {
-          sub_group->setAttribute("style", style);
-        }
+        sub_group->setAttribute("fill_color_ind", bar_color);
+      if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+        sub_group->setAttribute("fill_style", fill_style);
+      if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+        sub_group->setAttribute("fill_int_style", fill_int_style);
+      if (grm_args_values(subplot_args, "bar_width", "d", &bar_width)) sub_group->setAttribute("bar_width", bar_width);
+      if (grm_args_values(subplot_args, "style", "s", &style)) sub_group->setAttribute("style", style);
       if (grm_args_values(*current_series, "transparency", "d", &transparency))
-        {
-          sub_group->setAttribute("transparency", transparency);
-        }
+        sub_group->setAttribute("transparency", transparency);
 
       /* Push attributes on the series level to the tree */
       if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
@@ -2115,13 +2175,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           sub_group->setAttribute("line_color_rgb", "line_color_rgb" + id_str);
         }
       if (grm_args_values(*current_series, "edge_color", "i", &edge_color))
-        {
-          sub_group->setAttribute("line_color_ind", edge_color);
-        }
+        sub_group->setAttribute("line_color_ind", edge_color);
       if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
-        {
-          sub_group->setAttribute("edge_width", edge_width);
-        }
+        sub_group->setAttribute("edge_width", edge_width);
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
           sub_group->setAttribute("x_range_min", x_min);
@@ -2179,13 +2235,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           /* Flatten inner_series */
           /* Since the data has to be processed the error handling is done here instead of in the renderer */
           if (c != nullptr)
-            {
-              cleanupAndSetErrorIf((c_length < inner_series_length), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-            }
+            cleanupAndSetErrorIf((c_length < inner_series_length), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
           if (c_rgb != nullptr)
-            {
-              cleanupAndSetErrorIf((c_rgb_length < inner_series_length * 3), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-            }
+            cleanupAndSetErrorIf((c_rgb_length < inner_series_length * 3), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
           y_vec = {};
           indices_vec = {};
@@ -3245,6 +3297,8 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       char *spec, *label;
       auto sub_group = global_render->createSeries("polar_line");
       int clip_negative = 0, marker_type;
+      double line_width, border_width, marker_size;
+      int line_type, line_color_ind, border_color_ind, marker_color_ind;
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
@@ -3278,8 +3332,22 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
         }
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
       if (grm_args_values(*current_series, "label", "s", &label))
         {
           sub_group->setAttribute("label", label);
@@ -3429,6 +3497,7 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   double transparency;
   double theta_range_min, theta_range_max, r_lim_min, r_lim_max;
   grm_args_t **series;
+  int fill_style, fill_int_style;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
@@ -3451,6 +3520,10 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   /* face_color */
   if (grm_args_values(*series, "face_color", "i", &face_color))
     series_group->setAttribute("fill_color_ind", face_color);
+  if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+    series_group->setAttribute("fill_style", fill_style);
+  if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+    series_group->setAttribute("fill_int_style", fill_int_style);
   /* transparency */
   if (grm_args_values(*series, "transparency", "d", &transparency))
     series_group->setAttribute("transparency", transparency);

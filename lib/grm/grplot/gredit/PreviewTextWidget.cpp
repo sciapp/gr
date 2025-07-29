@@ -2,8 +2,9 @@
 #include "gr.h"
 #include "grm.h"
 
-PreviewTextWidget::PreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height)
-    : GRWidget()
+PreviewTextWidget::PreviewTextWidget(QWidget *parent) : GRWidget(parent) {}
+
+void PreviewTextWidget::initialize(std::string text, int scientific_format, int text_color, int width, int height)
 {
   this->text = text;
   this->scientific_format = scientific_format;

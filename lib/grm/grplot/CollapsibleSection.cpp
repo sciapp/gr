@@ -47,6 +47,8 @@ CollapsibleSection::CollapsibleSection(const QString &title, const int animation
   });
 }
 
+CollapsibleSection::~CollapsibleSection() = default;
+
 void CollapsibleSection::setContentLayout(QLayout &content_layout)
 {
   delete content_area.layout();

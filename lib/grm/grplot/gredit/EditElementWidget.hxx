@@ -12,9 +12,10 @@
 #include <QAction>
 #include <QPushButton>
 #include <QObject>
-#include <vector>
 #include <QKeyEvent>
+#include <vector>
 #include "grm.h"
+
 class EditElementWidget;
 #include "../grplotWidget.hxx"
 

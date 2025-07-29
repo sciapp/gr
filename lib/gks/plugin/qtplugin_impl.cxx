@@ -853,7 +853,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   if (!p->bounding_stack.empty())
     {
       double point_x, point_y;
-      for (i = 0; i < points->size(); i++)
+      for (i = 0; i < points->size() - 1; i++)
         {
           point_x = points->constData()[i].x();
           point_y = points->constData()[i].y();

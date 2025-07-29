@@ -313,6 +313,7 @@ void AddElementWidget::parentSelected(int i)
 
           auto group_box_layout = new QVBoxLayout;
           group_box_layout->addWidget(scroll_area);
+          group_box_layout->setContentsMargins(2, 2, 2, 2);
           add_attributes_group->setLayout(group_box_layout);
         }
       grplot_widget->redraw();

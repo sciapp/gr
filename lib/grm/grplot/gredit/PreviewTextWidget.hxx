@@ -6,7 +6,8 @@
 class PreviewTextWidget : public GRWidget
 {
 public:
-  PreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height);
+  PreviewTextWidget(QWidget *parent = nullptr);
+  void initialize(std::string text, int scientific_format, int text_color, int width, int height);
 
 protected:
   virtual void draw();

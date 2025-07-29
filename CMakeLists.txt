@@ -1405,6 +1405,7 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/TableWidget.cpp
       lib/grm/grplot/gredit/TreeWidget.cpp
       lib/grm/grplot/grplot.cxx
+      lib/grm/grplot/grplotDockWidget.cpp
       lib/grm/grplot/grplotMainwindow.cxx
       lib/grm/grplot/grplotWidget.cxx
       lib/grm/grplot/qtterm/ArgsWrapper.cpp
@@ -1569,9 +1570,18 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx
+      )
       target_sources(
         grplot
-        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotWidget.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cpp
@@ -1590,7 +1600,8 @@ if((Qt6Widgets_FOUND
       set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
       target_sources(
         grplot
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotMainwindow.hxx
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotMainwindow.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
