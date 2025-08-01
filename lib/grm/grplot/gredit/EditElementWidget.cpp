@@ -513,7 +513,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
-          if (!window_added)
+          if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element")
             {
               form->addRow(window);
               window_added = true;
@@ -645,7 +645,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           if (!element_movement_modification_added)
             {
               if (advanced_editor || (cur_attr_name != "x_scale_wc" && cur_attr_name != "x_shift_wc" &&
-                                      cur_attr_name != "y_scale_wc" && cur_attr_name != "y_shift_wc"))
+                                      cur_attr_name != "y_scale_wc" && cur_attr_name != "y_shift_wc") &&
+                                         (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
                 {
                   form->addRow(element_movement_modification);
                   element_movement_modification_added = true;
@@ -656,7 +657,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           element_movement_modification_form->addRow(label, line_edit);
-          if (!advanced_editor)
+          if (!advanced_editor || (cur_attr_name != "x_scale_wc" && cur_attr_name != "x_shift_wc" &&
+                                   cur_attr_name != "y_scale_wc" && cur_attr_name != "y_shift_wc") &&
+                                      (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
             element_movement_modification_form->setRowVisible(
                 element_movement_modification_form->rowCount() - 1,
                 !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
@@ -1007,7 +1010,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   else if (attr_name == "window_x_min" || attr_name == "window_x_max" || attr_name == "window_y_min" ||
                            attr_name == "window_y_max" || attr_name == "window_z_min" || attr_name == "window_z_max")
                     {
-                      if (!window_added)
+                      if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element")
                         {
                           form->addRow(window);
                           window_added = true;
@@ -1371,8 +1374,10 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                 {
                                   if (!element_movement_modification_added)
                                     {
-                                      if (advanced_editor || (attr_name != "x_scale_wc" && attr_name != "x_shift_wc" &&
-                                                              attr_name != "y_scale_wc" && attr_name != "y_shift_wc"))
+                                      if (advanced_editor ||
+                                          (attr_name != "x_scale_wc" && attr_name != "x_shift_wc" &&
+                                           attr_name != "y_scale_wc" && attr_name != "y_shift_wc") &&
+                                              (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
                                         {
                                           form->addRow(element_movement_modification);
                                           element_movement_modification_added = true;
@@ -1942,6 +1947,10 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "height",
            "set_text_color_for_background",
            "width",
+           "x_scale_ndc",
+           "x_shift_ndc",
+           "y_scale_ndc",
+           "y_shift_ndc",
            "z_index",
        }},
       {std::string("titles_3d"),
@@ -2626,6 +2635,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "y_scale_wc",
            "y_shift_wc",
        }},
+      {std::string("overlay"), std::vector<std::string>{}},
+      {std::string("overlay_element"), std::vector<std::string>{"element_type", "data", "window_x_min", "window_x_max",
+                                                                "window_y_min", "window_y_max"}},
   };
 
   if (element_to_advanced_attributes.count(elem_name))

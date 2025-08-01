@@ -232,7 +232,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(edit_element_dock_widget, SIGNAL(resizeMainWindow()), this,
                            SLOT(closeEditElementDockSlot()));
 
-          tree_dock_widget = new GRPlotDockWidget("DOM Tree Elements:", LEFT_AREA_WIDTH, height, this);
+          tree_dock_widget = new GRPlotDockWidget("Element Tree:", LEFT_AREA_WIDTH, height, this);
           tree_dock_widget->setWidget(grplot_widget_->getTreeWidget());
           tree_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
           tree_dock_widget->hide();
@@ -243,7 +243,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
                            SLOT(hideTreeWidgetDockSlot()));
           QObject::connect(tree_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeTreeWidgetDockSlot()));
 
-          table_dock_widget = new GRPlotDockWidget("DOM Tree Data-Context Viewer:", LEFT_AREA_WIDTH, height, this);
+          table_dock_widget = new GRPlotDockWidget("Data-Context Viewer:", LEFT_AREA_WIDTH, height, this);
           table_dock_widget->setWidget(grplot_widget_->getTableWidget());
           table_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
           table_dock_widget->hide();

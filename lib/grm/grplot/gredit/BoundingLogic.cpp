@@ -9,6 +9,8 @@
 
 #include "BoundingLogic.hxx"
 
+#include "../util.hxx"
+
 #include <algorithm>
 #include <vector>
 #include <cmath>
@@ -115,6 +117,13 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
       if (subplot_element && (bounding_object.getRef()->localName() == "series_line" ||
                               bounding_object.getRef()->localName() == "series_scatter"))
         {
+          if (util::startsWith(elem_name, "series_") &&
+              !subplot_element->querySelectors(
+                  elem_name + "[_bbox_id=\"" +
+                  std::to_string(static_cast<int>(bounding_object.getRef()->getAttribute("_bbox_id"))) +
+                  ""
+                  "\"]"))
+            continue;
           auto x_key = static_cast<std::string>(bounding_object.getRef()->getAttribute("x"));
           auto y_key = static_cast<std::string>(bounding_object.getRef()->getAttribute("y"));
           auto x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);

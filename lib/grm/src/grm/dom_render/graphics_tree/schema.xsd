@@ -120,11 +120,19 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- extend the list -->
+                <xs:element ref="draw_image" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attributeGroup ref="text_modifications"/>
+            <xs:attribute name="data" type="xs:string"/>
             <xs:attribute name="element_type" type="strint"/>
+            <xs:attribute name="height_abs" type="xs:double"/>
             <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="width_abs" type="xs:double"/>
+            <xs:attribute name="window_x_max" type="xs:double"/>
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:double"/> <!-- string if more complex childs are possible -->
             <xs:attribute name="y" type="xs:double"/> <!-- string if more complex childs are possible -->
         </xs:complexType>
