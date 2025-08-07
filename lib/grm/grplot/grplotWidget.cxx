@@ -1754,7 +1754,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
         }
       else if (event->key() == Qt::Key_R)
         {
-          // Todo: maybe reset ndc_shift and ndc_scale
+          // Todo: maybe reset ndc_shift and ndc_max/min_shift
           resetPixmap();
         }
     }
@@ -1800,6 +1800,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     {
       int x, y;
       getMousePos(event, &x, &y);
+      cursorHandler(x, y); // get the correct cursor and sets it
       if (mouse_state.mode == MouseState::Mode::MOVE_SELECTED && !ctrl_key_mode)
         {
           grm_args_t *args = grm_args_new();
@@ -1809,6 +1810,35 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           grm_args_push(args, "x_shift", "i", x - mouse_state.anchor.x());
           grm_args_push(args, "y_shift", "i", y - mouse_state.anchor.y());
           grm_args_push(args, "move_selection", "i", 1);
+
+          grm_input(args);
+          grm_args_delete(args);
+
+          mouse_state.anchor.setX(x);
+          mouse_state.anchor.setY(y);
+          redraw();
+        }
+      else if ((mouse_state.mode == MouseState::Mode::HORIZONTAL_SCALE_SELECTED ||
+                mouse_state.mode == MouseState::Mode::VERTICAL_SCALE_SELECTED ||
+                mouse_state.mode == MouseState::Mode::B_DIAGONAL_SCALE_SELECTED ||
+                mouse_state.mode == MouseState::Mode::F_DIAGONAL_SCALE_SELECTED) &&
+               !ctrl_key_mode)
+        {
+          if (cursor().shape() == Qt::ArrowCursor) return;
+          grm_args_t *args = grm_args_new();
+
+          grm_args_push(args, "x", "i", mouse_state.anchor.x());
+          grm_args_push(args, "y", "i", mouse_state.anchor.y());
+
+          if (mouse_state.mode == MouseState::Mode::VERTICAL_SCALE_SELECTED)
+            grm_args_push(args, "x_shift", "i", 0);
+          else
+            grm_args_push(args, "x_shift", "i", x - mouse_state.anchor.x());
+          if (mouse_state.mode == MouseState::Mode::HORIZONTAL_SCALE_SELECTED)
+            grm_args_push(args, "y_shift", "i", 0);
+          else
+            grm_args_push(args, "y_shift", "i", y - mouse_state.anchor.y());
+          grm_args_push(args, "scale_selection", "i", 1);
 
           grm_input(args);
           grm_args_delete(args);
@@ -1971,13 +2001,31 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
         }
       else
         {
-          mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+          auto elem_name = current_selection->getRef()->localName();
+          if (enable_advanced_editor ||
+              (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+               elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+               elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
+               elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
+               elem_name == "text_region" || elem_name == "overlay_element"))
+            {
+              if (cursor().shape() == Qt::SizeBDiagCursor)
+                mouse_state.mode = MouseState::Mode::B_DIAGONAL_SCALE_SELECTED;
+              else if (cursor().shape() == Qt::SizeHorCursor)
+                mouse_state.mode = MouseState::Mode::HORIZONTAL_SCALE_SELECTED;
+              else if (cursor().shape() == Qt::SizeVerCursor)
+                mouse_state.mode = MouseState::Mode::VERTICAL_SCALE_SELECTED;
+              else if (cursor().shape() == Qt::SizeFDiagCursor)
+                mouse_state.mode = MouseState::Mode::F_DIAGONAL_SCALE_SELECTED;
+              else if (cursor().shape() == Qt::SizeAllCursor)
+                mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+            }
         }
       mouse_state.anchor.setX(x);
       mouse_state.anchor.setY(y);
 
       int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
-      if (cursor_state != DEFAULT_HOVER_MODE && cursor_state != LEGEND_ELEMENT_HOVER_MODE)
+      if (!enable_editor && cursor_state != DEFAULT_HOVER_MODE && cursor_state != LEGEND_ELEMENT_HOVER_MODE)
         {
           grm_args_t *args = grm_args_new();
           grm_args_push(args, "clear_locked_state", "i", 1);
@@ -2029,8 +2077,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                         elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
                         elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
                         elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
-                        elem_name == "axis" || elem_name == "text_region") ||
-                       util::startsWith(elem_name, "series")) &&
+                        elem_name == "text_region" || elem_name == "overlay_element")) &&
                       (elem_name != "coordinate_system" &&
                        !(elem_name == "layout_grid" && tmp->getRef()->parentElement()->localName() != "layout_grid")))
                     {
@@ -2038,7 +2085,26 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                     }
                   addCurrentSelection(std::move(tmp));
                 }
-              mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+
+              auto elem_name = current_selection->getRef()->localName();
+              if (enable_advanced_editor ||
+                  (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+                   elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+                   elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
+                   elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
+                   elem_name == "text_region" || elem_name == "overlay_element"))
+                {
+                  if (cursor_state == VERTICAL_SCALE_HOVER_MODE)
+                    mouse_state.mode = MouseState::Mode::VERTICAL_SCALE_SELECTED;
+                  else if (cursor_state == HORIZONTAL_SCALE_HOVER_MODE)
+                    mouse_state.mode = MouseState::Mode::HORIZONTAL_SCALE_SELECTED;
+                  else if (cursor_state == B_DIAGONAL_SCALE_HOVER_MODE)
+                    mouse_state.mode = MouseState::Mode::B_DIAGONAL_SCALE_SELECTED;
+                  else if (cursor_state == F_DIAGONAL_SCALE_HOVER_MODE)
+                    mouse_state.mode = MouseState::Mode::F_DIAGONAL_SCALE_SELECTED;
+                  else
+                    mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+                }
             }
           tree_widget->updateData(grm_get_document_root());
           tree_widget->selectItem(current_selection->getRef());
@@ -2103,6 +2169,22 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
       cursorHandler(x, y);
     }
   else if (mouse_state.mode == MouseState::Mode::MOVE_SELECTED)
+    {
+      mouse_state.mode = MouseState::Mode::NORMAL;
+    }
+  else if (mouse_state.mode == MouseState::Mode::HORIZONTAL_SCALE_SELECTED)
+    {
+      mouse_state.mode = MouseState::Mode::NORMAL;
+    }
+  else if (mouse_state.mode == MouseState::Mode::VERTICAL_SCALE_SELECTED)
+    {
+      mouse_state.mode = MouseState::Mode::NORMAL;
+    }
+  else if (mouse_state.mode == MouseState::Mode::B_DIAGONAL_SCALE_SELECTED)
+    {
+      mouse_state.mode = MouseState::Mode::NORMAL;
+    }
+  else if (mouse_state.mode == MouseState::Mode::F_DIAGONAL_SCALE_SELECTED)
     {
       mouse_state.mode = MouseState::Mode::NORMAL;
     }
@@ -4354,8 +4436,13 @@ void GRPlotWidget::addTextSlot()
   auto max_width_height = std::max(width, height);
   auto ndc_x = (double)add_pos_x / max_width_height;
   auto ndc_y = (double)(height - add_pos_y) / max_width_height;
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
   auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "text");
+  overlay_element->setAttribute("z_index", 10);
   overlay->appendChild(overlay_element);
+  render->setAutoUpdate(auto_update);
 
   overlay_element_edit = true;
   redraw();
@@ -4401,6 +4488,9 @@ void GRPlotWidget::addImageSlot()
   auto ndc_x = (double)add_pos_x / max_width_height;
   auto ndc_y = (double)(height - add_pos_y) / max_width_height;
   auto max_image_width_height = std::max(image.width(), image.height());
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
   auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "image");
 
   overlay_element->setAttribute("data", data_key);
@@ -4408,7 +4498,9 @@ void GRPlotWidget::addImageSlot()
   overlay_element->setAttribute("_height", image.height());
   overlay_element->setAttribute("width_abs", 0.2 * image.width() / max_image_width_height);
   overlay_element->setAttribute("height_abs", 0.2 * image.height() / max_image_width_height);
+  overlay_element->setAttribute("z_index", 10);
   overlay->appendChild(overlay_element);
+  render->setAutoUpdate(auto_update);
 
   overlay_element_edit = true;
   redraw();
@@ -5534,9 +5626,9 @@ QWidget *GRPlotWidget::getTextPreviewWidget()
 
 void GRPlotWidget::cursorHandler(int x, int y)
 {
+  int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
   if (!enable_editor)
     {
-      int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
       if (cursor_state == DEFAULT_HOVER_MODE)
         {
           csr->setShape(Qt::ArrowCursor);
@@ -5553,8 +5645,48 @@ void GRPlotWidget::cursorHandler(int x, int y)
         {
           csr->setShape(Qt::PointingHandCursor);
         }
-      setCursor(*csr);
     }
+  else
+    {
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
+        {
+          auto elem_name = current_selection->getRef()->localName();
+          if ((enable_advanced_editor ||
+               (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+                elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+                elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
+                elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
+                elem_name == "text_region" || elem_name == "overlay_element")) &&
+              mouse_state.mode == MouseState::Mode::NORMAL)
+            {
+              if (cursor_state == DEFAULT_HOVER_MODE)
+                {
+                  csr->setShape(Qt::ArrowCursor);
+                }
+              else if (cursor_state == VERTICAL_SCALE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeVerCursor);
+                }
+              else if (cursor_state == HORIZONTAL_SCALE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeHorCursor);
+                }
+              else if (cursor_state == MOVE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeAllCursor);
+                }
+              else if (cursor_state == B_DIAGONAL_SCALE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeBDiagCursor);
+                }
+              else if (cursor_state == F_DIAGONAL_SCALE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeFDiagCursor);
+                }
+            }
+        }
+    }
+  setCursor(*csr);
 }
 
 bool GRPlotWidget::getEnableAdvancedEditor()
