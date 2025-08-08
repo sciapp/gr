@@ -103,6 +103,7 @@ QStringList step_where_list{
     "post",
     "mid",
 };
+QStringList element_type_list{"text", "image"};
 
 static std::string file_export;
 static QFile *test_commands_file = nullptr;
@@ -186,6 +187,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "axis_type",
       "clip_region",
       "colormap",
+      "element_type",
       "error_bar_style",
       "fill_int_style",
       "fill_style",
@@ -519,7 +521,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 #endif
       QObject::connect(load_file_action, SIGNAL(triggered()), this, SLOT(loadFileSlot()));
 
-      show_container_action = new QAction(tr("&Show GRM Container"));
+      show_container_action = new QAction(tr("&Show GRM Element Tree"));
       show_container_action->setCheckable(true);
       show_container_action->setShortcut(Qt::CTRL | Qt::Key_C);
       show_container_action->setVisible(false);
@@ -580,6 +582,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(add_text_act, SIGNAL(triggered()), this, SLOT(addTextSlot()));
       add_overlay_menu = new QMenu(this);
       add_overlay_menu->addAction(add_text_act);
+
+      add_image_act = new QAction(tr("&Add Image"));
+      QObject::connect(add_image_act, SIGNAL(triggered()), this, SLOT(addImageSlot()));
+      add_overlay_menu->addAction(add_image_act);
 
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
@@ -766,6 +772,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   static std::map<std::string, QStringList> attribute_to_list{
       {"axis_type", axis_type_list},
       {"error_bar_style", error_bar_style_list},
+      {"element_type", element_type_list},
       {"clip_region", clip_region_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
@@ -1225,6 +1232,13 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "step_where")
         {
           if (step_where_list.contains(QString::fromStdString(value)))
+            element->setAttribute(label, value);
+          else
+            fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
+        }
+      else if (label == "element_type")
+        {
+          if (element_type_list.contains(QString::fromStdString(value)))
             element->setAttribute(label, value);
           else
             fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
@@ -4341,6 +4355,59 @@ void GRPlotWidget::addTextSlot()
   auto ndc_x = (double)add_pos_x / max_width_height;
   auto ndc_y = (double)(height - add_pos_y) / max_width_height;
   auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "text");
+  overlay->appendChild(overlay_element);
+
+  overlay_element_edit = true;
+  redraw();
+}
+
+void GRPlotWidget::addImageSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  auto overlay = figure_elem->querySelectors("overlay");
+  auto context = render->getContext();
+
+  if (overlay == nullptr)
+    {
+      overlay = render->createOverlay();
+      figure_elem->appendChild(overlay);
+    }
+
+  QString filename = QFileDialog::getOpenFileName(this, tr("Load Image"), QDir::homePath(), tr("Images (*.png *.jpg)"));
+  if (filename.isEmpty()) return;
+  QPixmap p(filename);
+  auto image = p.toImage();
+  std::vector<int> color_array;
+
+  for (int j = 0; j < image.height(); j++)
+    {
+      for (int i = 0; i < image.width(); i++)
+        {
+          auto c = image.pixel(i, j);
+          color_array.push_back((qRed(c) & 0xff) | (qGreen(c) & 0xff) << 8 | (qBlue(c) & 0xff) << 16 |
+                                (qAlpha(c) & 0xff) << 24);
+        }
+    }
+  auto data_key = "data" + std::to_string(static_cast<int>(global_root->getAttribute("_id")));
+  (*context)[data_key] = color_array;
+
+  int width = this->size().width(), height = this->size().height();
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  auto max_width_height = std::max(width, height);
+  auto ndc_x = (double)add_pos_x / max_width_height;
+  auto ndc_y = (double)(height - add_pos_y) / max_width_height;
+  auto max_image_width_height = std::max(image.width(), image.height());
+  auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "image");
+
+  overlay_element->setAttribute("data", data_key);
+  overlay_element->setAttribute("_width", image.width());
+  overlay_element->setAttribute("_height", image.height());
+  overlay_element->setAttribute("width_abs", 0.2 * image.width() / max_image_width_height);
+  overlay_element->setAttribute("height_abs", 0.2 * image.height() / max_image_width_height);
   overlay->appendChild(overlay_element);
 
   overlay_element_edit = true;

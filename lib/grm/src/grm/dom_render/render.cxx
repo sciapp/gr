@@ -11952,6 +11952,7 @@ static void processOverlayElement(const std::shared_ptr<GRM::Element> &element,
 {
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   int child_id = 0;
+  double metric_width, metric_height, aspect_ratio_ws;
 
   auto type = static_cast<std::string>(element->getAttribute("element_type"));
   auto x = static_cast<double>(element->getAttribute("x"));
@@ -11960,6 +11961,22 @@ static void processOverlayElement(const std::shared_ptr<GRM::Element> &element,
   /* clear old childs */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
+
+  GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+  aspect_ratio_ws = metric_width / metric_height;
+
+  auto start_aspect_ratio_ws = static_cast<double>(
+      element->parentElement()->parentElement()->querySelectors("plot")->getAttribute("_start_aspect_ratio"));
+  y /= ((start_aspect_ratio_ws > 1) ? 1.0 / start_aspect_ratio_ws : start_aspect_ratio_ws);
+
+  if (aspect_ratio_ws > 1)
+    {
+      y /= aspect_ratio_ws;
+    }
+  else
+    {
+      x *= aspect_ratio_ws;
+    }
 
   if (type == "text")
     {
@@ -11973,13 +11990,64 @@ static void processOverlayElement(const std::shared_ptr<GRM::Element> &element,
       else
         {
           text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-          if (text != nullptr) global_render->createText(x, y, "");
+          if (text != nullptr)
+            global_render->createText(x, y, static_cast<std::string>(text->getAttribute("text")), CoordinateSpace::NDC,
+                                      text);
         }
       if (text != nullptr)
         {
           if (!text->hasAttribute("font")) text->setAttribute("font", PLOT_DEFAULT_FONT);
           if (!text->hasAttribute("font_precision")) text->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
-          if (!text->hasAttribute("char_height")) text->setAttribute("char_height", PLOT_2D_CHAR_HEIGHT);
+          if (!text->hasAttribute("_char_height_set_by_user"))
+            text->setAttribute("char_height", (aspect_ratio_ws > 1) ? PLOT_2D_CHAR_HEIGHT / aspect_ratio_ws
+                                                                    : PLOT_2D_CHAR_HEIGHT * aspect_ratio_ws);
+        }
+    }
+  else if (type == "image")
+    {
+      std::shared_ptr<GRM::Element> image;
+      double w[4] = {0.0, 1.0, 0.0, 1.0};
+      auto image_width = static_cast<int>(element->getAttribute("_width"));
+      auto image_height = static_cast<int>(element->getAttribute("_height"));
+      auto width = static_cast<double>(element->getAttribute("width_abs"));
+      auto height = static_cast<double>(element->getAttribute("height_abs"));
+      auto data_key = static_cast<std::string>(element->getAttribute("data"));
+      auto data = GRM::get<std::vector<int>>((*context)[data_key]);
+
+      if (aspect_ratio_ws > 1)
+        {
+          w[2] /= aspect_ratio_ws;
+          w[3] /= aspect_ratio_ws;
+          height /= aspect_ratio_ws;
+          width /= aspect_ratio_ws;
+        }
+      else
+        {
+          w[0] *= aspect_ratio_ws;
+          w[1] *= aspect_ratio_ws;
+          width *= aspect_ratio_ws;
+          height *= aspect_ratio_ws;
+        }
+
+      element->setAttribute("window_x_min", w[0]);
+      element->setAttribute("window_x_max", w[1]);
+      element->setAttribute("window_y_min", w[2]);
+      element->setAttribute("window_y_max", w[3]);
+      global_render->processWindow(element);
+
+      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+        {
+          image =
+              global_render->createDrawImage(x, y, x + width, y + height, image_width, image_height, data_key, data, 0);
+          image->setAttribute("_child_id", child_id++);
+          element->append(image);
+        }
+      else
+        {
+          image = element->querySelectors("draw_image[_child_id=" + std::to_string(child_id++) + "]");
+          if (image != nullptr)
+            global_render->createDrawImage(x, y, x + width, y + height, image_width, image_height, data_key, data, 0,
+                                           nullptr, image);
         }
     }
 }
@@ -16111,6 +16179,7 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   if (element->parentElement()->localName() == "label") processCharHeight(element->parentElement());
+  if (element->parentElement()->localName() == "overlay_element") processCharHeight(element);
   if (text_fits && redraw_ws && scientific_format == 2)
     {
       gr_settextcolorind(text_color_ind); // needed to have a visible text after update
@@ -18580,7 +18649,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   /* Modifier */
   if (strEqualsAny(element->localName(), "axis", "central_region", "figure", "plot", "label", "root",
                    "layout_grid_element", "radial_axes", "side_region", "text_region", "side_plot_region", "tick_group",
-                   "theta_axes", "arc_grid_line", "angle_line", "layout_grid", "overlay"))
+                   "theta_axes", "arc_grid_line", "angle_line", "layout_grid", "overlay", "overlay_element"))
     {
       bool old_state = automatic_update;
       automatic_update = false;
@@ -18647,6 +18716,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       if (element->localName() == "text_region") processTextRegion(element, context);
       if (element->localName() == "theta_axes") processThetaAxes(element, context);
       if (element->localName() == "tick_group") processTickGroup(element, context);
+      if (element->localName() == "overlay_element") processOverlayElement(element, context);
       GRM::Render::processAttributes(element);
       automatic_update = old_state;
       if (element->localName() != "root") applyMoveTransformation(element);
@@ -19502,6 +19572,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("draw_grid"), std::vector<std::string>{"None", "Determines whether the axis has grid lines or not"}},
       {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
       {std::string("e_upwards"), std::vector<std::string>{"None", "The x-value for the upward error"}},
+      {std::string("element_type"), std::vector<std::string>{"None", "The type of the overlay element"}},
       {std::string("edge_width"), std::vector<std::string>{"None", "The width of all edges"}},
       {std::string("end_angle"), std::vector<std::string>{"None", "The end angle of the element"}},
       {std::string("error_bar_color"),
@@ -19528,6 +19599,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
            "0",
            "Determines whether GRPlot should be used or not. This could change some aspects in the displayed plot"}},
       {std::string("height"), std::vector<std::string>{"None", "The height of the element"}},
+      {std::string("height_abs"),
+       std::vector<std::string>{"None",
+                                "The absolut height of the imported graphic. The value has to be between 0 and 1."}},
       {std::string("indices"),
        std::vector<std::string>{"None", "References the bars which is calculated as inner bars stored in the context"}},
       {std::string("int_lim_high"), std::vector<std::string>{"None", "Sets the upper-limit for the integral"}},
@@ -19749,6 +19823,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("weights"), std::vector<std::string>{"None", "References the weights stored in the context"}},
       {std::string("width"),
        std::vector<std::string>{"None", "The width of the side region element - inflicting the viewport"}},
+      {std::string("width_abs"),
+       std::vector<std::string>{"None",
+                                "The absolut width of the imported graphic. The value has to be between 0 and 1."}},
       {std::string("window_x_max"), std::vector<std::string>{"None", "The upper window x-coordinate"}},
       {std::string("window_x_min"), std::vector<std::string>{"None", "The lower window x-coordinate"}},
       {std::string("window_y_max"), std::vector<std::string>{"None", "The upper window y-coordinate"}},

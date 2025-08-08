@@ -263,6 +263,7 @@ private slots:
   void xLimSlot();
   void yLimSlot();
   void zLimSlot();
+  void addImageSlot();
 
 private:
   struct MouseState
@@ -407,7 +408,7 @@ private:
       *twin_x_axis_act, *twin_y_axis_act;
   QCursor *csr;
   QMenu *add_overlay_menu;
-  QAction *add_text_act;
+  QAction *add_text_act, *add_image_act;
   QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act;
   QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
