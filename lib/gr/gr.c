@@ -11464,9 +11464,11 @@ static void cubic_bezier(double x[4], double y[4], int n)
  */
 void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 {
-  int i, j = 0, code, nan = 0;
+  int i, j = 0, k = 0, op, nan = 0;
 
   check_autoinit;
+
+  npath = 0;
 
   if (n >= maxpath) reallocate(n);
 
@@ -11476,7 +11478,9 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
       opcode[0] = GR_MOVETO;
     }
   else
-    memmove(opcode, codes, n);
+    {
+      memmove(opcode, codes, n);
+    }
 
   for (i = 0; i < n; i++)
     {
@@ -11497,33 +11501,52 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   for (i = 0; i < j; i++)
     {
-      code = opcode[i];
-      if (code == GR_STOP)
-        break;
-      else if (code == GR_MOVETO)
+      op = opcode[i];
+      if (op == GR_STOP)
         {
-          closepath(fill);
+          break;
+        }
+      else if (op == GR_MOVETO)
+        {
+          code[k++] = 'M';
           addpath(xpoint[i], ypoint[i]);
         }
-      else if (code == GR_LINETO)
-        addpath(xpoint[i], ypoint[i]);
-      else if (code == GR_CURVE3)
+      else if (op == GR_LINETO)
         {
-          quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-          i += 1;
-        }
-      else if (code == GR_CURVE4)
-        {
-          cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-          i += 2;
-        }
-      else if (code == GR_CLOSEPOLY)
-        {
+          code[k++] = 'L';
           addpath(xpoint[i], ypoint[i]);
-          closepath(fill);
+        }
+      else if (op == GR_CURVE3)
+        {
+          code[k++] = 'Q';
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+        }
+      else if (op == GR_CURVE4)
+        {
+          code[k++] = 'C';
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+        }
+      else if (op == GR_CLOSEPOLY)
+        {
+          code[k++] = 'Z';
         }
     }
-  closepath(fill);
+
+  if (codes != NULL)
+    {
+      code[k] = fill ? 'f' : 's';
+      gks_gdp(npath, xpath, ypath, GKS_K_GDP_DRAW_PATH, k + 1, code);
+    }
+  else
+    {
+      gks_polyline(npath, xpath, ypath);
+    }
 
   if (flag_stream)
     {
