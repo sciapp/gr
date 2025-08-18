@@ -2810,7 +2810,13 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
           private_shift = true;
         }
 
-      if (element->localName() == "text" && (x_shift != 0 || y_shift != 0)) gr_settextoffset(x_shift, -y_shift);
+      if (element->localName() == "text")
+        {
+          if (x_shift != 0 || y_shift != 0)
+            gr_settextoffset(x_shift, -y_shift);
+          else
+            gr_settextoffset(0, 0);
+        }
 
       // when the element contains an axes the max viewport must be smaller than normal to respect the axes
       vp_border_x_min = getMinViewport(element, true);
@@ -3098,6 +3104,46 @@ std::string GRM::transformationIntToString(int transformation)
     }
   logger((stderr, "Got unknown transformation \"%i\"\n", transformation));
   throw std::logic_error("Given transformation is unknown.\n");
+}
+
+int GRM::labelOrientationStringToInt(const std::string &label_orientation_str)
+{
+  if (label_orientation_str == "up")
+    return 1;
+  else if (label_orientation_str == "down")
+    return -1;
+  logger((stderr, "Got unknown label orientation \"%s\"\n", label_orientation_str.c_str()));
+  throw std::logic_error("The given label orientation is unknown.\n");
+}
+
+std::string GRM::labelOrientationIntToString(int label_orientation)
+{
+  if (label_orientation > 0)
+    return "up";
+  else if (label_orientation < 0)
+    return "down";
+  logger((stderr, "Got unknown label orientation \"%i\"\n", label_orientation));
+  throw std::logic_error("The given label orientation is unknown.\n");
+}
+
+int GRM::spaceStringToInt(const std::string &space_str)
+{
+  if (space_str == "ndc")
+    return 1;
+  else if (space_str == "wc")
+    return 0;
+  logger((stderr, "Got unknown space \"%s\"\n", space_str.c_str()));
+  throw std::logic_error("Given space is unknown.\n");
+}
+
+std::string GRM::spaceIntToString(int space)
+{
+  if (space == 1)
+    return "ndc";
+  else if (space == 0)
+    return "wc";
+  logger((stderr, "Got unknown space \"%i\"\n", space));
+  throw std::logic_error("Given space is unknown.\n");
 }
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
@@ -16600,6 +16646,14 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                   text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_LEFT);
                 }
             }
+          if (tick_group->parentElement()->hasAttribute("char_up_x") &&
+              tick_group->parentElement()->hasAttribute("char_up_y"))
+            {
+              auto char_up_x = static_cast<double>(tick_group->parentElement()->getAttribute("char_up_x"));
+              auto char_up_y = static_cast<double>(tick_group->parentElement()->getAttribute("char_up_y"));
+              if (!text_elem->hasAttribute("_char_up_x_set_by_user")) text_elem->setAttribute("char_up_x", char_up_x);
+              if (!text_elem->hasAttribute("_char_up_y_set_by_user")) text_elem->setAttribute("char_up_y", char_up_y);
+            }
         }
       text_elem->setAttribute("scientific_format", scientific_format);
     }
@@ -21979,8 +22033,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
       "z",
   };
-  std::vector<std::string> coordinate_system_element{"normalization", "theta_flip", "x_grid",
-                                                     "y_grid",        "z_grid",     "plot_type"};
+  std::vector<std::string> coordinate_system_element{"theta_flip", "x_grid", "y_grid", "z_grid", "plot_type"};
   static std::map<std::string, std::vector<std::string>> element_names{
       {std::string("bar"), bar},
       {std::string("error_bar"), error_bar},
@@ -23484,8 +23537,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   element->setAttribute("tick_orientation", value);
                 }
             }
-          else if (element->localName() == "axis" && strEqualsAny(attr, "adjust_x_lim", "adjust_y_lim", "x_lim_max",
-                                                                  "x_lim_min", "y_lim_max", "y_lim_min"))
+          else if (element->localName() == "axis" &&
+                   strEqualsAny(attr, "adjust_x_lim", "adjust_y_lim", "x_lim_max", "x_lim_min", "y_lim_max",
+                                "y_lim_min", "window_x_max", "window_x_min", "window_y_max", "window_y_min"))
             {
               auto plot_parent = element;
               getPlotParent(plot_parent);

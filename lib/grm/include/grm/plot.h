@@ -43,6 +43,7 @@ GRM_EXPORT int grm_render(void);
 GRM_EXPORT int grm_process_tree(void);
 GRM_EXPORT int grm_export(const char *file_path);
 GRM_EXPORT int grm_switch(unsigned int id);
+GRM_EXPORT int grm_get_error_code();
 
 #if !defined(NO_XERCES_C)
 GRM_EXPORT int grm_load_graphics_tree(FILE *file);

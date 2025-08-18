@@ -353,7 +353,6 @@
             <xs:attribute name="angle_ticks" type="xs:integer"/>
             <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="hide" type="xs:integer"/>
-            <xs:attribute name="normalization" type="xs:string"/>
             <xs:attribute name="plot_type" type="xs:string"/>
             <xs:attribute name="theta_flip" type="xs:integer"/>
             <xs:attribute name="x_grid" type="xs:integer"/>
@@ -393,6 +392,8 @@
             <xs:attribute name="adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="axis_type" type="xs:string" use="required"/> <!-- X or Y -->
+            <xs:attribute name="char_up_x" type="xs:double"/>
+            <xs:attribute name="char_up_y" type="xs:double"/>
             <xs:attribute name="draw_grid" type="xs:integer"/>
             <xs:attribute name="label_orientation" type="xs:integer"/>
             <xs:attribute name="label_pos" type="xs:double"/>

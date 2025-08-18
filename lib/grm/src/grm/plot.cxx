@@ -174,6 +174,7 @@ static std::shared_ptr<GRM::Element> global_root;
 static std::shared_ptr<GRM::Element> edit_figure;
 static std::weak_ptr<GRM::Element> current_dom_element;
 static std::weak_ptr<GRM::Element> current_central_region_element;
+static int error_code = GRM_ERROR_NONE;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -649,6 +650,7 @@ error_cleanup:
       stringArrayMapDelete(type_map);
       type_map = nullptr;
     }
+  error_code = error;
   return error;
 }
 
@@ -941,6 +943,7 @@ cleanup:
 
   --recursion_level;
 
+  error_code = error;
   return error;
 }
 
@@ -961,14 +964,22 @@ grm_error_t plotInitArgStructure(grm_arg_t *arg, const char **hierarchy_name_ptr
   logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
           next_hierarchy_level_max_id));
   error = argIncreaseArray(arg, next_hierarchy_level_max_id - args_old_array_length);
+  error_code = error;
   returnIfError;
   argValues(arg, "A", &args_array);
   for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
     {
       args_array[i] = grm_args_new();
       grm_args_push(args_array[i], "array_index", "i", i);
-      returnErrorIf(args_array[i] == nullptr, GRM_ERROR_MALLOC);
+
+      if (args_array[i] == nullptr)
+        {
+          error = GRM_ERROR_MALLOC;
+          error_code = error;
+          returnIfError;
+        }
       error = plotInitArgsStructure(args_array[i], hierarchy_name_ptr, 1);
+      error_code = error;
       returnIfError;
       if (strcmp(*hierarchy_name_ptr, "plots") == 0) grm_args_push(args_array[i], "in_use", "i", 0);
     }
@@ -1024,6 +1035,7 @@ error_cleanup:
       free(args_array);
     }
 
+  error_code = error;
   return error;
 }
 
@@ -1041,6 +1053,7 @@ int plotCheckForRequest(const grm_args_t *args, grm_error_t *error)
   else
     {
       *error = GRM_ERROR_PLOT_INVALID_REQUEST;
+      error_code = GRM_ERROR_PLOT_INVALID_REQUEST;
     }
 
   return is_request;
@@ -1123,7 +1136,17 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
       grm_args_push(subplot_args, "kind", "s", kind);
     }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  if (!strEqualsAny(kind, "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
+                    "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "barplot",
+                    "contour", "contourf", "heatmap", "hexbin", "histogram", "line", "quiver", "scatter", "shade",
+                    "stairs", "stem", "marginal_heatmap", "imshow", "tricontour", "pie"))
+    {
+      error = GRM_ERROR_PLOT_UNKNOWN_KIND;
+      error_code = error;
+      returnIfError;
+    }
   error = plotStoreCoordinateRanges(subplot_args);
+  error_code = error;
   returnIfError;
   plotProcessWindow(subplot_args);
 
@@ -1182,6 +1205,7 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
 
   if (global_grid != nullptr) grm_grid_delete(global_grid);
   error = grm_grid_new(1, 1, &global_grid);
+  error_code = error;
   returnIfError;
   grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != nullptr)
@@ -1203,7 +1227,11 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
           cols_length = 0;
         }
 
-      if (rows_length != cols_length) return GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+      if (rows_length != cols_length)
+        {
+          error_code = GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+          return GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+        }
 
       grm_args_first_value(*current_subplot_args, "row_span", "I", &row_spans, &row_spans_length);
       grm_args_first_value(*current_subplot_args, "col_span", "I", &col_spans, &col_spans_length);
@@ -1247,15 +1275,19 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
             {
               error = grm_grid_set_element_args_slice(rowstart, rowstop, colstart, colstop, *current_subplot_args,
                                                       current_grid);
+              error_code = error;
               returnIfError;
               error = grm_grid_get_element(rowstart, colstart, current_grid, &current_element);
+              error_code = error;
               returnIfError;
             }
           else
             {
               error = grm_grid_ensure_cells_are_grid(rowstart, rowstop, colstart, colstop, current_grid);
+              error_code = error;
               returnIfError;
               error = grm_grid_get_element(rowstart, colstart, current_grid, (grm_element_t **)&current_grid);
+              error_code = error;
               returnIfError;
               current_element = (grm_element_t *)current_grid;
             }
@@ -1264,26 +1296,31 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
               rel_heights[current_nesting_degree] != -1)
             {
               error = grm_element_set_relative_height(current_element, rel_heights[current_nesting_degree]);
+              error_code = error;
             }
           if (rel_widths != nullptr && rel_widths_length > current_nesting_degree &&
               rel_widths[current_nesting_degree] != -1)
             {
               error = grm_element_set_relative_width(current_element, rel_widths[current_nesting_degree]);
+              error_code = error;
             }
           if (abs_heights != nullptr && abs_heights_length > current_nesting_degree &&
               abs_heights[current_nesting_degree] != -1)
             {
               error = grm_element_set_abs_height(current_element, abs_heights[current_nesting_degree]);
+              error_code = error;
             }
           if (abs_widths != nullptr && abs_widths_length > current_nesting_degree &&
               abs_widths[current_nesting_degree] != -1)
             {
               error = grm_element_set_abs_width(current_element, abs_widths[current_nesting_degree]);
+              error_code = error;
             }
           if (aspect_ratios != nullptr && aspect_ratios_length > current_nesting_degree &&
               aspect_ratios[current_nesting_degree] != -1)
             {
               error = grm_element_set_aspect_ratio(current_element, aspect_ratios[current_nesting_degree]);
+              error_code = error;
             }
           if (fit_parents_heights != nullptr && fit_parents_heights_length > current_nesting_degree &&
               fit_parents_heights[current_nesting_degree] != -1)
@@ -1486,11 +1523,16 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
   const char *key_hierarchy_name, **current_hierarchy_name_ptr;
   grm_args_t *current_args, **args_array;
   grm_arg_t *current_arg;
+  grm_error_t error;
   unsigned int args_array_length, current_id;
 
   logger((stderr, "Check hierarchy level for key \"%s\"...\n", key));
-  returnErrorIf(!stringMapAt(plot_valid_keys_map, key, static_cast<const char **>(&key_hierarchy_name)),
-                GRM_ERROR_PLOT_UNKNOWN_KEY);
+  if (!stringMapAt(plot_valid_keys_map, key, static_cast<const char **>(&key_hierarchy_name)))
+    {
+      error = GRM_ERROR_PLOT_UNKNOWN_KEY;
+      error_code = error;
+      returnIfError;
+    }
   logger((stderr, "... got hierarchy \"%s\"\n", key_hierarchy_name));
   current_hierarchy_name_ptr = hierarchy_name_start_ptr;
   current_args = args;
@@ -1499,7 +1541,12 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
       while (*++current_hierarchy_name_ptr != nullptr)
         {
           current_arg = argsAt(current_args, *current_hierarchy_name_ptr);
-          returnErrorIf(current_arg == nullptr, GRM_ERROR_INTERNAL);
+          if (current_arg == nullptr)
+            {
+              error = GRM_ERROR_INTERNAL;
+              error_code = error;
+              returnIfError;
+            }
           argFirstValue(current_arg, "A", &args_array, &args_array_length);
           uintMapAt(hierarchy_to_id, *current_hierarchy_name_ptr, &current_id);
           /* Check for the invalid id 0 because id 0 is set for append mode */
@@ -1538,12 +1585,18 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
                 {
                   error = eventQueueEnqueueNewPlotEvent(event_queue, (int)current_id - 1);
                 }
+              error_code = error;
               returnIfError;
               grm_args_push(current_args, "in_use", "i", 1);
             }
           if (strcmp(*current_hierarchy_name_ptr, key_hierarchy_name) == 0) break;
         }
-      returnErrorIf(*current_hierarchy_name_ptr == nullptr, GRM_ERROR_INTERNAL);
+      if (*current_hierarchy_name_ptr == nullptr)
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
     }
   if (found_args != nullptr) *found_args = current_args;
   if (found_hierarchy_name_ptr != nullptr) *found_hierarchy_name_ptr = current_hierarchy_name_ptr;
@@ -1641,6 +1694,7 @@ grm_error_t plotLine(grm_args_t *subplot_args)
               if (limits_low_num != limits_high_num)
                 {
                   error = GRM_ERROR_PLOT_MISSING_DATA;
+                  error_code = error;
                   returnIfError;
                 }
               else
@@ -1660,12 +1714,14 @@ grm_error_t plotLine(grm_args_t *subplot_args)
           else
             {
               error = GRM_ERROR_PLOT_MISSING_DATA;
+              error_code = error;
               returnIfError;
             }
         }
 
       global_root->setAttribute("_id", ++id);
       error = plotDrawErrorBars(*current_series, x_length);
+      error_code = error;
       returnIfError;
       ++current_series;
     }
@@ -1862,6 +1918,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         sub_group->setAttribute("ref_y_axis_location", y_axis_ref);
 
       error = plotDrawErrorBars(*current_series, x_length);
+      error_code = error;
       returnIfError;
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -1920,6 +1977,7 @@ grm_error_t plotQuiver(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, 256);
+  error_code = error;
 
   return error;
 }
@@ -2098,6 +2156,7 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         {
           if (num_bins <= 1) num_bins = (int)(3.3 * log10((int)x_length) + 0.5) + 1;
           error = plotDrawErrorBars(*current_series, num_bins);
+          error_code = error;
         }
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -2363,6 +2422,7 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
     }
 
 cleanup:
+  error_code = error;
 
   return error;
 }
@@ -2433,6 +2493,7 @@ grm_error_t plotContour(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, num_levels);
+  error_code = error;
 
   return error;
 }
@@ -2503,6 +2564,7 @@ grm_error_t plotContourf(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, num_levels);
+  error_code = error;
 
   return error;
 }
@@ -3275,8 +3337,10 @@ grm_error_t plotVolume(grm_args_t *subplot_args)
     }
 
   error = plotDrawAxes(subplot_args, 2);
+  error_code = error;
   returnIfError;
   error = plotDrawColorbar(subplot_args, PLOT_3D_COLORBAR_OFFSET, 256);
+  error_code = error;
   returnIfError;
 
   return GRM_ERROR_NONE;
@@ -3808,6 +3872,7 @@ grm_error_t plotRaw(grm_args_t *plot_args)
 
 cleanup:
   if (graphics_data != nullptr) free(graphics_data);
+  error_code = error;
 
   return error;
 }
@@ -4311,11 +4376,6 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args)
 
   grm_args_values(args, "kind", "s", &kind);
 
-  if (strcmp(kind, "polar_histogram") == 0)
-    {
-      if (grm_args_values(args, "normalization", "s", &norm)) sub_group->setAttribute("normalization", norm);
-    }
-
   if (grm_args_values(args, "theta_flip", "i", &theta_flip)) sub_group->setAttribute("theta_flip", theta_flip);
 
   if (grm_args_values(args, "title", "s", &title))
@@ -4376,6 +4436,7 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
 {
   grm_arg_t *arg_ptr;
   grm_args_value_iterator_t *value_it;
+  grm_error_t error = GRM_ERROR_NONE;
   unsigned int length;
   int i, *ii;
 
@@ -4388,12 +4449,21 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
       argsValueIteratorGet(value_it, *upwards_length, *upwards);
       argsValueIteratorDelete(value_it);
 
-      returnErrorIf(*downwards_length != *upwards_length || *downwards_length != x_length,
-                    GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (*downwards_length != *upwards_length || *downwards_length != x_length)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
     }
   else if (strcmp(arg_ptr->value_format, "nD") == 0)
     {
-      returnErrorIf(!grm_args_first_value(error_container, key, "D", downwards, downwards_length), GRM_ERROR_INTERNAL);
+      if (!grm_args_first_value(error_container, key, "D", downwards, downwards_length))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       /* Python encapsulates all single elements into an array */
       if (*downwards_length == 1)
         {
@@ -4402,24 +4472,49 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
           *downwards_length = 0;
           return GRM_ERROR_NONE;
         }
-      returnErrorIf(*downwards_length != x_length, GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (*downwards_length != x_length)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
       *upwards = *downwards;
       *upwards_length = *downwards_length;
     }
   else if (strcmp(arg_ptr->value_format, "d") == 0)
     {
-      returnErrorIf(!grm_args_values(error_container, key, "d", downwards_flt), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(error_container, key, "d", downwards_flt))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt;
     }
   else if (strcmp(arg_ptr->value_format, "nI") == 0)
     {
-      returnErrorIf(!grm_args_first_value(error_container, key, "nI", &ii, &length), GRM_ERROR_INTERNAL);
-      returnErrorIf(length != 1, GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (!grm_args_first_value(error_container, key, "nI", &ii, &length))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
+      if (length != 1)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt = (double)ii[0];
     }
   else if (strcmp(arg_ptr->value_format, "i") == 0)
     {
-      returnErrorIf(!grm_args_values(error_container, key, "i", &i), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(error_container, key, "i", &i))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt = (double)i;
     }
   return GRM_ERROR_NONE;
@@ -4455,15 +4550,22 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
 
   if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
     {
-      returnErrorIf(!grm_args_values(series_args, "error", "a", &error_container), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(series_args, "error", "a", &error_container))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
 
       error = extractMultiTypeArgument(error_container, "absolute", x_length, &downwards_length, &upwards_length,
                                        &absolute_downwards, &absolute_upwards, &absolute_downwards_flt,
                                        &absolute_upwards_flt);
+      error_code = error;
       returnIfError;
       error = extractMultiTypeArgument(error_container, "relative", x_length, &downwards_length, &upwards_length,
                                        &relative_downwards, &relative_upwards, &relative_downwards_flt,
                                        &relative_upwards_flt);
+      error_code = error;
       returnIfError;
     }
   else
@@ -4471,6 +4573,7 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
       error = extractMultiTypeArgument(series_args, "error", x_length, &downwards_length, &upwards_length,
                                        &absolute_downwards, &absolute_upwards, &absolute_downwards_flt,
                                        &absolute_upwards_flt);
+      error_code = error;
       returnIfError;
     }
 
@@ -4478,6 +4581,7 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
       relative_upwards_flt == FLT_MAX && absolute_downwards == nullptr && relative_downwards == nullptr &&
       absolute_downwards_flt == FLT_MAX && relative_downwards_flt == FLT_MAX)
     {
+      error_code = GRM_ERROR_PLOT_MISSING_DATA;
       return GRM_ERROR_PLOT_MISSING_DATA;
     }
   if (absolute_upwards != nullptr)
@@ -4774,6 +4878,11 @@ grm_error_t countsPolarHistogram(grm_args_t *subplot_args)
 
   return error;
 }
+
+int grm_get_error_code()
+{
+  return error_code;
+}
 } /* end of extern "C" */
 
 /* ------------------------- dump ----------------------------------------------------------------------------------- */
@@ -4869,6 +4978,7 @@ char *dumpContextStr(DumpEncoding dump_encoding, const std::unordered_set<std::s
     case DUMP_JSON_BASE64:
     case DUMP_BSON_BASE64:
       encoded_string = base64Encode(nullptr, memwriterBuf(memwriter), memwriterSize(memwriter), &error);
+      error_code = error;
       if (error != GRM_ERROR_NONE) logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
       break;
     default:
@@ -5013,6 +5123,7 @@ void loadContextStr(GRM::Context &context, const std::string &context_str, DumpE
       serialized_context = base64Decode(nullptr, context_str.c_str(), nullptr, &error);
       if (error != GRM_ERROR_NONE)
         {
+          error_code = error;
           std::stringstream error_description;
           error_description << "error \"" << error << "\" (\"" << grm_error_names[error] << "\")";
           logger((stderr, "Got %s!\n", error_description.str().c_str()));
@@ -5253,6 +5364,7 @@ protected:
         base64Decode(nullptr, attribute_value.c_str(), nullptr, &error), std::free);
     if (error != GRM_ERROR_NONE)
       {
+        error_code = error;
         logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
         throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + grm_error_names[error] + "\")!");
       }
@@ -5261,6 +5373,7 @@ protected:
     error = fromBsonRead(internal_args.get(), bson_data.get());
     if (error != GRM_ERROR_NONE)
       {
+        error_code = error;
         logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
         throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + grm_error_names[error] + "\")!");
       }
@@ -5312,6 +5425,7 @@ protected:
                     break;
                   default:
                     /* This branch should never be reached */
+                    error_code = GRM_ERROR_INTERNAL;
                     logger((stderr, "Internal error!\n"));
                     assert(false);
                   }
@@ -5884,7 +5998,11 @@ grm_error_t validateGraphicsTree(bool include_private_attributes)
 
   auto schema_filepath{include_private_attributes ? getMergedSchemaFilepath()
                                                   : (std::string(getGrDir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH)};
-  if (!fileExists(schema_filepath.c_str())) return GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+  if (!fileExists(schema_filepath.c_str()))
+    {
+      error_code = GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+      return GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+    }
 
   try
     {
@@ -5893,6 +6011,7 @@ grm_error_t validateGraphicsTree(bool include_private_attributes)
   catch (const XMLException &e)
     {
       std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      error_code = GRM_ERROR_PARSE_XML_PARSING;
       return GRM_ERROR_PARSE_XML_PARSING;
     }
 
@@ -5953,6 +6072,7 @@ bool validateGraphicsTreeWithErrorMessages()
 {
 #ifndef NO_XERCES_C
   grm_error_t validation_error = validateGraphicsTree(true);
+  error_code = validation_error;
   if (validation_error == GRM_ERROR_NONE)
     {
       fprintf(stderr, "The internal graphics tree passed the validity check.\n");
@@ -6249,9 +6369,15 @@ int grm_merge_extended(const grm_args_t *args, int hold, const char *identificat
         {
           // If this is a request, do not process the argument container further
           processEvents();
+          error_code = error;
           return error == GRM_ERROR_NONE;
         }
-      if (plotMergeArgs(global_root_args, args, nullptr, nullptr, hold) != GRM_ERROR_NONE) return 0;
+      error = plotMergeArgs(global_root_args, args, nullptr, nullptr, hold);
+      if (error != GRM_ERROR_NONE)
+        {
+          error_code = error;
+          return 0;
+        }
       if (!getIdFromArgs(args, &last_merge_plot_id, &last_merge_subplot_id, &last_merge_series_id))
         {
           last_merge_plot_id = 0;
@@ -6303,7 +6429,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
-  if (plotPreSubplot(subplot_args) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotPreSubplot(subplot_args)) != GRM_ERROR_NONE) return 0;
 
   auto central_region =
       (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
@@ -6376,7 +6502,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "grplot", "i", &grplot)) group->setAttribute("grplot", grplot);
 
   if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
-  if (plot_func(subplot_args) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;
 
   plotPostSubplot(subplot_args);
   return 1;
@@ -6522,7 +6648,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
         }
       if (!edit_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
         {
-          if (plotProcessGridArguments(edit_plot_args) != GRM_ERROR_NONE) return 0;
+          if ((error_code = plotProcessGridArguments(edit_plot_args)) != GRM_ERROR_NONE) return 0;
         }
       current_grid = reinterpret_cast<GRM::Grid *>(global_grid);
       int nrows = current_grid->getNRows();
@@ -6665,8 +6791,8 @@ int grm_switch(unsigned int id)
       global_render->setActiveFigure(edit_figure);
     }
 
-  if (plotInitStaticVariables() != GRM_ERROR_NONE) return 0;
-  if (plotInitArgsStructure(global_root_args, plot_hierarchy_names, id + 1) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotInitStaticVariables()) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotInitArgsStructure(global_root_args, plot_hierarchy_names, id + 1)) != GRM_ERROR_NONE) return 0;
   if (!grm_args_first_value(global_root_args, "plots", "A", &args_array, &args_array_length)) return 0;
   if (id + 1 > args_array_length) return 0;
 
@@ -6680,6 +6806,7 @@ int grm_validate(void)
 {
 #ifndef NO_XERCES_C
   grm_error_t validation_error = validateGraphicsTree();
+  error_code = validation_error;
   return (validation_error == GRM_ERROR_NONE);
 #endif
   return 0;

@@ -104,6 +104,8 @@ QStringList step_where_list{
     "mid",
 };
 QStringList element_type_list{"text", "image"};
+QStringList space_list{"ndc", "wc"};
+QStringList label_orientation_list{"up", "down"};
 
 static std::string file_export;
 static QFile *test_commands_file = nullptr;
@@ -194,6 +196,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "font",
       "font_precision",
       "kind",
+      "label_orientation",
       "line_type",
       "location",
       "marginal_heatmap_kind",
@@ -201,6 +204,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "model",
       "norm",
       "orientation",
+      "plot_type",
       "ref_x_axis_location",
       "ref_y_axis_location",
       "resample_method",
@@ -209,6 +213,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "size_y_type",
       "size_x_unit",
       "size_y_unit",
+      "space",
       "step_where",
       "style",
       "text_encoding",
@@ -250,7 +255,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "polar_with_pan",
       "r_log",
       "set_text_color_for_background",
-      "space",
       "stairs",
       "text_is_title",
       "theta_flip",
@@ -781,6 +785,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"fill_int_style", fill_int_style_list},
       {"font", font_list},
       {"font_precision", font_precision_list},
+      {"label_orientation", label_orientation_list},
       {"line_type", line_type_list},
       {"marker_type", marker_type_list},
       {"text_align_vertical", text_align_vertical_list},
@@ -796,6 +801,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
+      {"space", space_list},
       {"step_where", step_where_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
@@ -1134,6 +1140,15 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::transformationIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "label_orientation" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::labelOrientationIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "space" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = GRM::spaceIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
 
   int index = ((QComboBox *)*line_edit)->findText(current_text.c_str());
   if (index == -1) index += ((QComboBox *)*line_edit)->count();
@@ -1343,6 +1358,14 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
             {
               element->setAttribute(label, GRM::transformationStringToInt(value));
             }
+          else if (label == "label_orientation")
+            {
+              element->setAttribute(label, GRM::labelOrientationStringToInt(value));
+            }
+          else if (label == "space")
+            {
+              element->setAttribute(label, GRM::spaceStringToInt(value));
+            }
         }
       catch (std::logic_error &e)
         {
@@ -1353,9 +1376,12 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
 
 void GRPlotWidget::attributeEditEvent(bool highlight_location)
 {
-  edit_element_widget->show();
-  edit_element_widget->attributeEditEvent(highlight_location);
-  show_edit_element_act->trigger();
+  if (current_selection != nullptr)
+    {
+      edit_element_widget->show();
+      edit_element_widget->attributeEditEvent(highlight_location);
+      show_edit_element_act->trigger();
+    }
 }
 
 void GRPlotWidget::draw()
@@ -1379,17 +1405,166 @@ void GRPlotWidget::draw()
     {
       /* Call `grm_plot` at least once to initialize the internal argument container structure,
        * but use `grm_render` afterwards, so the graphics tree is not deleted every time. */
-      was_successful = grm_plot(nullptr);
+      try
+        {
+          was_successful = grm_plot(nullptr);
+        }
+      catch (std::runtime_error e)
+        {
+          std::cerr << e.what() << std::endl;
+          exit(1);
+        }
+      catch (NotFoundError e)
+        {
+          std::cerr << e.what() << std::endl;
+          exit(1);
+        }
     }
   else
     {
-      was_successful = grm_render();
+      try
+        {
+          was_successful = grm_render();
+        }
+      catch (NotFoundError e)
+        {
+          std::cerr << e.what() << std::endl;
+          exit(1);
+        }
     }
   if (!was_successful)
     {
-      // Todo: detailed error message according to the specific error
-      fprintf(stderr,
-              "An error occured, the application will be closed. Please verify ur input is correct and try it again\n");
+      if (!draw_called_at_least_once || in_listen_mode)
+        {
+          auto error_code = grm_get_error_code();
+          if (error_code == 1)
+            fprintf(stderr, "A unspecified GRM error occurred!\n");
+          else if (error_code == 2)
+            fprintf(stderr, "An internal GRM error occurred!\n");
+          else if (error_code == 3)
+            fprintf(stderr, "A GRM error occurred while trying to allocate storage!\n");
+          else if (error_code == 4)
+            fprintf(stderr, "A GRM error caused by an unsupported operation occurred!\n");
+          else if (error_code == 5)
+            fprintf(stderr, "An unsupported datatype GRM error occurred!\n");
+          else if (error_code == 6)
+            fprintf(stderr, "An invalid argument GRM error occurred!\n");
+          else if (error_code == 7)
+            fprintf(stderr, "An args invalid key GRM error occurred!\n");
+          else if (error_code == 8)
+            fprintf(stderr, "An args increasing non array value GRM error occurred!\n");
+          else if (error_code == 9)
+            fprintf(stderr, "An args increasing multi dimensional array GRM error occurred!\n");
+          else if (error_code == 10)
+            fprintf(stderr, "A GRM error occurred while parsing a null value!\n");
+          else if (error_code == 11)
+            fprintf(stderr, "A GRM error occurred while parsing a bool value!\n");
+          else if (error_code == 12)
+            fprintf(stderr, "A GRM error occurred while parsing an int value!\n");
+          else if (error_code == 13)
+            fprintf(stderr, "A GRM error occurred while parsing a double value!\n");
+          else if (error_code == 14)
+            fprintf(stderr, "A GRM error occurred while parsing a string value!\n");
+          else if (error_code == 15)
+            fprintf(stderr, "A GRM error occurred while parsing an array value!\n");
+          else if (error_code == 16)
+            fprintf(stderr, "A GRM error occurred while parsing an object value!\n");
+          else if (error_code == 17)
+            fprintf(stderr, "A GRM error occurred while parsing an unknown datatype!\n");
+          else if (error_code == 18)
+            fprintf(stderr, "A GRM error occurred while parsing an invalid delimiter!\n");
+          else if (error_code == 19)
+            fprintf(stderr, "A GRM error occurred while parsing an incomplete string!\n");
+          else if (error_code == 20)
+            fprintf(stderr, "A GRM error occurred while parsing a missing object container!\n");
+          else if (error_code == 21)
+            fprintf(stderr, "A GRM error occurred while parsing a non existing schema file!\n");
+          else if (error_code == 22)
+            fprintf(stderr, "A GRM error occurred while parsing an invalid schema!\n");
+          else if (error_code == 23)
+            fprintf(stderr, "Validating the xml schema file failed. A GRM parse error occurred!\n");
+          else if (error_code == 24)
+            fprintf(stderr, "A GRM error occurred while parsing the xml schema!\n");
+          else if (error_code == 25)
+            fprintf(stderr, "While initialize a network winsocket a GRM error occurred!\n");
+          else if (error_code == 26)
+            fprintf(stderr, "While creating a network socket a GRM error occurred!\n");
+          else if (error_code == 27)
+            fprintf(stderr, "While binding a network socket a GRM error occurred!\n");
+          else if (error_code == 28)
+            fprintf(stderr, "While listening to the network socket a GRM error occurred!\n");
+          else if (error_code == 29)
+            fprintf(stderr, "A GRM error occurred after a network connection was accepted!\n");
+          else if (error_code == 30)
+            fprintf(stderr, "While resolving the network hostname a GRM error occurred!\n");
+          else if (error_code == 31)
+            fprintf(stderr, "While connecting to the network socket a GRM error occurred!\n");
+          else if (error_code == 32)
+            fprintf(stderr, "While receiving the network a GRM error occurred!\n");
+          else if (error_code == 33)
+            fprintf(stderr, "The received network is unsupported. A GRM error occurred!\n");
+          else if (error_code == 34)
+            fprintf(stderr, "The network received a connection shutdown. A GRM error occurred!\n");
+          else if (error_code == 35)
+            fprintf(stderr, "While sending the network a GRM error occurred!\n");
+          else if (error_code == 36)
+            fprintf(stderr, "A GRM error occurred cause of unsupported network send!\n");
+          else if (error_code == 37)
+            fprintf(stderr, "The network socket is closed. A GRM error occurred!\n");
+          else if (error_code == 38)
+            fprintf(stderr, "While cleaning the network winsocket up a GRM error occurred!\n");
+          else if (error_code == 39)
+            fprintf(stderr, "While receiving a custom command a GRM error occurred!\n");
+          else if (error_code == 40)
+            fprintf(stderr, "While sending a custom command a GRM error occurred!\n");
+          else if (error_code == 41)
+            fprintf(stderr, "A GRM error in combination with the colormap occurred!\n");
+          else if (error_code == 42)
+            fprintf(stderr, "A GRM error in combination with the normalization occurred!\n");
+          else if (error_code == 43)
+            fprintf(stderr, "The key is unknown. A GRM error occurred!\n");
+          else if (error_code == 44)
+            fprintf(stderr, "A GRM error in combination with an unknown algorithm occurred!\n");
+          else if (error_code == 45)
+            fprintf(stderr, "A GRM error in combination with a missing algorithm occurred!\n");
+          else if (error_code == 46)
+            fprintf(stderr, "The kind is unknown. A GRM error occurred!\n");
+          else if (error_code == 47)
+            fprintf(stderr, "A GRM error in combination with missing data occurred!\n");
+          else if (error_code == 48)
+            fprintf(stderr, "A GRM error in combination with a length mismatch in the components occurred!\n");
+          else if (error_code == 49)
+            fprintf(stderr, "A GRM error in combination with missing dimensions occurred!\n");
+          else if (error_code == 50)
+            fprintf(stderr, "A GRM error in combination with missing labels occurred!\n");
+          else if (error_code == 51)
+            fprintf(stderr, "The plot id is invalid. A GRM error occurred!\n");
+          else if (error_code == 52)
+            fprintf(stderr, "A out of range GRM error occurred!\n");
+          else if (error_code == 53)
+            fprintf(stderr, "A GRM error in combination with incompatible arguments occurred!\n");
+          else if (error_code == 54)
+            fprintf(stderr, "A GRM error in combination with an invalid request occurred!\n");
+          else if (error_code == 55)
+            fprintf(stderr, "The base64 block is too short. A GRM error occurred!\n");
+          else if (error_code == 56)
+            fprintf(stderr, "A base64 invalid character encountered. A GRM error occurred!\n");
+          else if (error_code == 57)
+            fprintf(stderr, "A GRM error based on a invalid layout index occurred!\n");
+          else if (error_code == 58)
+            fprintf(stderr, "Layout attributes contradict. A GRM error occurred.\n");
+          else if (error_code == 59)
+            fprintf(stderr, "Encountered a invalid argument range inside the layout. A GRM error occurred!\n");
+          else if (error_code == 60)
+            fprintf(stderr, "Encountered a length mismatch inside the layout components. A GRM error occurred!\n");
+          else if (error_code == 61)
+            fprintf(stderr, "A GRM error occurred while creating a temporary directory!\n");
+          else if (error_code == 62)
+            fprintf(stderr, "A non implemented GRM error occurred!\n");
+        }
+      fprintf(
+          stderr,
+          "An error occurred, the application will be closed. Please verify your input is correct and try it again\n");
       exit(1);
     }
   draw_called_at_least_once = true;
@@ -1685,6 +1860,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           prev_selection.reset();
           tree_widget->updateData(grm_get_document_root());
           edit_element_widget->hide();
+          this->cursor().setShape(Qt::ArrowCursor);
           redraw();
         }
       else if (event->key() == Qt::Key_Return)
@@ -5692,6 +5868,10 @@ void GRPlotWidget::cursorHandler(int x, int y)
                 {
                   csr->setShape(Qt::SizeFDiagCursor);
                 }
+            }
+          else if (mouse_state.mode == MouseState::Mode::NORMAL)
+            {
+              if (cursor_state == DEFAULT_HOVER_MODE) csr->setShape(Qt::ArrowCursor);
             }
         }
     }
