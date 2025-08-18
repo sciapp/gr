@@ -3126,24 +3126,24 @@ std::string GRM::labelOrientationIntToString(int label_orientation)
   throw std::logic_error("The given label orientation is unknown.\n");
 }
 
-int GRM::spaceStringToInt(const std::string &space_str)
+int GRM::worldCoordinatesStringToInt(const std::string &world_coordinates_str)
 {
-  if (space_str == "ndc")
+  if (world_coordinates_str == "ndc")
     return 1;
-  else if (space_str == "wc")
+  else if (world_coordinates_str == "wc")
     return 0;
-  logger((stderr, "Got unknown space \"%s\"\n", space_str.c_str()));
-  throw std::logic_error("Given space is unknown.\n");
+  logger((stderr, "Got unknown world coordinates \"%s\"\n", world_coordinates_str.c_str()));
+  throw std::logic_error("Given world coordinates is unknown.\n");
 }
 
-std::string GRM::spaceIntToString(int space)
+std::string GRM::worldCoordinatesIntToString(int world_coordinates)
 {
-  if (space == 1)
+  if (world_coordinates == 1)
     return "ndc";
-  else if (space == 0)
+  else if (world_coordinates == 0)
     return "wc";
-  logger((stderr, "Got unknown space \"%i\"\n", space));
-  throw std::logic_error("Given space is unknown.\n");
+  logger((stderr, "Got unknown world coordinates \"%i\"\n", world_coordinates));
+  throw std::logic_error("Given world coordinates is unknown.\n");
 }
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
@@ -16195,11 +16195,13 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
   auto str = static_cast<std::string>(element->getAttribute("text"));
   auto available_width = static_cast<double>(element->getAttribute("width"));
   auto available_height = static_cast<double>(element->getAttribute("height"));
-  auto space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
-  if (element->hasAttribute("_space_set_by_user"))
+  auto world_coordinates = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("world_coordinates")));
+  if (element->hasAttribute("_world_coordinates_set_by_user"))
     {
-      space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("_space_set_by_user")));
-      element->setAttribute("space", static_cast<int>(element->getAttribute("_space_set_by_user")));
+      world_coordinates =
+          static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("_world_coordinates_set_by_user")));
+      element->setAttribute("world_coordinates",
+                            static_cast<int>(element->getAttribute("_world_coordinates_set_by_user")));
     }
   if (element->parentElement()->parentElement()->hasAttribute("text_color_ind"))
     text_color_ind = static_cast<int>(element->parentElement()->parentElement()->getAttribute("text_color_ind"));
@@ -16215,7 +16217,7 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
   processPrivateTransparency(element);
   if (element->hasAttribute("transparency")) processTransparency(element);
 
-  if (space == CoordinateSpace::WC) gr_wctondc(&x, &y);
+  if (world_coordinates == CoordinateSpace::WC) gr_wctondc(&x, &y);
   if (element->hasAttribute("width") && element->hasAttribute("height"))
     {
       gr_wctondc(&available_width, &available_height);
@@ -18313,6 +18315,9 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
         continue;
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
+      std::string prefix = "";
+
+      if (child->hasAttribute("label")) prefix = static_cast<std::string>(child->getAttribute("label")) + "_";
 
       // save the original data so it can be restored
       if (child->hasAttribute("x") && !child->hasAttribute("_x_org"))
@@ -18399,8 +18404,8 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
                   if (!grm_isnan(x_vec[i])) x_max = (x_max > x_vec[i]) ? x_max : x_vec[i];
                 }
 
-              (*context)["x" + str] = x_vec;
-              child->setAttribute("x", "x" + str);
+              (*context)[prefix + "x" + str] = x_vec;
+              child->setAttribute("x", prefix + "x" + str);
               if (child->hasAttribute("x_range_min")) child->setAttribute("x_range_min", x_min);
               if (child->hasAttribute("x_range_max")) child->setAttribute("x_range_max", x_max);
             }
@@ -18439,8 +18444,8 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
                   if (!grm_isnan(y_vec[i])) y_max = (y_max > y_vec[i]) ? y_max : y_vec[i];
                 }
 
-              (*context)["y" + str] = y_vec;
-              child->setAttribute("y", "y" + str);
+              (*context)[prefix + "y" + str] = y_vec;
+              child->setAttribute("y", prefix + "y" + str);
               if (kind == "barplot" && y_min <= 0) y_min = 1;
               if (child->hasAttribute("y_range_min")) child->setAttribute("y_range_min", y_min);
               if (child->hasAttribute("y_range_max")) child->setAttribute("y_range_max", y_max);
@@ -18480,8 +18485,8 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
                   if (!grm_isnan(z_vec[i])) z_max = (z_max > z_vec[i]) ? z_max : z_vec[i];
                 }
 
-              (*context)["z" + str] = z_vec;
-              child->setAttribute("z", "z" + str);
+              (*context)[prefix + "z" + str] = z_vec;
+              child->setAttribute("z", prefix + "z" + str);
               if (child->hasAttribute("z_range_min")) child->setAttribute("z_range_min", z_min);
               if (child->hasAttribute("z_range_max")) child->setAttribute("z_range_max", z_max);
             }
@@ -18501,8 +18506,8 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
               if (!grm_isnan(r_vec[i])) r_max = (r_max > r_vec[i]) ? r_max : r_vec[i];
             }
 
-          (*context)["r" + str] = r_vec;
-          child->setAttribute("r", "r" + str);
+          (*context)[prefix + "r" + str] = r_vec;
+          child->setAttribute("r", prefix + "r" + str);
           if (child->hasAttribute("r_range_min")) child->setAttribute("r_range_min", r_min);
           if (child->hasAttribute("r_range_max")) child->setAttribute("r_range_max", r_max);
         }
@@ -19820,7 +19825,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("size_y"), std::vector<std::string>{"None", "The figure height"}},
       {std::string("size_y_type"), std::vector<std::string>{"double", "The figure height type (integer, double, ...)"}},
       {std::string("size_y_unit"), std::vector<std::string>{"px", "The figure height unit (px, ...)"}},
-      {std::string("space"), std::vector<std::string>{"None", "The used worldspace (ndc or wc)"}},
       {std::string("space_rotation"), std::vector<std::string>{"0", "The rotation for space"}},
       {std::string("space_tilt"), std::vector<std::string>{"90", "The tilt for space"}},
       {std::string("space_z_max"), std::vector<std::string>{"None", "The upper z-coordinate for space"}},
@@ -19910,6 +19914,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("window_y_min"), std::vector<std::string>{"None", "The lower window y-coordinate"}},
       {std::string("window_z_max"), std::vector<std::string>{"None", "The upper window z-coordinate"}},
       {std::string("window_z_min"), std::vector<std::string>{"None", "The lower window z-coordinate"}},
+      {std::string("world_coordinates"), std::vector<std::string>{"None", "The used world space (ndc or wc)"}},
       {std::string("ws_viewport_x_max"),
        std::vector<std::string>{"None", "The upper workstation viewport x-coordinate"}},
       {std::string("ws_viewport_x_min"),
@@ -20172,7 +20177,7 @@ GRM::Render::createPolyline(const std::string &x_key, std::optional<std::vector<
 }
 
 std::shared_ptr<GRM::Element> GRM::Render::createText(double x, double y, const std::string &text,
-                                                      CoordinateSpace space,
+                                                      CoordinateSpace world_coordinates,
                                                       const std::shared_ptr<GRM::Element> &ext_element)
 {
   /*!
@@ -20181,7 +20186,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createText(double x, double y, const 
    * \param[in] x A double value representing the x coordinate
    * \param[in] y A double value representing the y coordinate
    * \param[in] text A string
-   * \param[in] space the coordinate space (WC or NDC) for x and y, default NDC
+   * \param[in] world_coordinates the coordinate space (WC or NDC) for x and y, default NDC
    */
 
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("text") : ext_element;
@@ -20189,7 +20194,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createText(double x, double y, const 
   element->setAttribute("x", x);
   element->setAttribute("y", y);
   element->setAttribute("text", text);
-  element->setAttribute("space", static_cast<int>(space));
+  element->setAttribute("world_coordinates", static_cast<int>(world_coordinates));
 
   return element;
 }
@@ -22034,6 +22039,12 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "z",
   };
   std::vector<std::string> coordinate_system_element{"theta_flip", "x_grid", "y_grid", "z_grid", "plot_type"};
+  std::vector<std::string> tick_group{
+      "line_color_ind",
+      "line_color_rgb",
+      "line_spec",
+      "line_type",
+  };
   static std::map<std::string, std::vector<std::string>> element_names{
       {std::string("bar"), bar},
       {std::string("error_bar"), error_bar},
@@ -22070,6 +22081,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       {std::string("series_trisurface"), series_trisurface},
       {std::string("series_volume"), series_volume},
       {std::string("series_wireframe"), series_wireframe},
+      {std::string("tick_group"), tick_group},
   };
   // plot attributes which needs a bounding box redraw
   // TODO: critical update in plot means critical update inside childs, extend the following lists
@@ -24365,10 +24377,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto is_major = static_cast<int>(element->getAttribute("is_major"));
               element->setAttribute("_is_major_set_by_user", is_major);
             }
-          else if (strEqualsAny(attr, "space"))
+          else if (strEqualsAny(attr, "world_coordinates"))
             {
-              auto space = static_cast<int>(element->getAttribute("space"));
-              element->setAttribute("_space_set_by_user", space);
+              auto world_coordinates = static_cast<int>(element->getAttribute("world_coordinates"));
+              element->setAttribute("_world_coordinates_set_by_user", world_coordinates);
             }
           else if (strEqualsAny(attr, "fill_color_ind") && element->localName() == "legend")
             {
@@ -24700,6 +24712,13 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   legend = global_render->createLegend();
                   plot_parent->append(legend);
                 }
+            }
+          else if (attr == "text_angle")
+            {
+              auto val = static_cast<int>(element->getAttribute("text_angle"));
+              element->setAttribute("char_up_x", std::cos(val * M_PI / 180.0));
+              element->setAttribute("char_up_y", std::sin(val * M_PI / 180.0));
+              element->removeAttribute("text_angle");
             }
 
           auto plot_parent = element;

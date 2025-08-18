@@ -55,6 +55,17 @@ static std::string labelToAttrName(std::string label)
   return attr_name;
 }
 
+static std::vector<std::string> intersection(std::vector<std::string> v1, std::vector<std::string> v2)
+{
+  std::vector<std::string> v3;
+
+  std::sort(v1.begin(), v1.end());
+  std::sort(v2.begin(), v2.end());
+
+  std::set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(), back_inserter(v3));
+  return v3;
+}
+
 EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {
   grplot_widget = widget;
@@ -65,14 +76,16 @@ EditElementWidget::EditElementWidget(GRPlotWidget *widget, QWidget *parent) : QW
 #endif
 }
 
-void EditElementWidget::attributeEditEvent(bool highlight_location)
+void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Element>> multiple_selections,
+                                           bool highlight_location)
 {
   QString text_label;
   bool line_modification_added = false, marker_modification_added = false, text_modification_added = false,
        fill_modification_added = false, viewport_added = false, viewport_normalized_added = false, window_added = false,
        range_modification_added = false, log_modification_added = false, flip_modification_added = false,
        lim_modification_added = false, element_movement_modification_added = false, space_modification_added = false,
-       ws_modification_added = false;
+       ws_modification_added = false, tick_modification_added = false, tick_label_modification_added = false,
+       inherit_from_plot_added = false;
   auto current_selection = grplot_widget->getCurrentSelection();
   if (current_selection == nullptr || *current_selection == nullptr)
     {
@@ -86,6 +99,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
       fields.clear();
       labels.clear();
       attr_type.clear();
+      this->multiple_selections.clear();
     }
 
   context_name = "";
@@ -100,7 +114,17 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
   std::string currently_clicked_name = (*current_selection)->getRef()->localName();
   QString title("Element Edit: ");
-  title.append(currently_clicked_name.c_str());
+  if (multiple_selections.empty() ||
+      !((*current_selection)->getRef()->hasAttribute("_selected_for_move") &&
+        static_cast<int>((*current_selection)->getRef()->getAttribute("_selected_for_move"))))
+    {
+      title.append(currently_clicked_name.c_str());
+    }
+  else
+    {
+      this->multiple_selections = multiple_selections;
+      title = "Intersection Element Edit:";
+    }
   this->setWindowTitle(title);
   auto change_parameters_label = new QLabel("Change Parameters:", this);
   change_parameters_label->setStyleSheet("font-weight: bold");
@@ -209,13 +233,143 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
   ws_modification_form->setFormAlignment(Qt::AlignLeft);
   CollapsibleSection *ws_modification = new CollapsibleSection("WS Modifications", 100, this);
   auto *ws_modification_layout = new QVBoxLayout();
+  auto tick_modification_form = new QFormLayout;
+  tick_modification_form->setVerticalSpacing(VERTICAL_SPACING);
+  tick_modification_form->setHorizontalSpacing(HORIZONTAL_SPACING);
+  tick_modification_form->setContentsMargins(0, 0, 0, 0);
+  tick_modification_form->setFormAlignment(Qt::AlignLeft);
+  CollapsibleSection *tick_modification = new CollapsibleSection("Tick Modifications", 100, this);
+  auto *tick_modification_layout = new QVBoxLayout();
+  auto tick_label_modification_form = new QFormLayout;
+  tick_label_modification_form->setVerticalSpacing(VERTICAL_SPACING);
+  tick_label_modification_form->setHorizontalSpacing(HORIZONTAL_SPACING);
+  tick_label_modification_form->setContentsMargins(0, 0, 0, 0);
+  tick_label_modification_form->setFormAlignment(Qt::AlignLeft);
+  CollapsibleSection *tick_label_modification = new CollapsibleSection("Tick Label Modifications", 100, this);
+  auto *tick_label_modification_layout = new QVBoxLayout();
+  auto inherit_from_plot_modification_form = new QFormLayout;
+  inherit_from_plot_modification_form->setVerticalSpacing(VERTICAL_SPACING);
+  inherit_from_plot_modification_form->setHorizontalSpacing(HORIZONTAL_SPACING);
+  inherit_from_plot_modification_form->setContentsMargins(0, 0, 0, 0);
+  inherit_from_plot_modification_form->setFormAlignment(Qt::AlignLeft);
+  CollapsibleSection *inherit_from_plot_modification =
+      new CollapsibleSection("Modifications inherit from Plot", 100, this);
+  auto *inherit_from_plot_modification_layout = new QVBoxLayout();
 
   QWidget *line_edit;
 
-  std::vector<std::string> sorted_names;
-  for (const auto &cur_attr_name : (*current_selection)->getRef()->getAttributeNames())
+  if ((*current_selection)->getRef()->localName() == "axis" ||
+      (*current_selection)->getRef()->localName() == "coordinate_system")
     {
-      sorted_names.push_back(cur_attr_name);
+      std::shared_ptr<GRM::Element> plot_elem;
+
+      if ((*current_selection)->getRef()->localName() == "axis")
+        {
+          if ((*current_selection)->getRef()->parentElement()->localName() == "coordinate_system")
+            plot_elem = (*current_selection)->getRef()->parentElement()->parentElement()->parentElement();
+          else
+            plot_elem = (*current_selection)->getRef()->parentElement()->parentElement()->parentElement();
+        }
+      else
+        {
+          plot_elem = (*current_selection)->getRef()->parentElement()->parentElement();
+        }
+      for (const auto &attr_name : std::vector<std::string>{
+               "x_log",     "y_log",         "z_log",        "r_log",        "x_flip",       "y_flip",
+               "z_flip",    "theta_flip",    "adjust_x_lim", "adjust_y_lim", "adjust_z_lim", "x_lim_min",
+               "x_lim_max", "y_lim_min",     "y_lim_max",    "z_lim_min",    "z_lim_max",    "r_lim_min",
+               "r_lim_max", "theta_lim_min", "theta_lim_max"})
+        {
+          bool was_added = true;
+          QString tooltip_string = GRM::Render::getDefaultAndTooltip(plot_elem, attr_name)[1].c_str();
+          tooltip_string.append(".  Default: ");
+          tooltip_string.append(GRM::Render::getDefaultAndTooltip(plot_elem, attr_name)[0].c_str());
+
+          if (check_box_attr.contains(attr_name.c_str()))
+            {
+              line_edit = new QCheckBox(this);
+              ((QCheckBox *)line_edit)->setToolTip(tooltip_string);
+              if (multiple_selections.empty() && plot_elem->hasAttribute(attr_name))
+                ((QCheckBox *)line_edit)->setChecked(static_cast<int>(plot_elem->getAttribute(attr_name)) == 1);
+            }
+          else
+            {
+              if (plot_elem->getAttribute(attr_name).isInt())
+                {
+                  attr_type.emplace(attr_name, "xs:integer");
+                }
+              else if (plot_elem->getAttribute(attr_name).isDouble())
+                {
+                  attr_type.emplace(attr_name, "xs:double");
+                }
+              else
+                {
+                  attr_type.emplace(attr_name, "xs:string");
+                }
+              line_edit = new QLineEdit(this);
+              if (multiple_selections.empty() && plot_elem->hasAttribute(attr_name))
+                ((QLineEdit *)line_edit)->setText(static_cast<std::string>(plot_elem->getAttribute(attr_name)).c_str());
+              ((QLineEdit *)line_edit)->setToolTip(tooltip_string);
+            }
+
+          text_label = QString(attrNameToLabel(attr_name).c_str());
+          if (!plot_elem->hasAttribute(attr_name))
+            text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attrNameToLabel(attr_name).c_str());
+          auto label = new QLabel(text_label, this);
+          label->setFixedWidth(LABEL_WIDTH);
+          label->setWordWrap(true);
+          label->setToolTip(tooltip_string);
+          if (!inherit_from_plot_added &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name, true)))
+            {
+              form->addRow(inherit_from_plot_modification);
+              inherit_from_plot_added = true;
+            }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+          inherit_from_plot_modification_form->addRow(label, line_edit);
+          if (!advanced_editor)
+            inherit_from_plot_modification_form->setRowVisible(
+                inherit_from_plot_modification_form->rowCount() - 1,
+                !isAdvancedAttribute((*current_selection)->getRef(), attr_name, true));
+#else
+          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name, true))
+            inherit_from_plot_modification_form->addRow(label, line_edit);
+#endif
+          if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), attr_name, true))
+            was_added = false;
+
+          if (was_added)
+            {
+              labels << text_label;
+              fields << line_edit;
+            }
+        }
+    }
+
+  std::vector<std::string> sorted_names;
+  if (!multiple_selections.empty())
+    {
+      for (const auto &cur_attr_name : multiple_selections[0]->getAttributeNames())
+        {
+          sorted_names.push_back(cur_attr_name);
+        }
+      for (int i = 1; i < multiple_selections.size() - 1; i++)
+        {
+          std::vector<std::string> tmp;
+          for (const auto &cur_attr_name : multiple_selections[i]->getAttributeNames())
+            {
+              tmp.push_back(cur_attr_name);
+            }
+          sorted_names = intersection(sorted_names, tmp);
+        }
+    }
+  else
+    {
+      for (const auto &cur_attr_name : (*current_selection)->getRef()->getAttributeNames())
+        {
+          sorted_names.push_back(cur_attr_name);
+        }
     }
   std::sort(sorted_names.begin(), sorted_names.end());
   for (const auto &cur_attr_name : sorted_names)
@@ -244,6 +398,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               cur_attr_name == "x_shift_ndc" || cur_attr_name == "y_shift_ndc")
             continue;
         }
+      if (cur_attr_name == "text_angle") continue;
       QString tooltip_string =
           GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), cur_attr_name)[1].c_str();
       tooltip_string.append(".  Default: ");
@@ -269,19 +424,27 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
             {
               attr_type.emplace(cur_attr_name, "xs:string");
             }
-          ((QCheckBox *)line_edit)->setToolTip(tooltip_string);
+          ((QComboBox *)line_edit)->setToolTip(tooltip_string);
+          if (!multiple_selections.empty())
+            {
+              ((QComboBox *)line_edit)->setCurrentIndex(((QComboBox *)line_edit)->count() - 1);
+            }
         }
       else if (check_box_attr.contains(cur_attr_name.c_str()))
         {
           line_edit = new QCheckBox(this);
           ((QCheckBox *)line_edit)->setToolTip(tooltip_string);
-          ((QCheckBox *)line_edit)
-              ->setChecked(static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name)) == 1);
+          if (multiple_selections.empty())
+            ((QCheckBox *)line_edit)
+                ->setChecked(static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name)) == 1);
         }
       else if (color_ind_attr.contains(cur_attr_name.c_str()))
         {
           auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-          line_edit = new QPushButton(std::to_string(index).c_str(), this);
+          if (multiple_selections.empty())
+            line_edit = new QPushButton(std::to_string(index).c_str(), this);
+          else
+            line_edit = new QPushButton("", this);
           ((QPushButton *)line_edit)->setToolTip(tooltip_string);
           ((QPushButton *)line_edit)->setObjectName(cur_attr_name.c_str());
 
@@ -296,7 +459,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
           auto color_pic = QPixmap::fromImage(image);
           color_pic = color_pic.scaled(20, 20);
-          ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
+          if (multiple_selections.empty()) ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
 
           QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
           QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
@@ -342,7 +505,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
           auto color_pic = QPixmap::fromImage(image);
           color_pic = color_pic.scaled(20, 20);
-          ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
+          if (multiple_selections.empty()) ((QPushButton *)line_edit)->setIcon(QIcon(color_pic));
 
           QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorRGBSlot()));
           QObject::connect(((QPushButton *)line_edit), &QPushButton::clicked, [=]() {
@@ -384,7 +547,10 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           auto up_y = static_cast<double>((*current_selection)->getRef()->getAttribute("char_up_y"));
           auto angle = std::atan2(up_y, up_x);
           if (angle < 0) angle += M_PI * 2;
-          ((QDial *)line_edit)->setValue(angle / M_PI * 180 + DIAL_OFFSET);
+          if (multiple_selections.empty())
+            ((QDial *)line_edit)->setValue(angle / M_PI * 180 + DIAL_OFFSET);
+          else
+            ((QDial *)line_edit)->setValue(90 + DIAL_OFFSET);
         }
       else if (cur_attr_name == "char_up_y")
         {
@@ -405,8 +571,10 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               attr_type.emplace(cur_attr_name, "xs:string");
             }
           line_edit = new QLineEdit(this);
-          ((QLineEdit *)line_edit)
-              ->setText(static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)).c_str());
+          if (multiple_selections.empty())
+            ((QLineEdit *)line_edit)
+                ->setText(
+                    static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)).c_str());
           ((QLineEdit *)line_edit)->setToolTip(tooltip_string);
         }
 
@@ -517,7 +685,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
-          if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element")
+          if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element" &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)))
             {
               form->addRow(window);
               window_added = true;
@@ -623,7 +792,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
-          if (!lim_modification_added)
+          if (!lim_modification_added &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)))
             {
               form->addRow(lim_modification);
               lim_modification_added = true;
@@ -652,7 +822,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
-          if (!element_movement_modification_added)
+          if (!element_movement_modification_added &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)))
             {
               if (advanced_editor || (cur_attr_name != "x_max_shift_wc" && cur_attr_name != "x_min_shift_wc" &&
                                       cur_attr_name != "x_shift_wc" && cur_attr_name != "y_max_shift_wc" &&
@@ -723,6 +894,63 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           if (!advanced_editor) was_added = false;
 
           ws_modification_form->addRow(label, line_edit);
+        }
+      else if (cur_attr_name == "x_tick" || cur_attr_name == "y_tick" || cur_attr_name == "tick" ||
+               cur_attr_name == "tick_orientation" || cur_attr_name == "tick_size" || cur_attr_name == "num_ticks" ||
+               cur_attr_name == "scale" ||
+               (cur_attr_name == "x_major" || cur_attr_name == "y_major" || cur_attr_name == "major_count") &&
+                   (*current_selection)->getRef()->localName() == "axis")
+        {
+          text_label = QString(attrNameToLabel(cur_attr_name).c_str());
+          auto label = new QLabel(text_label, this);
+          label->setFixedWidth(LABEL_WIDTH);
+          label->setWordWrap(true);
+          label->setToolTip(tooltip_string);
+          if (!tick_modification_added &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)))
+            {
+              form->addRow(tick_modification);
+              tick_modification_added = true;
+            }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+          tick_modification_form->addRow(label, line_edit);
+          if (!advanced_editor)
+            tick_modification_form->setRowVisible(tick_modification_form->rowCount() - 1,
+                                                  !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
+#else
+          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
+            tick_modification_form->addRow(label, line_edit);
+#endif
+          if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)) was_added = false;
+        }
+      else if ((*current_selection)->getRef()->localName() == "axis" &&
+               (cur_attr_name == "label_orientation" || cur_attr_name == "label_pos" ||
+                cur_attr_name == "num_tick_labels" || cur_attr_name == "scientific_format"))
+        {
+          text_label = QString(attrNameToLabel(cur_attr_name).c_str());
+          auto label = new QLabel(text_label, this);
+          label->setFixedWidth(LABEL_WIDTH);
+          label->setWordWrap(true);
+          label->setToolTip(tooltip_string);
+          if (!tick_label_modification_added &&
+              (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)))
+            {
+              form->addRow(tick_label_modification);
+              tick_label_modification_added = true;
+            }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+          tick_label_modification_form->addRow(label, line_edit);
+          if (!advanced_editor)
+            tick_label_modification_form->setRowVisible(
+                tick_label_modification_form->rowCount() - 1,
+                !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
+#else
+          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
+            tick_label_modification_form->addRow(label, line_edit);
+#endif
+          if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)) was_added = false;
         }
       else if (highlight_location && cur_attr_name == "location")
         {
@@ -839,8 +1067,21 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
         {
           if (child->localName() == "xs:attribute")
             {
-              bool was_added = true;
+              bool was_added = true, not_in = false;
               auto attr_name = static_cast<std::string>(child->getAttribute("name"));
+              if (attr_name == "text_angle") continue;
+              for (const auto &selection : multiple_selections)
+                {
+                  std::shared_ptr<GRM::Element> tmp;
+                  auto selection_name = selection->localName();
+                  auto selections2 = schema_tree->querySelectorsAll("[name=" + selection_name + "]");
+                  for (const auto &s : selections2)
+                    {
+                      if (s->localName() == "xs:element") tmp = s->children()[0];
+                    }
+                  if (tmp->querySelectors("[name=\"" + attr_name + "\"]") == nullptr) not_in = true;
+                }
+              if (!multiple_selections.empty() && not_in) continue;
               if (!(*current_selection)->getRef()->hasAttribute(attr_name))
                 {
                   /* attributes of an element which aren't already in the tree getting added with red text color
@@ -880,8 +1121,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                     }
                   else if (color_ind_attr.contains(attr_name.c_str()))
                     {
-                      auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
-                      line_edit = new QPushButton(std::to_string(index).c_str(), this);
+                      line_edit = new QPushButton("", this);
                       ((QPushButton *)line_edit)->setToolTip(tooltip_string);
                       ((QPushButton *)line_edit)->setObjectName(attr_name.c_str());
                       QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
@@ -906,8 +1146,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                     {
                       line_edit = new QDial(this);
                       ((QDial *)line_edit)
-                          ->setToolTip(
-                              "The character up vector which is used to rotate the text. Default: (0,1) or 90 degrees");
+                          ->setToolTip("The rotation of the text defined by an angle. Default: 90 degrees");
                       ((QDial *)line_edit)->setRange(0, 360);
                       ((QDial *)line_edit)->setWrapping(true);
                       ((QDial *)line_edit)->setInvertedAppearance(true);
@@ -953,7 +1192,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                            attr_name == "adjust_y_lim" || attr_name == "adjust_z_lim" || attr_name == "r_lim_min" ||
                            attr_name == "r_lim_max" || attr_name == "theta_lim_min" || attr_name == "theta_lim_max")
                     {
-                      if (!lim_modification_added)
+                      if (!lim_modification_added &&
+                          (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
                         {
                           form->addRow(lim_modification);
                           lim_modification_added = true;
@@ -1023,7 +1263,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   else if (attr_name == "window_x_min" || attr_name == "window_x_max" || attr_name == "window_y_min" ||
                            attr_name == "window_y_max" || attr_name == "window_z_min" || attr_name == "window_z_max")
                     {
-                      if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element")
+                      if (!window_added && (*current_selection)->getRef()->localName() != "overlay_element" &&
+                          (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
                         {
                           form->addRow(window);
                           window_added = true;
@@ -1077,6 +1318,58 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       if (!advanced_editor) was_added = false;
 
                       ws_modification_form->addRow(label, line_edit);
+                    }
+                  else if (attr_name == "x_tick" || attr_name == "y_tick" || attr_name == "tick" ||
+                           attr_name == "tick_orientation" || attr_name == "tick_size" || attr_name == "num_ticks" ||
+                           attr_name == "scale" ||
+                           (attr_name == "x_major" || attr_name == "y_major" || attr_name == "major_count") &&
+                               (*current_selection)->getRef()->localName() == "axis")
+                    {
+                      text_label = QString(attrNameToLabel(attr_name).c_str());
+                      if (!tick_modification_added &&
+                          (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
+                        {
+                          form->addRow(tick_modification);
+                          tick_modification_added = true;
+                        }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                      tick_modification_form->addRow(label, line_edit);
+                      if (!advanced_editor)
+                        tick_modification_form->setRowVisible(
+                            tick_modification_form->rowCount() - 1,
+                            !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
+#else
+                      if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                        tick_modification_form->addRow(label, line_edit);
+#endif
+                      if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                        was_added = false;
+                    }
+                  else if ((*current_selection)->getRef()->localName() == "axis" &&
+                           (attr_name == "label_orientation" || attr_name == "label_pos" ||
+                            attr_name == "num_tick_labels" || attr_name == "scientific_format"))
+                    {
+                      text_label = QString(attrNameToLabel(attr_name).c_str());
+                      if (!tick_label_modification_added &&
+                          (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
+                        {
+                          form->addRow(tick_label_modification);
+                          tick_label_modification_added = true;
+                        }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                      tick_label_modification_form->addRow(label, line_edit);
+                      if (!advanced_editor)
+                        tick_label_modification_form->setRowVisible(
+                            tick_label_modification_form->rowCount() - 1,
+                            !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
+#else
+                      if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                        tick_label_modification_form->addRow(label, line_edit);
+#endif
+                      if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                        was_added = false;
                     }
                   else
 #if QT_VERSION < QT_VERSION_CHECK(6, 4, 0)
@@ -1173,20 +1466,34 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   /* iterate through attribute elements */
                   for (const auto &childchild : group->children())
                     {
-                      bool was_added = true;
+                      bool was_added = true, not_in = false;
                       if (childchild->localName() == "xs:attribute")
                         {
                           auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
+                          for (const auto &selection : multiple_selections)
+                            {
+                              std::shared_ptr<GRM::Element> tmp;
+                              auto selection_name = selection->localName();
+                              auto selections2 = schema_tree->querySelectorsAll("[name=" + selection_name + "]");
+                              for (const auto &s : selections2)
+                                {
+                                  if (s->localName() == "xs:element") tmp = s->children()[0];
+                                }
+                              if (tmp->querySelectors("[" + attr_name + "]") == nullptr) not_in = true;
+                            }
+
                           if ((*current_selection)->getRef()->localName() == "coordinate_system" ||
                               ((*current_selection)->getRef()->localName() == "layout_grid" &&
                                (*current_selection)->getRef()->parentElement()->localName() != "layout_grid"))
                             {
-                              // special case for coordinate_system cause the ndc movements results in a nonsense plot
+                              // special case for coordinate_system cause the ndc movements results in a nonsense
+                              // plot
                               if (attr_name == "x_max_shift_ndc" || attr_name == "x_min_shift_ndc" ||
                                   attr_name == "y_max_shift_ndc" || attr_name == "y_min_shift_ndc" ||
                                   attr_name == "x_shift_ndc" || attr_name == "y_shift_ndc")
                                 continue;
                             }
+                          if (!multiple_selections.empty() && not_in) continue;
                           if (!(*current_selection)->getRef()->hasAttribute(attr_name))
                             {
                               /* attributes of an element which aren't already in the tree getting added with
@@ -1219,9 +1526,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                 }
                               else if (color_ind_attr.contains(attr_name.c_str()))
                                 {
-                                  auto index =
-                                      static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
-                                  line_edit = new QPushButton(std::to_string(index).c_str(), this);
+                                  line_edit = new QPushButton("", this);
                                   ((QPushButton *)line_edit)->setToolTip(tooltip_string);
                                   ((QPushButton *)line_edit)->setObjectName(attr_name.c_str());
                                   QObject::connect(((QPushButton *)line_edit), SIGNAL(clicked()), this,
@@ -1388,7 +1693,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                        attr_name == "y_shift_ndc" || attr_name == "y_max_shift_wc" ||
                                        attr_name == "y_min_shift_wc" || attr_name == "y_shift_wc")
                                 {
-                                  if (!element_movement_modification_added)
+                                  if (!element_movement_modification_added &&
+                                      (advanced_editor ||
+                                       !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
                                     {
                                       if (advanced_editor ||
                                           (attr_name != "x_max_shift_wc" && attr_name != "x_min_shift_wc" &&
@@ -1624,11 +1931,43 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
       clearLayout(ws_modification_layout);
       ws_modification->close();
     }
+  if (tick_modification_added)
+    {
+      tick_modification_layout->addLayout(tick_modification_form);
+      tick_modification->setContentLayout(*tick_modification_layout);
+    }
+  else
+    {
+      clearLayout(tick_modification_form);
+      clearLayout(tick_modification_layout);
+      tick_modification->close();
+    }
+  if (tick_label_modification_added)
+    {
+      tick_label_modification_layout->addLayout(tick_label_modification_form);
+      tick_label_modification->setContentLayout(*tick_label_modification_layout);
+    }
+  else
+    {
+      clearLayout(tick_label_modification_form);
+      clearLayout(tick_label_modification_layout);
+      tick_label_modification->close();
+    }
+  if (inherit_from_plot_added)
+    {
+      inherit_from_plot_modification_layout->addLayout(inherit_from_plot_modification_form);
+      inherit_from_plot_modification->setContentLayout(*inherit_from_plot_modification_layout, true);
+    }
+  else
+    {
+      clearLayout(inherit_from_plot_modification_form);
+      clearLayout(inherit_from_plot_modification_layout);
+      inherit_from_plot_modification->close();
+    }
 
   QDialogButtonBox *button_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
   QObject::connect(button_box, SIGNAL(accepted()), this, SLOT(accept()));
   QObject::connect(button_box, SIGNAL(rejected()), this, SLOT(reject()));
-  form->addRow(button_box);
 
   auto scroll_area_content = new QWidget;
   scroll_area_content->setLayout(form);
@@ -1641,6 +1980,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
   auto group_box_layout = new QVBoxLayout;
   group_box_layout->addWidget(scroll_area);
+  group_box_layout->addWidget(button_box);
   group_box_layout->setContentsMargins(2, 2, 2, 2);
   this->setLayout(group_box_layout);
 }
@@ -1651,15 +1991,16 @@ void EditElementWidget::reject()
   fields.clear();
   labels.clear();
   attr_type.clear();
+  this->multiple_selections.clear();
   this->close();
 }
 
-void EditElementWidget::accept()
+void EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection)
 {
-  auto current_selection = grplot_widget->getCurrentSelection();
-  grplot_widget->createHistoryElement();
+  auto current_selection_saved = current_selection;
   for (int i = 0; i < labels.count(); i++)
     {
+      current_selection = current_selection_saved;
       auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
       if ((util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") ||
            util::startsWith(labels[i].toStdString(), "<span style='color:#0000ff;'>")) &&
@@ -1669,90 +2010,115 @@ void EditElementWidget::accept()
           labels[i].remove(labels[i].size() - 7, 7);
         }
       auto attr_name = labelToAttrName(labels[i].toStdString());
-      if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
+      if ((current_selection->localName() == "axis" || current_selection->localName() == "coordinate_system") &&
+          (attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log" || attr_name == "r_log" ||
+           attr_name == "adjust_x_lim" || attr_name == "adjust_y_lim" || attr_name == "adjust_z_lim" ||
+           attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "y_lim_min" ||
+           attr_name == "y_lim_max" || attr_name == "z_lim_min" || attr_name == "z_lim_max" ||
+           attr_name == "r_lim_min" || attr_name == "r_lim_max" || attr_name == "theta_lim_min" ||
+           attr_name == "theta_lim_max" || attr_name == "x_flip" || attr_name == "y_flip" || attr_name == "z_flip" ||
+           attr_name == "r_flip" || attr_name == "theta_flip"))
         {
-          auto name = static_cast<std::string>((*current_selection)->getRef()->getAttribute("name"));
-          if (((QLineEdit *)fields[i])->text().toStdString().empty() && attr_name != "tick_label" &&
-              attr_name != "text")
+          if (current_selection->localName() == "axis")
             {
-              /* remove attributes from tree when the value got removed */
-              (*current_selection)->getRef()->removeAttribute(attr_name);
-              if ((*current_selection)->getRef()->hasAttribute("_" + attr_name + "_set_by_user"))
-                (*current_selection)->getRef()->removeAttribute("_" + attr_name + "_set_by_user");
+              bool pass = false;
+              auto location = static_cast<std::string>(current_selection->getAttribute("location"));
+              if (location != "x" && location != "y")
+                {
+                  if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "y_lim_min" ||
+                      attr_name == "y_lim_max" || attr_name == "adjust_x_lim" || attr_name == "adjust_y_lim")
+                    pass = true;
+                }
+              if (!pass)
+                {
+                  if (current_selection->parentElement()->localName() == "coordinate_system")
+                    current_selection = current_selection->parentElement()->parentElement()->parentElement();
+                  else
+                    current_selection = current_selection->parentElement()->parentElement()->parentElement();
+                }
             }
           else
             {
-              if (attr_name == "text")
+              current_selection = current_selection->parentElement()->parentElement();
+            }
+        }
+      if (typeid(field) == typeid(QLineEdit))
+        {
+          if (((QLineEdit *)fields[i])->isModified())
+            {
+              auto name = static_cast<std::string>(current_selection->getAttribute("name"));
+              if (((QLineEdit *)fields[i])->text().toStdString().empty() && attr_name != "tick_label" &&
+                  attr_name != "text")
                 {
-                  const auto value = ((QLineEdit *)fields[i])->text().toStdString();
-                  if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                      !util::isDigits(value))
-                    {
-                      if ((*current_selection)->getRef()->parentElement()->localName() == "text_region")
-                        {
-                          (*current_selection)
-                              ->getRef()
-                              ->parentElement()
-                              ->parentElement()
-                              ->setAttribute("text_content", value);
-                        }
-                      else if (name == "xlabel" || name == "ylabel")
-                        {
-                          (*current_selection)
-                              ->getRef()
-                              ->parentElement()
-                              ->parentElement()
-                              ->querySelectors(name)
-                              ->setAttribute(name, value);
-                        }
-                    }
-                  else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
-                    {
-                      (*current_selection)->getRef()->parentElement()->setAttribute(attr_name, std::stod(value));
-                    }
-                  else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
-                           util::isDigits(value))
-                    {
-                      (*current_selection)->getRef()->parentElement()->setAttribute(attr_name, std::stoi(value));
-                    }
+                  /* remove attributes from tree when the value got removed */
+                  current_selection->removeAttribute(attr_name);
+                  if (current_selection->hasAttribute("_" + attr_name + "_set_by_user"))
+                    current_selection->removeAttribute("_" + attr_name + "_set_by_user");
                 }
-              if (attr_name == "Colorrep-index")
+              else
                 {
-                  /* special case for colorrep attribute */
-                  (*current_selection)
-                      ->getRef()
-                      ->setAttribute("colorrep." + ((QLineEdit *)fields[i])->text().toStdString(),
-                                     ((QLineEdit *)fields[i + 1])->text().toStdString());
-                }
-              else if (attr_name != "Colorrep-value")
-                {
-                  const auto value = ((QLineEdit *)fields[i])->text().toStdString();
-                  if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                      !util::isDigits(value))
+                  if (attr_name == "text")
                     {
-                      (*current_selection)->getRef()->setAttribute(attr_name, value);
+                      const auto value = ((QLineEdit *)fields[i])->text().toStdString();
+                      if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                          !util::isDigits(value))
+                        {
+                          if (current_selection->parentElement()->localName() == "text_region")
+                            {
+                              current_selection->parentElement()->parentElement()->setAttribute("text_content", value);
+                            }
+                          else if (name == "xlabel" || name == "ylabel")
+                            {
+                              current_selection->parentElement()->parentElement()->querySelectors(name)->setAttribute(
+                                  name, value);
+                            }
+                        }
+                      else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                        {
+                          current_selection->parentElement()->setAttribute(attr_name, std::stod(value));
+                        }
+                      else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
+                               util::isDigits(value))
+                        {
+                          current_selection->parentElement()->setAttribute(attr_name, std::stoi(value));
+                        }
                     }
-                  else if (attr_type[attr_name] == "xs:string" &&
-                           (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
-                            attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
-                            attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
-                            attr_name == "z_label_3d"))
+                  if (attr_name == "Colorrep-index")
                     {
-                      (*current_selection)->getRef()->setAttribute(attr_name, value);
+                      /* special case for colorrep attribute */
+                      current_selection->setAttribute("colorrep." + ((QLineEdit *)fields[i])->text().toStdString(),
+                                                      ((QLineEdit *)fields[i + 1])->text().toStdString());
                     }
-                  else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                  else if (attr_name != "Colorrep-value")
                     {
-                      (*current_selection)->getRef()->setAttribute(attr_name, std::stod(value));
-                    }
-                  else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
-                           util::isDigits(value))
-                    {
-                      (*current_selection)->getRef()->setAttribute(attr_name, std::stoi(value));
-                    }
-                  else
-                    {
-                      fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
-                              attr_name.c_str(), attr_type[attr_name].c_str());
+                      const auto value = ((QLineEdit *)fields[i])->text().toStdString();
+                      if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                          !util::isDigits(value))
+                        {
+                          current_selection->setAttribute(attr_name, value);
+                        }
+                      else if (attr_type[attr_name] == "xs:string" &&
+                               (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
+                                attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
+                                attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
+                                attr_name == "z_label_3d"))
+                        {
+                          current_selection->setAttribute(attr_name, value);
+                        }
+                      else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                        {
+                          current_selection->setAttribute(attr_name, std::stod(value));
+                        }
+                      else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
+                               util::isDigits(value))
+                        {
+                          current_selection->setAttribute(attr_name, std::stoi(value));
+                        }
+                      else
+                        {
+                          fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
+                                  attr_name.c_str(), attr_type[attr_name].c_str());
+                        }
                     }
                 }
             }
@@ -1763,22 +2129,21 @@ void EditElementWidget::accept()
           if (((QComboBox *)fields[i])->itemText(index).toStdString().empty())
             {
               /* remove attributes from tree when the value got removed */
-              (*current_selection)->getRef()->removeAttribute(attr_name);
-              if ((*current_selection)->getRef()->hasAttribute("_" + attr_name + "_set_by_user"))
-                (*current_selection)->getRef()->removeAttribute("_" + attr_name + "_set_by_user");
+              current_selection->removeAttribute(attr_name);
+              if (current_selection->hasAttribute("_" + attr_name + "_set_by_user"))
+                current_selection->removeAttribute("_" + attr_name + "_set_by_user");
             }
           else
             {
-              if (attr_name == "location" && (*current_selection)->getRef()->localName() == "axis")
-                (*current_selection)->getRef()->setAttribute("_ignore_next_tick_orientation", true);
+              if (attr_name == "location" && current_selection->localName() == "axis")
+                current_selection->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
-              grplot_widget->attributeSetForComboBox(attr_type[attr_name], (*current_selection)->getRef(), value,
-                                                     attr_name);
+              grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
             }
         }
       else if (typeid(field) == typeid(QCheckBox))
         {
-          (*current_selection)->getRef()->setAttribute(attr_name, ((QCheckBox *)fields[i])->isChecked());
+          current_selection->setAttribute(attr_name, ((QCheckBox *)fields[i])->isChecked());
         }
       else if (typeid(field) == typeid(QDial))
         {
@@ -1790,16 +2155,35 @@ void EditElementWidget::accept()
               val = ((val % 15 >= 7) ? (val / 15 + 1) : (val / 15)) * 15;
               render->getAutoUpdate(&update);
               render->setAutoUpdate(false);
-              (*current_selection)->getRef()->setAttribute("char_up_x", std::cos((val - DIAL_OFFSET) * M_PI / 180.0));
+              current_selection->setAttribute("char_up_x", std::cos((val - DIAL_OFFSET) * M_PI / 180.0));
               render->setAutoUpdate(update);
-              (*current_selection)->getRef()->setAttribute("char_up_y", std::sin((val - DIAL_OFFSET) * M_PI / 180.0));
+              current_selection->setAttribute("char_up_y", std::sin((val - DIAL_OFFSET) * M_PI / 180.0));
             }
           else
             {
-              (*current_selection)->getRef()->setAttribute(attr_name, val);
+              current_selection->setAttribute(attr_name, val);
             }
         }
     }
+}
+
+void EditElementWidget::accept()
+{
+  if (multiple_selections.empty())
+    {
+      auto current_selection = grplot_widget->getCurrentSelection();
+      grplot_widget->createHistoryElement();
+      setAttributesDuringAccept((*current_selection)->getRef());
+    }
+  else
+    {
+      for (const auto &selection : multiple_selections)
+        {
+          grplot_widget->createHistoryElement();
+          setAttributesDuringAccept(selection);
+        }
+    }
+
   grplot_widget->setTreeUpdate(true);
   if (getenv("GRM_DEBUG"))
     {
@@ -1812,6 +2196,7 @@ void EditElementWidget::accept()
   fields.clear();
   labels.clear();
   attr_type.clear();
+  this->multiple_selections.clear();
   this->close();
 }
 
@@ -1837,7 +2222,8 @@ void EditElementWidget::colorRGBSlot()
   grplot_widget->colorRGBPopUp(attribute_name, (*current_selection)->getRef());
 }
 
-bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name)
+bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
+                                            bool inherit_elem)
 {
   // hide all set and non set attributes which allow a graphical modification of the figure if the advanced editor isn't
   // turned on
@@ -1906,7 +2292,8 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("coordinate_system"),
        std::vector<std::string>{
-           "",
+           "char_height",
+           "plot_type", // Todo: readd plot_type if it can be used to transform a 2d plot in a 3d plot f.e.
        }},
       {std::string("grid_3d"),
        std::vector<std::string>{
@@ -1922,12 +2309,26 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("axis"),
        std::vector<std::string>{
+           "axis_type",
            "max_value",
            "min_value",
+           "name",
+           "x_max_shift_ndc",
+           "x_min_shift_ndc",
+           "x_shift_ndc",
+           "y_max_shift_ndc",
+           "y_min_shift_ndc",
+           "y_shift_ndc",
            "z_index",
        }},
       {std::string("tick_group"),
        std::vector<std::string>{
+           "x_max_shift_ndc",
+           "x_min_shift_ndc",
+           "x_shift_ndc",
+           "y_max_shift_ndc",
+           "y_min_shift_ndc",
+           "y_shift_ndc",
            "z_index",
        }},
       {std::string("tick"),
@@ -1973,7 +2374,7 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        std::vector<std::string>{
            "height",
            "set_text_color_for_background",
-           "space",
+           "world_coordinates",
            "width",
            "x_max_shift_ndc",
            "x_min_shift_ndc",
@@ -2805,13 +3206,15 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
             {
               if (attr_name == "r_min" || attr_name == "r_max" || attr_name == "space_3d_camera_distance" ||
                   attr_name == "space_3d_fov" || attr_name == "space_3d_theta" || attr_name == "space_3d_phi" ||
-                  attr_name == "window_z_max" || attr_name == "window_z_min")
+                  attr_name == "window_z_max" || attr_name == "window_z_min" || attr_name == "clip_region" ||
+                  attr_name == "select_specific_xform")
                 return true;
             }
           else if (plot_type == "3d")
             {
               if (attr_name == "r_min" || attr_name == "r_max" || attr_name == "space_rotation" ||
-                  attr_name == "space_tilt" || attr_name == "space_z_max" || attr_name == "space_z_min")
+                  attr_name == "space_tilt" || attr_name == "space_z_max" || attr_name == "space_z_min" ||
+                  attr_name == "clip_region" || attr_name == "select_specific_xform")
                 return true;
             }
           else if (plot_type == "polar")
@@ -2833,18 +3236,71 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
             {
               if (attr_name == "theta_flip" || attr_name == "x_grid" || attr_name == "y_grid" ||
                   attr_name == "z_grid" || attr_name == "z_label" || attr_name == "angle_ticks" ||
-                  attr_name == "x_label" || attr_name == "y_label")
+                  attr_name == "x_label" || attr_name == "y_label" || attr_name == "z_log" || attr_name == "r_log" ||
+                  attr_name == "adjust_z_lim" || attr_name == "z_lim_min" || attr_name == "z_lim_max" ||
+                  attr_name == "z_flip" || attr_name == "theta_lim_min" || attr_name == "theta_lim_max" ||
+                  attr_name == "r_lim_min" || attr_name == "r_lim_max")
                 return true;
             }
           else if (plot_type == "3d")
             {
-              if (attr_name == "theta_flip" || attr_name == "angle_ticks") return true;
+              if (attr_name == "theta_flip" || attr_name == "angle_ticks" || attr_name == "r_log" ||
+                  attr_name == "theta_lim_min" || attr_name == "theta_lim_max" || attr_name == "r_lim_min" ||
+                  attr_name == "r_lim_max")
+                return true;
             }
           else if (plot_type == "polar")
             {
               if (attr_name == "x_grid" || attr_name == "x_label" || attr_name == "y_grid" || attr_name == "y_label" ||
                   attr_name == "y_line" || attr_name == "z_grid" || attr_name == "z_label" || attr_name == "x_label" ||
-                  attr_name == "y_label")
+                  attr_name == "y_label" || attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log" ||
+                  attr_name == "adjust_x_lim" || attr_name == "adjust_y_lim" || attr_name == "adjust_z_lim" ||
+                  attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "y_lim_min" ||
+                  attr_name == "y_lim_max" || attr_name == "z_lim_min" || attr_name == "z_lim_max")
+                return true;
+            }
+        }
+    }
+  else if (element->localName() == "axis")
+    {
+      auto axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
+      if (axis_type == "x")
+        {
+          if (attr_name == "y_tick" || attr_name == "y_major" || attr_name == "y_log" || attr_name == "adjust_y_lim" ||
+              attr_name == "y_lim_min" || attr_name == "y_lim_max")
+            return true;
+        }
+      else if (axis_type == "y")
+        {
+          if (attr_name == "x_tick" || attr_name == "x_major" || attr_name == "x_log" || attr_name == "adjust_x_lim" ||
+              attr_name == "x_lim_min" || attr_name == "x_lim_max")
+            return true;
+        }
+      if (attr_name == "z_log" || attr_name == "r_log" || attr_name == "x_flip" || attr_name == "y_flip" ||
+          attr_name == "z_flip" || attr_name == "theta_flip" || attr_name == "theta_lim_min" ||
+          attr_name == "theta_lim_max" || attr_name == "r_lim_min" || attr_name == "r_lim_max" ||
+          attr_name == "adjust_z_lim" || attr_name == "z_lim_min" || attr_name == "z_lim_max")
+        return true;
+      auto location = static_cast<std::string>(element->getAttribute("location"));
+      if (location == "x" || location == "y")
+        {
+          if (attr_name == "window_x_min" || attr_name == "window_x_max" || attr_name == "window_y_min" ||
+              attr_name == "window_y_max")
+            return true;
+          if ((attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "adjust_x_lim" ||
+               attr_name == "y_lim_min" || attr_name == "y_lim_max" || attr_name == "adjust_y_lim") &&
+              !inherit_elem)
+            return true;
+        }
+      else
+        {
+          if (inherit_elem)
+            {
+              if (axis_type == "x" &&
+                  (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "adjust_x_lim"))
+                return true;
+              if (axis_type == "y" &&
+                  (attr_name == "y_lim_min" || attr_name == "y_lim_max" || attr_name == "adjust_y_lim"))
                 return true;
             }
         }

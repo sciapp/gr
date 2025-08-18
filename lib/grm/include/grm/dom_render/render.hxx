@@ -151,7 +151,7 @@ GRM_EXPORT int fillStyleStringToInt(const std::string &fill_style_str);
 GRM_EXPORT int fillIntStyleStringToInt(const std::string &fill_int_style_str);
 GRM_EXPORT int transformationStringToInt(const std::string &transformation_str);
 GRM_EXPORT int labelOrientationStringToInt(const std::string &label_orientation_str);
-GRM_EXPORT int spaceStringToInt(const std::string &space_str);
+GRM_EXPORT int worldCoordinatesStringToInt(const std::string &world_coordinates_str);
 
 GRM_EXPORT std::string algorithmIntToString(int algorithm);
 GRM_EXPORT std::string colormapIntToString(int colormap);
@@ -176,7 +176,7 @@ GRM_EXPORT std::string fillStyleIntToString(int fill_style);
 GRM_EXPORT std::string fillIntStyleIntToString(int fill_int_style);
 GRM_EXPORT std::string transformationIntToString(int transformation);
 GRM_EXPORT std::string labelOrientationIntToString(int label_orientation);
-GRM_EXPORT std::string spaceIntToString(int space);
+GRM_EXPORT std::string worldCoordinatesIntToString(int world_coordinates);
 
 GRM_EXPORT std::vector<std::string> getSizeUnits();
 GRM_EXPORT std::vector<std::string> getColormaps();

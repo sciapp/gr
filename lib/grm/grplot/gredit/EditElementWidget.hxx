@@ -26,7 +26,8 @@ class EditElementWidget : public QWidget
 public:
   explicit EditElementWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
 
-  void attributeEditEvent(bool highlight_location = false);
+  void attributeEditEvent(std::vector<std::shared_ptr<GRM::Element>> multiple_selections,
+                          bool highlight_location = false);
 
 private slots:
   void reject();
@@ -38,7 +39,9 @@ private slots:
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;
-  bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name);
+  bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
+                           bool inherit_elem = false);
+  void setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
 
 private:
   GRPlotWidget *grplot_widget;
@@ -46,6 +49,7 @@ private:
   QList<QString> labels;
   QList<QWidget *> fields;
   std::unordered_map<std::string, std::string> attr_type;
+  std::vector<std::shared_ptr<GRM::Element>> multiple_selections;
 };
 
 

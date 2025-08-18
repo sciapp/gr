@@ -30,7 +30,8 @@ private:
       *aspect_ratio_sub_menu, *location_sub_menu, *lim_sub_menu;
   QLineEdit *find_line_edit;
   QTextBrowser *message;
-  QDockWidget *edit_element_dock_widget, *tree_dock_widget, *table_dock_widget, *text_preview_dock_widget;
+  QDockWidget *edit_element_dock_widget, *tree_dock_widget, *table_dock_widget, *text_preview_dock_widget,
+      *selection_list_dock_widget;
   bool help_mode = false;
 
   void center();
@@ -51,14 +52,17 @@ private slots:
   void showTreeWidgetDockSlot();
   void showTableWidgetDockSlot();
   void showTextPreviewDockSlot();
+  void showSelectionListDockSlot();
   void hideEditElementDockSlot();
   void hideTreeWidgetDockSlot();
   void hideTableWidgetDockSlot();
   void hideTextPreviewDockSlot();
+  void hideSelectionListDockSlot();
   void closeEditElementDockSlot();
   void closeTreeWidgetDockSlot();
   void closeTableWidgetDockSlot();
   void closeTextPreviewDockSlot();
+  void closeSelectionListDockSlot();
 };
 
 #endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */

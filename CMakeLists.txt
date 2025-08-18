@@ -1155,9 +1155,11 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/gredit/BoundingLogic.cpp
     lib/grm/grplot/gredit/BoundingObject.cpp
     lib/grm/grplot/gredit/ColorPickerRGB.cpp
+    lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
     lib/grm/grplot/gredit/EditElementWidget.cpp
     lib/grm/grplot/gredit/PreviewTextWidget.cpp
+    lib/grm/grplot/gredit/SelectionListWidget.cpp
     lib/grm/grplot/gredit/TableWidget.cpp
     lib/grm/grplot/gredit/TreeWidget.cpp
     lib/grm/grplot/grplotWidget.cxx
@@ -1399,9 +1401,11 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/BoundingLogic.cpp
       lib/grm/grplot/gredit/BoundingObject.cpp
       lib/grm/grplot/gredit/ColorPickerRGB.cpp
+      lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
       lib/grm/grplot/gredit/EditElementWidget.cpp
       lib/grm/grplot/gredit/PreviewTextWidget.cpp
+      lib/grm/grplot/gredit/SelectionListWidget.cpp
       lib/grm/grplot/gredit/TableWidget.cpp
       lib/grm/grplot/gredit/TreeWidget.cpp
       lib/grm/grplot/grplot.cxx
@@ -1578,6 +1582,22 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
@@ -1586,10 +1606,12 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingObject.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cpp
@@ -1606,10 +1628,12 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingObject.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx
