@@ -4734,17 +4734,21 @@ static void start_pline3d(double x, double y, double z)
 int gr_textext(double x, double y, char *string)
 {
   int errind, tnr, result;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  result = gr_textex(x, y, string, 0, NULL, NULL);
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
+  result = gr_textex(tx, ty, string, 0, NULL, NULL);
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", tx, ty, string);
 
   return result;
 }
@@ -4753,13 +4757,16 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr;
   int i;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  gr_textex(x, y, string, 1, tbx, tby);
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+  gr_textex(tx, ty, string, 1, tbx, tby);
 
   if (tnr != NDC)
     {
@@ -12293,8 +12300,12 @@ void gr_mathtex(double x, double y, char *string)
   int len;
   int unused;
   int prec;
+  double tx, ty;
 
   check_autoinit;
+
+  tx = x + txoff[0];
+  ty = y + txoff[1];
 
   s = start = strdup(string);
   len = strlen(s);
@@ -12307,14 +12318,14 @@ void gr_mathtex(double x, double y, char *string)
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, start, 0, NULL, NULL, NULL);
+      mathtex2(tx, ty, start, 0, NULL, NULL, NULL);
     }
   else
     {
-      mathtex(x, y, start, 0, NULL, NULL);
+      mathtex(tx, ty, start, 0, NULL, NULL);
     }
 
-  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", tx, ty, string);
 
   free(s);
 }
@@ -12325,6 +12336,7 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
   int len;
   int unused;
   int prec;
+  double tx, ty;
 
   check_autoinit;
 
@@ -12336,14 +12348,17 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
       start = s + 1;
     }
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, start, 1, tbx, tby, NULL);
+      mathtex2(tx, ty, start, 1, tbx, tby, NULL);
     }
   else
     {
-      mathtex(x, y, start, 1, tbx, tby);
+      mathtex(tx, ty, start, 1, tbx, tby);
     }
 
   free(s);
