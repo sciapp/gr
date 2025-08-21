@@ -346,7 +346,7 @@ grm_error_t tooltipListEntryDelete(TooltipListEntry entry)
 static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
                                      int x_shift, int y_shift, bool is_movable)
 {
-  double x_with_shift, y_with_shift, x_ndc, y_ndc;
+  double x_with_shift, y_with_shift, x_start, y_start;
   double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
   int width, height, max_width_height;
   std::string post_fix = "_wc";
@@ -379,15 +379,15 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
     post_fix = "_ndc";
 
   x_with_shift = ndc_x + (double)x_shift / max_width_height;
-  x_ndc = ndc_x;
+  x_start = ndc_x;
   y_with_shift = ndc_y + (double)y_shift / max_width_height;
-  y_ndc = ndc_y;
+  y_start = ndc_y;
 
   gr_ndctowc(&x_with_shift, &y_with_shift);
-  gr_ndctowc(&x_ndc, &y_ndc);
+  gr_ndctowc(&x_start, &y_start);
 
-  wc_x_shift = x_with_shift - x_ndc;
-  wc_y_shift = y_ndc - y_with_shift;
+  wc_x_shift = x_with_shift - x_start;
+  wc_y_shift = y_start - y_with_shift;
 
   if (element->hasAttribute("x_shift" + post_fix))
     old_x_shift = static_cast<double>(element->getAttribute("x_shift" + post_fix));
@@ -395,41 +395,189 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
     old_y_shift = static_cast<double>(element->getAttribute("y_shift" + post_fix));
 
   render->setAutoUpdate(true);
-  if (x_shift != 0)
+  if (element->localName() == "overlay_element")
     {
-      if (post_fix == "_wc")
+      auto element_type = static_cast<std::string>(element->getAttribute("element_type"));
+      if (x_shift != 0)
         {
-          if (is_movable && element->localName() == "polyline" &&
-              static_cast<std::string>(element->getAttribute("name")) == "integral_left")
+          auto old_x = static_cast<double>(element->getAttribute("x"));
+          element->setAttribute("x", old_x + (double)x_shift / max_width_height);
+        }
+      if (y_shift != 0)
+        {
+          auto old_y = static_cast<double>(element->getAttribute("y"));
+          element->setAttribute("y", old_y - (double)y_shift / max_width_height);
+        }
+    }
+  else
+    {
+      if (x_shift != 0)
+        {
+          if (post_fix == "_wc")
             {
-              auto old_int_lim_low = static_cast<double>(element->parentElement()->getAttribute("int_lim_low"));
-              element->parentElement()->setAttribute("int_lim_low", old_int_lim_low + wc_x_shift);
-            }
-          else if (is_movable && element->localName() == "polyline" &&
-                   static_cast<std::string>(element->getAttribute("name")) == "integral_right")
-            {
-              auto old_int_lim_high = static_cast<double>(element->parentElement()->getAttribute("int_lim_high"));
-              element->parentElement()->setAttribute("int_lim_high", old_int_lim_high + wc_x_shift);
+              if (is_movable && element->localName() == "polyline" &&
+                  static_cast<std::string>(element->getAttribute("name")) == "integral_left")
+                {
+                  auto old_int_lim_low = static_cast<double>(element->parentElement()->getAttribute("int_lim_low"));
+                  element->parentElement()->setAttribute("int_lim_low", old_int_lim_low + wc_x_shift);
+                }
+              else if (is_movable && element->localName() == "polyline" &&
+                       static_cast<std::string>(element->getAttribute("name")) == "integral_right")
+                {
+                  auto old_int_lim_high = static_cast<double>(element->parentElement()->getAttribute("int_lim_high"));
+                  element->parentElement()->setAttribute("int_lim_high", old_int_lim_high + wc_x_shift);
+                }
+              else
+                {
+                  element->setAttribute("x_shift" + post_fix, old_x_shift + wc_x_shift);
+                }
             }
           else
             {
-              element->setAttribute("x_shift" + post_fix, old_x_shift + wc_x_shift);
+              element->setAttribute("x_shift" + post_fix, old_x_shift + (double)x_shift / max_width_height);
             }
         }
-      else
+      if (y_shift != 0)
         {
-          element->setAttribute("x_shift" + post_fix, old_x_shift + (double)x_shift / max_width_height);
+          if (post_fix == "_wc")
+            {
+              element->setAttribute("y_shift" + post_fix, old_y_shift + wc_y_shift);
+            }
+          else
+            {
+              element->setAttribute("y_shift" + post_fix, old_y_shift + (double)y_shift / max_width_height);
+            }
         }
     }
-  if (y_shift != 0)
+  render->setAutoUpdate(false);
+}
+
+static void oneSidedTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
+                                         int x_shift, int y_shift, bool is_movable,
+                                         const std::shared_ptr<GRM::Element> &central_region)
+{
+  double old_x_shift = 0, old_y_shift = 0;
+  double metric_width, metric_height;
+  std::string x_border_qualifier = "max", y_border_qualifier = "max";
+  int width, height, max_width_height;
+  std::string post_fix = "_wc";
+  std::vector<std::string> ndc_transformation_elems = {
+      "figure",
+      "plot",
+      "colorbar",
+      "label",
+      "titles_3d",
+      "text",
+      "layout_grid_element",
+      "layout_grid",
+      "central_region",
+      "side_region",
+      "marginal_heatmap_plot",
+      "legend",
+      "axis",
+      "side_plot_region",
+      "text_region",
+      "coordinate_system",
+      "overlay_element",
+  };
+  auto render = grm_get_render();
+
+  GRM::Render::getFigureSize(&width, &height, &metric_width, &metric_height);
+  max_width_height = grm_max(width, height);
+  auto aspect_ratio = metric_width / metric_height;
+
+  if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
+      ndc_transformation_elems.end())
+    post_fix = "_ndc";
+  if (post_fix == "_wc") return;
+
+  // use the bbox to figure out which border is selected
+  auto bbox_x_min = static_cast<double>(element->getAttribute("_bbox_x_min"));
+  auto bbox_x_max = static_cast<double>(element->getAttribute("_bbox_x_max"));
+  auto bbox_y_min = static_cast<double>(element->getAttribute("_bbox_y_min"));
+  auto bbox_y_max = static_cast<double>(element->getAttribute("_bbox_y_max"));
+
+  if (abs(ndc_x * max_width_height - bbox_x_min) < abs(ndc_x * max_width_height - bbox_x_max))
+    x_border_qualifier = "min";
+
+  if (abs((height - ndc_y * max_width_height) - bbox_y_min) > abs((height - ndc_y * max_width_height) - bbox_y_max))
+    y_border_qualifier = "min";
+
+  if (element->hasAttribute("x_" + x_border_qualifier + "_shift" + post_fix))
+    old_x_shift = static_cast<double>(element->getAttribute("x_" + x_border_qualifier + "_shift" + post_fix));
+  if (element->hasAttribute("y_" + y_border_qualifier + "_shift" + post_fix))
+    old_y_shift = static_cast<double>(element->getAttribute("y_" + y_border_qualifier + "_shift" + post_fix));
+
+  render->setAutoUpdate(true);
+  if (element->localName() == "overlay_element")
     {
-      if (post_fix == "_wc")
+      auto element_type = static_cast<std::string>(element->getAttribute("element_type"));
+      if (element_type == "image")
         {
-          element->setAttribute("y_shift" + post_fix, old_y_shift + wc_y_shift);
+          if (x_shift != 0)
+            {
+              auto width_abs = static_cast<double>(element->getAttribute("width_abs"));
+              if (x_border_qualifier == "min")
+                {
+                  auto start_x = static_cast<double>(element->getAttribute("x"));
+                  element->setAttribute("x", start_x + (double)x_shift / max_width_height);
+                  element->setAttribute("width_abs",
+                                        width_abs - ((double)x_shift / max_width_height) *
+                                                        (aspect_ratio > 1 ? aspect_ratio : (1.0 / aspect_ratio)));
+                }
+              else
+                {
+                  element->setAttribute("width_abs",
+                                        width_abs + ((double)x_shift / max_width_height) *
+                                                        (aspect_ratio > 1 ? aspect_ratio : (1.0 / aspect_ratio)));
+                }
+            }
+
+          if (y_shift != 0)
+            {
+              auto height_abs = static_cast<double>(element->getAttribute("height_abs"));
+              if (y_border_qualifier == "min")
+                {
+                  auto start_y = static_cast<double>(element->getAttribute("y"));
+                  element->setAttribute("y", start_y - (double)y_shift / max_width_height);
+                  element->setAttribute("height_abs",
+                                        height_abs + (double)y_shift / max_width_height *
+                                                         (aspect_ratio > 1 ? aspect_ratio : (1.0 / aspect_ratio)));
+                }
+              else
+                {
+                  element->setAttribute("height_abs",
+                                        height_abs - (double)y_shift / max_width_height *
+                                                         (aspect_ratio > 1 ? aspect_ratio : (1.0 / aspect_ratio)));
+                }
+            }
         }
-      else
+    }
+  else
+    {
+      if (x_shift != 0)
         {
-          element->setAttribute("y_shift" + post_fix, old_y_shift + (double)y_shift / max_width_height);
+          if (post_fix == "_wc")
+            {
+              // todo: if its really needed later
+            }
+          else
+            {
+              element->setAttribute("x_" + x_border_qualifier + "_shift" + post_fix,
+                                    old_x_shift + (double)x_shift / max_width_height);
+            }
+        }
+      if (y_shift != 0)
+        {
+          if (post_fix == "_wc")
+            {
+              // todo: if its really needed later
+            }
+          else
+            {
+              element->setAttribute("y_" + y_border_qualifier + "_shift" + post_fix,
+                                    old_y_shift + (double)y_shift / max_width_height);
+            }
         }
     }
   render->setAutoUpdate(false);
@@ -459,6 +607,12 @@ int inputImpl(const grm_args_t *input_args)
    * legend_selected:
    * - `x`, `y`: mouse cursor position
    * - `movable_state`: the status from grm_get_hover_mode
+   * move_selection:
+   * - `x`, `y`: mouse cursor position
+   * - `move_selection`: defines if the element should get moved or not
+   * scale_selection:
+   * - `x`, `y`: mouse cursor position
+   * - `scale_selection`: defines if the element should get scaled or not
    *
    * All coordinates are expected to be given as workstation coordinates (integer type)
    */
@@ -498,7 +652,8 @@ int inputImpl(const grm_args_t *input_args)
       logger((stderr, "x: %d, y: %d, ndc_x: %lf, ndc_y: %lf\n", x, y, ndc_x, ndc_y));
 
       auto subplot_element = grm_get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
-      if (subplot_element == nullptr && grm_args_values(input_args, "move_selection", "i", &selection_status))
+      if (subplot_element == nullptr && (grm_args_values(input_args, "move_selection", "i", &selection_status) ||
+                                         grm_args_values(input_args, "scale_selection", "i", &selection_status)))
         {
           // needed so the cursor doesn't need to be inside the window for gredit element moving
           subplot_element = grm_get_document_root()->querySelectors("plot[plot_group]");
@@ -845,6 +1000,35 @@ int inputImpl(const grm_args_t *input_args)
               for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=1]"))
                 {
                   moveTransformationHelper(selection, ndc_x, ndc_y, xshift, yshift, false);
+                }
+              gr_restorestate();
+            }
+          else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
+                   grm_args_values(input_args, "y_shift", "i", &yshift) &&
+                   grm_args_values(input_args, "scale_selection", "i", &selection_status))
+            {
+              gr_savestate();
+              GRM::Render::processLimits(subplot_element);
+              GRM::Render::processWindow(central_region);
+
+              for (const auto &elem : subplot_element->parentElement()->children())
+                {
+                  if (elem->hasAttribute("scale"))
+                    {
+                      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+                      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                                   static_cast<double>(central_region->getAttribute("window_x_max")),
+                                   static_cast<double>(central_region->getAttribute("window_y_min")),
+                                   static_cast<double>(central_region->getAttribute("window_y_max")));
+                      gr_setscale(static_cast<int>(elem->getAttribute("scale")));
+                      break;
+                    }
+                }
+              GRM::Render::calculateCharHeight(central_region);
+
+              for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=1]"))
+                {
+                  oneSidedTransformationHelper(selection, ndc_x, ndc_y, xshift, yshift, false, central_region);
                 }
               gr_restorestate();
             }
@@ -1865,6 +2049,62 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
                 return LEGEND_ELEMENT_HOVER_MODE;
             }
         }
+    }
+
+  std::vector<std::string> ndc_transformation_elems = {
+      "figure",
+      "plot",
+      "colorbar",
+      "label",
+      "titles_3d",
+      "text",
+      "layout_grid_element",
+      "layout_grid",
+      "central_region",
+      "side_region",
+      "marginal_heatmap_plot",
+      "legend",
+      "axis",
+      "side_plot_region",
+      "text_region",
+      "coordinate_system",
+      "overlay_element",
+  };
+
+  for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]"))
+    {
+      if (!elem->hasAttribute("_bbox_x_min")) continue;
+      if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), elem->localName()) !=
+              ndc_transformation_elems.end() &&
+          !elem->hasAttribute("viewport_x_min") && elem->localName() != "overlay_element")
+        continue;
+
+      auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(elem->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(elem->getAttribute("_bbox_y_max"));
+
+      // check if the cursor is at the border of the box or not
+      if (((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5) ||
+           (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5)) &&
+          mouse_y > bbox_y_min + 5 && mouse_y < bbox_y_max - 5)
+        return HORIZONTAL_SCALE_HOVER_MODE;
+      if (((mouse_y > bbox_y_min - 5 && mouse_y < bbox_y_min + 5) ||
+           (mouse_y > bbox_y_max - 5 && mouse_y < bbox_y_max + 5)) &&
+          mouse_x > bbox_x_min + 5 && mouse_x < bbox_x_max - 5)
+        return VERTICAL_SCALE_HOVER_MODE;
+      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_min - 5 &&
+           mouse_y < bbox_y_min + 5) ||
+          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_max - 5 &&
+           mouse_y < bbox_y_max + 5))
+        return F_DIAGONAL_SCALE_HOVER_MODE;
+      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_max - 5 &&
+           mouse_y < bbox_y_max + 5) ||
+          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_min - 5 &&
+           mouse_y < bbox_y_min + 5))
+        return B_DIAGONAL_SCALE_HOVER_MODE;
+      if (bbox_x_min <= mouse_x && mouse_x <= bbox_x_max && bbox_y_min <= mouse_y && mouse_y <= bbox_y_max)
+        return MOVE_HOVER_MODE;
     }
   return DEFAULT_HOVER_MODE;
 }

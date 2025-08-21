@@ -2643,7 +2643,7 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
 {
   double w[4], vp[4], vp_org[4];
   double x_shift = 0, y_shift = 0;
-  double x_scale = 1, y_scale = 1;
+  double x_max_shift = 0, x_min_shift = 0, y_max_shift = 0, y_min_shift = 0;
   bool disable_x_trans = false, disable_y_trans = false, any_xform = false; // only for wc
   std::shared_ptr<GRM::Element> parent_element = element->parentElement();
   std::string post_fix = "_wc";
@@ -2671,14 +2671,24 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       ndc_transformation_elems.end())
     post_fix = "_ndc";
 
-  if (element->hasAttribute("x_scale" + post_fix))
+  if (element->hasAttribute("x_max_shift" + post_fix))
     {
-      x_scale = static_cast<double>(element->getAttribute("x_scale" + post_fix));
+      x_max_shift = static_cast<double>(element->getAttribute("x_max_shift" + post_fix));
       any_xform = true;
     }
-  if (element->hasAttribute("y_scale" + post_fix))
+  if (element->hasAttribute("x_min_shift" + post_fix))
     {
-      y_scale = static_cast<double>(element->getAttribute("y_scale" + post_fix));
+      x_min_shift = static_cast<double>(element->getAttribute("x_min_shift" + post_fix));
+      any_xform = true;
+    }
+  if (element->hasAttribute("y_max_shift" + post_fix))
+    {
+      y_max_shift = static_cast<double>(element->getAttribute("y_max_shift" + post_fix));
+      any_xform = true;
+    }
+  if (element->hasAttribute("y_min_shift" + post_fix))
+    {
+      y_min_shift = static_cast<double>(element->getAttribute("y_min_shift" + post_fix));
       any_xform = true;
     }
   if (element->hasAttribute("x_shift" + post_fix))
@@ -2701,14 +2711,24 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
     {
       while (parent_element->localName() != "root" && !any_xform)
         {
-          if (parent_element->hasAttribute("x_scale" + post_fix))
+          if (parent_element->hasAttribute("x_max_shift" + post_fix))
             {
-              x_scale = static_cast<double>(parent_element->getAttribute("x_scale" + post_fix));
+              x_max_shift = static_cast<double>(parent_element->getAttribute("x_max_shift" + post_fix));
               any_xform = true;
             }
-          if (parent_element->hasAttribute("y_scale" + post_fix))
+          if (parent_element->hasAttribute("x_min_shift" + post_fix))
             {
-              y_scale = static_cast<double>(parent_element->getAttribute("y_scale" + post_fix));
+              x_min_shift = static_cast<double>(parent_element->getAttribute("x_min_shift" + post_fix));
+              any_xform = true;
+            }
+          if (parent_element->hasAttribute("y_max_shift" + post_fix))
+            {
+              y_max_shift = static_cast<double>(parent_element->getAttribute("y_max_shift" + post_fix));
+              any_xform = true;
+            }
+          if (parent_element->hasAttribute("y_min_shift" + post_fix))
+            {
+              y_min_shift = static_cast<double>(parent_element->getAttribute("y_min_shift" + post_fix));
               any_xform = true;
             }
           if (parent_element->hasAttribute("x_shift" + post_fix))
@@ -2798,19 +2818,20 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       vp_border_y_min = getMinViewport(element, false);
       vp_border_y_max = getMaxViewport(element, false);
 
-      if (private_shift || (x_shift != 0 || x_scale != 1 || y_shift != 0 || y_scale != 1))
+      if (private_shift || (x_shift != 0 || x_max_shift != 0 || x_min_shift != 0 || y_shift != 0 || y_max_shift != 0 ||
+                            y_min_shift != 0))
         {
           if (element->hasAttribute("viewport_normalized_x_min") &&
               element->hasAttribute("viewport_normalized_x_max") &&
               element->hasAttribute("viewport_normalized_y_min") && element->hasAttribute("viewport_normalized_y_max"))
             {
-              plot[0] = plot[0] / x_scale + x_shift;
-              plot[1] = plot[1] / x_scale + x_shift;
+              plot[0] = plot[0] + x_min_shift + x_shift;
+              plot[1] = plot[1] + x_max_shift + x_shift;
               plot[0] = grm_max(0, plot[0]);
               plot[1] = grm_min(1, plot[1]);
 
-              plot[2] = plot[2] / y_scale + y_shift;
-              plot[3] = plot[3] / y_scale + y_shift;
+              plot[2] = plot[2] + y_min_shift + y_shift;
+              plot[3] = plot[3] + y_max_shift + y_shift;
               plot[2] = grm_max(0, plot[2]);
               plot[3] = grm_min(1, plot[3]);
 
@@ -2824,8 +2845,8 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
             }
 
           // calculate viewport changes in x-direction
-          vp[0] = vp_org[0] / x_scale + x_shift;
-          vp[1] = vp_org[1] / x_scale + x_shift;
+          vp[0] = vp_org[0] + x_min_shift + x_shift;
+          vp[1] = vp_org[1] + x_max_shift + x_shift;
           diff = grm_min(vp[1] - vp[0], vp_border_x_max - vp_border_x_min);
 
           // the viewport cant leave the [vp_border_x_min, vp_border_x_max] space
@@ -2841,8 +2862,8 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
             }
 
           // calculate viewport changes in y-direction
-          vp[2] = vp_org[2] / y_scale - y_shift;
-          vp[3] = vp_org[3] / y_scale - y_shift;
+          vp[2] = vp_org[2] - y_min_shift - y_shift;
+          vp[3] = vp_org[3] - y_max_shift - y_shift;
           diff = grm_min(vp_border_y_max - vp_border_y_min, vp[3] - vp[2]);
 
           // the viewport cant leave the [vp_border_y_min, vp_border_y_max] space
@@ -2864,19 +2885,19 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
           automatic_update = old_state;
         }
     }
-  else if (x_shift != 0 || x_scale != 1 || y_shift != 0 || y_scale != 1)
+  else if (x_shift != 0 || x_max_shift != 0 || x_min_shift != 0 || y_shift != 0 || y_max_shift != 0 || y_min_shift != 0)
     {
       // elements in world space gets transformed in world space which is equal to changing their window
       gr_inqwindow(&w[0], &w[1], &w[2], &w[3]);
       if (!disable_x_trans)
         {
-          w[0] = w[0] / x_scale - x_shift;
-          w[1] = w[1] / x_scale - x_shift;
+          w[0] = w[0] + x_min_shift - x_shift;
+          w[1] = w[1] + x_max_shift - x_shift;
         }
       if (!disable_y_trans)
         {
-          w[2] = w[2] / y_scale - y_shift;
-          w[3] = w[3] / y_scale - y_shift;
+          w[2] = (w[2] - y_shift) - y_min_shift;
+          w[3] = (w[3] - y_shift) - y_max_shift;
         }
       if (w[1] - w[0] > 0.0 && w[3] - w[2] > 0.0) gr_setwindow(w[0], w[1], w[2], w[3]);
     }
@@ -11989,10 +12010,13 @@ static void processOverlayElement(const std::shared_ptr<GRM::Element> &element,
         }
       else
         {
+          std::string text_content = "";
           text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
           if (text != nullptr)
-            global_render->createText(x, y, static_cast<std::string>(text->getAttribute("text")), CoordinateSpace::NDC,
-                                      text);
+            {
+              if (text->hasAttribute("text")) text_content = static_cast<std::string>(text->getAttribute("text"));
+              global_render->createText(x, y, text_content, CoordinateSpace::NDC, text);
+            }
         }
       if (text != nullptr)
         {
@@ -19862,7 +19886,15 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                      "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
                                      "values specify no labels will be drawn for the x axis"}},
       {std::string("x_max"), std::vector<std::string>{"None", "The upper x-coordinate of the element"}},
+      {std::string("x_max_shift_ndc"),
+       std::vector<std::string>{"0", "The upper x border shift for movable transformation in NDC space"}},
+      {std::string("x_max_shift_wc"),
+       std::vector<std::string>{"0", "The upper x border shift for movable transformation in WC space"}},
       {std::string("x_min"), std::vector<std::string>{"None", "The lower x-coordinate of the element"}},
+      {std::string("x_min_shift_ndc"),
+       std::vector<std::string>{"0", "The lower x border shift for movable transformation in NDC space"}},
+      {std::string("x_min_shift_wc"),
+       std::vector<std::string>{"0", "The lower x border shift for movable transformation in WC space"}},
       {std::string("x_org"),
        std::vector<std::string>{"0", "The world-coordinates of the origin (point of intersection) of the x axis"}},
       {std::string("x_org_pos"),
@@ -19870,10 +19902,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                 "The world-coordinates position of the origin (point of intersection) of the x axis"}},
       {std::string("x_range_max"), std::vector<std::string>{"None", "The upper x-value"}},
       {std::string("x_range_min"), std::vector<std::string>{"None", "The lower x-value"}},
-      {std::string("x_scale_ndc"),
-       std::vector<std::string>{"1", "The x direction scale for movable transformation in NDC space"}},
-      {std::string("x_scale_wc"),
-       std::vector<std::string>{"1", "The x direction scale for movable transformation in WV space"}},
       {std::string("x_shift_ndc"),
        std::vector<std::string>{"0", "The x direction shift for movable transformation in NDC space"}},
       {std::string("x_shift_wc"),
@@ -19900,7 +19928,15 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                      "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
                                      "values specify no labels will be drawn for the y axis"}},
       {std::string("y_max"), std::vector<std::string>{"None", "The upper y-coordinate of the element"}},
+      {std::string("y_max_shift_ndc"),
+       std::vector<std::string>{"0", "The upper y border shift for movable transformation in NDC space"}},
+      {std::string("y_max_shift_wc"),
+       std::vector<std::string>{"0", "The upper y border shift for movable transformation in WC space"}},
       {std::string("y_min"), std::vector<std::string>{"None", "The lower y-coordinate of the element"}},
+      {std::string("y_min_shift_ndc"),
+       std::vector<std::string>{"0", "The lower y border shift for movable transformation in NDC space"}},
+      {std::string("y_min_shift_wc"),
+       std::vector<std::string>{"0", "The lower y border shift for movable transformation in WC space"}},
       {std::string("y_org"),
        std::vector<std::string>{"0", "The world-coordinates of the origin (point of intersection) of the y axis"}},
       {std::string("y_org_pos"),
@@ -19908,10 +19944,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                 "The world-coordinates position of the origin (point of intersection) of the y axis"}},
       {std::string("y_range_max"), std::vector<std::string>{"None", "The upper y-value"}},
       {std::string("y_range_min"), std::vector<std::string>{"None", "The lower y-value"}},
-      {std::string("y_scale_ndc"),
-       std::vector<std::string>{"1", "The y direction scale for movable transformation in NDC space"}},
-      {std::string("y_scale_wc"),
-       std::vector<std::string>{"1", "The y direction scale for movable transformation in WC space"}},
       {std::string("y_shift_ndc"),
        std::vector<std::string>{"0", "The y direction shift for movable transformation in NDC space"}},
       {std::string("y_shift_wc"),
@@ -21811,6 +21843,12 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   std::vector<std::string> marginal_heatmap_plot{
       "algorithm", "marginal_heatmap_kind", "x", "x_flip", "y", "y_flip", "z",
   };
+  std::vector<std::string> overlay_element{
+      "height_abs",
+      "width_abs",
+      "x",
+      "y",
+  };
   std::vector<std::string> polar_bar{
       "bin_width",      "bin_widths", "bin_edges",      "class_nr", "count",      "draw_edges",     "fill_color_ind",
       "fill_int_style", "fill_style", "line_color_ind", "norm",     "theta_flip", "theta_colormap", "r_colormap",
@@ -21950,6 +21988,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       {std::string("polar_bar"), polar_bar},
       {std::string("coordinate_system"), coordinate_system_element},
       {std::string("marginal_heatmap_plot"), marginal_heatmap_plot},
+      {std::string("overlay_element"), overlay_element},
       {std::string("series_barplot"), series_barplot},
       {std::string("series_contour"), series_contour},
       {std::string("series_contourf"), series_contourf},
@@ -22682,7 +22721,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   if (strEqualsAny(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "error_bar_style",
                                    "inner_series", "levels", "line_spec", "marginal_heatmap_kind", "num_bins", "px",
                                    "py", "pz", "r", "r_colormap", "stairs", "theta", "theta_colormap", "u", "v", "x",
-                                   "y", "z"))
+                                   "y", "z") &&
+                      element->localName() != "overlay_element")
                     element->setAttribute("_delete_children", 2);
                   if (strEqualsAny(attr, "text") && element->localName() == "bar")
                     element->setAttribute("_delete_children", 2);
@@ -23005,9 +23045,11 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
             }
           else if (attr == "location")
             {
-              if (element->hasAttribute("x_scale_ndc")) element->removeAttribute("x_scale_ndc");
+              if (element->hasAttribute("x_max_shift_ndc")) element->removeAttribute("x_max_shift_ndc");
+              if (element->hasAttribute("x_min_shift_ndc")) element->removeAttribute("x_min_shift_ndc");
               if (element->hasAttribute("x_shift_ndc")) element->removeAttribute("x_shift_ndc");
-              if (element->hasAttribute("y_scale_ndc")) element->removeAttribute("y_scale_ndc");
+              if (element->hasAttribute("y_max_shift_ndc")) element->removeAttribute("y_max_shift_ndc");
+              if (element->hasAttribute("y_min_shift_ndc")) element->removeAttribute("y_min_shift_ndc");
               if (element->hasAttribute("y_shift_ndc")) element->removeAttribute("y_shift_ndc");
               resetOldBoundingBoxes(element);
 

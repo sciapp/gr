@@ -135,6 +135,7 @@
             <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:double"/> <!-- string if more complex childs are possible -->
             <xs:attribute name="y" type="xs:double"/> <!-- string if more complex childs are possible -->
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -1454,9 +1455,11 @@
         <xs:attribute name="disable_x_trans" type="xs:integer"/>
         <xs:attribute name="disable_y_trans" type="xs:integer"/>
         <xs:attribute name="movable" type="xs:integer"/>
-        <xs:attribute name="x_scale_wc" type="xs:double"/>
+        <xs:attribute name="x_max_shift_wc" type="xs:double"/>
+        <xs:attribute name="x_min_shift_wc" type="xs:double"/>
         <xs:attribute name="x_shift_wc" type="xs:double"/>
-        <xs:attribute name="y_scale_wc" type="xs:double"/>
+        <xs:attribute name="y_max_shift_wc" type="xs:double"/>
+        <xs:attribute name="y_min_shift_wc" type="xs:double"/>
         <xs:attribute name="y_shift_wc" type="xs:double"/>
     </xs:attributeGroup>
 
@@ -1466,9 +1469,11 @@
         <xs:attribute name="viewport_x_min" type="xs:double"/>
         <xs:attribute name="viewport_y_max" type="xs:double"/>
         <xs:attribute name="viewport_y_min" type="xs:double"/>
-        <xs:attribute name="x_scale_ndc" type="xs:double"/>
+        <xs:attribute name="x_max_shift_ndc" type="xs:double"/>
+        <xs:attribute name="x_min_shift_ndc" type="xs:double"/>
         <xs:attribute name="x_shift_ndc" type="xs:double"/>
-        <xs:attribute name="y_scale_ndc" type="xs:double"/>
+        <xs:attribute name="y_max_shift_ndc" type="xs:double"/>
+        <xs:attribute name="y_min_shift_ndc" type="xs:double"/>
         <xs:attribute name="y_shift_ndc" type="xs:double"/>
     </xs:attributeGroup>
 

@@ -63,13 +63,11 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
     }
 
   // checkboxes for _selected attribute
-  if (advanced_editor ||
-      (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
-       elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
-       elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" || elem_name == "side_region" ||
-       elem_name == "marginal_heatmap_plot" || elem_name == "legend" || elem_name == "axis" ||
-       elem_name == "text_region") ||
-      util::startsWith(elem_name, "series"))
+  if (advanced_editor || (elem_name == "figure" || elem_name == "plot" || elem_name == "layout_grid" ||
+                          elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
+                          elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
+                          elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
+                          elem_name == "text_region" || elem_name == "overlay_element"))
     {
       if (elem_name != "coordinate_system" &&
           !(elem_name == "layout_grid" && item->getRef()->parentElement()->localName() != "layout_grid"))
