@@ -1782,7 +1782,16 @@ void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
   GR_UNUSED(event);
   if (enable_editor)
     {
-      if (event->key() == Qt::Key_Control) ctrl_key_mode = false;
+      /*
+       * Handling of the Ctrl modifier is broken on Linux/X11. The key code is `0` and the reported **set** modifiers
+       * contain `Qt::ControlModifier` although it is released.
+       */
+      if (event->key() == Qt::Key_Control || (event->key() == 0 && (event->modifiers() & Qt::ControlModifier)))
+        {
+          ctrl_key_mode = false;
+          auto rel_cursor_pos = mapFromGlobal(QCursor::pos());
+          cursorHandler(rel_cursor_pos.x(), rel_cursor_pos.y()); // get the correct cursor and sets it
+        }
     }
   else
     {
