@@ -2076,7 +2076,7 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       if (!elem->hasAttribute("_bbox_x_min")) continue;
       if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), elem->localName()) !=
               ndc_transformation_elems.end() &&
-          !elem->hasAttribute("viewport_x_min") && elem->localName() != "overlay_element")
+          !elem->hasAttribute("viewport_x_min") && !strEqualsAny(elem->localName(), "overlay_element", "text"))
         continue;
 
       auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
@@ -2084,25 +2084,28 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
       auto bbox_y_max = static_cast<double>(elem->getAttribute("_bbox_y_max"));
 
-      // check if the cursor is at the border of the box or not
-      if (((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5) ||
-           (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5)) &&
-          mouse_y > bbox_y_min + 5 && mouse_y < bbox_y_max - 5)
-        return HORIZONTAL_SCALE_HOVER_MODE;
-      if (((mouse_y > bbox_y_min - 5 && mouse_y < bbox_y_min + 5) ||
-           (mouse_y > bbox_y_max - 5 && mouse_y < bbox_y_max + 5)) &&
-          mouse_x > bbox_x_min + 5 && mouse_x < bbox_x_max - 5)
-        return VERTICAL_SCALE_HOVER_MODE;
-      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_min - 5 &&
-           mouse_y < bbox_y_min + 5) ||
-          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_max - 5 &&
-           mouse_y < bbox_y_max + 5))
-        return F_DIAGONAL_SCALE_HOVER_MODE;
-      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_max - 5 &&
-           mouse_y < bbox_y_max + 5) ||
-          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_min - 5 &&
-           mouse_y < bbox_y_min + 5))
-        return B_DIAGONAL_SCALE_HOVER_MODE;
+      if (elem->localName() != "text")
+        {
+          // check if the cursor is at the border of the box or not
+          if (((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5) ||
+               (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5)) &&
+              mouse_y > bbox_y_min + 5 && mouse_y < bbox_y_max - 5)
+            return HORIZONTAL_SCALE_HOVER_MODE;
+          if (((mouse_y > bbox_y_min - 5 && mouse_y < bbox_y_min + 5) ||
+               (mouse_y > bbox_y_max - 5 && mouse_y < bbox_y_max + 5)) &&
+              mouse_x > bbox_x_min + 5 && mouse_x < bbox_x_max - 5)
+            return VERTICAL_SCALE_HOVER_MODE;
+          if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_min - 5 &&
+               mouse_y < bbox_y_min + 5) ||
+              (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_max - 5 &&
+               mouse_y < bbox_y_max + 5))
+            return F_DIAGONAL_SCALE_HOVER_MODE;
+          if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_max - 5 &&
+               mouse_y < bbox_y_max + 5) ||
+              (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_min - 5 &&
+               mouse_y < bbox_y_min + 5))
+            return B_DIAGONAL_SCALE_HOVER_MODE;
+        }
       if (bbox_x_min <= mouse_x && mouse_x <= bbox_x_max && bbox_y_min <= mouse_y && mouse_y <= bbox_y_max)
         return MOVE_HOVER_MODE;
     }

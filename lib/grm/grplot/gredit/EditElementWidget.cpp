@@ -22,7 +22,7 @@ static void clearLayout(QLayout *layout)
   QLayoutItem *item;
   if (!layout->isEmpty() && layout->count() > 0)
     {
-      while ((item = layout->takeAt(0)))
+      while (layout->count() > 0 && ((item = layout->takeAt(0))))
         {
           if (item->layout())
             {
@@ -102,7 +102,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
   QString title("Element Edit: ");
   title.append(currently_clicked_name.c_str());
   this->setWindowTitle(title);
-  auto change_parameters_label = new QLabel("Change Parameters:");
+  auto change_parameters_label = new QLabel("Change Parameters:", this);
   change_parameters_label->setStyleSheet("font-weight: bold");
   auto form = new QFormLayout;
   form->addRow(change_parameters_label);
@@ -377,6 +377,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           ((QDial *)line_edit)->setWrapping(true);
           ((QDial *)line_edit)->setInvertedAppearance(true);
           ((QDial *)line_edit)->setFixedSize(40, 40);
+          ((QDial *)line_edit)->setNotchesVisible(true);
+          ((QDial *)line_edit)->setNotchTarget(15);
 
           auto up_x = static_cast<double>((*current_selection)->getRef()->getAttribute(cur_attr_name));
           auto up_y = static_cast<double>((*current_selection)->getRef()->getAttribute("char_up_y"));
@@ -412,7 +414,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           cur_attr_name == "line_type" || cur_attr_name == "line_width")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -429,7 +431,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "border_color_ind" || cur_attr_name == "border_width")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -445,7 +447,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "text_color_ind" || cur_attr_name == "font" || cur_attr_name == "font_precision")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -461,7 +463,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "fill_int_style" || cur_attr_name == "fill_style")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -477,7 +479,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "viewport_y_min" || cur_attr_name == "viewport_y_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -494,7 +496,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "viewport_normalized_y_min" || cur_attr_name == "viewport_normalized_y_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -511,7 +513,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "window_y_max" || cur_attr_name == "window_z_min" || cur_attr_name == "window_z_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -539,7 +541,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "theta_range_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -561,7 +563,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "r_log" || cur_attr_name == "theta_log")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -586,14 +588,17 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "theta_flip")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
           if (!flip_modification_added)
             {
-              form->addRow(flip_modification);
-              flip_modification_added = true;
+              if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
+                {
+                  form->addRow(flip_modification);
+                  flip_modification_added = true;
+                }
             }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -614,7 +619,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "r_lim_max" || cur_attr_name == "theta_lim_min" || cur_attr_name == "theta_lim_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -643,7 +648,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "y_min_shift_wc" || cur_attr_name == "y_shift_wc")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -652,7 +657,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
               if (advanced_editor || (cur_attr_name != "x_max_shift_wc" && cur_attr_name != "x_min_shift_wc" &&
                                       cur_attr_name != "x_shift_wc" && cur_attr_name != "y_max_shift_wc" &&
                                       cur_attr_name != "y_min_shift_wc" && cur_attr_name != "y_shift_wc") &&
-                                         (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
+                                         ((*current_selection)->getRef()->hasAttribute("viewport_x_min") ||
+                                          (*current_selection)->getRef()->localName() == "text"))
                 {
                   form->addRow(element_movement_modification);
                   element_movement_modification_added = true;
@@ -663,10 +669,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
           element_movement_modification_form->addRow(label, line_edit);
-          if (!advanced_editor || (cur_attr_name != "x_max_shift_wc" && cur_attr_name != "x_min_shift_wc" &&
-                                   cur_attr_name != "x_shift_wc" && cur_attr_name != "y_max_shift_wc" &&
-                                   cur_attr_name != "y_min_shift_wc" && cur_attr_name != "y_shift_wc") &&
-                                      (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
+          if (!advanced_editor)
             element_movement_modification_form->setRowVisible(
                 element_movement_modification_form->rowCount() - 1,
                 !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
@@ -681,7 +684,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "space_3d_fov" || cur_attr_name == "space_3d_phi" || cur_attr_name == "space_3d_theta")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -708,7 +711,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                cur_attr_name == "ws_viewport_y_min" || cur_attr_name == "ws_viewport_y_max")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -724,7 +727,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
       else if (highlight_location && cur_attr_name == "location")
         {
           text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(attrNameToLabel(cur_attr_name).c_str());
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -734,15 +737,14 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
         {
           if (cur_attr_name == "char_up_x")
             {
-              text_label = QString("char up");
-              tooltip_string =
-                  QString("The character up vector which is used to rotate the text. Default: (0,1) or 90 degrees");
+              text_label = QString("text angle");
+              tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
             }
           else
             {
               text_label = QString(attrNameToLabel(cur_attr_name).c_str());
             }
-          auto label = new QLabel(text_label);
+          auto label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
@@ -754,9 +756,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       context_attributes.end() &&
                   static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3) // string
                 {
-                  auto widget = new QWidget();
+                  auto widget = new QWidget(this);
                   auto grid_layout = new QGridLayout();
-                  auto button = new QPushButton();
+                  auto button = new QPushButton(this);
                   connect(button, &QPushButton::clicked, [=]() {
                     if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
                       context_name =
@@ -784,9 +786,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
           else if (cur_attr_name == "text" || cur_attr_name == "x_label_3d" || cur_attr_name == "y_label_3d" ||
                    cur_attr_name == "z_label_3d" || cur_attr_name == "tick_label")
             {
-              auto widget = new QWidget();
+              auto widget = new QWidget(this);
               auto grid_layout = new QGridLayout();
-              auto button = new QPushButton();
+              auto button = new QPushButton(this);
               connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
               button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
@@ -911,6 +913,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       ((QDial *)line_edit)->setInvertedAppearance(true);
                       ((QDial *)line_edit)->setValue(90 + DIAL_OFFSET);
                       ((QDial *)line_edit)->setFixedSize(40, 40);
+                      ((QDial *)line_edit)->setNotchesVisible(true);
+                      ((QDial *)line_edit)->setNotchTarget(15);
                     }
                   else if (attr_name == "char_up_y")
                     {
@@ -924,23 +928,22 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                     }
                   if (attr_name == "char_up_x")
                     {
-                      text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("char up");
-                      tooltip_string = QString(
-                          "The character up vector which is used to rotate the text. Default: (0,1) or 90 degrees");
+                      text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("text angle");
+                      tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
                     }
                   else
                     {
                       text_label =
                           QString("<span style='color:#ff0000;'>%1</span>").arg(attrNameToLabel(attr_name).c_str());
                     }
-                  auto label = new QLabel(text_label);
+                  auto label = new QLabel(text_label, this);
                   label->setFixedWidth(LABEL_WIDTH);
                   label->setWordWrap(true);
                   label->setToolTip(tooltip_string);
                   if (highlight_location && attr_name == "location")
                     {
                       text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(attr_name.c_str());
-                      label = new QLabel(text_label);
+                      label = new QLabel(text_label, this);
                       label->setToolTip(tooltip_string);
                       form->addRow(label, line_edit);
                     }
@@ -974,8 +977,11 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                     {
                       if (!flip_modification_added)
                         {
-                          form->addRow(flip_modification);
-                          flip_modification_added = true;
+                          if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                            {
+                              form->addRow(flip_modification);
+                              flip_modification_added = true;
+                            }
                         }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -1081,9 +1087,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                               context_attributes.end() &&
                           type_name == "xs:string")
                         {
-                          auto widget = new QWidget();
+                          auto widget = new QWidget(this);
                           auto grid_layout = new QGridLayout();
-                          auto button = new QPushButton();
+                          auto button = new QPushButton(this);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
                           button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
 #else
@@ -1108,9 +1114,9 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                       else if (attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
                                attr_name == "z_label_3d" || attr_name == "tick_label")
                         {
-                          auto widget = new QWidget();
+                          auto widget = new QWidget(this);
                           auto grid_layout = new QGridLayout();
-                          auto button = new QPushButton();
+                          auto button = new QPushButton(this);
                           connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
                           button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
@@ -1155,7 +1161,6 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                * added */
               std::shared_ptr<GRM::Element> group;
               auto group_name = static_cast<std::string>(child->getAttribute("ref"));
-              bool was_added = true;
 
               if (group_name != "colorrep")
                 {
@@ -1168,6 +1173,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                   /* iterate through attribute elements */
                   for (const auto &childchild : group->children())
                     {
+                      bool was_added = true;
                       if (childchild->localName() == "xs:attribute")
                         {
                           auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
@@ -1276,7 +1282,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                 }
                               text_label = QString("<span style='color:#ff0000;'>%1</span>")
                                                .arg(attrNameToLabel(attr_name).c_str());
-                              auto label = new QLabel(text_label);
+                              auto label = new QLabel(text_label, this);
                               label->setFixedWidth(LABEL_WIDTH);
                               label->setWordWrap(true);
                               label->setToolTip(tooltip_string);
@@ -1388,7 +1394,8 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                                           (attr_name != "x_max_shift_wc" && attr_name != "x_min_shift_wc" &&
                                            attr_name != "x_shift_wc" && attr_name != "y_max_shift_wc" &&
                                            attr_name != "y_min_shift_wc" && attr_name != "y_shift_wc") &&
-                                              (*current_selection)->getRef()->hasAttribute("viewport_x_min"))
+                                              ((*current_selection)->getRef()->hasAttribute("viewport_x_min") ||
+                                               (*current_selection)->getRef()->localName() == "text"))
                                         {
                                           form->addRow(element_movement_modification);
                                           element_movement_modification_added = true;
@@ -1443,7 +1450,7 @@ void EditElementWidget::attributeEditEvent(bool highlight_location)
                    */
                   line_edit = new QLineEdit(this);
                   ((QLineEdit *)line_edit)->setText("");
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
+                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
                   form->addRow(text_label, line_edit);
 
                   attr_type.emplace("Colorrep-index", "xs:string");
@@ -1766,7 +1773,7 @@ void EditElementWidget::accept()
                 (*current_selection)->getRef()->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
               grplot_widget->attributeSetForComboBox(attr_type[attr_name], (*current_selection)->getRef(), value,
-                                                     (labels[i]).toStdString());
+                                                     attr_name);
             }
         }
       else if (typeid(field) == typeid(QCheckBox))
@@ -1775,20 +1782,21 @@ void EditElementWidget::accept()
         }
       else if (typeid(field) == typeid(QDial))
         {
-          if (labels[i].toStdString() == "char up")
+          auto val = ((QDial *)fields[i])->value();
+          if (labels[i].toStdString() == "text angle")
             {
               bool update;
               auto render = grm_get_render();
-              auto val = ((QDial *)fields[i])->value() - DIAL_OFFSET;
+              val = ((val % 15 >= 7) ? (val / 15 + 1) : (val / 15)) * 15;
               render->getAutoUpdate(&update);
               render->setAutoUpdate(false);
-              (*current_selection)->getRef()->setAttribute("char_up_x", std::cos(val * M_PI / 180.0));
+              (*current_selection)->getRef()->setAttribute("char_up_x", std::cos((val - DIAL_OFFSET) * M_PI / 180.0));
               render->setAutoUpdate(update);
-              (*current_selection)->getRef()->setAttribute("char_up_y", std::sin(val * M_PI / 180.0));
+              (*current_selection)->getRef()->setAttribute("char_up_y", std::sin((val - DIAL_OFFSET) * M_PI / 180.0));
             }
           else
             {
-              (*current_selection)->getRef()->setAttribute(attr_name, ((QDial *)fields[i])->value());
+              (*current_selection)->getRef()->setAttribute(attr_name, val);
             }
         }
     }
@@ -1831,7 +1839,7 @@ void EditElementWidget::colorRGBSlot()
 
 bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name)
 {
-  // hide all set and non set attributes which allow a graphical modifaction of the figure if the advanced editor isn't
+  // hide all set and non set attributes which allow a graphical modification of the figure if the advanced editor isn't
   // turned on
   auto elem_name = element->localName();
   static std::unordered_map<std::string, std::vector<std::string>> element_to_advanced_attributes{
@@ -1965,13 +1973,12 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        std::vector<std::string>{
            "height",
            "set_text_color_for_background",
+           "space",
            "width",
            "x_max_shift_ndc",
            "x_min_shift_ndc",
-           "x_shift_ndc",
            "y_max_shift_ndc",
            "y_min_shift_ndc",
-           "y_shift_ndc",
            "z_index",
        }},
       {std::string("titles_3d"),
@@ -2824,8 +2831,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
           auto plot_type = static_cast<std::string>(element->getAttribute("plot_type"));
           if (plot_type == "2d")
             {
-              if (attr_name == "theta_flip" || attr_name == "z_grid" || attr_name == "z_label" ||
-                  attr_name == "angle_ticks")
+              if (attr_name == "theta_flip" || attr_name == "x_grid" || attr_name == "y_grid" ||
+                  attr_name == "z_grid" || attr_name == "z_label" || attr_name == "angle_ticks" ||
+                  attr_name == "x_label" || attr_name == "y_label")
                 return true;
             }
           else if (plot_type == "3d")
@@ -2835,7 +2843,8 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
           else if (plot_type == "polar")
             {
               if (attr_name == "x_grid" || attr_name == "x_label" || attr_name == "y_grid" || attr_name == "y_label" ||
-                  attr_name == "y_line" || attr_name == "z_grid" || attr_name == "z_label")
+                  attr_name == "y_line" || attr_name == "z_grid" || attr_name == "z_label" || attr_name == "x_label" ||
+                  attr_name == "y_label")
                 return true;
             }
         }
@@ -2869,6 +2878,40 @@ void EditElementWidget::openTextPreview()
 
       if ((*current_selection)->getRef()->hasAttribute("scientific_format"))
         scientific_format = static_cast<int>((*current_selection)->getRef()->getAttribute("scientific_format"));
+
+      for (int i = 0; i < labels.count(); i++)
+        {
+          auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
+
+          if ((util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") ||
+               util::startsWith(labels[i].toStdString(), "<span style='color:#0000ff;'>")) &&
+              util::endsWith(labels[i].toStdString(), "</span>"))
+            {
+              labels[i].remove(0, 29);
+              labels[i].remove(labels[i].size() - 7, 7);
+            }
+          auto attr_name = labelToAttrName(labels[i].toStdString());
+
+          if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
+            {
+              if (attr_name == "tick_label" || attr_name == "text")
+                text = ((QLineEdit *)fields[i])->text().toStdString();
+              else if (attr_name == "text_color_ind")
+                text_color = ((QLineEdit *)fields[i])->text().toInt();
+            }
+          else if (typeid(field) == typeid(QComboBox))
+            {
+              int index = ((QComboBox *)fields[i])->currentIndex();
+              if (attr_name == "scientific_format")
+                {
+                  if (((QComboBox *)fields[i])->itemText(index).toStdString().empty())
+                    scientific_format = 1;
+                  else
+                    scientific_format =
+                        GRM::scientificFormatStringToInt(((QComboBox *)fields[i])->itemText(index).toStdString());
+                }
+            }
+        }
 
       auto bbox_x_min = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_x_min"));
       auto bbox_x_max = static_cast<int>((*current_selection)->getRef()->getAttribute("_bbox_x_max"));

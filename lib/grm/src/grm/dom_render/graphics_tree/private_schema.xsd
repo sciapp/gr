@@ -360,6 +360,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_text_modifications"/>
+            <xs:attribute name="_char_up_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_space_set_by_user" type="xs:integer"/>
         </xs:complexType>
