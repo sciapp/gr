@@ -409,6 +409,7 @@
             <xs:attribute name="org" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="scientific_format" type="strint"/>
+            <xs:attribute name="text_angle" type="xs:integer"/>
             <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="tick_orientation" type="xs:integer"/>
             <xs:attribute name="tick_size" type="xs:double"/>
@@ -495,9 +496,10 @@
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
-            <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
+            <xs:attribute name="text_angle" type="xs:integer"/>
             <xs:attribute name="width" type="xs:double"/>
+            <xs:attribute name="world_coordinates" type="xs:integer"/>
             <xs:attribute name="x" type="xs:double"/>
             <xs:attribute name="y" type="xs:double"/>
             <xs:attribute name="z_index" type="xs:integer"/>

@@ -11,6 +11,7 @@
 #include <QWidget>
 #include <QMainWindow>
 #include <QCursor>
+#include <QRadioButton>
 
 #include "gredit/BoundingObject.hxx"
 #include "gredit/BoundingLogic.hxx"
@@ -21,6 +22,7 @@ class GRPlotWidget;
 #include "gredit/EditElementWidget.hxx"
 #include "gredit/TableWidget.hxx"
 #include "gredit/ColorPickerRGB.hxx"
+#include "gredit/SelectionListWidget.hxx"
 #include "qtterm/Receiver.hxx"
 #include "qtterm/ArgsWrapper.hxx"
 #include "util.hxx"
@@ -162,10 +164,12 @@ public:
   QAction *getShowTreeWidgetAct();
   QAction *getShowTableWidgetAct();
   QAction *getShowTextPreviewAct();
+  QAction *getShowSelectionListWidgetAct();
   QAction *getHideEditElementAct();
   QAction *getHideTreeWidgetAct();
   QAction *getHideTableWidgetAct();
   QAction *getHideTextPreviewAct();
+  QAction *getHideSelectionListWidgetAct();
   QAction *getXLimAct();
   QAction *getYLimAct();
   QAction *getZLimAct();
@@ -173,6 +177,7 @@ public:
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
   QWidget *getTextPreviewWidget();
+  QWidget *getSelectionListWidget();
 
 protected:
   virtual void draw();
@@ -269,6 +274,8 @@ private slots:
   void yLimSlot();
   void zLimSlot();
   void addImageSlot();
+  void listItemCheckStatusChanged(QListWidgetItem *item);
+  void listItemPressed(QListWidgetItem *item);
 
 private:
   struct MouseState
@@ -387,6 +394,7 @@ private:
   EditElementWidget *edit_element_widget;
   PreviewTextWidget *preview_text_widget;
   ColorPickerRGB *color_picker_rgb;
+  SelectionListWidget *selection_list_widget;
   bool hide_grid_bbox = true;
   bool enable_advanced_editor = false;
   int add_pos_x, add_pos_y;
@@ -418,8 +426,10 @@ private:
   QCursor *csr;
   QMenu *add_overlay_menu;
   QAction *add_text_act, *add_image_act;
-  QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act;
-  QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act;
+  QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
+      *show_selection_list_widget_act;
+  QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act,
+      *hide_selection_list_widget_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
   bool overlay_element_edit = false, called_by_location_change = false;
 
@@ -435,6 +445,8 @@ private:
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);
   void overlayElementEdit();
+  void colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index, QGridLayout *grid_layout,
+                        QList<QRadioButton *> radio_buttons, int max_index, int index_name_start);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

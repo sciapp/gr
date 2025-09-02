@@ -266,9 +266,21 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(text_preview_dock_widget, SIGNAL(resizeMainWindow()), this,
                            SLOT(closeTextPreviewDockSlot()));
 
+          selection_list_dock_widget = new GRPlotDockWidget("Selection List:", LEFT_AREA_WIDTH, 100, this);
+          selection_list_dock_widget->setWidget(grplot_widget_->getSelectionListWidget());
+          selection_list_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
+          selection_list_dock_widget->hide();
+          addDockWidget(Qt::LeftDockWidgetArea, selection_list_dock_widget);
+          QObject::connect(grplot_widget_->getShowSelectionListWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(showSelectionListDockSlot()));
+          QObject::connect(grplot_widget_->getHideSelectionListWidgetAct(), SIGNAL(triggered()), this,
+                           SLOT(hideSelectionListDockSlot()));
+          QObject::connect(selection_list_dock_widget, SIGNAL(resizeMainWindow()), this,
+                           SLOT(closeSelectionListDockSlot()));
+
           this->tabifyDockWidget(tree_dock_widget, table_dock_widget);
 
-          // this way the tabs is existing gets shown on the top side of the DockWidgetArea instead of the bottom side
+          // this way the existing tabs gets shown on the top side of the DockWidgetArea instead of the bottom side
           this->setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
           this->setTabPosition(Qt::BottomDockWidgetArea, QTabWidget::North);
           this->setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
@@ -401,6 +413,15 @@ void GRPlotMainWindow::showTextPreviewDockSlot()
   center();
 }
 
+void GRPlotMainWindow::showSelectionListDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  selection_list_dock_widget->show();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
 void GRPlotMainWindow::hideEditElementDockSlot()
 {
   auto w = grplot_widget_->width();
@@ -434,6 +455,15 @@ void GRPlotMainWindow::hideTextPreviewDockSlot()
   auto w = grplot_widget_->width();
   auto h = grplot_widget_->height();
   text_preview_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideSelectionListDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  selection_list_dock_widget->hide();
   resizeGRPlotWidget(w, h);
   center();
 }
@@ -474,6 +504,16 @@ void GRPlotMainWindow::closeTextPreviewDockSlot()
   auto h = grplot_widget_->height();
 
   text_preview_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeSelectionListDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  selection_list_dock_widget->hide();
   resizeGRPlotWidget(w, h);
   center();
 }

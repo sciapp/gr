@@ -1625,6 +1625,7 @@ grm_error_t plotLine(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       double line_width, border_width, marker_size;
       int line_color_ind, line_type, border_color_ind, marker_color_ind;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("line");
       group->append(sub_group);
 
@@ -1634,17 +1635,24 @@ grm_error_t plotLine(grm_args_t *subplot_args)
 
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       if (y_length > 0)
         {
           std::vector<double> y_vec(y, y + y_length);
-          (*context)["y" + str] = y_vec;
-          sub_group->setAttribute("y", "y" + str);
+          (*context)[prefix + "y" + str] = y_vec;
+          sub_group->setAttribute("y", prefix + "y" + str);
         }
       if (grm_args_first_value(*current_series, "x", "D", &x, &x_length))
         {
           std::vector<double> x_vec(x, x + x_length);
-          (*context)["x" + str] = x_vec;
-          sub_group->setAttribute("x", "x" + str);
+          (*context)[prefix + "x" + str] = x_vec;
+          sub_group->setAttribute("x", prefix + "x" + str);
         }
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
@@ -1670,11 +1678,6 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
         sub_group->setAttribute("line_color_ind", line_color_ind);
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
-        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
@@ -1756,6 +1759,7 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       double line_width;
       int line_color_ind, line_type;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("stairs");
       group->append(sub_group);
 
@@ -1766,13 +1770,20 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       std::vector<double> x_vec(x, x + x_length);
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
 
       std::vector<double> y_vec(y, y + y_length);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -1800,11 +1811,6 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
         sub_group->setAttribute("line_color_ind", line_color_ind);
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
-        }
       if (grm_args_values(*current_series, "step_where", "s", &where)) sub_group->setAttribute("step_where", where);
 
       global_root->setAttribute("_id", ++id);
@@ -1842,6 +1848,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       char *label;
       double marker_size, border_width;
       int marker_color_ind, border_color_ind;
+      std::string prefix = "";
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1853,16 +1860,23 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       std::vector<double> x_vec(x, x + x_length);
       std::vector<double> y_vec(y, y + y_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
       if (grm_args_first_value(*current_series, "z", "D", &z, &z_length))
         {
           std::vector<double> z_vec(z, z + z_length);
 
-          (*context)["z" + str] = z_vec;
-          sub_group->setAttribute("z", "z" + str);
+          (*context)[prefix + "z" + str] = z_vec;
+          sub_group->setAttribute("z", prefix + "z" + str);
         }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
@@ -1879,17 +1893,12 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         {
           std::vector<double> c_vec(c, c + c_length);
 
-          (*context)["c" + str] = c_vec;
-          sub_group->setAttribute("c", "c" + str);
+          (*context)[prefix + "c" + str] = c_vec;
+          sub_group->setAttribute("c", prefix + "c" + str);
         }
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
           sub_group->setAttribute("marker_color_ind", c_index);
-        }
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
         }
 
       if (z != nullptr || c != nullptr)
@@ -1998,6 +2007,7 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       double line_width;
       int line_type, line_color_ind;
+      std::string prefix;
 
       auto sub_group = global_render->createSeries("stem");
       group->append(sub_group);
@@ -2012,10 +2022,17 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       std::vector<double> x_vec(x, x + x_length);
       std::vector<double> y_vec(y, y + x_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
         {
@@ -2038,11 +2055,6 @@ grm_error_t plotStem(grm_args_t *subplot_args)
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
         sub_group->setAttribute("line_color_ind", line_color_ind);
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
-        }
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -3036,6 +3048,7 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
       char *label;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("line3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3046,17 +3059,24 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       std::vector<double> x_vec(x, x + x_length);
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
 
       std::vector<double> y_vec(y, y + y_length);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       std::vector<double> z_vec(z, z + z_length);
-      (*context)["z" + str] = z_vec;
-      sub_group->setAttribute("z", "z" + str);
+      (*context)[prefix + "z" + str] = z_vec;
+      sub_group->setAttribute("z", prefix + "z" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -3072,12 +3092,6 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
         {
           sub_group->setAttribute("z_range_min", z_min);
           sub_group->setAttribute("z_range_max", z_max);
-        }
-
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
         }
 
       global_root->setAttribute("_id", ++id);
@@ -3101,6 +3115,7 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
     {
       double x_min, x_max, y_min, y_max, z_min, z_max;
       char *label;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("scatter3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3115,12 +3130,19 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
       std::vector<double> y_vec(y, y + y_length);
       std::vector<double> z_vec(z, z + z_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
-      (*context)["z" + str] = z_vec;
-      sub_group->setAttribute("z", "z" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
+      (*context)[prefix + "z" + str] = z_vec;
+      sub_group->setAttribute("z", prefix + "z" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -3141,19 +3163,14 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
           std::vector<double> c_vec(c, c + c_length);
-          (*context)["c" + str] = c_vec;
-          sub_group->setAttribute("c", "c" + str);
+          (*context)[prefix + "c" + str] = c_vec;
+          sub_group->setAttribute("c", prefix + "c" + str);
 
           if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
             {
               group->parentElement()->setAttribute("c_lim_min", c_min);
               group->parentElement()->setAttribute("c_lim_max", c_max);
             }
-        }
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
         }
 
       global_root->setAttribute("_id", ++id);
@@ -3363,6 +3380,7 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       int clip_negative = 0, marker_type;
       double line_width, border_width, marker_size;
       int line_type, line_color_ind, border_color_ind, marker_color_ind;
+      std::string prefix = "";
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
@@ -3375,10 +3393,17 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       std::vector<double> theta_vec(theta, theta + theta_length);
       std::vector<double> r_vec(r, r + r_length);
 
-      (*context)["theta" + str] = theta_vec;
-      sub_group->setAttribute("theta", "theta" + str);
-      (*context)["r" + str] = r_vec;
-      sub_group->setAttribute("r", "r" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", prefix + "theta" + str);
+      (*context)[prefix + "r" + str] = r_vec;
+      sub_group->setAttribute("r", prefix + "r" + str);
 
       if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
@@ -3412,11 +3437,6 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
         sub_group->setAttribute("border_color_ind", border_color_ind);
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
-        }
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -3440,6 +3460,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       char *label;
       auto sub_group = global_render->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
+      std::string prefix = "";
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
@@ -3449,13 +3470,20 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       std::vector<double> theta_vec(theta, theta + theta_length);
       std::vector<double> r_vec(r, r + r_length);
 
-      (*context)["theta" + str] = theta_vec;
-      sub_group->setAttribute("theta", "theta" + str);
-      (*context)["r" + str] = r_vec;
-      sub_group->setAttribute("r", "r" + str);
+      (*context)[prefix + "theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", prefix + "theta" + str);
+      (*context)[prefix + "r" + str] = r_vec;
+      sub_group->setAttribute("r", prefix + "r" + str);
 
       if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
@@ -3472,11 +3500,6 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
           sub_group->setAttribute("clip_negative", clip_negative);
         }
 
-      if (grm_args_values(*current_series, "label", "s", &label))
-        {
-          sub_group->setAttribute("label", label);
-          plotDrawLegend(subplot_args);
-        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
 

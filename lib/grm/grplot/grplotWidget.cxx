@@ -104,7 +104,7 @@ QStringList step_where_list{
     "mid",
 };
 QStringList element_type_list{"text", "image"};
-QStringList space_list{"ndc", "wc"};
+QStringList world_coordinates_list{"ndc", "wc"};
 QStringList label_orientation_list{"up", "down"};
 
 static std::string file_export;
@@ -122,6 +122,7 @@ static std::weak_ptr<GRM::Element> prev_selection;
 static const char *grm_tmp_dir = nullptr;
 static int history_count = 0;
 static int history_forward_count = 0;
+static std::shared_ptr<GRM::Element> prev_highlighted_tick_group_elem;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -181,6 +182,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   selected_parent = nullptr;
   preview_text_widget = new PreviewTextWidget(this);
   preview_text_widget->hide();
+  selection_list_widget = new SelectionListWidget(this);
+  selection_list_widget->hide();
   csr = new QCursor(Qt::ArrowCursor);
   setCursor(*csr);
 
@@ -213,7 +216,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "size_y_type",
       "size_x_unit",
       "size_y_unit",
-      "space",
+      "world_coordinates",
       "step_where",
       "style",
       "text_encoding",
@@ -242,6 +245,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "fit_parents_width",
       "grplot",
       "hide",
+      "hidden",
       "is_major",
       "is_mirrored",
       "keep_aspect_ratio",
@@ -598,10 +602,17 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       show_tree_widget_act = new QAction();
       show_table_widget_act = new QAction();
       show_preview_text_act = new QAction();
+      show_selection_list_widget_act = new QAction();
       hide_edit_element_act = new QAction();
       hide_tree_widget_act = new QAction();
       hide_table_widget_act = new QAction();
       hide_preview_text_act = new QAction();
+      hide_selection_list_widget_act = new QAction();
+
+      connect(selection_list_widget, SIGNAL(itemChanged(QListWidgetItem *)), this,
+              SLOT(listItemCheckStatusChanged(QListWidgetItem *)));
+      connect(selection_list_widget, SIGNAL(itemPressed(QListWidgetItem *)), this,
+              SLOT(listItemPressed(QListWidgetItem *)));
     }
 }
 
@@ -620,6 +631,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
   table_widget = nullptr;
   add_element_widget = nullptr;
   edit_element_widget = nullptr;
+  selection_list_widget = nullptr;
   csr = new QCursor(Qt::ArrowCursor);
   setCursor(*csr);
 
@@ -801,7 +813,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
-      {"space", space_list},
+      {"world_coordinates", world_coordinates_list},
       {"step_where", step_where_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
@@ -1145,9 +1157,10 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::labelOrientationIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "space" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+  else if (cur_attr_name == "world_coordinates" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
     {
-      current_text = GRM::spaceIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+      current_text =
+          GRM::worldCoordinatesIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
 
   int index = ((QComboBox *)*line_edit)->findText(current_text.c_str());
@@ -1362,9 +1375,9 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
             {
               element->setAttribute(label, GRM::labelOrientationStringToInt(value));
             }
-          else if (label == "space")
+          else if (label == "world_coordinates")
             {
-              element->setAttribute(label, GRM::spaceStringToInt(value));
+              element->setAttribute(label, GRM::worldCoordinatesStringToInt(value));
             }
         }
       catch (std::logic_error &e)
@@ -1378,8 +1391,9 @@ void GRPlotWidget::attributeEditEvent(bool highlight_location)
 {
   if (current_selection != nullptr)
     {
+      auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
       edit_element_widget->show();
-      edit_element_widget->attributeEditEvent(highlight_location);
+      edit_element_widget->attributeEditEvent(multiple_selections, highlight_location);
       show_edit_element_act->trigger();
     }
 }
@@ -1742,8 +1756,9 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   bounding_logic->clear();
   extractBoundingBoxesFromGRM((QPainter &)painter);
 
-  // get the old selected element is existing and set it as the current_selection
+  // get the old selected element if existing and set it as the current_selection
   auto old_selelected_elem = grm_get_document_root()->querySelectors("[_highlighted=\"1\"]");
+  if (old_selelected_elem == nullptr) old_selelected_elem = prev_highlighted_tick_group_elem;
   if (old_selelected_elem != nullptr)
     {
       auto bbox_id = static_cast<int>(old_selelected_elem->getAttribute("_bbox_id"));
@@ -1846,21 +1861,24 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
     {
       if (event->key() == Qt::Key_Escape)
         {
-          if (!current_selections.empty())
+          if (!current_selections.empty()) current_selections.clear();
+          for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]"))
             {
-              for (const auto &selection : current_selections)
-                {
-                  selection->getRef()->setAttribute("_selected_for_move", 0);
-                }
-              current_selections.clear();
+              selection->setAttribute("_selected_for_move", 0);
             }
-          if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
+          if (current_selection)
+            {
+              current_selection->getRef()->removeAttribute("_highlighted");
+              prev_highlighted_tick_group_elem.reset();
+            }
           current_selection = nullptr;
           mouse_move_selection = nullptr;
           prev_selection.reset();
           tree_widget->updateData(grm_get_document_root());
           edit_element_widget->hide();
           this->cursor().setShape(Qt::ArrowCursor);
+          selection_list_widget->hide();
+          hide_selection_list_widget_act->trigger();
           redraw();
         }
       else if (event->key() == Qt::Key_Return)
@@ -1986,7 +2004,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       int x, y;
       getMousePos(event, &x, &y);
       cursorHandler(x, y); // get the correct cursor and sets it
-      if (mouse_state.mode == MouseState::Mode::MOVE_SELECTED && !ctrl_key_mode)
+      if (mouse_state.mode == MouseState::Mode::MOVE_SELECTED)
         {
           grm_args_t *args = grm_args_new();
 
@@ -2006,8 +2024,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       else if ((mouse_state.mode == MouseState::Mode::HORIZONTAL_SCALE_SELECTED ||
                 mouse_state.mode == MouseState::Mode::VERTICAL_SCALE_SELECTED ||
                 mouse_state.mode == MouseState::Mode::B_DIAGONAL_SCALE_SELECTED ||
-                mouse_state.mode == MouseState::Mode::F_DIAGONAL_SCALE_SELECTED) &&
-               !ctrl_key_mode)
+                mouse_state.mode == MouseState::Mode::F_DIAGONAL_SCALE_SELECTED))
         {
           if (cursor().shape() == Qt::ArrowCursor) return;
           grm_args_t *args = grm_args_new();
@@ -2179,10 +2196,25 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
   else if (event->button() == Qt::MouseButton::LeftButton)
     {
       int x, y;
+      BoundingObject *old_current_selection = nullptr;
       getMousePos(event, &x, &y);
-      if (current_selections.empty() || ctrl_key_mode)
+      if (current_selection != nullptr &&
+          !grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]").empty())
         {
-          mouse_state.mode = MouseState::Mode::PAN;
+          // current_selection should always be part of current_selections
+          std::unique_ptr<BoundingObject> tmp(new BoundingObject(current_selection[0]));
+          addCurrentSelection(std::move(tmp));
+        }
+      if (current_selections.empty())
+        {
+          if (grm_get_document_root()->querySelectors("[_selected_for_move=\"1\"]"))
+            {
+              mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+            }
+          else
+            {
+              mouse_state.mode = MouseState::Mode::PAN;
+            }
         }
       else
         {
@@ -2204,6 +2236,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 mouse_state.mode = MouseState::Mode::F_DIAGONAL_SCALE_SELECTED;
               else if (cursor().shape() == Qt::SizeAllCursor)
                 mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
+              old_current_selection = current_selection;
             }
         }
       mouse_state.anchor.setX(x);
@@ -2222,10 +2255,12 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
 
       if (enable_editor)
         {
+          bool set_selected_for_move = false;
           for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
             {
               elem->removeAttribute("_highlighted");
             }
+          prev_highlighted_tick_group_elem.reset();
           amount_scrolled = 0;
           auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
           if (cur_clicked.empty())
@@ -2237,8 +2272,13 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
               return;
             }
           clicked = cur_clicked;
-          current_selection = &clicked[0];
+          if (old_current_selection == nullptr) current_selection = &clicked[0];
           current_selection->getRef()->setAttribute("_highlighted", true);
+          auto name = current_selection->getRef()->localName();
+          if (name == "tick_group" || name == "tick" || name == "grid_line" || name == "text")
+            {
+              prev_highlighted_tick_group_elem = current_selection->getRef();
+            }
           if (ctrl_key_mode)
             {
               bool removed_selection = false;
@@ -2267,8 +2307,14 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                        !(elem_name == "layout_grid" && tmp->getRef()->parentElement()->localName() != "layout_grid")))
                     {
                       tmp->getRef()->setAttribute("_selected_for_move", 1);
+                      set_selected_for_move = true;
                     }
                   addCurrentSelection(std::move(tmp));
+                }
+              else
+                {
+                  auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
+                  selection_list_widget->updateSelectionList(multiple_selections);
                 }
 
               auto elem_name = current_selection->getRef()->localName();
@@ -2294,6 +2340,17 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
           tree_widget->updateData(grm_get_document_root());
           tree_widget->selectItem(current_selection->getRef());
           mouse_move_selection = nullptr;
+          if (ctrl_key_mode && set_selected_for_move)
+            {
+              auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
+              if (multiple_selections.size() > 1) attributeEditEvent(false);
+              if (multiple_selections.size() > 0)
+                {
+                  selection_list_widget->updateSelectionList(multiple_selections);
+                  selection_list_widget->show();
+                  show_selection_list_widget_act->trigger();
+                }
+            }
         }
       else
         {
@@ -2405,12 +2462,7 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
       grm_merge(args_);
     }
 
-  for (const auto &selection : current_selections)
-    {
-      selection->getRef()->setAttribute("_selected_for_move", 0);
-    }
   prev_selection.reset();
-  current_selections.clear();
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
@@ -2459,8 +2511,14 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
                       if (clicked[i].getId() == current_selection->getId() && i + 1 < clicked.size())
                         {
                           current_selection->getRef()->removeAttribute("_highlighted");
+                          prev_highlighted_tick_group_elem.reset();
                           current_selection = &clicked[i + 1];
                           current_selection->getRef()->setAttribute("_highlighted", true);
+                          auto name = current_selection->getRef()->localName();
+                          if (name == "tick_group" || name == "tick" || name == "grid_line" || name == "text")
+                            {
+                              prev_highlighted_tick_group_elem = current_selection->getRef();
+                            }
                           tree_widget->updateData(grm_get_document_root());
                           tree_widget->selectItem(current_selection->getRef());
                           break;
@@ -2478,8 +2536,14 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
                       if (clicked[i].getId() == current_selection->getId() && i - 1 > 0)
                         {
                           current_selection->getRef()->removeAttribute("_highlighted");
+                          prev_highlighted_tick_group_elem.reset();
                           current_selection = &clicked[i - 1];
                           current_selection->getRef()->setAttribute("_highlighted", true);
+                          auto name = current_selection->getRef()->localName();
+                          if (name == "tick_group" || name == "tick" || name == "grid_line" || name == "text")
+                            {
+                              prev_highlighted_tick_group_elem = current_selection->getRef();
+                            }
                           tree_widget->updateData(grm_get_document_root());
                           tree_widget->selectItem(current_selection->getRef());
                           break;
@@ -2507,7 +2571,23 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
   if (enable_editor)
     {
-      if (event->button() == Qt::MouseButton::LeftButton) attributeEditEvent();
+      if (event->button() == Qt::MouseButton::LeftButton)
+        {
+          int x, y;
+          getMousePos(event, &x, &y);
+          auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
+          if (cur_clicked.empty())
+            {
+              clicked.clear();
+              current_selection = nullptr;
+              tree_widget->updateData(grm_get_document_root());
+              update();
+              return;
+            }
+          clicked = cur_clicked;
+
+          attributeEditEvent();
+        }
     }
   else
     {
@@ -2542,7 +2622,11 @@ void GRPlotWidget::heatmap()
           series_elem->setAttribute("kind", "heatmap");
         }
     }
-  if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection != nullptr)
+    {
+      current_selection->getRef()->removeAttribute("_highlighted");
+      prev_highlighted_tick_group_elem.reset();
+    }
   current_selection = nullptr;
   current_selections.clear();
   redraw();
@@ -2571,7 +2655,11 @@ void GRPlotWidget::marginalHeatmapAll()
     {
       series_elem->setAttribute("marginal_heatmap_kind", "all");
     }
-  if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection != nullptr)
+    {
+      current_selection->getRef()->removeAttribute("_highlighted");
+      prev_highlighted_tick_group_elem.reset();
+    }
   current_selection = nullptr;
   current_selections.clear();
   redraw();
@@ -2600,7 +2688,11 @@ void GRPlotWidget::marginalHeatmapLine()
     {
       series_elem->setAttribute("marginal_heatmap_kind", "line");
     }
-  if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection != nullptr)
+    {
+      current_selection->getRef()->removeAttribute("_highlighted");
+      prev_highlighted_tick_group_elem.reset();
+    }
   current_selection = nullptr;
   current_selections.clear();
   redraw();
@@ -2628,7 +2720,11 @@ void GRPlotWidget::line()
       elem->setAttribute("_update_required", true);
     }
   grm_get_render()->setAutoUpdate(update);
-  if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection != nullptr)
+    {
+      current_selection->getRef()->removeAttribute("_highlighted");
+      prev_highlighted_tick_group_elem.reset();
+    }
   current_selection = nullptr;
   current_selections.clear();
   redraw();
@@ -3319,11 +3415,6 @@ void GRPlotWidget::colormapSlot()
   auto text_label = QString("colormap_inverted");
   form->addRow(text_label, checkbox);
 
-  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-  form->addRow(&button_box);
-  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
-  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
-
   auto scroll_area_content = new QWidget;
   scroll_area_content->setLayout(form);
   auto scroll_area = new QScrollArea;
@@ -3334,6 +3425,10 @@ void GRPlotWidget::colormapSlot()
 
   auto group_box_layout = new QVBoxLayout;
   group_box_layout->addWidget(scroll_area);
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  group_box_layout->addWidget(&button_box);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
   dialog.setLayout(group_box_layout);
 
   if (dialog.exec() == QDialog::Accepted)
@@ -3516,6 +3611,44 @@ void GRPlotWidget::colorRGBPopUp(std::string attribute_name, const std::shared_p
   if (color_picker_rgb->exec() == QDialog::Accepted) redraw();
 }
 
+void GRPlotWidget::colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index,
+                                    QGridLayout *grid_layout, QList<QRadioButton *> radio_buttons, int max_index,
+                                    int index_name_start)
+{
+  int col = 0;
+  for (int index = 0; index < max_index; index++)
+    {
+      int errind;
+      double r, g, b;
+      QImage image(1, 1, QImage::Format_RGB32);
+      QRgb value;
+
+      if (plot_elem->hasAttribute("colormap"))
+        {
+          auto colormap = static_cast<int>(plot_elem->getAttribute("colormap"));
+          gr_setcolormap(colormap);
+        }
+      gks_inq_color_rep(-1, index_name_start, -1, &errind, &r, &g, &b);
+      value = qRgb(255 * r, 255 * g, 255 * b);
+      image.setPixel(0, 0, value);
+
+      auto label_pix = new QLabel();
+      auto color_pic = QPixmap::fromImage(image);
+      color_pic = color_pic.scaled(20, 20);
+      label_pix->setPixmap(color_pic);
+      auto button = new QRadioButton(this);
+      auto label = new QLabel(std::to_string(index_name_start).c_str());
+
+      if (index_name_start == current_index) button->setChecked(true);
+
+      grid_layout->addWidget(button, index / 6, col++ % 18);
+      grid_layout->addWidget(label_pix, index / 6, col++ % 18);
+      grid_layout->addWidget(label, index / 6, col++ % 18);
+
+      radio_buttons << button;
+      index_name_start += 1;
+    }
+}
 void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index,
                                    const std::shared_ptr<GRM::Element> element)
 {
@@ -3529,48 +3662,89 @@ void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index
   QDialog dialog(this);
   QString title(attribute_name.c_str());
   dialog.setWindowTitle(title);
-  auto grid_layout = new QGridLayout;
+  auto form = new QVBoxLayout;
 
-  int col = 0;
-  for (int index = 0; index < 1255; index++)
-    {
-      int errind;
-      double r, g, b;
-      QImage image(1, 1, QImage::Format_RGB32);
-      QRgb value;
+  auto grid_layout_ansi = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_ansi, radio_buttons, 8, 0);
+  auto horizontal_group_box_ansi = new QGroupBox(tr("Ansi colors"));
+  horizontal_group_box_ansi->setLayout(grid_layout_ansi);
 
-      if (plot_elem->hasAttribute("colormap"))
-        {
-          auto colormap = static_cast<int>(plot_elem->getAttribute("colormap"));
-          gr_setcolormap(colormap);
-        }
-      gks_inq_color_rep(-1, index, -1, &errind, &r, &g, &b);
-      value = qRgb(255 * r, 255 * g, 255 * b);
-      image.setPixel(0, 0, value);
+  auto grid_layout_cmap_reduced = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap_reduced, radio_buttons, 80 - 8, 8);
+  auto horizontal_group_box_cmap_reduced = new QGroupBox(tr("Reduced colormap"));
+  horizontal_group_box_cmap_reduced->setLayout(grid_layout_cmap_reduced);
 
-      auto label_pix = new QLabel();
-      auto color_pic = QPixmap::fromImage(image);
-      color_pic = color_pic.scaled(20, 20);
-      label_pix->setPixmap(color_pic);
-      auto button = new QRadioButton(this);
-      auto label = new QLabel(std::to_string(index).c_str());
+  auto grid_layout_diff_colors = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_diff_colors, radio_buttons, 257 - 80, 80);
+  auto horizontal_group_box_diff_colors = new QGroupBox(tr("Mixed colors"));
+  horizontal_group_box_diff_colors->setLayout(grid_layout_diff_colors);
 
-      if (index == current_index) button->setChecked(true);
+  auto grid_layout_rainbow = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_rainbow, radio_buttons, 588 - 257, 257);
+  auto horizontal_group_box_rainbow = new QGroupBox(tr("Rainbow"));
+  horizontal_group_box_rainbow->setLayout(grid_layout_rainbow);
 
-      grid_layout->addWidget(button, index / 6, col++ % 18);
-      grid_layout->addWidget(label_pix, index / 6, col++ % 18);
-      grid_layout->addWidget(label, index / 6, col++ % 18);
+  auto grid_layout_gray = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_gray, radio_buttons, 644 - 588, 588);
+  auto horizontal_group_box_gray = new QGroupBox(tr("Gray"));
+  horizontal_group_box_gray->setLayout(grid_layout_gray);
 
-      radio_buttons << button;
-    }
+  auto grid_layout_blue = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_blue, radio_buttons, 700 - 644, 644);
+  auto horizontal_group_box_blue = new QGroupBox(tr("Blue"));
+  horizontal_group_box_blue->setLayout(grid_layout_blue);
 
-  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-  grid_layout->addWidget(&button_box, 210, 0, 1, 18);
-  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
-  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
+  auto grid_layout_magenta = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_magenta, radio_buttons, 756 - 700, 700);
+  auto horizontal_group_box_magenta = new QGroupBox(tr("Magenta"));
+  horizontal_group_box_magenta->setLayout(grid_layout_magenta);
+
+  auto grid_layout_red = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_red, radio_buttons, 812 - 756, 756);
+  auto horizontal_group_box_red = new QGroupBox(tr("Red"));
+  horizontal_group_box_red->setLayout(grid_layout_red);
+
+  auto grid_layout_yellow = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_yellow, radio_buttons, 868 - 812, 812);
+  auto horizontal_group_box_yellow = new QGroupBox(tr("Yellow"));
+  horizontal_group_box_yellow->setLayout(grid_layout_yellow);
+
+  auto grid_layout_green = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_green, radio_buttons, 924 - 868, 868);
+  auto horizontal_group_box_green = new QGroupBox(tr("Green"));
+  horizontal_group_box_green->setLayout(grid_layout_green);
+
+  auto grid_layout_cian = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_cian, radio_buttons, 980 - 924, 924);
+  auto horizontal_group_box_cian = new QGroupBox(tr("Cian"));
+  horizontal_group_box_cian->setLayout(grid_layout_cian);
+
+  auto grid_layout_high_diff_colors = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_high_diff_colors, radio_buttons, 1000 - 980, 980);
+  auto horizontal_group_box_high_diff_colors = new QGroupBox(tr("Easily distinguishable colors"));
+  horizontal_group_box_high_diff_colors->setLayout(grid_layout_high_diff_colors);
+
+  auto grid_layout_cmap = new QGridLayout;
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap, radio_buttons, 1255 - 1000, 1000);
+  auto horizontal_group_box_cmap = new QGroupBox(tr("Colormap"));
+  horizontal_group_box_cmap->setLayout(grid_layout_cmap);
+
+  form->addWidget(horizontal_group_box_high_diff_colors);
+  form->addWidget(horizontal_group_box_ansi);
+  form->addWidget(horizontal_group_box_cmap);
+  form->addWidget(horizontal_group_box_diff_colors);
+  form->addWidget(horizontal_group_box_rainbow);
+  form->addWidget(horizontal_group_box_gray);
+  form->addWidget(horizontal_group_box_blue);
+  form->addWidget(horizontal_group_box_magenta);
+  form->addWidget(horizontal_group_box_red);
+  form->addWidget(horizontal_group_box_yellow);
+  form->addWidget(horizontal_group_box_green);
+  form->addWidget(horizontal_group_box_cian);
+  form->addWidget(horizontal_group_box_cmap_reduced);
 
   auto scroll_area_content = new QWidget;
-  scroll_area_content->setLayout(grid_layout);
+  scroll_area_content->setLayout(form);
   auto scroll_area = new QScrollArea;
   scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -3579,6 +3753,10 @@ void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index
 
   auto group_box_layout = new QVBoxLayout;
   group_box_layout->addWidget(scroll_area);
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  group_box_layout->addWidget(&button_box);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
   dialog.setLayout(group_box_layout);
 
   if (dialog.exec() == QDialog::Accepted)
@@ -3727,7 +3905,11 @@ void GRPlotWidget::legendSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, legend_elem);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = bbox;
       current_selection->getRef()->setAttribute("_highlighted", true);
       attributeEditEvent(true);
@@ -3758,7 +3940,11 @@ void GRPlotWidget::colorbarSlot()
           new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, colorbar->parentElement());
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = bbox;
       current_selection->getRef()->setAttribute("_highlighted", true);
       attributeEditEvent(true);
@@ -3794,7 +3980,11 @@ void GRPlotWidget::leftAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+              if (current_selection != nullptr)
+                {
+                  current_selection->getRef()->removeAttribute("_highlighted");
+                  prev_highlighted_tick_group_elem.reset();
+                }
               current_selection = bbox;
               current_selection->getRef()->setAttribute("_highlighted", true);
               attributeEditEvent();
@@ -3832,7 +4022,11 @@ void GRPlotWidget::rightAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+              if (current_selection != nullptr)
+                {
+                  current_selection->getRef()->removeAttribute("_highlighted");
+                  prev_highlighted_tick_group_elem.reset();
+                }
               current_selection = bbox;
               current_selection->getRef()->setAttribute("_highlighted", true);
               attributeEditEvent();
@@ -3870,7 +4064,11 @@ void GRPlotWidget::bottomAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+              if (current_selection != nullptr)
+                {
+                  current_selection->getRef()->removeAttribute("_highlighted");
+                  prev_highlighted_tick_group_elem.reset();
+                }
               current_selection = bbox;
               current_selection->getRef()->setAttribute("_highlighted", true);
               attributeEditEvent();
@@ -3908,7 +4106,11 @@ void GRPlotWidget::topAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+              if (current_selection != nullptr)
+                {
+                  current_selection->getRef()->removeAttribute("_highlighted");
+                  prev_highlighted_tick_group_elem.reset();
+                }
               current_selection = bbox;
               current_selection->getRef()->setAttribute("_highlighted", true);
               attributeEditEvent();
@@ -3942,7 +4144,11 @@ void GRPlotWidget::twinXAxisSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = bbox;
       current_selection->getRef()->setAttribute("_highlighted", true);
       attributeEditEvent();
@@ -3974,7 +4180,11 @@ void GRPlotWidget::twinYAxisSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = bbox;
       current_selection->getRef()->setAttribute("_highlighted", true);
       attributeEditEvent();
@@ -4051,6 +4261,11 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                     painter.drawText(current_selection->boundingRect().topLeft() + QPointF(x_pos, y_pos),
                                      current_selection->getRef()->localName().c_str());
                   current_selection->getRef()->setAttribute("_highlighted", true);
+                  auto name = current_selection->getRef()->localName();
+                  if (name == "tick_group" || name == "tick" || name == "grid_line" || name == "text")
+                    {
+                      prev_highlighted_tick_group_elem = current_selection->getRef();
+                    }
                   if (prev_selection.lock() == nullptr || prev_selection.lock() != current_selection->getRef())
                     redraw();
                   prev_selection = current_selection->getRef();
@@ -4112,6 +4327,26 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
               painter.fillRect(rect, QBrush(QColor(243, 224, 59, 40), Qt::SolidPattern));
             }
         }
+
+      auto global_root = grm_get_document_root();
+      if (global_root->querySelectors("[_selected_for_move=\"1\"]"))
+        {
+          for (const auto selection : global_root->querySelectorsAll("[_selected_for_move=\"1\"]"))
+            {
+              auto bbox_xmin = static_cast<double>(selection->getAttribute("_bbox_x_min"));
+              auto bbox_xmax = static_cast<double>(selection->getAttribute("_bbox_x_max"));
+              auto bbox_ymin = static_cast<double>(selection->getAttribute("_bbox_y_min"));
+              auto bbox_ymax = static_cast<double>(selection->getAttribute("_bbox_y_max"));
+              auto rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+              if (enable_advanced_editor)
+                {
+                  int x_pos = 5, y_pos = 10;
+                  if (selection->localName() == "text") y_pos = 0;
+                  painter.drawText(rect.topLeft() + QPointF(x_pos, y_pos), selection->localName().c_str());
+                }
+              painter.fillRect(rect, QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
+            }
+        }
     }
   else
     {
@@ -4152,10 +4387,6 @@ void GRPlotWidget::resetPixmap()
 {
   redraw_pixmap = RedrawType::FULL;
   current_selection = nullptr;
-  for (const auto &selection : current_selections)
-    {
-      selection->getRef()->setAttribute("_selected_for_move", 0);
-    }
   prev_selection.reset();
   current_selections.clear();
   update();
@@ -4275,20 +4506,23 @@ void GRPlotWidget::enableEditorFunctions()
       if (!called_by_location_change) edit_element_widget->hide();
       add_element_widget->hide();
       editor_action->setText(tr("&Enable Editorview"));
+      hide_selection_list_widget_act->trigger();
+      selection_list_widget->hide();
 
       // if the editor gets turned off everything needs to be reseted
       for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
         {
           elem->removeAttribute("_highlighted");
         }
+      prev_highlighted_tick_group_elem.reset();
       current_selection = nullptr;
       mouse_move_selection = nullptr;
       amount_scrolled = 0;
       clicked.clear();
 
-      for (const auto &selection : current_selections)
+      for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]"))
         {
-          selection->getRef()->setAttribute("_selected_for_move", 0);
+          selection->setAttribute("_selected_for_move", 0);
         }
       prev_selection.reset();
       current_selections.clear();
@@ -4436,11 +4670,6 @@ void GRPlotWidget::generateLinearContextSlot()
       fields << line_edit;
     }
 
-  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-  form->addRow(&button_box);
-  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
-  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
-
   auto scroll_area_content = new QWidget;
   scroll_area_content->setLayout(form);
   auto scroll_area = new QScrollArea;
@@ -4451,6 +4680,10 @@ void GRPlotWidget::generateLinearContextSlot()
 
   auto group_box_layout = new QVBoxLayout;
   group_box_layout->addWidget(scroll_area);
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  group_box_layout->addWidget(&button_box);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
   dialog.setLayout(group_box_layout);
 
   if (dialog.exec() == QDialog::Accepted)
@@ -4520,7 +4753,11 @@ void GRPlotWidget::undoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = nullptr;
       if (add_element_widget->isVisible()) add_element_widget->hide();
       redo_action->setVisible(true);
@@ -4536,7 +4773,11 @@ void GRPlotWidget::undoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = nullptr;
       if (add_element_widget->isVisible()) add_element_widget->hide();
       redo_action->setVisible(true);
@@ -4573,7 +4814,11 @@ void GRPlotWidget::redoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = nullptr;
       if (add_element_widget->isVisible()) add_element_widget->hide();
       if (history_forward_count == 0) redo_action->setVisible(false);
@@ -4590,7 +4835,11 @@ void GRPlotWidget::redoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = nullptr;
       if (add_element_widget->isVisible()) add_element_widget->hide();
       if (history_forward_count == 0) redo_action->setVisible(false);
@@ -4689,6 +4938,7 @@ void GRPlotWidget::addImageSlot()
 
   overlay_element_edit = true;
   redraw();
+  this->activateWindow(); // needed so that the grplot widget is the active one again and events are tracked
 }
 
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
@@ -5019,6 +5269,14 @@ void GRPlotWidget::setCurrentSelection(BoundingObject *p_current_selection)
     return;
 
   auto global_root = grm_get_document_root();
+  auto render = grm_get_render();
+  if (name == "tick_group" || name == "tick" || name == "grid_line" || name == "text")
+    {
+      prev_highlighted_tick_group_elem = current_selection->getRef();
+    }
+  bool auto_update;
+  render->getAutoUpdate(&auto_update);
+  render->setAutoUpdate(false);
   for (const auto &selected : global_root->querySelectorsAll("[_selected_for_menu]"))
     {
       selected->removeAttribute("_selected_for_menu");
@@ -5032,6 +5290,7 @@ void GRPlotWidget::setCurrentSelection(BoundingObject *p_current_selection)
       plot_parent = plot_parent->parentElement();
     }
   plot_parent->setAttribute("_selected_for_menu", true);
+  render->setAutoUpdate(auto_update);
 }
 
 BoundingObject **GRPlotWidget::getCurrentSelection()
@@ -5083,6 +5342,7 @@ void GRPlotWidget::setTreeUpdate(bool status)
 void GRPlotWidget::editElementAccepted()
 {
   if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
+  prev_highlighted_tick_group_elem.reset();
   current_selection = nullptr;
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
@@ -5094,6 +5354,8 @@ void GRPlotWidget::editElementAccepted()
     }
   prev_selection.reset();
   current_selections.clear();
+  selection_list_widget->hide();
+  hide_selection_list_widget_act->trigger();
   redraw();
 }
 
@@ -5754,6 +6016,12 @@ QAction *GRPlotWidget::getShowTextPreviewAct()
   return show_preview_text_act;
 }
 
+QAction *GRPlotWidget::getShowSelectionListWidgetAct()
+{
+  return show_selection_list_widget_act;
+}
+
+
 QAction *GRPlotWidget::getHideEditElementAct()
 {
   return hide_edit_element_act;
@@ -5772,6 +6040,11 @@ QAction *GRPlotWidget::getHideTableWidgetAct()
 QAction *GRPlotWidget::getHideTextPreviewAct()
 {
   return hide_preview_text_act;
+}
+
+QAction *GRPlotWidget::getHideSelectionListWidgetAct()
+{
+  return hide_selection_list_widget_act;
 }
 
 QAction *GRPlotWidget::getXLimAct()
@@ -5807,6 +6080,11 @@ QWidget *GRPlotWidget::getTableWidget()
 QWidget *GRPlotWidget::getTextPreviewWidget()
 {
   return preview_text_widget;
+}
+
+QWidget *GRPlotWidget::getSelectionListWidget()
+{
+  return selection_list_widget;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)
@@ -5916,7 +6194,11 @@ void GRPlotWidget::overlayElementEdit()
       auto bbox_y_min = static_cast<double>(text->getAttribute("_bbox_y_min"));
       auto bbox_y_max = static_cast<double>(text->getAttribute("_bbox_y_max"));
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, text);
-      if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+      if (current_selection != nullptr)
+        {
+          current_selection->getRef()->removeAttribute("_highlighted");
+          prev_highlighted_tick_group_elem.reset();
+        }
       current_selection = bbox;
       current_selection->getRef()->setAttribute("_highlighted", true);
       attributeEditEvent(false);
@@ -5932,4 +6214,29 @@ void GRPlotWidget::setUpPreviewTextWidget(std::string text, int scientific_forma
   preview_text_widget->show();
   preview_text_widget->update();
   show_preview_text_act->trigger();
+}
+
+void GRPlotWidget::listItemCheckStatusChanged(QListWidgetItem *item)
+{
+  if (item->checkState() == Qt::Unchecked)
+    {
+      ((CustomQListWidgetItem *)item)->getElementRef()->removeAttribute("_selected_for_move");
+
+      auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
+      selection_list_widget->updateSelectionList(multiple_selections);
+      redraw();
+    }
+}
+
+void GRPlotWidget::listItemPressed(QListWidgetItem *item)
+{
+  auto selection = ((CustomQListWidgetItem *)item)->getElementRef();
+  auto bbox_xmin = static_cast<double>(selection->getAttribute("_bbox_x_min"));
+  auto bbox_xmax = static_cast<double>(selection->getAttribute("_bbox_x_max"));
+  auto bbox_ymin = static_cast<double>(selection->getAttribute("_bbox_y_min"));
+  auto bbox_ymax = static_cast<double>(selection->getAttribute("_bbox_y_max"));
+  auto bbox_id = static_cast<int>(selection->getAttribute("_bbox_id"));
+  setCurrentSelection(new BoundingObject(bbox_id, bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax, selection));
+
+  redraw();
 }

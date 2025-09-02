@@ -92,6 +92,7 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
 
 bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
 {
+  if (item->getRef() == nullptr) return false;
   bool selected_status = item->getRef()->hasAttribute("_selected_for_move") &&
                          static_cast<int>(item->getRef()->getAttribute("_selected_for_move"));
   if ((item->getRef()->localName() != "root" && item->getRef()->localName() != "coordinate_system" &&
