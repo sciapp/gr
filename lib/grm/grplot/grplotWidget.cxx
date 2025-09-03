@@ -279,6 +279,21 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "background_color", "border_color_ind", "fill_color_ind", "line_color_ind", "marker_color_ind", "text_color_ind",
   };
   color_rgb_attr = QStringList{"line_color_rgb", "fill_color_rgb"};
+  slider_attr = QStringList{
+      "abs_height",
+      "abs_width",
+      "transparency",
+      "viewport_normalized_x_max",
+      "viewport_normalized_x_min",
+      "viewport_normalized_y_max",
+      "viewport_normalized_y_min",
+      "x_max_shift_ndc",
+      "x_min_shift_ndc",
+      "x_shift_ndc",
+      "y_max_shift_ndc",
+      "y_min_shift_ndc",
+      "y_shift_ndc",
+  };
 
   // add context attributes to combobox list
   auto context_attributes = GRM::getContextAttributes();
@@ -683,107 +698,56 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       fill_int_style_list, transformation_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
-  for (auto &i : size_unit_vec)
-    {
-      size_unit_list.push_back(i.c_str());
-    }
+  for (auto &i : size_unit_vec) size_unit_list.push_back(i.c_str());
   auto colormap_vec = GRM::getColormaps();
   colormap_list.reserve((int)colormap_vec.size());
-  for (auto &i : colormap_vec)
-    {
-      colormap_list.push_back(i.c_str());
-    }
+  for (auto &i : colormap_vec) colormap_list.push_back(i.c_str());
   auto font_vec = GRM::getFonts();
   font_list.reserve((int)font_vec.size());
-  for (auto &i : font_vec)
-    {
-      font_list.push_back(i.c_str());
-    }
+  for (auto &i : font_vec) font_list.push_back(i.c_str());
   auto font_precision_vec = GRM::getFontPrecisions();
   font_precision_list.reserve((int)font_precision_vec.size());
-  for (auto &i : font_precision_vec)
-    {
-      font_precision_list.push_back(i.c_str());
-    }
+  for (auto &i : font_precision_vec) font_precision_list.push_back(i.c_str());
   auto line_type_vec = GRM::getLineTypes();
   line_type_list.reserve((int)line_type_vec.size());
-  for (auto &i : line_type_vec)
-    {
-      line_type_list.push_back(i.c_str());
-    }
+  for (auto &i : line_type_vec) line_type_list.push_back(i.c_str());
   auto location_vec = GRM::getLocations();
   location_list.reserve((int)location_vec.size());
-  for (auto &i : location_vec)
-    {
-      location_list.push_back(i.c_str());
-    }
+  for (auto &i : location_vec) location_list.push_back(i.c_str());
   auto x_axis_location_vec = GRM::getXAxisLocations();
   x_axis_location_list.reserve((int)x_axis_location_vec.size());
-  for (auto &i : x_axis_location_vec)
-    {
-      x_axis_location_list.push_back(i.c_str());
-    }
+  for (auto &i : x_axis_location_vec) x_axis_location_list.push_back(i.c_str());
   auto y_axis_location_vec = GRM::getYAxisLocations();
   y_axis_location_list.reserve((int)y_axis_location_vec.size());
-  for (auto &i : y_axis_location_vec)
-    {
-      y_axis_location_list.push_back(i.c_str());
-    }
+  for (auto &i : y_axis_location_vec) y_axis_location_list.push_back(i.c_str());
   auto marker_type_vec = GRM::getMarkerTypes();
   marker_type_list.reserve((int)marker_type_vec.size());
-  for (auto &i : marker_type_vec)
-    {
-      marker_type_list.push_back(i.c_str());
-    }
+  for (auto &i : marker_type_vec) marker_type_list.push_back(i.c_str());
   auto text_align_horizontal_vec = GRM::getTextAlignHorizontal();
   text_align_horizontal_list.reserve((int)text_align_horizontal_vec.size());
-  for (auto &i : text_align_horizontal_vec)
-    {
-      text_align_horizontal_list.push_back(i.c_str());
-    }
+  for (auto &i : text_align_horizontal_vec) text_align_horizontal_list.push_back(i.c_str());
   auto text_align_vertical_vec = GRM::getTextAlignVertical();
   text_align_vertical_list.reserve((int)text_align_vertical_vec.size());
-  for (auto &i : text_align_vertical_vec)
-    {
-      text_align_vertical_list.push_back(i.c_str());
-    }
+  for (auto &i : text_align_vertical_vec) text_align_vertical_list.push_back(i.c_str());
   auto algorithm_volume_vec = GRM::getAlgorithm();
   algorithm_volume_list.reserve((int)algorithm_volume_vec.size());
-  for (auto &i : algorithm_volume_vec)
-    {
-      algorithm_volume_list.push_back(i.c_str());
-    }
+  for (auto &i : algorithm_volume_vec) algorithm_volume_list.push_back(i.c_str());
   auto model_vec = GRM::getModel();
   model_list.reserve((int)model_vec.size());
-  for (auto &i : model_vec)
-    {
-      model_list.push_back(i.c_str());
-    }
+  for (auto &i : model_vec) model_list.push_back(i.c_str());
   auto fill_style_vec = GRM::getFillStyles();
   fill_style_list.reserve((int)fill_style_vec.size());
-  for (auto &i : fill_style_vec)
-    {
-      fill_style_list.push_back(i.c_str());
-    }
+  for (auto &i : fill_style_vec) fill_style_list.push_back(i.c_str());
   auto fill_int_style_vec = GRM::getFillIntStyles();
   fill_int_style_list.reserve((int)fill_int_style_vec.size());
-  for (auto &i : fill_int_style_vec)
-    {
-      fill_int_style_list.push_back(i.c_str());
-    }
+  for (auto &i : fill_int_style_vec) fill_int_style_list.push_back(i.c_str());
   auto transformation_vec = GRM::getTransformation();
   transformation_list.reserve((int)transformation_vec.size());
-  for (auto &i : transformation_vec)
-    {
-      transformation_list.push_back(i.c_str());
-    }
+  for (auto &i : transformation_vec) transformation_list.push_back(i.c_str());
   table_widget->extractContextNames(grm_get_render()->getContext());
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve((int)context_attr_vec.size());
-  for (auto &i : context_attr_vec)
-    {
-      context_attr_list.push_back(i.c_str());
-    }
+  for (auto &i : context_attr_vec) context_attr_list.push_back(i.c_str());
 
   static std::map<std::string, QStringList> attribute_to_list{
       {"axis_type", axis_type_list},
@@ -1247,10 +1211,7 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
           table_widget->extractContextNames(grm_get_render()->getContext());
           auto context_attr_vec = table_widget->getContextNames();
           context_attr_list.reserve((int)context_attr_vec.size());
-          for (auto &i : context_attr_vec)
-            {
-              context_attr_list.push_back(i.c_str());
-            }
+          for (auto &i : context_attr_vec) context_attr_list.push_back(i.c_str());
 
           if (context_attr_list.contains(QString::fromStdString(value)))
             element->setAttribute(label, value);
@@ -2208,13 +2169,9 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
       if (current_selections.empty())
         {
           if (grm_get_document_root()->querySelectors("[_selected_for_move=\"1\"]"))
-            {
-              mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
-            }
+            mouse_state.mode = MouseState::Mode::MOVE_SELECTED;
           else
-            {
-              mouse_state.mode = MouseState::Mode::PAN;
-            }
+            mouse_state.mode = MouseState::Mode::PAN;
         }
       else
         {
@@ -3563,7 +3520,6 @@ void GRPlotWidget::zLimSlot()
                                                     : global_root->querySelectors("figure[active=1]");
   const auto plot_elem = figure_elem->querySelectors("plot");
 
-
   QList<QLineEdit *> fields;
   QDialog dialog(this);
   QString title("Set Z Lim:");
@@ -4711,10 +4667,7 @@ void GRPlotWidget::generateLinearContextSlot()
           start = std::stod(values[1]);
           end = std::stod(values[2]);
           n = std::stoi(values[3]);
-          for (int i = 0; i < n; i++)
-            {
-              data_vec.push_back(start + i * (end - start) / (n - 1));
-            }
+          for (int i = 0; i < n; i++) data_vec.push_back(start + i * (end - start) / (n - 1));
 
           (*context)[values[0]] = data_vec;
           table_widget->updateData(context);
@@ -5316,6 +5269,11 @@ QStringList GRPlotWidget::getColorIndAttributes()
 QStringList GRPlotWidget::getColorRGBAttributes()
 {
   return color_rgb_attr;
+}
+
+QStringList GRPlotWidget::getSilderAttributes()
+{
+  return slider_attr;
 }
 
 void GRPlotWidget::addCurrentSelection(std::unique_ptr<BoundingObject> curr_selection)

@@ -78,6 +78,7 @@ public:
   QStringList getComboBoxAttributes();
   QStringList getColorIndAttributes();
   QStringList getColorRGBAttributes();
+  QStringList getSilderAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
   bool getEnableAdvancedEditor();
@@ -389,7 +390,7 @@ private:
   std::shared_ptr<GRM::Document> schema_tree;
   bool tree_update = true;
   QSize size_hint;
-  QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr;
+  QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr, slider_attr;
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
   PreviewTextWidget *preview_text_widget;
