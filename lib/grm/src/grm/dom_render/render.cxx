@@ -658,14 +658,8 @@ static std::tuple<double, int> getColorbarAttributes(const std::string &kind, co
       else
         colors = PLOT_DEFAULT_CONTOUR_LEVELS;
     }
-  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
-    {
-      offset = PLOT_POLAR_COLORBAR_OFFSET;
-    }
-  if (kind == "surface" || kind == "volume" || kind == "trisurface")
-    {
-      offset = PLOT_3D_COLORBAR_OFFSET;
-    }
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap") offset = PLOT_POLAR_COLORBAR_OFFSET;
+  if (kind == "surface" || kind == "volume" || kind == "trisurface") offset = PLOT_3D_COLORBAR_OFFSET;
   return {offset, colors};
 }
 
@@ -2951,10 +2945,7 @@ std::string GRM::algorithmIntToString(int algorithm)
 {
   for (auto const &map_elem : algorithm_string_to_int)
     {
-      if (map_elem.second == algorithm)
-        {
-          return map_elem.first;
-        }
+      if (map_elem.second == algorithm) return map_elem.first;
     }
   logger((stderr, "Got unknown volume algorithm \"%i\"\n", algorithm));
   throw std::logic_error("For volume series the given algorithm is unknown.\n");
@@ -3339,10 +3330,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
   else if (group)
     {
       attr = parent->getAttribute("marker_types");
-      if (attr.isString())
-        {
-          type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
 
   attr = element->getAttribute("marker_color_indices");
@@ -3353,10 +3341,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
   else if (group)
     {
       attr = parent->getAttribute("marker_color_indices");
-      if (attr.isString())
-        {
-          color_ind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) color_ind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
 
   attr = element->getAttribute("marker_sizes");
@@ -3367,10 +3352,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
   else if (group)
     {
       attr = parent->getAttribute("marker_sizes");
-      if (attr.isString())
-        {
-          size = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) size = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
     }
 
   x_key = static_cast<std::string>(element->getAttribute("x"));
@@ -3402,18 +3384,12 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
         {
           if (color_ind.size() > i)
             {
-              if (color_ind[i] == skip_color_ind)
-                {
-                  continue;
-                }
+              if (color_ind[i] == skip_color_ind) continue;
               gr_setmarkercolorind(color_ind[i]);
             }
           else
             {
-              if (color_ind.back() == skip_color_ind)
-                {
-                  continue;
-                }
+              if (color_ind.back() == skip_color_ind) continue;
               gr_setmarkercolorind(color_ind.back());
             }
         }
@@ -3471,10 +3447,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
   else if (group)
     {
       attr = parent->getAttribute("line_types");
-      if (attr.isString())
-        {
-          type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
 
   attr = element->getAttribute("line_color_indices");
@@ -3485,10 +3458,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
   else if (group)
     {
       attr = parent->getAttribute("line_color_indices");
-      if (attr.isString())
-        {
-          color_ind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) color_ind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
 
   attr = element->getAttribute("line_widths");
@@ -3499,10 +3469,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
   else if (group)
     {
       attr = parent->getAttribute("line_widths");
-      if (attr.isString())
-        {
-          width = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
-        }
+      if (attr.isString()) width = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
     }
 
   x_key = static_cast<std::string>(element->getAttribute("x"));
@@ -3573,10 +3540,7 @@ static std::shared_ptr<GRM::Element> getPlotElement(const std::shared_ptr<GRM::E
   while (ancestor->localName() != "figure")
     {
       bool ancestor_has_plot_group = (ancestor->hasAttribute("plot_group"));
-      if (ancestor->parentElement()->localName() == "layout_grid_element" || ancestor_has_plot_group)
-        {
-          return ancestor;
-        }
+      if (ancestor->parentElement()->localName() == "layout_grid_element" || ancestor_has_plot_group) return ancestor;
       ancestor = ancestor->parentElement();
     }
   return nullptr;
@@ -4332,9 +4296,7 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
 void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
 {
   if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || boundingMap()[id].expired())
-    {
-      return;
-    }
+    return;
   auto element = boundingMap()[id].lock();
   element->setAttribute("_bbox_id", id);
   element->setAttribute("_bbox_x_min", x_min);
@@ -4376,10 +4338,7 @@ static double findMaxStep(unsigned int n, std::vector<double> x)
 
   if (n >= 2)
     {
-      for (i = 1; i < n; ++i)
-        {
-          max_step = grm_max(x[i] - x[i - 1], max_step);
-        }
+      for (i = 1; i < n; ++i) max_step = grm_max(x[i] - x[i - 1], max_step);
     }
 
   return max_step;
@@ -4707,10 +4666,7 @@ static void processColorReps(const std::shared_ptr<GRM::Element> &element)
     {
       auto start = 0U;
       auto end = attr.find('.');
-      if (attr.substr(start, end) == "colorrep")
-        {
-          processColorRep(element, attr);
-        }
+      if (attr.substr(start, end) == "colorrep") processColorRep(element, attr);
     }
 }
 
@@ -4755,21 +4711,13 @@ static void processFlip(const std::shared_ptr<GRM::Element> &element)
 
   gr_inqscale(&options);
   if (x_flip)
-    {
-      options = options | GR_OPTION_FLIP_X;
-    }
+    options = options | GR_OPTION_FLIP_X;
   else
-    {
-      options = options & ~GR_OPTION_FLIP_X;
-    }
+    options = options & ~GR_OPTION_FLIP_X;
   if (y_flip)
-    {
-      options = options | GR_OPTION_FLIP_Y;
-    }
+    options = options | GR_OPTION_FLIP_Y;
   else
-    {
-      options = options & ~GR_OPTION_FLIP_Y;
-    }
+    options = options & ~GR_OPTION_FLIP_Y;
   gr_setscale(options);
 }
 
@@ -5107,10 +5055,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
               std::shared_ptr<GRM::Element> line_elem, marker_elem;
 
               render = std::dynamic_pointer_cast<GRM::Render>(side_region->ownerDocument());
-              if (!render)
-                {
-                  throw NotFoundError("Render-document not found for element\n");
-                }
+              if (!render) throw NotFoundError("Render-document not found for element\n");
               context = render->getContext();
               auto plot_group = element->parentElement();
               getPlotParent(plot_group);
@@ -5478,10 +5423,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
 
       for (const auto &child : central_region->children())
         {
-          if (startsWith(child->localName(), "series_"))
-            {
-              resetOldBoundingBoxes(child);
-            }
+          if (startsWith(child->localName(), "series_")) resetOldBoundingBoxes(child);
         }
       gr_restorestate();
     }
@@ -8730,10 +8672,7 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
       pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
     }
 
-  for (i = 0; i < num_levels; ++i)
-    {
-      h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-    }
+  for (i = 0; i < num_levels; ++i) h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
 
   auto nx = (int)px_vec.size();
   auto ny = (int)py_vec.size();
@@ -8776,10 +8715,7 @@ static void processDrawGraphics(const std::shared_ptr<GRM::Element> &element,
   auto data_vec = GRM::get<std::vector<int>>((*context)[key]);
 
   char_vec.reserve(data_vec.size());
-  for (int i : data_vec)
-    {
-      char_vec.push_back((char)i);
-    }
+  for (int i : data_vec) char_vec.push_back((char)i);
   char *data_p = &(char_vec[0]);
   applyMoveTransformation(element);
 
@@ -8835,13 +8771,10 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   int error_bar_style = ERRORBAR_DEFAULT_STYLE; // line
 
   absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
-  if (element->parentElement()->parentElement()->localName() == "central_region")
+  series = element->parentElement();
+  if (element->parentElement()->parentElement()->localName() != "central_region")
     {
-      series = element->parentElement();
-    }
-  else
-    {
-      series = element->parentElement()->parentElement(); // marginal heatmap
+      series = series->parentElement(); // marginal heatmap
     }
 
   if (!element->hasAttribute("x")) throw NotFoundError("Error-bars are missing required attribute x-data.\n");
@@ -9172,10 +9105,7 @@ static void processIsosurface(const std::shared_ptr<GRM::Element> &element,
       temp_colors = GRM::get<std::vector<double>>((*context)[temp_c]);
       i = temp_colors.size();
       if (i != 3) throw std::length_error("For isosurface series the foreground colors must have size 3.\n");
-      while (i-- > 0)
-        {
-          foreground_colors[i] = (float)temp_colors[i];
-        }
+      while (i-- > 0) foreground_colors[i] = (float)temp_colors[i];
     }
   logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
 
@@ -9185,14 +9115,8 @@ static void processIsosurface(const std::shared_ptr<GRM::Element> &element,
     {
       if (std::isfinite(z_vec[i]))
         {
-          if (grm_isnan(c_min) || c_min > z_vec[i])
-            {
-              c_min = z_vec[i];
-            }
-          if (grm_isnan(c_max) || c_max < z_vec[i])
-            {
-              c_max = z_vec[i];
-            }
+          if (grm_isnan(c_min) || c_min > z_vec[i]) c_min = z_vec[i];
+          if (grm_isnan(c_max) || c_max < z_vec[i]) c_max = z_vec[i];
         }
     }
   if (c_min == c_max || !std::isfinite(c_min) || !std::isfinite(c_max))
@@ -10443,8 +10367,7 @@ static void processRadialAxes(const std::shared_ptr<GRM::Element> &element,
     {
       for (const auto &child : element->children())
         {
-          // Todo: Change this
-          child->remove();
+          child->remove(); // Todo: Change this
         }
       del = DelValues::RECREATE_OWN_CHILDREN;
     }
@@ -11257,10 +11180,7 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
       --cols;
       --rows;
     }
-  for (i = 0; i < 256; i++)
-    {
-      gr_inqcolor(1000 + i, icmap + i);
-    }
+  for (i = 0; i < 256; i++) gr_inqcolor(1000 + i, icmap + i);
 
   data = std::vector<int>(rows * cols);
   if (z_max > z_min)
@@ -11289,10 +11209,7 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
-      for (i = 0; i < cols * rows; i++)
-        {
-          data[i] = 0;
-        }
+      for (i = 0; i < cols * rows; i++) data[i] = 0;
     }
   rgba = std::vector<int>(rows * cols);
 
@@ -11304,14 +11221,8 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
     {
       for (i = 0; i < rows * cols; i++)
         {
-          if (data[i] == -1)
-            {
-              rgba[i] = 0;
-            }
-          else
-            {
-              rgba[i] = (255 << 24) + icmap[data[i]];
-            }
+          rgba[i] = 0;
+          if (data[i] != -1) rgba[i] = (255 << 24) + icmap[data[i]];
         }
 
       std::shared_ptr<GRM::Element> cell_array;
@@ -12759,10 +12670,7 @@ static void processPolarScatter(const std::shared_ptr<GRM::Element> &element,
   if (!element->hasAttribute("marker_type"))
     {
       element->setAttribute("marker_type", *previous_scatter_marker_type++);
-      if (*previous_scatter_marker_type == INT_MAX)
-        {
-          previous_scatter_marker_type = plot_scatter_markertypes;
-        }
+      if (*previous_scatter_marker_type == INT_MAX) previous_scatter_marker_type = plot_scatter_markertypes;
     }
   processMarkerType(element);
 
@@ -12988,10 +12896,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       c_max = static_cast<double>(element->getAttribute("c_range_max"));
     }
 
-  for (i = 0; i < 256; i++)
-    {
-      gr_inqcolor(1000 + (int)i, icmap + i);
-    }
+  for (i = 0; i < 256; i++) gr_inqcolor(1000 + (int)i, icmap + i);
 
   data = std::vector<int>(rows * cols);
   if (z_max > z_min)
@@ -13013,10 +12918,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
-      for (i = 0; i < cols * rows; i++)
-        {
-          data[i] = 0;
-        }
+      for (i = 0; i < cols * rows; i++) data[i] = 0;
     }
 
   // for cases like r_max = 3.2342 -> calc new central_r_max = 4.0 and use nonuniform_polar_cell_array
@@ -13374,10 +13276,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &plot_elem,
       series->setAttribute("bin_width", bin_width);
       bin_widths.resize(num_bins);
 
-      for (i = 0; i < num_bins; i++)
-        {
-          bin_widths[i] = bin_width;
-        }
+      for (i = 0; i < num_bins; i++) bin_widths[i] = bin_width;
       series->setAttribute("bin_widths", bin_widths_key);
       (*context)[bin_widths_key] = bin_widths;
     }
@@ -14406,10 +14305,7 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
   if (!element->hasAttribute("marker_type"))
     {
       element->setAttribute("marker_type", *previous_scatter_marker_type++);
-      if (*previous_scatter_marker_type == INT_MAX)
-        {
-          previous_scatter_marker_type = plot_scatter_markertypes;
-        }
+      if (*previous_scatter_marker_type == INT_MAX) previous_scatter_marker_type = plot_scatter_markertypes;
     }
   processMarkerType(element);
 
@@ -14444,14 +14340,7 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
         {
           if (!z_vec.empty())
             {
-              if (i < z_length)
-                {
-                  marker_sizes_vec.push_back(z_vec[i]);
-                }
-              else
-                {
-                  marker_sizes_vec.push_back(2.0);
-                }
+              marker_sizes_vec.push_back((i < z_length) ? z_vec[i] : 2.0);
             }
           if (!c_vec.empty())
             {
@@ -14899,10 +14788,7 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
             current_marker_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
           else
             element->setAttribute("line_color_ind", current_marker_color_ind);
-          if (is_vertical)
-            {
-              marker_x = y_vec, marker_y = x_vec;
-            }
+          if (is_vertical) marker_x = y_vec, marker_y = x_vec;
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
               marker = global_render->createPolymarker("x" + str, marker_x, "y" + str, marker_y);
@@ -15587,10 +15473,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
 
           bins = std::vector<double>((k == 0) ? num_bins_y : num_bins_x);
 
-          for (i = 0; i < ((k == 0) ? num_bins_y : num_bins_x); i++)
-            {
-              bins[i] = 0;
-            }
+          for (i = 0; i < ((k == 0) ? num_bins_y : num_bins_x); i++) bins[i] = 0;
           for (i = 0; i < y_len; i++)
             {
               for (j = 0; j < x_len; j++)
@@ -15647,10 +15530,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
                   side_region->querySelectors("series_histogram[_child_id=\"" + std::to_string(child_id++) + "\"]");
               sub_group->setAttribute("_update_required", true);
             }
-          if (side_region != nullptr)
-            {
-              side_region->setAttribute("marginal_heatmap_side_plot", true);
-            }
+          if (side_region != nullptr) side_region->setAttribute("marginal_heatmap_side_plot", true);
 
           if (sub_group != nullptr)
             {
@@ -15675,10 +15555,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
         {
           side_region = element->querySelectors("side_region[location=\"" +
                                                 (k == 0 ? std::string("right") : std::string("top")) + "\"]");
-          if (side_region != nullptr)
-            {
-              side_region->setAttribute("marginal_heatmap_side_plot", true);
-            }
+          if (side_region != nullptr) side_region->setAttribute("marginal_heatmap_side_plot", true);
           // special case for marginal_heatmap_kind line - when new indices != -1 are received the 2 lines should be
           // displayed
           sub_group = side_region->querySelectors("series_stairs[_child_id=\"" + std::to_string(child_id) + "\"]");
@@ -23801,10 +23678,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   for (int i = 0; i < num_row; i++)
                     {
                       std::vector<int> row;
-                      for (int j = 0; j < num_col; j++)
-                        {
-                          row.push_back(-1);
-                        }
+                      for (int j = 0; j < num_col; j++) row.push_back(-1);
                       grid_matrix.push_back(row);
                     }
                   for (const auto &grid_elem : element->parentElement()->children())
@@ -24114,10 +23988,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                       for (int i = 0; i < num_row; i++)
                         {
                           std::vector<int> row;
-                          for (int j = 0; j < num_col; j++)
-                            {
-                              row.push_back(-1);
-                            }
+                          for (int j = 0; j < num_col; j++) row.push_back(-1);
                           grid_matrix.push_back(row);
                         }
                       for (const auto &grid_elem : element->children())
@@ -24805,10 +24676,7 @@ void GRM::deleteContextAttribute(const std::shared_ptr<GRM::Element> &element)
   for (const auto &attr : attr_inter)
     {
       auto value = element->getAttribute(attr);
-      if (value.isString())
-        {
-          (*context)[attr].decrementKey(static_cast<std::string>(value));
-        }
+      if (value.isString()) (*context)[attr].decrementKey(static_cast<std::string>(value));
     }
 }
 
@@ -24829,7 +24697,7 @@ void GRM::cleanupElement(GRM::Element &element)
 const char *GRM::Render::initializeHistory()
 {
   if (grm_tmp_dir == nullptr) grm_tmp_dir = createTmpDir();
-  if (grm_tmp_dir == nullptr) throw(std::runtime_error("Tmp directory couldnt be created"));
+  if (grm_tmp_dir == nullptr) throw(std::runtime_error("Tmp directory could not be created"));
 
   return grm_tmp_dir;
 }
