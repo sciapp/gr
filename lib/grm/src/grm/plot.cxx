@@ -6802,6 +6802,12 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
         }
       edit_figure = global_root->querySelectors("[_figure_id=figure" + std::to_string(active_plot_index - 1) + "]");
       global_render->setActiveFigure(edit_figure);
+
+      // workaround to get a valid background for the group_mask which is getting used for the highlights
+      auto active_figure = global_render->querySelectors("figure[active=\"1\"]");
+      auto is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
+      if (is_multiplot) grm_get_render()->setEnableEditor(true);
+
       global_render->render();
       global_render->setAutoUpdate(true);
     }

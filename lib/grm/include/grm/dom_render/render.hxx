@@ -13,7 +13,7 @@
 #include "gr.h"
 #include "grm/layout.hxx"
 #include <grm/util.h>
-#include <grm/dom_render/GroupMask.hxx>
+#include <grm/dom_render/group_mask.hxx>
 
 /* ========================= macros ================================================================================= */
 
@@ -562,6 +562,8 @@ public:
 
   static void setAutoUpdate(bool update);
 
+  static void setEnableEditor(bool update);
+
   void setActiveFigure(const std::shared_ptr<Element> &element);
 
   /* ------------------------------- getter functions ----------------------------------------------------------------*/
@@ -569,6 +571,8 @@ public:
   std::shared_ptr<Element> getActiveFigure();
 
   static void getAutoUpdate(bool *update);
+
+  static void getEnableEditor(bool *update);
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
@@ -587,6 +591,9 @@ public:
   static void render(const std::shared_ptr<Document> &document,
                      const std::shared_ptr<Context> &ext_context); // external doc and external context; could be static
   void processTree();
+  void renderMaskHighlight(std::shared_ptr<Element> highlighted_element,
+                           void (*image_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int,
+                                                  unsigned int *));
   static void finalize();
   std::shared_ptr<Context> getContext();
 

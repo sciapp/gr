@@ -161,21 +161,31 @@ public:
   std::unordered_set<unsigned int> getObjectsInBox(unsigned int center_x, unsigned int center_y) const
   {
     std::unordered_set<unsigned int> object_ids;
-    // std::cerr << "################################################################################" << std::endl;
+    auto global_root = grm_get_document_root();
     for (int i = std::max<int>(0, center_x - box_size_ / 2); i < std::min<int>(width_, center_x + box_size_ / 2); i++)
       {
         for (int j = std::max<int>(0, center_y - box_size_ / 2); j < std::min<int>(height_, center_y + box_size_ / 2);
              j++)
           {
-            int id;
-            // std::cerr << "(" << i << ", " << j << ") = " << this->operator()(i, j) << std::endl;
-            if ((id = (*this)(i, j)) >= 0)
+            if (int id; (id = (*this)(i, j)) >= 0)
               {
-                object_ids.insert(id);
+                auto elem = global_root->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
+                if (elem == nullptr) continue;
+                if (elem->localName() == "fill_rect" || elem->localName() == "draw_image" ||
+                    elem->localName() == "cell_array" || elem->localName() == "fill_arc" ||
+                    elem->localName() == "fill_area")
+                  {
+                    // large filled areas needs to be handled differently so smaller objects inside of them can be
+                    // selected alone
+                    if (i == center_x && j == center_y) object_ids.insert(id);
+                  }
+                else
+                  {
+                    object_ids.insert(id);
+                  }
               }
           }
       }
-    // std::cerr << "################################################################################" << std::endl;
     return object_ids;
   }
 

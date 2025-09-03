@@ -31,7 +31,7 @@ private:
   GRPlotWidget *grplot_widget;
   bool cleared;
   std::list<std::weak_ptr<GRM::Element>> contract_elements;
-  bool findSelectedItem(CustomTreeWidgetItem *item);
+  bool findSelectedItem(CustomTreeWidgetItem *item, bool double_click = false);
   bool checkboxStatusChanged(CustomTreeWidgetItem *item);
 };
 

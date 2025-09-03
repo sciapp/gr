@@ -277,7 +277,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
   QWidget *line_edit;
 
-  if ((*current_selection)->getRef()->localName() == "axis" ||
+  if (((*current_selection)->getRef()->localName() == "axis" &&
+       (*current_selection)->getRef()->parentElement()->localName() == "coordinate_system") ||
       (*current_selection)->getRef()->localName() == "coordinate_system")
     {
       std::shared_ptr<GRM::Element> plot_elem;
@@ -314,11 +315,17 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             }
           else
             {
-              if (plot_elem->getAttribute(attr_name).isInt())
+              if (attr_name == "x_log" || attr_name == "y_log" || attr_name == "z_log" || attr_name == "r_log" ||
+                  attr_name == "x_flip" || attr_name == "y_flip" || attr_name == "z_flip" ||
+                  attr_name == "theta_flip" || attr_name == "adjust_x_lim" || attr_name == "adjust_y_lim" ||
+                  attr_name == "adjust_z_lim")
                 {
                   attr_type.emplace(attr_name, "xs:integer");
                 }
-              else if (plot_elem->getAttribute(attr_name).isDouble())
+              else if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "y_lim_min" ||
+                       attr_name == "y_lim_max" || attr_name == "z_lim_min" || attr_name == "z_lim_max" ||
+                       attr_name == "r_lim_min" || attr_name == "r_lim_max" || attr_name == "theta_lim_min" ||
+                       attr_name == "theta_lim_max")
                 {
                   attr_type.emplace(attr_name, "xs:double");
                 }
@@ -370,8 +377,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             }
           else
             {
-              text_label.clear();
-              label->clear();
+              if (!advanced_editor)
+                {
+                  text_label.clear();
+                  label->clear();
+                }
               line_edit->close();
             }
         }
@@ -404,7 +414,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
   std::sort(sorted_names.begin(), sorted_names.end());
   for (const auto &cur_attr_name : sorted_names)
     {
-      QLabel *label;
+      QLabel *label = nullptr;
       bool was_added = true;
       if (util::startsWith(cur_attr_name, "_")) continue;
       if ((*current_selection)->getRef()->localName() == "layout_grid" &&
@@ -1391,8 +1401,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
         }
       else
         {
-          text_label.clear();
-          label->clear();
+          if (!advanced_editor)
+            {
+              text_label.clear();
+              label->clear();
+            }
           line_edit->close();
         }
     }
@@ -1590,7 +1603,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                         dial->setValue(val + DIAL_OFFSET);
                       });
                       form->addRow(text_label, widget);
-                      label->clear();
+                      if (!advanced_editor) label->clear();
                     }
                   else if (highlight_location && attr_name == "location")
                     {
@@ -1995,8 +2008,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                     }
                   else
                     {
-                      text_label.clear();
-                      label->clear();
+                      if (!advanced_editor)
+                        {
+                          text_label.clear();
+                          label->clear();
+                        }
                       line_edit->close();
                     }
                 }
@@ -2385,6 +2401,10 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                           !is_non_advanced_element)
                                         was_added = false;
                                     }
+                                  else
+                                    {
+                                      was_added = false;
+                                    }
                                 }
                               else
                                 {
@@ -2411,8 +2431,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                 }
                               else
                                 {
-                                  text_label.clear();
-                                  label->clear();
+                                  if (!advanced_editor)
+                                    {
+                                      text_label.clear();
+                                      label->clear();
+                                    }
                                   line_edit->close();
                                 }
                             }
@@ -2694,6 +2717,7 @@ void EditElementWidget::reject()
   labels.clear();
   attr_type.clear();
   this->multiple_selections.clear();
+  grplot_widget->editElementRejected();
   this->close();
 }
 

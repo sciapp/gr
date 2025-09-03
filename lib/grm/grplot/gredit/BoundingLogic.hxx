@@ -2,6 +2,7 @@
 #define QT_EXAMPLE_BOUNDING_LOGIC_H
 #include "BoundingObject.hxx"
 #include <grm/dom_render/graphics_tree/util.hxx>
+#include <unordered_set>
 
 
 class BoundingLogic
@@ -13,6 +14,8 @@ public:
   void addBoundingObject(const BoundingObject &obj);
   std::vector<BoundingObject> getBoundingObjectsAtPoint(int x, int y, bool grid_hidden = false,
                                                         bool advanced_editor = false);
+  std::unordered_set<unsigned int> getElementsAtPoint(int x, int y, bool grid_hidden = false,
+                                                      bool advanced_editor = false);
   void clear();
 
 private:

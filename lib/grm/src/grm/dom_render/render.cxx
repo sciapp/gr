@@ -272,6 +272,7 @@ static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_m
 static bool first_call = true;
 static bool highlighted_attr_exist = false;
 static const char *grm_tmp_dir = nullptr;
+static bool enable_editor = false;
 
 static StringMapEntry kind_to_fmt[] = {
     {"line", "xys"},
@@ -536,6 +537,16 @@ void GRM::Render::getAutoUpdate(bool *update)
   *update = automatic_update;
 }
 
+void GRM::Render::setEnableEditor(bool update)
+{
+  enable_editor = update;
+}
+
+void GRM::Render::getEnableEditor(bool *update)
+{
+  *update = enable_editor;
+}
+
 static void getPlotParent(std::shared_ptr<GRM::Element> &element)
 {
   auto plot_parent = element;
@@ -610,7 +621,8 @@ static double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool 
   auto aspect_ratio_ws = metric_width / metric_height;
   if (plot_element != nullptr && plot_element->parentElement() != nullptr &&
       plot_element->parentElement()->localName() == "layout_grid_element" &&
-      !strEqualsAny(element->localName(), "figure", "layout_grid"))
+      !strEqualsAny(element->localName(), "figure", "layout_grid") && !element->hasAttribute("y_max_shift_ndc") &&
+      !element->hasAttribute("y_min_shift_ndc"))
     {
       double figure_viewport[4];
       auto figure_vp_element = plot_element->parentElement();
@@ -784,6 +796,7 @@ static void clearOldChildren(DelValues *del, const std::shared_ptr<GRM::Element>
                 child->remove();
             }
         }
+      element->setAttribute("_delete_children", 0);
     }
   else if (!element->hasChildNodes())
     *del = DelValues::RECREATE_OWN_CHILDREN;
@@ -2811,7 +2824,31 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       if (element->localName() == "text")
         {
           if (x_shift != 0 || y_shift != 0)
-            gr_settextoffset(x_shift, -y_shift);
+            {
+              double metric_width, metric_height;
+              GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+              auto aspect_ratio_ws = metric_width / metric_height;
+              auto text_x = static_cast<double>(element->getAttribute("x"));
+              auto text_y = static_cast<double>(element->getAttribute("y"));
+
+              // clipping for the text offset
+              if (x_shift > 0)
+                if (aspect_ratio_ws > 1)
+                  x_shift = grm_min(0.99 - text_x, x_shift);
+                else
+                  x_shift = grm_min(aspect_ratio_ws - text_x - 0.01, x_shift);
+              else
+                x_shift = grm_max(0.01 - text_x, x_shift);
+
+              if (y_shift < 0)
+                if (aspect_ratio_ws > 1)
+                  y_shift = grm_max(-text_y, y_shift);
+                else
+                  y_shift = grm_max(text_y - 1.0, y_shift);
+              else
+                y_shift = grm_min(text_y - 0.01, y_shift);
+              gr_settextoffset(x_shift, -y_shift);
+            }
           else
             gr_settextoffset(0, 0);
         }
@@ -5907,7 +5944,7 @@ static void processPrivateTransparency(const std::shared_ptr<GRM::Element> &elem
       if (!(element->hasAttribute("_highlighted") && static_cast<int>(element->getAttribute("_highlighted"))) &&
           !hasHighlightedParent(element))
         {
-          gr_settransparency(0.5);
+          gr_settransparency(0.4);
         }
       else
         {
@@ -7551,6 +7588,9 @@ static void processCellArray(const std::shared_ptr<GRM::Element> &element, const
       element->setAttribute("num_row", nrow);
     }
   auto color = static_cast<std::string>(element->getAttribute("color_ind_values"));
+
+  if (element->parentElement()->localName() == "colorbar")
+    processColormap(element->parentElement()->parentElement()->parentElement()->parentElement());
   applyMoveTransformation(element);
   if (redraw_ws)
     gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
@@ -7575,6 +7615,7 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
    * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
    * functions like `gr_axis` modify the axis text based on the chosen encoding. */
   processTextEncoding(active_figure);
+  processColormap(plot_parent);
 
   if (!getLimitsForColorbar(element, c_min, c_max) && !getLimitsForColorbar(plot_parent, c_min, c_max))
     throw NotFoundError("Missing limits\n");
@@ -8511,6 +8552,8 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
   double *pz_p = &(pz_vec[0]);
   applyMoveTransformation(element);
 
+  processColormap(element->parentElement()->parentElement());
+
   if (redraw_ws) gr_contour(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
@@ -8671,6 +8714,8 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
   double *pz_p = &(pz_vec[0]);
   applyMoveTransformation(element);
 
+  processColormap(element->parentElement()->parentElement());
+
   if (redraw_ws) gr_contourf(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
@@ -8735,6 +8780,11 @@ static void processDrawImage(const std::shared_ptr<GRM::Element> &element, const
       model = GRM::colorModelStringToInt(static_cast<std::string>(element->getAttribute("color_model")));
     }
   applyMoveTransformation(element);
+  if (element->parentElement()->localName() != "polar_bar")
+    {
+      processClipRegion(element->parentElement()->parentElement());
+      gr_selntran(1);
+    }
   if (redraw_ws)
     gr_drawimage(x_min, x_max, y_max, y_min, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]),
                  model);
@@ -11379,6 +11429,8 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
                                                      cell_array);
         }
     }
+  processClipRegion(element->parentElement());
+  processColormap(element->parentElement()->parentElement());
 }
 
 static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -12228,30 +12280,6 @@ static void processPolarCellArray(const std::shared_ptr<GRM::Element> &element,
                       n_row, color);
 }
 
-static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
-                                  unsigned int *pixels)
-{
-  const std::string filepath{"test_partial.ppm"};
-  std::ofstream image_file(filepath, std::ios::out | std::ios::binary);
-  image_file << "P6\n" << std::to_string(width) << " " << std::to_string(height) << "\n255\n";
-  for (unsigned int j = 0; j < height; j++)
-    {
-      for (unsigned int i = 0; i < width; i++)
-        {
-          const auto pixel = reinterpret_cast<uint8_t *>(pixels + j * width + i);
-          if (pixel[3] == 0)
-            {
-              image_file << (uint8_t)255 << (uint8_t)255 << (uint8_t)255;
-            }
-          else
-            {
-              image_file << pixel[2] << pixel[1] << pixel[0];
-            }
-        }
-    }
-  std::free(pixels);
-}
-
 static void processPolyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -12264,8 +12292,6 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
 
   auto name = static_cast<std::string>(element->getAttribute("name"));
   bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
-
-  // gr_beginpartial(1, processPartialDrawing);
 
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(0);
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
@@ -12304,8 +12330,6 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
       if (redraw_ws && !hidden) gr_polyline(2, x, y);
     }
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(1);
-
-  // gr_endpartial(1);
 }
 
 static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
@@ -12499,6 +12523,7 @@ static void processQuiver(const std::shared_ptr<GRM::Element> &element, const st
   double *u_p = &(u_vec[0]);
   double *v_p = &(v_vec[0]);
   applyMoveTransformation(element);
+  processColormap(element->parentElement()->parentElement());
 
   if (redraw_ws) gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, colored);
 }
@@ -13130,6 +13155,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       if (!polar_cell_array->hasAttribute("select_specific_xform"))
         global_render->setSelectSpecificXform(polar_cell_array, 1);
     }
+  processColormap(element->parentElement()->parentElement());
 }
 
 static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -15121,6 +15147,7 @@ static void processShade(const std::shared_ptr<GRM::Element> &element, const std
       x_bins = y_bins;
       y_bins = tmp2;
     }
+  processColormap(element->parentElement()->parentElement());
   if (redraw_ws) gr_shadepoints(n, x_p, y_p, xform, x_bins, y_bins);
 }
 
@@ -15271,6 +15298,7 @@ static void processSurface(const std::shared_ptr<GRM::Element> &element, const s
 
   applyMoveTransformation(element);
   processSpace3d(element->parentElement());
+  processColormap(element->parentElement()->parentElement());
   if (!use_gr3)
     {
       double *px_p = &(x_vec[0]);
@@ -16172,6 +16200,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
                                        std::nullopt, nullptr, cell_array);
     }
   if (cell_array != nullptr) cell_array->setAttribute("name", "imshow");
+  processColormap(element->parentElement()->parentElement());
 }
 
 static void processText(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -16960,6 +16989,7 @@ static void processTriContour(const std::shared_ptr<GRM::Element> &element,
   double *pz_p = &(z_vec[0]);
   double *l_p = &(levels[0]);
   applyMoveTransformation(element);
+  processColormap(element->parentElement()->parentElement());
 
   if (redraw_ws) gr_tricontour((int)x_length, px_p, py_p, pz_p, num_levels, l_p);
 }
@@ -16995,6 +17025,7 @@ static void processTriSurface(const std::shared_ptr<GRM::Element> &element,
   double *pz_p = &(pz_vec[0]);
   applyMoveTransformation(element);
   processSpace3d(element->parentElement());
+  processColormap(element->parentElement()->parentElement());
 
   if (redraw_ws) gr_trisurface(nx, px_p, py_p, pz_p);
 }
@@ -17079,6 +17110,7 @@ static void processVolume(const std::shared_ptr<GRM::Element> &element, const st
   if (element->hasAttribute("d_max")) d_max = static_cast<double>(element->getAttribute("d_max"));
 
   processSpace3d(element->parentElement());
+  processColormap(element->parentElement()->parentElement());
   if (redraw_ws)
     {
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
@@ -18304,6 +18336,10 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           global_render->setSelectSpecificXform(central_region, 1);
         }
     }
+  else if (kinds_3d.count(kind) == 0)
+    {
+      global_render->setClipRegion(central_region, 0);
+    }
 
   // set the x-, y- and z-data to NAN if the value is <= 0
   // if the plot contains the marginal_heatmap_plot the marginal_heatmap should be child in the following for
@@ -18594,6 +18630,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
             }
         }
     }
+  if (!element->hasAttribute("_line_type_set_by_user")) gr_setlinetype(GKS_K_LINETYPE_SOLID);
 }
 
 static void processSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -18737,6 +18774,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       /* check if figure is active; skip inactive elements */
       if (element->localName() == "figure")
         {
+          gr_selntran(1); // for some reason selntran isn't always resetted correctly after a legend got processed
           if (!static_cast<int>(element->getAttribute("active"))) return;
           if (element->hasAttribute("size_x") && !element->hasAttribute("_initial_width"))
             {
@@ -18752,6 +18790,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         {
           std::shared_ptr<GRM::Element> central_region_parent = element;
           processPlot(element, context);
+          // for some reason selntran isn't always resseted in multiplotcase even after the additional set on the figure
+          gr_selntran(1);
           // if the kind is marginal_heatmap plot can only have 1 child and this child is the marginal_heatmap_plot
           if (static_cast<std::string>(element->getAttribute("_kind")) == "marginal_heatmap")
             central_region_parent = element->children()[0];
@@ -19086,7 +19126,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
             {
               bbox_id = idPool().next();
             }
-          gr_setbboxcallback(bbox_id, &bboxReceiveCallback, &maskReceiveCallback);
+          gr_setbboxcallback(bbox_id, &bboxReceiveCallback, enable_editor ? &maskReceiveCallback : nullptr);
           boundingMap()[bbox_id] = element;
         }
 
@@ -19473,9 +19513,7 @@ void GRM::Render::render()
 
       finalizeGrid(active_figure);
       renderHelper(root, this->context);
-      gr_beginpartial(1, processPartialDrawing);
       renderZQueue(this->context);
-      gr_endpartial(1);
       if (active_figure->hasAttribute("_kind_changed")) active_figure->removeAttribute("_kind_changed");
       automatic_update = false;
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
@@ -19508,6 +19546,70 @@ void GRM::Render::processTree()
   renderHelper(global_root, this->context);
   renderZQueue(this->context);
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+}
+
+static void highlightHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Recursive helper function for renderMaskHighlight; Not part of render class
+   * Only renders / processes children if the parent is in parent_types (group etc.)
+   * Used for traversing the tree
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] context A GRM::Context
+   */
+  gr_savestate();
+  z_index_manager.saveState();
+  custom_color_index_manager.saveState();
+
+  processElement(element, context);
+  if (element->hasChildNodes() && parent_types.count(element->localName()))
+    {
+      for (const auto &child : element->children())
+        {
+          if (child->localName() == "figure" && !static_cast<int>(child->getAttribute("active"))) continue;
+          highlightHelper(child, context);
+        }
+    }
+
+  custom_color_index_manager.restoreState();
+  z_index_manager.restoreState();
+  gr_restorestate();
+}
+
+static void processParents(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  if (element->localName() == "figure")
+    {
+      processElement(element, context);
+      return;
+    }
+  processParents(element->parentElement(), context);
+  processElement(element, context);
+}
+
+void GRM::Render::renderMaskHighlight(std::shared_ptr<GRM::Element> highlighted_element,
+                                      void (*image_callback)(int, unsigned int, unsigned int, unsigned int,
+                                                             unsigned int, unsigned int *))
+{
+  auto bbox_id = static_cast<int>(highlighted_element->getAttribute("_bbox_id"));
+  auto old_state = automatic_update;
+  const auto root = this->firstChildElement();
+  global_root = root;
+  active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
+  applyRootDefaults(root);
+  if (static_cast<int>(global_root->getAttribute("_clear_ws"))) gr_clearws();
+  automatic_update = false;
+  redraw_ws = true;
+  finalizeGrid(active_figure);
+  if (highlighted_element->localName() != "figure") processParents(highlighted_element, this->context);
+  highlightHelper(highlighted_element, this->context);
+  gr_beginpartial(bbox_id, image_callback);
+  renderZQueue(this->context);
+  gr_endpartial(bbox_id);
+  automatic_update = old_state;
+  if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
+  redraw_ws = false;
 }
 
 void GRM::Render::finalize()
@@ -23211,7 +23313,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           auto b = plot_parent->getAttribute("_" + std::string(value) + "_window_xform_b_org");
 
                           plot_parent->setAttribute("_" + new_location + "_window_xform_a_org", a);
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_a", a);
                           plot_parent->setAttribute("_" + new_location + "_window_xform_b_org", b);
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_b", b);
 
                           plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_a");
                           plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_b");
@@ -24391,7 +24495,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
             }
           else if (strEqualsAny(attr, "select_specific_xform") && element->localName() == "legend")
             {
-              element->setAttribute("_select_specific_xform_set_by_user", true);
+              element->setAttribute("_select_specific_xform_set_by_user", 1);
             }
           else if (strEqualsAny(attr, "text_color_ind") && element->localName() == "bar")
             {
