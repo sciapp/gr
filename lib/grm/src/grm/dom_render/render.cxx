@@ -22867,7 +22867,12 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                    std::find(plot_critical_attributes.begin(), plot_critical_attributes.end(), attr) !=
                        plot_critical_attributes.end())
             {
-              for (const auto &plot_child : element->children())
+              auto central_region_parent = element;
+              auto kind = static_cast<std::string>(element->getAttribute("_kind"));
+              if (kind == "marginal_heatmap") // needed so that f.e. colormap changes gets applied
+                central_region_parent = element->querySelectors("marginal_heatmap_plot");
+
+              for (const auto &plot_child : central_region_parent->children())
                 {
                   for (const auto &child : plot_child->children())
                     {

@@ -2391,9 +2391,10 @@ void EditElementWidget::reject()
   this->close();
 }
 
-void EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection)
+bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection)
 {
   auto current_selection_saved = current_selection;
+  bool highlight_location = false;
   for (int i = 0; i < labels.count(); i++)
     {
       current_selection = current_selection_saved;
@@ -2402,6 +2403,7 @@ void EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
            util::startsWith(labels[i].toStdString(), "<span style='color:#0000ff;'>")) &&
           util::endsWith(labels[i].toStdString(), "</span>"))
         {
+          if (util::startsWith(labels[i].toStdString(), "<span style='color:#0000ff;'>")) highlight_location = true;
           labels[i].remove(0, 29);
           labels[i].remove(labels[i].size() - 7, 7);
         }
@@ -2536,6 +2538,14 @@ void EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
               const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
               grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
             }
+
+          if (attr_name == "colormap")
+            {
+              const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
+              auto colormap = QPixmap((":/preview_images/colormaps/" + value + ".png").c_str());
+              colormap = colormap.scaled(20, 20);
+              grplot_widget->getColormapAct()->setIcon(colormap);
+            }
         }
       else if (typeid(field) == typeid(QCheckBox))
         {
@@ -2561,22 +2571,24 @@ void EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
             }
         }
     }
+  return highlight_location;
 }
 
 void EditElementWidget::accept()
 {
+  bool highlight_location = false;
   if (multiple_selections.empty())
     {
       auto current_selection = grplot_widget->getCurrentSelection();
       grplot_widget->createHistoryElement();
-      setAttributesDuringAccept((*current_selection)->getRef());
+      highlight_location = setAttributesDuringAccept((*current_selection)->getRef());
     }
   else
     {
       for (const auto &selection : multiple_selections)
         {
           grplot_widget->createHistoryElement();
-          setAttributesDuringAccept(selection);
+          highlight_location = setAttributesDuringAccept(selection);
         }
     }
 
@@ -2588,7 +2600,7 @@ void EditElementWidget::accept()
                                                 GRM::SerializerOptions::InternalAttributesFormat::PLAIN})
                 << "\n";
     }
-  grplot_widget->editElementAccepted();
+  grplot_widget->editElementAccepted(highlight_location);
   fields.clear();
   labels.clear();
   attr_type.clear();

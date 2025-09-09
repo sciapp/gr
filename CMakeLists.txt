@@ -1161,6 +1161,7 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
     lib/grm/grplot/gredit/EditElementWidget.cpp
+    lib/grm/grplot/gredit/IconBarWidget.cpp
     lib/grm/grplot/gredit/PreviewTextWidget.cpp
     lib/grm/grplot/gredit/SelectionListWidget.cpp
     lib/grm/grplot/gredit/TableWidget.cpp
@@ -1395,10 +1396,12 @@ if((Qt6Widgets_FOUND
 )
   if(NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
     include(GenPreviewImages)
+    include(ImportIconImages)
 
     add_executable(
       grplot WIN32 MACOSX_BUNDLE
       "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc"
+      "${CMAKE_CURRENT_BINARY_DIR}/grplot_icon.qrc"
       lib/grm/grplot/CollapsibleSection.cpp
       lib/grm/grplot/gredit/AddElementWidget.cpp
       lib/grm/grplot/gredit/BoundingLogic.cpp
@@ -1407,6 +1410,7 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
       lib/grm/grplot/gredit/EditElementWidget.cpp
+      lib/grm/grplot/gredit/IconBarWidget.cpp
       lib/grm/grplot/gredit/PreviewTextWidget.cpp
       lib/grm/grplot/gredit/SelectionListWidget.cpp
       lib/grm/grplot/gredit/TableWidget.cpp
@@ -1601,6 +1605,14 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
@@ -1613,6 +1625,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
@@ -1635,6 +1648,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
