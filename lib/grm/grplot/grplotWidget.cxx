@@ -461,7 +461,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(keep_window_act, &QAction::triggered, this, &GRPlotWidget::keepWindowSlot);
   keep_window_act->setCheckable(true);
   keep_window_act->setChecked(true);
-  colormap_act = new QAction(tr("&Colormap"), this);
+  colormap_act = new QAction(tr(""), this);
+  auto colormap = QPixmap(":/preview_images/colormaps/viridis.png");
+  colormap_act->setIcon(colormap.scaled(20, 20));
   connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
 
   vertical_orientation_act = new QAction(tr("&Vertical"), this);
@@ -618,17 +620,27 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       show_table_widget_act = new QAction();
       show_preview_text_act = new QAction();
       show_selection_list_widget_act = new QAction();
+      show_icon_bar_widget_act = new QAction();
       hide_edit_element_act = new QAction();
       hide_tree_widget_act = new QAction();
       hide_table_widget_act = new QAction();
       hide_preview_text_act = new QAction();
       hide_selection_list_widget_act = new QAction();
+      hide_icon_bar_widget_act = new QAction();
 
       connect(selection_list_widget, SIGNAL(itemChanged(QListWidgetItem *)), this,
               SLOT(listItemCheckStatusChanged(QListWidgetItem *)));
       connect(selection_list_widget, SIGNAL(itemPressed(QListWidgetItem *)), this,
               SLOT(listItemPressed(QListWidgetItem *)));
     }
+  icon_bar_widget = new IconBarWidget(this);
+  icon_bar_widget->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+  icon_bar_widget->setMinimumWidth(0);
+
+  icon_bar_act = new QAction(tr("&Icon bar"));
+  icon_bar_act->setCheckable(true);
+  icon_bar_act->setChecked(true);
+  QObject::connect(icon_bar_act, SIGNAL(triggered()), this, SLOT(showIconBarSlot()));
 }
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
@@ -647,6 +659,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
   add_element_widget = nullptr;
   edit_element_widget = nullptr;
   selection_list_widget = nullptr;
+  icon_bar_widget = nullptr;
   csr = new QCursor(Qt::ArrowCursor);
   setCursor(*csr);
 
@@ -3399,7 +3412,13 @@ void GRPlotWidget::colormapSlot()
       for (int i = 0; i < colormap_names.size(); i++)
         {
           if (radio_buttons[i]->isChecked())
-            plot_elem->setAttribute("colormap", GRM::colormapStringToInt(colormap_names[i]));
+            {
+              plot_elem->setAttribute("colormap", GRM::colormapStringToInt(colormap_names[i]));
+              auto colormap = QPixmap((":/preview_images/colormaps/" + colormap_names[i] + ".png").c_str());
+              colormap = colormap.scaled(20, 20);
+              if (checkbox->isChecked()) colormap = colormap.transformed(QTransform().rotate(180));
+              colormap_act->setIcon(colormap);
+            }
         }
 
       plot_elem->setAttribute("colormap_inverted", checkbox->isChecked());
@@ -4466,9 +4485,12 @@ void GRPlotWidget::enableEditorFunctions()
       selection_list_widget->hide();
 
       // if the editor gets turned off everything needs to be reseted
-      for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
+      if (!called_by_location_change)
         {
-          elem->removeAttribute("_highlighted");
+          for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
+            {
+              elem->removeAttribute("_highlighted");
+            }
         }
       prev_highlighted_tick_group_elem.reset();
       current_selection = nullptr;
@@ -5297,7 +5319,7 @@ void GRPlotWidget::setTreeUpdate(bool status)
   this->tree_update = status;
 }
 
-void GRPlotWidget::editElementAccepted()
+void GRPlotWidget::editElementAccepted(bool highlight_location)
 {
   if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
   prev_highlighted_tick_group_elem.reset();
@@ -5314,6 +5336,7 @@ void GRPlotWidget::editElementAccepted()
   current_selections.clear();
   selection_list_widget->hide();
   hide_selection_list_widget_act->trigger();
+  if (highlight_location) hide_edit_element_act->trigger();
   redraw();
 }
 
@@ -5464,6 +5487,10 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                       z_log_act->setVisible(true);
                       z_lim_act->setVisible(true);
                     }
+                  if (kind == "wireframe")
+                    colormap_act->setVisible(false);
+                  else
+                    colormap_act->setVisible(true);
 
                   heatmap_act->setVisible(true);
                   surface_act->setVisible(true);
@@ -5979,6 +6006,10 @@ QAction *GRPlotWidget::getShowSelectionListWidgetAct()
   return show_selection_list_widget_act;
 }
 
+QAction *GRPlotWidget::getShowIconBarAct()
+{
+  return show_icon_bar_widget_act;
+}
 
 QAction *GRPlotWidget::getHideEditElementAct()
 {
@@ -6005,6 +6036,11 @@ QAction *GRPlotWidget::getHideSelectionListWidgetAct()
   return hide_selection_list_widget_act;
 }
 
+QAction *GRPlotWidget::getHideIconBarAct()
+{
+  return hide_icon_bar_widget_act;
+}
+
 QAction *GRPlotWidget::getXLimAct()
 {
   return x_lim_act;
@@ -6018,6 +6054,11 @@ QAction *GRPlotWidget::getYLimAct()
 QAction *GRPlotWidget::getZLimAct()
 {
   return z_lim_act;
+}
+
+QAction *GRPlotWidget::getIconBarAct()
+{
+  return icon_bar_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()
@@ -6043,6 +6084,11 @@ QWidget *GRPlotWidget::getTextPreviewWidget()
 QWidget *GRPlotWidget::getSelectionListWidget()
 {
   return selection_list_widget;
+}
+
+QWidget *GRPlotWidget::getIconBarWidget()
+{
+  return icon_bar_widget;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)
@@ -6197,4 +6243,18 @@ void GRPlotWidget::listItemPressed(QListWidgetItem *item)
   setCurrentSelection(new BoundingObject(bbox_id, bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax, selection));
 
   redraw();
+}
+
+void GRPlotWidget::showIconBarSlot()
+{
+  if (icon_bar_act->isChecked())
+    {
+      icon_bar_widget->setVisible(true);
+      show_icon_bar_widget_act->trigger();
+    }
+  else
+    {
+      icon_bar_widget->setVisible(false);
+      hide_icon_bar_widget_act->trigger();
+    }
 }

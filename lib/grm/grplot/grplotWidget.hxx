@@ -12,6 +12,9 @@
 #include <QMainWindow>
 #include <QCursor>
 #include <QRadioButton>
+#include <QGuiApplication>
+#include <QPalette>
+#include <QStyleHints>
 
 #include "gredit/BoundingObject.hxx"
 #include "gredit/BoundingLogic.hxx"
@@ -23,6 +26,7 @@ class GRPlotWidget;
 #include "gredit/TableWidget.hxx"
 #include "gredit/ColorPickerRGB.hxx"
 #include "gredit/SelectionListWidget.hxx"
+#include "gredit/IconBarWidget.hxx"
 #include "qtterm/Receiver.hxx"
 #include "qtterm/ArgsWrapper.hxx"
 #include "util.hxx"
@@ -58,7 +62,7 @@ public:
                                const std::string &value, const std::string &label);
   void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
                                         QWidget **line_edit);
-  void editElementAccepted();
+  void editElementAccepted(bool highlight_location);
   void processTestCommandsFile();
 
   void setSelectedParent(BoundingObject *parent);
@@ -71,6 +75,19 @@ public:
   void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
   void setUpPreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height);
+
+  inline bool isDarkMode()
+  {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    const auto scheme = QGuiApplication::styleHints()->colorScheme();
+    return scheme == Qt::ColorScheme::Dark;
+#else
+    const QPalette default_palette;
+    const auto text = default_palette.color(QPalette::WindowText);
+    const auto window = default_palette.color(QPalette::Window);
+    return text.lightness() > window.lightness();
+#endif // QT_VERSION
+  }
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();
@@ -166,19 +183,23 @@ public:
   QAction *getShowTableWidgetAct();
   QAction *getShowTextPreviewAct();
   QAction *getShowSelectionListWidgetAct();
+  QAction *getShowIconBarAct();
   QAction *getHideEditElementAct();
   QAction *getHideTreeWidgetAct();
   QAction *getHideTableWidgetAct();
   QAction *getHideTextPreviewAct();
   QAction *getHideSelectionListWidgetAct();
+  QAction *getHideIconBarAct();
   QAction *getXLimAct();
   QAction *getYLimAct();
   QAction *getZLimAct();
+  QAction *getIconBarAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
   QWidget *getTextPreviewWidget();
   QWidget *getSelectionListWidget();
+  QWidget *getIconBarWidget();
 
 protected:
   virtual void draw();
@@ -277,6 +298,7 @@ private slots:
   void addImageSlot();
   void listItemCheckStatusChanged(QListWidgetItem *item);
   void listItemPressed(QListWidgetItem *item);
+  void showIconBarSlot();
 
 private:
   struct MouseState
@@ -396,6 +418,7 @@ private:
   PreviewTextWidget *preview_text_widget;
   ColorPickerRGB *color_picker_rgb;
   SelectionListWidget *selection_list_widget;
+  IconBarWidget *icon_bar_widget;
   bool hide_grid_bbox = true;
   bool enable_advanced_editor = false;
   int add_pos_x, add_pos_y;
@@ -428,10 +451,11 @@ private:
   QMenu *add_overlay_menu;
   QAction *add_text_act, *add_image_act;
   QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
-      *show_selection_list_widget_act;
+      *show_selection_list_widget_act, *show_icon_bar_widget_act;
   QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act,
-      *hide_selection_list_widget_act;
+      *hide_selection_list_widget_act, *hide_icon_bar_widget_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
+  QAction *icon_bar_act;
   bool overlay_element_edit = false, called_by_location_change = false;
 
   void resetPixmap();

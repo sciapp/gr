@@ -41,7 +41,7 @@ protected:
   void keyPressEvent(QKeyEvent *event) override;
   bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
                            bool inherit_elem = false);
-  void setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
+  bool setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
 
 private:
   GRPlotWidget *grplot_widget;
