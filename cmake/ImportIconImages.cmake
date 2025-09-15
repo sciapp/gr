@@ -1,5 +1,5 @@
 set(GRPLOT_ICONS
-    accelerate
+    use_gr3
     algorithm
     aspect_ratio
     flip
@@ -9,7 +9,8 @@ set(GRPLOT_ICONS
     orientation
     kind
     polar_with_pan
-    accelerate_dark
+    text_color_ind
+    use_gr3_dark
     algorithm_dark
     aspect_ratio_dark
     flip_dark
@@ -19,6 +20,7 @@ set(GRPLOT_ICONS
     orientation_dark
     kind_dark
     polar_with_pan_dark
+    text_color_ind_dark
 )
 set(GRPLOT_ICON_QRC "<RCC>\n    <qresource prefix=\"/\">\n")
 foreach(icon IN LISTS GRPLOT_ICONS)

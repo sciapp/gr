@@ -292,7 +292,6 @@ const char *valid_plot_keys[] = {"clear", "raw", "size", "subplots", "update", n
 
 const char *valid_subplot_keys[] = {"abs_height",
                                     "abs_width",
-                                    "accelerate",
                                     "adjust_x_lim",
                                     "adjust_y_lim",
                                     "adjust_z_lim",
@@ -311,7 +310,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "font",
                                     "font_precision",
                                     "grid_element",
-                                    "grplot",
                                     "marginal_heatmap_kind",
                                     "keep_aspect_ratio",
                                     "keep_radii_axes",
@@ -341,6 +339,8 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "tilt",
                                     "title",
                                     "transformation",
+                                    "use_gr3",
+                                    "use_grplot_changes",
                                     "x_bins",
                                     "x_flip",
                                     "x_grid",
@@ -435,7 +435,6 @@ const char *valid_series_keys[] = {"a",
 static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"abs_height", "d"},
                                           {"abs_width", "d"},
-                                          {"accelerate", "i"},
                                           {"algorithm", "i|s"},
                                           {"adjust_x_lim", "i"},
                                           {"adjust_y_lim", "i"},
@@ -468,7 +467,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"font_precision", "i"},
                                           {"foreground_color", "D"},
                                           {"grid_element", "s"},
-                                          {"grplot", "i"},
                                           {"hold_plots", "i"},
                                           {"int_limits_high", "D"},
                                           {"int_limits_low", "D"},
@@ -519,6 +517,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"transparency", "d"},
                                           {"u", "D"},
                                           {"update", "i"},
+                                          {"use_gr3", "i"},
+                                          {"use_grplot_changes", "i"},
                                           {"v", "D"},
                                           {"x", "D|I"},
                                           {"x_bins", "i"},
@@ -2960,13 +2960,13 @@ grm_error_t plotSurface(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   grm_error_t error = GRM_ERROR_NONE;
-  int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
+  int use_gr3; /* this argument decides if GR3 or GRM is used to plot the surface */
   double xmin, xmax, ymin, ymax;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
+  bool has_use_gr3 = grm_args_values(subplot_args, "use_gr3", "i", &use_gr3);
 
   while (*current_series != nullptr)
     {
@@ -2975,7 +2975,7 @@ grm_error_t plotSurface(grm_args_t *subplot_args)
 
       auto sub_group = global_render->createSeries("surface");
       group->append(sub_group);
-      if (has_accelerate) sub_group->setAttribute("accelerate", accelerate);
+      if (has_use_gr3) sub_group->setAttribute("use_gr3", use_gr3);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -4445,7 +4445,7 @@ grm_error_t plotDrawColorbar(grm_args_t *subplot_args, double off, unsigned int 
   if (grm_args_values(subplot_args, "x_flip", "i", &flip) && flip) colorbar->setAttribute("x_flip", flip);
   if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip) colorbar->setAttribute("y_flip", flip);
 
-  side_region->setAttribute("offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
+  side_region->setAttribute("viewport_offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
   colorbar->setAttribute("char_height", PLOT_DEFAULT_COLORBAR_CHAR_HEIGHT);
   side_region->setAttribute("location", PLOT_DEFAULT_COLORBAR_LOCATION);
   side_region->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
@@ -4610,31 +4610,31 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
   if (absolute_upwards != nullptr)
     {
       std::vector<double> absolute_upwards_vec(absolute_upwards, absolute_upwards + upwards_length);
-      (*context)["absolute_upwards" + str] = absolute_upwards_vec;
-      sub_group->setAttribute("absolute_upwards", "absolute_upwards" + str);
+      (*context)["abs_upwards_e" + str] = absolute_upwards_vec;
+      sub_group->setAttribute("abs_upwards_e", "abs_upwards_e" + str);
     }
   if (relative_upwards != nullptr)
     {
       std::vector<double> relative_upwards_vec(relative_upwards, relative_upwards + upwards_length);
-      (*context)["relative_upwards" + str] = relative_upwards_vec;
-      sub_group->setAttribute("relative_upwards", "relative_upwards" + str);
+      (*context)["rel_upwards_e" + str] = relative_upwards_vec;
+      sub_group->setAttribute("rel_upwards_e", "rel_upwards_e" + str);
     }
   if (absolute_downwards != nullptr)
     {
       std::vector<double> absolute_downwards_vec(absolute_downwards, absolute_downwards + downwards_length);
-      (*context)["absolute_downwards" + str] = absolute_downwards_vec;
-      sub_group->setAttribute("absolute_downwards", "absolute_downwards" + str);
+      (*context)["abs_downwards_e" + str] = absolute_downwards_vec;
+      sub_group->setAttribute("abs_downwards_e", "abs_downwards_e" + str);
     }
   if (relative_downwards != nullptr)
     {
       std::vector<double> relative_downwards_vec(relative_downwards, relative_downwards + downwards_length);
-      (*context)["relative_downwards" + str] = relative_downwards_vec;
-      sub_group->setAttribute("relative_downwards", "relative_downwards" + str);
+      (*context)["rel_downwards_e" + str] = relative_downwards_vec;
+      sub_group->setAttribute("rel_downwards_e", "rel_downwards_e" + str);
     }
-  if (absolute_downwards_flt != FLT_MAX) sub_group->setAttribute("absolute_downwards_flt", absolute_downwards_flt);
-  if (relative_downwards_flt != FLT_MAX) sub_group->setAttribute("relative_downwards_flt", relative_downwards_flt);
-  if (absolute_upwards_flt != FLT_MAX) sub_group->setAttribute("absolute_upwards_flt", absolute_upwards_flt);
-  if (relative_upwards_flt != FLT_MAX) sub_group->setAttribute("relative_upwards_flt", relative_upwards_flt);
+  if (absolute_downwards_flt != FLT_MAX) sub_group->setAttribute("uniform_abs_downwards_e", absolute_downwards_flt);
+  if (relative_downwards_flt != FLT_MAX) sub_group->setAttribute("uniform_rel_downwards_e", relative_downwards_flt);
+  if (absolute_upwards_flt != FLT_MAX) sub_group->setAttribute("uniform_abs_upwards_e", absolute_upwards_flt);
+  if (relative_upwards_flt != FLT_MAX) sub_group->setAttribute("uniform_rel_upwards_e", relative_upwards_flt);
 
   if (grm_args_values(series_args, "error_bar_style", "i", &error_bar_style))
     {
@@ -6437,7 +6437,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max, theta_lim_min, theta_lim_max, r_lim_min,
       r_lim_max;
-  int grplot = 0;
+  int use_grplot_changes = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -6524,7 +6524,8 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       group->setAttribute("adjust_y_lim", adjust_y_lim);
     }
 
-  if (grm_args_values(subplot_args, "grplot", "i", &grplot)) group->setAttribute("grplot", grplot);
+  if (grm_args_values(subplot_args, "use_grplot_changes", "i", &use_grplot_changes))
+    group->setAttribute("use_grplot_changes", use_grplot_changes);
 
   if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
   if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;

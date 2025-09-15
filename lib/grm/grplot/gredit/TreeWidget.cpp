@@ -195,6 +195,7 @@ bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetI
   else if (item->getRef() == ref)
     {
       item->setSelected(true);
+      if (!this->hasFocus()) this->scrollTo(this->indexFromItem(item));
       return true;
     }
   return false;

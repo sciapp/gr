@@ -198,21 +198,21 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
               &IconBarWidget::showLocationSubMenu);
     }
 
-  accelerate_tool_button = new QToolButton(this);
-  accelerate_tool_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
-  accelerate_tool_button->setContentsMargins(0, 0, 0, 0);
-  accelerate_tool_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-  accelerate_tool_button->setToolButtonStyle(Qt::ToolButtonIconOnly);
-  accelerate_tool_button->setStyleSheet("QToolButton {border:none;} :hover {background: lightgray;}");
-  accelerate_tool_button->setToolTip("GR3 or GR variant");
-  accelerate_tool_button->setMinimumWidth(0);
+  use_gr3_tool_button = new QToolButton(this);
+  use_gr3_tool_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
+  use_gr3_tool_button->setContentsMargins(0, 0, 0, 0);
+  use_gr3_tool_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  use_gr3_tool_button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+  use_gr3_tool_button->setStyleSheet("QToolButton {border:none;} :hover {background: lightgray;}");
+  use_gr3_tool_button->setToolTip("GR3 or GR variant");
+  use_gr3_tool_button->setMinimumWidth(0);
 
-  auto accelerate_act = grplot_widget->getAccelerateAct();
-  accelerate_tool_button->setDefaultAction(accelerate_act);
-  accelerate_act->setText("");
-  name = (grplot_widget->isDarkMode() ? "accelerate_dark" : "accelerate");
-  auto accelerate = QPixmap((":/icons/" + name + ".png").c_str());
-  accelerate_act->setIcon(accelerate);
+  auto use_gr3_act = grplot_widget->getUseGR3Act();
+  use_gr3_tool_button->setDefaultAction(use_gr3_act);
+  use_gr3_act->setText("");
+  name = (grplot_widget->isDarkMode() ? "use_gr3_dark" : "use_gr3");
+  auto use_gr3 = QPixmap((":/icons/" + name + ".png").c_str());
+  use_gr3_act->setIcon(use_gr3);
 
   polar_with_pan_tool_button = new QToolButton(this);
   polar_with_pan_tool_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
@@ -240,6 +240,20 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   auto colormap_act = grplot_widget->getColormapAct();
   colormap_tool_button->setDefaultAction(colormap_act);
 
+  text_color_ind_button = new QToolButton(this);
+  text_color_ind_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
+  text_color_ind_button->setContentsMargins(0, 0, 0, 0);
+  text_color_ind_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  text_color_ind_button->setStyleSheet("QToolButton {border:none;} :hover {background: lightgray;}");
+  text_color_ind_button->setToolTip("Text Color Index");
+  text_color_ind_button->setMinimumWidth(0);
+
+  auto text_color_ind_act = grplot_widget->getTextColorIndAct();
+  text_color_ind_button->setDefaultAction(text_color_ind_act);
+  name = (grplot_widget->isDarkMode() ? "text_color_ind_dark" : "text_color_ind");
+  auto text_color_ind = QPixmap((":/icons/" + name + ".png").c_str());
+  text_color_ind_act->setIcon(text_color_ind);
+
   marginal_sub_menu->menuAction()->setVisible(false);
   algo_sub_menu->menuAction()->setVisible(false);
   algo_tool_button->setEnabled(false);
@@ -260,6 +274,8 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
           &IconBarWidget::hideAspectRatioSubMenu);
   connect(grplot_widget->getShowAspectRatioSubMenuAct(), &QAction::triggered, this,
           &IconBarWidget::showAspectRatioSubMenu);
+  connect(grplot_widget->getHideLimSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideLimSubMenu);
+  connect(grplot_widget->getShowLimSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showLimSubMenu);
 
   h_box_layout->addWidget(type_tool_button);
   h_box_layout->addWidget(algo_tool_button);
@@ -270,9 +286,10 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   h_box_layout->addWidget(aspect_ratio_tool_button);
   if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
     h_box_layout->addWidget(location_tool_button);
-  h_box_layout->addWidget(accelerate_tool_button);
+  h_box_layout->addWidget(use_gr3_tool_button);
   h_box_layout->addWidget(polar_with_pan_tool_button);
   h_box_layout->addWidget(colormap_tool_button);
+  h_box_layout->addWidget(text_color_ind_button);
 
   h_box_layout->setContentsMargins(0, 0, 0, 0);
   h_box_layout->setAlignment(Qt::AlignLeft);
@@ -338,6 +355,18 @@ void IconBarWidget::showLocationSubMenu()
 {
   location_sub_menu->menuAction()->setVisible(true);
   location_tool_button->setEnabled(true);
+}
+
+void IconBarWidget::hideLimSubMenu()
+{
+  lim_sub_menu->menuAction()->setVisible(false);
+  lim_tool_button->setEnabled(false);
+}
+
+void IconBarWidget::showLimSubMenu()
+{
+  lim_sub_menu->menuAction()->setVisible(true);
+  lim_tool_button->setEnabled(true);
 }
 
 void IconBarWidget::addSeperator()

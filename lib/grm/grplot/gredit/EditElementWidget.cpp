@@ -82,7 +82,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
        range_modification_added = false, log_modification_added = false, flip_modification_added = false,
        lim_modification_added = false, element_movement_modification_added = false, space_modification_added = false,
        ws_modification_added = false, tick_modification_added = false, tick_label_modification_added = false,
-       inherit_from_plot_added = false, absolute_errors_added = false, relative_errors_added = false;
+       inherit_from_plot_added = false, absolute_errors_added = false, relative_errors_added = false,
+       light_added = false;
   auto current_selection = grplot_widget->getCurrentSelection();
   if (current_selection == nullptr || *current_selection == nullptr)
     {
@@ -267,6 +268,13 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
   relative_errors_form->setFormAlignment(Qt::AlignLeft);
   CollapsibleSection *relative_errors = new CollapsibleSection("Relative Errors", 100, this);
   auto *relative_errors_layout = new QVBoxLayout();
+  auto light_form = new QFormLayout;
+  light_form->setVerticalSpacing(VERTICAL_SPACING);
+  light_form->setHorizontalSpacing(HORIZONTAL_SPACING);
+  light_form->setContentsMargins(0, 0, 0, 0);
+  light_form->setFormAlignment(Qt::AlignLeft);
+  CollapsibleSection *light = new CollapsibleSection("Light", 100, this);
+  auto *light_layout = new QVBoxLayout();
 
   QWidget *line_edit;
 
@@ -1084,8 +1092,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 #endif
           if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)) was_added = false;
         }
-      else if (cur_attr_name == "absolute_upwards" || cur_attr_name == "absolute_downwards" ||
-               cur_attr_name == "absolute_downwards_flt" || cur_attr_name == "absolute_upwards_flt")
+      else if (cur_attr_name == "abs_upwards_e" || cur_attr_name == "abs_downwards_e" ||
+               cur_attr_name == "uniform_abs_downwards_e" || cur_attr_name == "uniform_abs_upwards_e")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           auto label = new QLabel(text_label, this);
@@ -1100,8 +1108,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
           absolute_errors_form->addRow(label, line_edit);
         }
-      else if (cur_attr_name == "relative_upwards" || cur_attr_name == "relative_downwards" ||
-               cur_attr_name == "relative_downwards_flt" || cur_attr_name == "relative_upwards_flt")
+      else if (cur_attr_name == "rel_upwards_e" || cur_attr_name == "rel_downwards_e" ||
+               cur_attr_name == "uniform_rel_downwards_e" || cur_attr_name == "uniform_rel_upwards_e")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           auto label = new QLabel(text_label, this);
@@ -1124,6 +1132,64 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           label->setWordWrap(true);
           label->setToolTip(tooltip_string);
           form->addRow(label, line_edit);
+        }
+      else if (cur_attr_name == "ambient" || cur_attr_name == "diffuse" || cur_attr_name == "specular" ||
+               cur_attr_name == "specular_power")
+        {
+          text_label = QString(attrNameToLabel(cur_attr_name).c_str());
+          auto label = new QLabel(text_label, this);
+          label->setFixedWidth(LABEL_WIDTH);
+          label->setWordWrap(true);
+          label->setToolTip(tooltip_string);
+          if (!light_added)
+            {
+              form->addRow(light);
+              light_added = true;
+            }
+
+          if (slider_attr.contains(cur_attr_name.c_str()))
+            {
+              auto widget = new QWidget(this);
+              auto grid_layout = new QGridLayout();
+              auto slider = new QSlider(this);
+              slider->setOrientation(Qt::Horizontal);
+              slider->setRange(0, 100);
+              slider->setFixedWidth(80);
+              if (multiple_selections.empty())
+                {
+                  auto value = static_cast<double>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                  ((QLineEdit *)line_edit)->setText(QString::number(value, 'f', 2));
+                  slider->setValue(value * 100.0);
+                }
+              line_edit->setMaximumWidth(40);
+              grid_layout->addWidget(line_edit, 0, 0);
+              grid_layout->addWidget(slider, 0, 1);
+              grid_layout->setContentsMargins(0, 0, 0, 0);
+              grid_layout->setSpacing(10);
+              widget->setLayout(grid_layout);
+              widget->setContentsMargins(0, 0, 0, 0);
+              widget->setFixedHeight(30);
+
+              connect(slider, &QSlider::sliderMoved, this, [=] {
+                double val = slider->value();
+                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                ((QLineEdit *)line_edit)->setModified(true);
+              });
+              connect(slider, &QSlider::sliderPressed, this, [=] {
+                double val = slider->value();
+                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                ((QLineEdit *)line_edit)->setModified(true);
+              });
+              connect(((QLineEdit *)line_edit), &QLineEdit::textChanged, this, [=] {
+                double val = ((QLineEdit *)line_edit)->text().toDouble();
+                slider->setValue(val * 100.0);
+              });
+              light_form->addRow(label, widget);
+            }
+          else
+            {
+              light_form->addRow(label, line_edit);
+            }
         }
       else
         {
@@ -1199,7 +1265,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               auto grid_layout = new QGridLayout();
               auto slider = new QSlider(this);
               slider->setOrientation(Qt::Horizontal);
-              if (cur_attr_name == "transparency" || cur_attr_name == "abs_height" || cur_attr_name == "abs_width")
+              if (cur_attr_name == "transparency" || cur_attr_name == "height_abs" || cur_attr_name == "width_abs" ||
+                  cur_attr_name == "viewport_height_abs" || cur_attr_name == "viewport_height_rel" ||
+                  cur_attr_name == "viewport_width_abs" || cur_attr_name == "viewport_width_rel")
                 {
                   slider->setRange(0, 100);
                   slider->setFixedWidth(80);
@@ -1576,8 +1644,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), attr_name))
                         was_added = false;
                     }
-                  else if (attr_name == "absolute_upwards" || attr_name == "absolute_downwards" ||
-                           attr_name == "absolute_downwards_flt" || attr_name == "absolute_upwards_flt")
+                  else if (attr_name == "abs_upwards_e" || attr_name == "abs_downwards_e" ||
+                           attr_name == "uniform_abs_downwards_e" || attr_name == "uniform_abs_upwards_e")
                     {
                       text_label = QString(attrNameToLabel(attr_name).c_str());
                       if (!absolute_errors_added)
@@ -1588,8 +1656,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
                       absolute_errors_form->addRow(label, line_edit);
                     }
-                  else if (attr_name == "relative_upwards" || attr_name == "relative_downwards" ||
-                           attr_name == "relative_downwards_flt" || attr_name == "relative_upwards_flt")
+                  else if (attr_name == "rel_upwards_e" || attr_name == "rel_downwards_e" ||
+                           attr_name == "uniform_rel_downwards_e" || attr_name == "uniform_rel_upwards_e")
                     {
                       text_label = QString(attrNameToLabel(attr_name).c_str());
                       if (!relative_errors_added)
@@ -1652,13 +1720,70 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                           widget->setLayout(grid_layout);
                           form->addRow(widget);
                         }
+                      else if (attr_name == "ambient" || attr_name == "diffuse" || attr_name == "specular" ||
+                               attr_name == "specular_power")
+                        {
+                          text_label = QString(attrNameToLabel(attr_name).c_str());
+                          if (!light_added)
+                            {
+                              form->addRow(light);
+                              light_added = true;
+                            }
+
+                          if (slider_attr.contains(attr_name.c_str()))
+                            {
+                              auto widget = new QWidget(this);
+                              auto grid_layout = new QGridLayout();
+                              auto slider = new QSlider(this);
+                              slider->setOrientation(Qt::Horizontal);
+                              slider->setRange(0, 100);
+                              slider->setFixedWidth(80);
+                              if (multiple_selections.empty())
+                                {
+                                  auto value =
+                                      static_cast<double>((*current_selection)->getRef()->getAttribute(attr_name));
+                                  ((QLineEdit *)line_edit)->setText(QString::number(value, 'f', 2));
+                                  slider->setValue(value * 100.0);
+                                }
+                              line_edit->setMaximumWidth(40);
+                              grid_layout->addWidget(line_edit, 0, 0);
+                              grid_layout->addWidget(slider, 0, 1);
+                              grid_layout->setContentsMargins(0, 0, 0, 0);
+                              grid_layout->setSpacing(10);
+                              widget->setLayout(grid_layout);
+                              widget->setContentsMargins(0, 0, 0, 0);
+                              widget->setFixedHeight(30);
+
+                              connect(slider, &QSlider::sliderMoved, this, [=] {
+                                double val = slider->value();
+                                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                ((QLineEdit *)line_edit)->setModified(true);
+                              });
+                              connect(slider, &QSlider::sliderPressed, this, [=] {
+                                double val = slider->value();
+                                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                ((QLineEdit *)line_edit)->setModified(true);
+                              });
+                              connect(((QLineEdit *)line_edit), &QLineEdit::textChanged, this, [=] {
+                                double val = ((QLineEdit *)line_edit)->text().toDouble();
+                                slider->setValue(val * 100.0);
+                              });
+                              light_form->addRow(label, widget);
+                            }
+                          else
+                            {
+                              light_form->addRow(label, line_edit);
+                            }
+                        }
                       else if (slider_attr.contains(attr_name.c_str()))
                         {
                           auto widget = new QWidget(this);
                           auto grid_layout = new QGridLayout();
                           auto slider = new QSlider(this);
                           slider->setOrientation(Qt::Horizontal);
-                          if (attr_name == "transparency" || attr_name == "abs_height" || attr_name == "abs_width")
+                          if (attr_name == "transparency" || attr_name == "height_abs" || attr_name == "width_abs" ||
+                              attr_name == "viewport_height_abs" || attr_name == "viewport_height_rel" ||
+                              attr_name == "viewport_width_abs" || attr_name == "viewport_width_rel")
                             {
                               slider->setRange(0, 100);
                               slider->setFixedWidth(80);
@@ -2094,8 +2219,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                         }
                                     }
 #endif
-                                  if (!advanced_editor &&
-                                      isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                                  if ((!advanced_editor &&
+                                       isAdvancedAttribute((*current_selection)->getRef(), attr_name)) ||
+                                      !is_non_advanced_element)
                                     was_added = false;
                                 }
                               else
@@ -2359,6 +2485,17 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
       clearLayout(relative_errors_form);
       clearLayout(relative_errors_layout);
       relative_errors->close();
+    }
+  if (light_added)
+    {
+      light_layout->addLayout(light_form);
+      light->setContentLayout(*light_layout);
+    }
+  else
+    {
+      clearLayout(light_form);
+      clearLayout(light_layout);
+      light->close();
     }
 
   QDialogButtonBox *button_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
@@ -2643,27 +2780,31 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("layout_grid"),
        std::vector<std::string>{
-           "absolute_height",
-           "absolute_width",
            "aspect_ratio",
            "fit_parents_height",
            "fit_parents_width",
-           "relative_height",
-           "relative_width",
            "start_col",
            "start_row",
            "stop_col",
            "stop_row",
+           "viewport_height_abs",
+           "viewport_height_rel",
+           "viewport_width_abs",
+           "viewport_width_rel",
        }},
       {std::string("layout_grid_element"),
        std::vector<std::string>{
-           "absolute_height",
-           "absolute_width",
            "aspect_ratio",
            "fit_parents_height",
            "fit_parents_width",
-           "relative_height",
-           "relative_width",
+           "viewport_height_abs",
+           "viewport_height_rel",
+           "viewport_width_abs",
+           "viewport_width_rel",
+       }},
+      {std::string("draw_graphics"),
+       std::vector<std::string>{
+           "name",
        }},
       {std::string("plot"),
        std::vector<std::string>{
@@ -2782,6 +2923,7 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
       {std::string("text"),
        std::vector<std::string>{
            "height",
+           "name",
            "set_text_color_for_background",
            "world_coordinates",
            "width",
@@ -2901,6 +3043,7 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "disable_x_trans",
            "disable_y_trans",
            "movable",
+           "name",
            "x",
            "x_max_shift_wc",
            "x_min_shift_wc",
@@ -2969,10 +3112,28 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        }},
       {std::string("cell_array"),
        std::vector<std::string>{
-           "color_ind_values",      "disable_x_trans", "disable_y_trans", "movable", "num_col", "num_row",
-           "select_specific_xform", "start_col",       "start_row",       "x_dim",   "x_max",   "x_min",
-           "x_max_shift_wc",        "x_min_shift_wc",  "x_shift_wc",      "y_dim",   "y_max",   "y_min",
-           "y_max_shift_wc",        "y_min_shift_wc",  "y_shift_wc",
+           "color_ind_values",
+           "disable_x_trans",
+           "disable_y_trans",
+           "movable",
+           "name",
+           "num_col",
+           "num_row",
+           "select_specific_xform",
+           "start_col",
+           "start_row",
+           "x_dim",
+           "x_max",
+           "x_min",
+           "x_max_shift_wc",
+           "x_min_shift_wc",
+           "x_shift_wc",
+           "y_dim",
+           "y_max",
+           "y_min",
+           "y_max_shift_wc",
+           "y_min_shift_wc",
+           "y_shift_wc",
        }},
       {std::string("nonuniform_cell_array"),
        std::vector<std::string>{
@@ -3073,7 +3234,7 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        std::vector<std::string>{"disable_x_trans", "disable_y_trans", "end_angle", "movable", "start_angle", "x_max",
                                 "x_min", "x_max_shift_wc", "x_min_shift_wc", "x_shift_wc", "y_max", "y_min",
                                 "y_max_shift_wc", "y_min_shift_wc", "y_shift_wc", "z_index"}},
-      {std::string("fill_area"), std::vector<std::string>{"disable_x_trans", "disable_y_trans", "movable", "x",
+      {std::string("fill_area"), std::vector<std::string>{"disable_x_trans", "disable_y_trans", "movable", "name", "x",
                                                           "x_max_shift_wc", "x_min_shift_wc", "x_shift_wc", "y",
                                                           "y_max_shift_wc", "y_min_shift_wc", "y_shift_wc", "z_index"}},
       {std::string("series_barplot"),
@@ -3082,6 +3243,7 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "c_range_min",
            "disable_x_trans",
            "disable_y_trans",
+           "max_y_length",
            "movable",
            "x_max_shift_wc",
            "x_min_shift_wc",
@@ -3485,7 +3647,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
        std::vector<std::string>{
            "disable_x_trans",
            "disable_y_trans",
+           "downwards_e",
            "movable",
+           "upwards_e",
            "x_max_shift_wc",
            "x_min_shift_wc",
            "x_shift_wc",
@@ -3530,9 +3694,9 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
       {std::string("polar_bar"),
        std::vector<std::string>{
            "bin_edges",
+           "bin_nr",
            "bin_width",
            "bin_widths",
-           "class_nr",
            "count",
            "disable_x_trans",
            "disable_y_trans",

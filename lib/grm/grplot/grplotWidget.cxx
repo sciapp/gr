@@ -191,6 +191,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "algorithm",
       "axis_type",
       "clip_region",
+      "color_model",
       "colormap",
       "element_type",
       "error_bar_style",
@@ -204,7 +205,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "location",
       "marginal_heatmap_kind",
       "marker_type",
-      "model",
       "norm",
       "orientation",
       "plot_type",
@@ -224,12 +224,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "text_align_vertical",
       "tick_orientation",
       "transformation",
-      "x_org_pos",
-      "y_org_pos",
-      "z_org_pos",
+      "x_origin_pos",
+      "y_origin_pos",
+      "z_origin_pos",
   };
   check_box_attr = QStringList{
-      "accelerate",
       "active",
       "adjust_x_lim",
       "adjust_y_lim",
@@ -243,7 +242,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "flip_col_and_row",
       "fit_parents_height",
       "fit_parents_width",
-      "grplot",
       "hide",
       "hidden",
       "is_major",
@@ -264,6 +262,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "theta_flip",
       "trim_col",
       "trim_row",
+      "use_gr3",
+      "use_grplot_changes",
       "x_flip",
       "x_grid",
       "x_log",
@@ -280,13 +280,20 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   };
   color_rgb_attr = QStringList{"line_color_rgb", "fill_color_rgb"};
   slider_attr = QStringList{
-      "abs_height",
-      "abs_width",
+      "ambient",
+      "diffuse",
+      "height_abs",
+      "specular",
       "transparency",
+      "viewport_height_abs",
+      "viewport_height_rel",
       "viewport_normalized_x_max",
       "viewport_normalized_x_min",
       "viewport_normalized_y_max",
       "viewport_normalized_y_min",
+      "viewport_width_abs",
+      "viewport_width_rel",
+      "width_abs",
       "x_max_shift_ndc",
       "x_min_shift_ndc",
       "x_shift_ndc",
@@ -388,8 +395,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(imshow_act, &QAction::triggered, this, &GRPlotWidget::imshow);
   sum_act = new QAction(tr("&Sum"), this);
   connect(sum_act, &QAction::triggered, this, &GRPlotWidget::sumAlgorithm);
+  sum_act->setCheckable(true);
+  sum_act->setChecked(true);
   max_act = new QAction(tr("&Maximum"), this);
   connect(max_act, &QAction::triggered, this, &GRPlotWidget::maxAlgorithm);
+  max_act->setCheckable(true);
   contourf_act = new QAction(tr("&Contourf"), this);
   connect(contourf_act, &QAction::triggered, this, &GRPlotWidget::contourf);
   line_act = new QAction(tr("&Line"), this);
@@ -453,8 +463,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(theta_flip_act, &QAction::triggered, this, &GRPlotWidget::thetaFlipSlot);
   theta_flip_act->setCheckable(true);
 
-  accelerate_act = new QAction(tr("&Accelerate"), this);
-  connect(accelerate_act, &QAction::triggered, this, &GRPlotWidget::accelerateSlot);
+  use_gr3_act = new QAction(tr("&Use GR3"), this);
+  connect(use_gr3_act, &QAction::triggered, this, &GRPlotWidget::useGR3Slot);
   polar_with_pan_act = new QAction(tr("&Polar Pan"), this);
   connect(polar_with_pan_act, &QAction::triggered, this, &GRPlotWidget::polarWithPanSlot);
   keep_window_act = new QAction(tr("&Keep Window"), this);
@@ -465,6 +475,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   auto colormap = QPixmap(":/preview_images/colormaps/viridis.png");
   colormap_act->setIcon(colormap.scaled(20, 20));
   connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
+  text_color_ind_act = new QAction(tr(""), this);
+  connect(text_color_ind_act, &QAction::triggered, this, &GRPlotWidget::colorIndexSlot);
 
   vertical_orientation_act = new QAction(tr("&Vertical"), this);
   connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
@@ -614,7 +626,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
-
+      hide_lim_sub_menu_act = new QAction(this);
+      show_lim_sub_menu_act = new QAction(this);
       show_edit_element_act = new QAction();
       show_tree_widget_act = new QAction();
       show_table_widget_act = new QAction();
@@ -707,7 +720,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
       x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
-      text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list, fill_style_list,
+      text_align_vertical_list, algorithm_volume_list, color_model_list, context_attr_list, fill_style_list,
       fill_int_style_list, transformation_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
@@ -745,9 +758,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   auto algorithm_volume_vec = GRM::getAlgorithm();
   algorithm_volume_list.reserve((int)algorithm_volume_vec.size());
   for (auto &i : algorithm_volume_vec) algorithm_volume_list.push_back(i.c_str());
-  auto model_vec = GRM::getModel();
-  model_list.reserve((int)model_vec.size());
-  for (auto &i : model_vec) model_list.push_back(i.c_str());
+  auto color_model_vec = GRM::getColorModel();
+  color_model_list.reserve((int)color_model_vec.size());
+  for (auto &i : color_model_vec) color_model_list.push_back(i.c_str());
   auto fill_style_vec = GRM::getFillStyles();
   fill_style_list.reserve((int)fill_style_vec.size());
   for (auto &i : fill_style_vec) fill_style_list.push_back(i.c_str());
@@ -781,7 +794,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"text_align_horizontal", text_align_horizontal_list},
       {"orientation", orientation_list},
       {"marginal_heatmap_kind", marginal_heatmap_kind_list},
-      {"model", model_list},
+      {"color_model", color_model_list},
       {"norm", norm_list},
       {"plot_type", plot_type_list},
       {"ref_x_axis_location", x_axis_location_list},
@@ -794,9 +807,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"step_where", step_where_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
-      {"x_org_pos", org_pos_list},
-      {"y_org_pos", org_pos_list},
-      {"z_org_pos", org_pos_list},
+      {"x_origin_pos", org_pos_list},
+      {"y_origin_pos", org_pos_list},
+      {"z_origin_pos", org_pos_list},
       {"tick_orientation", tick_orientation_list},
       {"transformation", transformation_list},
   };
@@ -1031,9 +1044,10 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::algorithmIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "model" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+  else if (cur_attr_name == "color_model" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
     {
-      current_text = GRM::modelIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+      current_text =
+          GRM::colorModelIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
   else if (cur_attr_name == "location" &&
            !(current_selection->getRef()->localName() == "side_region" ||
@@ -1211,7 +1225,7 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
           else
             fprintf(stderr, "Invalid value %s for combobox attribute %s\n", value.c_str(), label.c_str());
         }
-      else if ((label == "x_org_pos" || label == "y_org_pos" || label == "z_org_pos"))
+      else if ((label == "x_origin_pos" || label == "y_origin_pos" || label == "z_origin_pos"))
         {
           if (org_pos_list.contains(QString::fromStdString(value)))
             element->setAttribute(label, value);
@@ -1266,9 +1280,9 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
             {
               element->setAttribute(label, GRM::algorithmStringToInt(value));
             }
-          else if (label == "model")
+          else if (label == "color_model")
             {
-              element->setAttribute(label, GRM::modelStringToInt(value));
+              element->setAttribute(label, GRM::colorModelStringToInt(value));
             }
           else if (label == "location" && element->localName() != "legend" && element->localName() != "axis")
             {
@@ -1742,6 +1756,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       auto bbox_y_max = static_cast<double>(old_selelected_elem->getAttribute("_bbox_y_max"));
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, old_selelected_elem);
       current_selection = bbox;
+      if (tree_widget->isVisible()) tree_widget->selectItem(current_selection->getRef());
     }
 
   highlightCurrentSelection((QPainter &)painter);
@@ -2707,6 +2722,7 @@ void GRPlotWidget::sumAlgorithm()
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                   : global_root->querySelectors("figure[active=1]");
 
+  max_act->setChecked(false);
   for (const auto &elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "sum");
@@ -2721,6 +2737,7 @@ void GRPlotWidget::maxAlgorithm()
   const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                   : global_root->querySelectors("figure[active=1]");
 
+  sum_act->setChecked(false);
   for (const auto &elem : plot_elem->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "max");
@@ -3295,7 +3312,7 @@ void GRPlotWidget::thetaFlipSlot()
   redraw();
 }
 
-void GRPlotWidget::accelerateSlot()
+void GRPlotWidget::useGR3Slot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
@@ -3305,8 +3322,8 @@ void GRPlotWidget::accelerateSlot()
   auto series_elements = figure_elem->querySelectorsAll("series_surface");
   for (const auto &series_elem : series_elements)
     {
-      bool accelerate = static_cast<int>(series_elem->getAttribute("accelerate"));
-      series_elem->setAttribute("accelerate", !accelerate);
+      bool use_gr3 = static_cast<int>(series_elem->getAttribute("use_gr3"));
+      series_elem->setAttribute("use_gr3", !use_gr3);
     }
 
   redraw();
@@ -3587,7 +3604,7 @@ void GRPlotWidget::colorRGBPopUp(std::string attribute_name, const std::shared_p
 }
 
 void GRPlotWidget::colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index,
-                                    QGridLayout *grid_layout, QList<QRadioButton *> radio_buttons, int max_index,
+                                    QGridLayout *grid_layout, QList<QRadioButton *> *radio_buttons, int max_index,
                                     int index_name_start)
 {
   int col = 0;
@@ -3614,13 +3631,18 @@ void GRPlotWidget::colorIndexHelper(const std::shared_ptr<GRM::Element> plot_ele
       auto button = new QRadioButton(this);
       auto label = new QLabel(std::to_string(index_name_start).c_str());
 
-      if (index_name_start == current_index) button->setChecked(true);
+      if (index_name_start == current_index)
+        {
+          button->setChecked(true);
+          last_checked_radio_button = button;
+        }
 
       grid_layout->addWidget(button, index / 6, col++ % 18);
       grid_layout->addWidget(label_pix, index / 6, col++ % 18);
       grid_layout->addWidget(label, index / 6, col++ % 18);
 
-      radio_buttons << button;
+      connect(button, SIGNAL(clicked()), this, SLOT(multipleRadioButtonGroupsListener()));
+      (*radio_buttons) << button;
       index_name_start += 1;
     }
 }
@@ -3640,67 +3662,67 @@ void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index
   auto form = new QVBoxLayout;
 
   auto grid_layout_ansi = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_ansi, radio_buttons, 8, 0);
+  colorIndexHelper(plot_elem, current_index, grid_layout_ansi, &radio_buttons, 8, 0);
   auto horizontal_group_box_ansi = new QGroupBox(tr("Ansi colors"));
   horizontal_group_box_ansi->setLayout(grid_layout_ansi);
 
   auto grid_layout_cmap_reduced = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cmap_reduced, radio_buttons, 80 - 8, 8);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap_reduced, &radio_buttons, 80 - 8, 8);
   auto horizontal_group_box_cmap_reduced = new QGroupBox(tr("Reduced colormap"));
   horizontal_group_box_cmap_reduced->setLayout(grid_layout_cmap_reduced);
 
   auto grid_layout_diff_colors = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_diff_colors, radio_buttons, 257 - 80, 80);
+  colorIndexHelper(plot_elem, current_index, grid_layout_diff_colors, &radio_buttons, 257 - 80, 80);
   auto horizontal_group_box_diff_colors = new QGroupBox(tr("Mixed colors"));
   horizontal_group_box_diff_colors->setLayout(grid_layout_diff_colors);
 
   auto grid_layout_rainbow = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_rainbow, radio_buttons, 588 - 257, 257);
+  colorIndexHelper(plot_elem, current_index, grid_layout_rainbow, &radio_buttons, 588 - 257, 257);
   auto horizontal_group_box_rainbow = new QGroupBox(tr("Rainbow"));
   horizontal_group_box_rainbow->setLayout(grid_layout_rainbow);
 
   auto grid_layout_gray = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_gray, radio_buttons, 644 - 588, 588);
+  colorIndexHelper(plot_elem, current_index, grid_layout_gray, &radio_buttons, 644 - 588, 588);
   auto horizontal_group_box_gray = new QGroupBox(tr("Gray"));
   horizontal_group_box_gray->setLayout(grid_layout_gray);
 
   auto grid_layout_blue = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_blue, radio_buttons, 700 - 644, 644);
+  colorIndexHelper(plot_elem, current_index, grid_layout_blue, &radio_buttons, 700 - 644, 644);
   auto horizontal_group_box_blue = new QGroupBox(tr("Blue"));
   horizontal_group_box_blue->setLayout(grid_layout_blue);
 
   auto grid_layout_magenta = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_magenta, radio_buttons, 756 - 700, 700);
+  colorIndexHelper(plot_elem, current_index, grid_layout_magenta, &radio_buttons, 756 - 700, 700);
   auto horizontal_group_box_magenta = new QGroupBox(tr("Magenta"));
   horizontal_group_box_magenta->setLayout(grid_layout_magenta);
 
   auto grid_layout_red = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_red, radio_buttons, 812 - 756, 756);
+  colorIndexHelper(plot_elem, current_index, grid_layout_red, &radio_buttons, 812 - 756, 756);
   auto horizontal_group_box_red = new QGroupBox(tr("Red"));
   horizontal_group_box_red->setLayout(grid_layout_red);
 
   auto grid_layout_yellow = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_yellow, radio_buttons, 868 - 812, 812);
+  colorIndexHelper(plot_elem, current_index, grid_layout_yellow, &radio_buttons, 868 - 812, 812);
   auto horizontal_group_box_yellow = new QGroupBox(tr("Yellow"));
   horizontal_group_box_yellow->setLayout(grid_layout_yellow);
 
   auto grid_layout_green = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_green, radio_buttons, 924 - 868, 868);
+  colorIndexHelper(plot_elem, current_index, grid_layout_green, &radio_buttons, 924 - 868, 868);
   auto horizontal_group_box_green = new QGroupBox(tr("Green"));
   horizontal_group_box_green->setLayout(grid_layout_green);
 
   auto grid_layout_cian = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cian, radio_buttons, 980 - 924, 924);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cian, &radio_buttons, 980 - 924, 924);
   auto horizontal_group_box_cian = new QGroupBox(tr("Cian"));
   horizontal_group_box_cian->setLayout(grid_layout_cian);
 
   auto grid_layout_high_diff_colors = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_high_diff_colors, radio_buttons, 1000 - 980, 980);
+  colorIndexHelper(plot_elem, current_index, grid_layout_high_diff_colors, &radio_buttons, 1000 - 980, 980);
   auto horizontal_group_box_high_diff_colors = new QGroupBox(tr("Easily distinguishable colors"));
   horizontal_group_box_high_diff_colors->setLayout(grid_layout_high_diff_colors);
 
   auto grid_layout_cmap = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cmap, radio_buttons, 1255 - 1000, 1000);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap, &radio_buttons, 1255 - 1000, 1000);
   auto horizontal_group_box_cmap = new QGroupBox(tr("Colormap"));
   horizontal_group_box_cmap->setLayout(grid_layout_cmap);
 
@@ -3740,7 +3762,7 @@ void GRPlotWidget::colorIndexPopUp(std::string attribute_name, int current_index
       std::vector<double> data_vec;
       std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
-      createHistoryElement();
+      if (enable_editor) createHistoryElement();
 
       for (int i = 0; i < 1255; i++)
         {
@@ -4916,6 +4938,42 @@ void GRPlotWidget::addImageSlot()
   this->activateWindow(); // needed so that the grplot widget is the active one again and events are tracked
 }
 
+void GRPlotWidget::multipleRadioButtonGroupsListener()
+{
+  auto checked_rb = (QRadioButton *)(sender());
+  if (last_checked_radio_button != nullptr)
+    {
+      last_checked_radio_button->setAutoExclusive(false);
+      last_checked_radio_button->setChecked(false);
+      last_checked_radio_button->setAutoExclusive(true);
+    }
+  last_checked_radio_button = checked_rb;
+}
+
+void GRPlotWidget::colorIndexSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                    : global_root->querySelectors("figure[active=1]");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
+
+  int index = 1;
+  if (plot_elem->hasAttribute("text_color_ind")) index = static_cast<int>(plot_elem->getAttribute("text_color_ind"));
+  colorIndexPopUp("text_color_ind", index, plot_elem);
+}
+
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -5390,7 +5448,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
       hidePlotTypeMenuElements();
       hide_marginal_sub_menu_act->trigger();
       hide_algo_menu_act->trigger();
-      accelerate_act->setVisible(false);
+      use_gr3_act->setVisible(false);
       polar_with_pan_act->setVisible(false);
       z_flip_act->setVisible(false);
       z_log_act->setVisible(false);
@@ -5445,13 +5503,13 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
         }
       if (plot_parent->querySelectors("side_plot_region"))
         {
-          if (edit_enabled) show_location_sub_menu_act->trigger();
           auto side_plot_region = plot_parent->querySelectors("side_plot_region");
           auto location = static_cast<std::string>(side_plot_region->getAttribute("location"));
           if (location.empty())
             location = static_cast<std::string>(side_plot_region->parentElement()->getAttribute("location"));
 
-          if (!side_plot_region->querySelectors("colorbar"))
+          if (!side_plot_region->querySelectors("colorbar") &&
+              !side_plot_region->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
             {
               if (location == "left")
                 left_axis_act->setVisible(true);
@@ -5461,6 +5519,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                 top_axis_act->setVisible(true);
               else if (location == "bottom")
                 bottom_axis_act->setVisible(true);
+              if (edit_enabled) show_location_sub_menu_act->trigger();
             }
         }
 
@@ -5480,7 +5539,7 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   kind == "surface" || kind == "wireframe" || kind == "contourf")
                 {
                   if (kind == "marginal_heatmap") show_algo_menu_act->trigger();
-                  if (kind == "surface") accelerate_act->setVisible(true);
+                  if (kind == "surface") use_gr3_act->setVisible(true);
                   if (kind == "surface" || kind == "wireframe")
                     {
                       z_flip_act->setVisible(true);
@@ -5510,6 +5569,8 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                 {
                   volume_act->setVisible(true);
                   isosurface_act->setVisible(true);
+                  z_lim_act->setVisible(true);
+                  z_flip_act->setVisible(true);
                 }
               else if (kind == "line3" || kind == "trisurface" || kind == "tricontour" || kind == "scatter3" ||
                        kind == "scatter")
@@ -5545,12 +5606,22 @@ void GRPlotWidget::adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent)
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
                   r_log_act->setVisible(true);
+                  x_lim_act->setVisible(false);
+                  y_lim_act->setVisible(false);
+                  x_log_act->setVisible(false);
+                  y_log_act->setVisible(false);
+                  hide_lim_sub_menu_act->trigger();
                 }
               else if (kind == "polar_heatmap" || kind == "polar_histogram")
                 {
                   polar_with_pan_act->setVisible(true);
                   theta_flip_act->setVisible(true);
                   r_log_act->setVisible(true);
+                  x_lim_act->setVisible(false);
+                  y_lim_act->setVisible(false);
+                  x_log_act->setVisible(false);
+                  y_log_act->setVisible(false);
+                  hide_lim_sub_menu_act->trigger();
                 }
               else if (kind == "histogram")
                 {
@@ -5837,6 +5908,16 @@ QAction *GRPlotWidget::getShowLocationSubMenuAct()
   return show_location_sub_menu_act;
 }
 
+QAction *GRPlotWidget::getHideLimSubMenuAct()
+{
+  return hide_lim_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowLimSubMenuAct()
+{
+  return show_lim_sub_menu_act;
+}
+
 QAction *GRPlotWidget::getAddSeperatorAct()
 {
   return add_seperator_act;
@@ -5882,9 +5963,9 @@ QAction *GRPlotWidget::getThetaFlipAct()
   return theta_flip_act;
 }
 
-QAction *GRPlotWidget::getAccelerateAct()
+QAction *GRPlotWidget::getUseGR3Act()
 {
-  return accelerate_act;
+  return use_gr3_act;
 }
 
 QAction *GRPlotWidget::getPolarWithPanAct()
@@ -6059,6 +6140,11 @@ QAction *GRPlotWidget::getZLimAct()
 QAction *GRPlotWidget::getIconBarAct()
 {
   return icon_bar_act;
+}
+
+QAction *GRPlotWidget::getTextColorIndAct()
+{
+  return text_color_ind_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()
