@@ -19,7 +19,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::map<std::string, const char *> key_to_types{
-    {"accelerate", "i"},
     {"algorithm", "s"},
     {"bar_color", "ddd"},
     {"bar_color", "i"},
@@ -37,7 +36,6 @@ static std::map<std::string, const char *> key_to_types{
     {"equal_up_and_down_error", "i"},
     {"error", "a"},
     {"error_bar_style", "i"},
-    {"grplot", "i"},
     {"int_limits_high", "nD"},
     {"int_limits_low", "nD"},
     {"isovalue", "d"},
@@ -72,6 +70,8 @@ static std::map<std::string, const char *> key_to_types{
     {"title", "s"},
     {"transformation", "i"},
     {"use_bins", "i"},
+    {"use_gr3", "i"},
+    {"use_grplot_changes", "i"},
     {"x_bins", "i"},
     {"x_colormap", "i"},
     {"x_flip", "i"},
@@ -552,7 +552,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   char *env, *wstype;
   void *handle = nullptr;
   const char *kind;
-  int grplot, divisor = 1;
+  int use_grplot_changes, divisor = 1;
   grm_file_args_t *file_args = grm_file_args_new();
   grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
 
@@ -2035,7 +2035,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(plot[plot_i], "row", "i", plot_i % divisor);
           grm_args_push(plot[plot_i], "col", "i", plot_i / divisor);
         }
-      if (!grm_args_values(plot[plot_i], "grplot", "i", &grplot)) grm_args_push(plot[plot_i], "grplot", "i", 1);
+      if (!grm_args_values(plot[plot_i], "use_grplot_changes", "i", &use_grplot_changes))
+        grm_args_push(plot[plot_i], "use_grplot_changes", "i", 1);
     }
   grm_args_push(args, "subplots", "nA", plot_num, plot.data());
   grm_merge(args);

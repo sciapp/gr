@@ -189,7 +189,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(selection_list_dock_widget, SIGNAL(resizeMainWindow()), this,
                            SLOT(closeSelectionListDockSlot()));
 
-          icon_bar_dock_widget = new GRPlotDockWidget("", 270, 28, this);
+          icon_bar_dock_widget = new GRPlotDockWidget("", 300, 28, this);
           icon_bar_dock_widget->setWidget(grplot_widget_->getIconBarWidget());
           icon_bar_dock_widget->setTitleBarWidget(new QWidget());
           icon_bar_dock_widget->setAllowedAreas(Qt::TopDockWidgetArea);

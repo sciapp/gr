@@ -149,6 +149,8 @@ public:
   QAction *getShowAspectRatioSubMenuAct();
   QAction *getHideLocationSubMenuAct();
   QAction *getShowLocationSubMenuAct();
+  QAction *getHideLimSubMenuAct();
+  QAction *getShowLimSubMenuAct();
   QAction *getAddSeperatorAct();
   QAction *getXLogAct();
   QAction *getYLogAct();
@@ -158,7 +160,7 @@ public:
   QAction *getYFlipAct();
   QAction *getZFlipAct();
   QAction *getThetaFlipAct();
-  QAction *getAccelerateAct();
+  QAction *getUseGR3Act();
   QAction *getPolarWithPanAct();
   QAction *getKeepWindowAct();
   QAction *getKeepAspectRatioAct();
@@ -194,6 +196,7 @@ public:
   QAction *getYLimAct();
   QAction *getZLimAct();
   QAction *getIconBarAct();
+  QAction *getTextColorIndAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -271,7 +274,7 @@ private slots:
   void yFlipSlot();
   void zFlipSlot();
   void thetaFlipSlot();
-  void accelerateSlot();
+  void useGR3Slot();
   void polarWithPanSlot();
   void keepWindowSlot();
   void onlySquareAspectRatioSlot();
@@ -299,6 +302,8 @@ private slots:
   void listItemCheckStatusChanged(QListWidgetItem *item);
   void listItemPressed(QListWidgetItem *item);
   void showIconBarSlot();
+  void multipleRadioButtonGroupsListener();
+  void colorIndexSlot();
 
 private:
   struct MouseState
@@ -439,10 +444,10 @@ private:
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
       *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
-      *undo_action, *redo_action, *advanced_editor_act;
+      *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
-  QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
+  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act;
   QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
@@ -457,6 +462,7 @@ private:
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
   QAction *icon_bar_act;
   bool overlay_element_edit = false, called_by_location_change = false;
+  QRadioButton *last_checked_radio_button = nullptr;
 
   void resetPixmap();
   void highlightCurrentSelection(QPainter &painter);
@@ -471,7 +477,7 @@ private:
   void cursorHandler(int x, int y);
   void overlayElementEdit();
   void colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index, QGridLayout *grid_layout,
-                        QList<QRadioButton *> radio_buttons, int max_index, int index_name_start);
+                        QList<QRadioButton *> *radio_buttons, int max_index, int index_name_start);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

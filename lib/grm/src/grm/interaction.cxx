@@ -1068,6 +1068,14 @@ int inputImpl(const grm_args_t *input_args)
                 {
                   ndc_xshift = (double)-xshift / max_width_height;
                   ndc_yshift = (double)yshift / max_width_height;
+                  // for some reason flip changes the panning for polar plots -> change flip influence back for panning
+                  if (subplot_element->hasAttribute("x_flip") &&
+                      static_cast<int>(subplot_element->getAttribute("x_flip")))
+                    ndc_xshift *= -1;
+                  if (subplot_element->hasAttribute("y_flip") &&
+                      static_cast<int>(subplot_element->getAttribute("y_flip")))
+                    ndc_yshift *= -1;
+
                   logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
                   auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
                   subplot_element->append(panzoom_element);

@@ -164,8 +164,8 @@ static std::set<std::string> drawable_kinds = {
     "contour", "contourf", "hexbin", "isosurface", "quiver", "shade", "surface", "tricontour", "trisurface", "volume",
 };
 
-static std::set<std::string> valid_context_attributes = {"absolute_downwards",
-                                                         "absolute_upwards",
+static std::set<std::string> valid_context_attributes = {"abs_downwards_e",
+                                                         "abs_upwards_e",
                                                          "bin_counts",
                                                          "bin_edges",
                                                          "bin_widths",
@@ -195,10 +195,9 @@ static std::set<std::string> valid_context_attributes = {"absolute_downwards",
                                                          "py",
                                                          "pz",
                                                          "r",
-                                                         "relative_downwards",
-                                                         "relative_upwards",
+                                                         "rel_downwards_e",
+                                                         "rel_upwards_e",
                                                          "scales",
-                                                         "specs",
                                                          "theta",
                                                          "u",
                                                          "v",
@@ -462,7 +461,7 @@ static std::map<std::string, int> algorithm_string_to_int{
     {"mip", GR_VOLUME_MIP},
     {"maximum", GR_VOLUME_MIP},
 };
-static std::map<std::string, int> model_string_to_int{
+static std::map<std::string, int> color_model_string_to_int{
     {"rgb", 0},
     {"hsv", 1},
 };
@@ -1498,7 +1497,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
       if (figure_vp_element == plot_parent)
         {
-          if (!element->hasAttribute("_offset_set_by_user")) offset *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
+          if (!element->hasAttribute("_viewport_offset_set_by_user")) offset *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
           if (!element->hasAttribute("_width_set_by_user")) width *= DEFAULT_ASPECT_RATIO_FOR_SCALING;
         }
       if (aspect_ratio_ws <= 1)
@@ -1820,9 +1819,10 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
             }
         }
 
-      if (element->hasAttribute("offset") && !(element->hasAttribute("marginal_heatmap_side_plot") &&
-                                               static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
-        offset = static_cast<double>(element->getAttribute("offset"));
+      if (element->hasAttribute("viewport_offset") &&
+          !(element->hasAttribute("marginal_heatmap_side_plot") &&
+            static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
+        offset = static_cast<double>(element->getAttribute("viewport_offset"));
       if (element->hasAttribute("width") && !(element->hasAttribute("marginal_heatmap_side_plot") &&
                                               static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
         width = static_cast<double>(element->getAttribute("width"));
@@ -1836,7 +1836,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           width = 0.0;
         }
 
-      if (!element->hasAttribute("_offset_set_by_user")) element->setAttribute("offset", offset);
+      if (!element->hasAttribute("_viewport_offset_set_by_user")) element->setAttribute("viewport_offset", offset);
       if (!element->hasAttribute("_width_set_by_user")) element->setAttribute("width", width);
 
       // apply text width to the side_region
@@ -1928,8 +1928,8 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       location = static_cast<std::string>(element->parentElement()->getAttribute("location"));
       kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
 
-      if (element->parentElement()->hasAttribute("offset"))
-        offset = static_cast<double>(element->parentElement()->getAttribute("offset"));
+      if (element->parentElement()->hasAttribute("viewport_offset"))
+        offset = static_cast<double>(element->parentElement()->getAttribute("viewport_offset"));
 
       if (element->parentElement()->querySelectors("colorbar"))
         {
@@ -3212,7 +3212,7 @@ static void clearAxisAttributes(const std::shared_ptr<GRM::Element> &axis)
 {
   if (axis->hasAttribute("min_value")) axis->removeAttribute("min_value");
   if (axis->hasAttribute("max_value")) axis->removeAttribute("max_value");
-  if (axis->hasAttribute("org")) axis->removeAttribute("org");
+  if (axis->hasAttribute("origin")) axis->removeAttribute("origin");
   if (axis->hasAttribute("pos")) axis->removeAttribute("pos");
   if (axis->hasAttribute("tick")) axis->removeAttribute("tick");
   if (axis->hasAttribute("major_count")) axis->removeAttribute("major_count");
@@ -4004,8 +4004,8 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
     }
 
   if (scale & GR_OPTION_FLIP_X &&
-      !(element->hasAttribute("x_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
-                                           element->localName() == "grid" || element->localName() == "grid3d")))
+      !(element->hasAttribute("x_origin") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                              element->localName() == "grid" || element->localName() == "grid3d")))
     {
       x_org_low = xmax;
       x_org_high = xmin;
@@ -4021,9 +4021,9 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
     }
   else
     {
-      if (element->hasAttribute("x_org"))
+      if (element->hasAttribute("x_origin"))
         {
-          x_org = static_cast<double>(element->getAttribute("x_org"));
+          x_org = static_cast<double>(element->getAttribute("x_origin"));
         }
       else
         {
@@ -4084,8 +4084,8 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
     }
 
   if (scale & GR_OPTION_FLIP_Y &&
-      !(element->hasAttribute("y_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
-                                           element->localName() == "grid" || element->localName() == "grid3d")))
+      !(element->hasAttribute("y_origin") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                              element->localName() == "grid" || element->localName() == "grid3d")))
     {
       y_org_low = ymax;
       y_org_high = ymin;
@@ -4101,9 +4101,9 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
     }
   else
     {
-      if (element->hasAttribute("y_org"))
+      if (element->hasAttribute("y_origin"))
         {
-          y_org = static_cast<double>(element->getAttribute("y_org"));
+          y_org = static_cast<double>(element->getAttribute("y_origin"));
         }
       else
         {
@@ -4206,9 +4206,9 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, c
     }
   else
     {
-      if (element->hasAttribute("z_org"))
+      if (element->hasAttribute("z_origin"))
         {
-          z_org = static_cast<double>(element->getAttribute("z_org"));
+          z_org = static_cast<double>(element->getAttribute("z_origin"));
         }
       else
         {
@@ -4456,11 +4456,11 @@ std::vector<std::string> GRM::getAlgorithm()
   return algorithm;
 }
 
-std::vector<std::string> GRM::getModel()
+std::vector<std::string> GRM::getColorModel()
 {
   std::vector<std::string> model;
-  model.reserve(model_string_to_int.size());
-  for (auto const &imap : model_string_to_int) model.push_back(imap.first);
+  model.reserve(color_model_string_to_int.size());
+  for (auto const &imap : color_model_string_to_int) model.push_back(imap.first);
   return model;
 }
 
@@ -4596,11 +4596,6 @@ static void processCharUp(const std::shared_ptr<GRM::Element> &element)
 static void processClipRegion(const std::shared_ptr<GRM::Element> &element)
 {
   gr_setclipregion(static_cast<int>(element->getAttribute("clip_region")));
-}
-
-static void processClipTransformation(const std::shared_ptr<GRM::Element> &element)
-{
-  gr_selectclipxform(static_cast<int>(element->getAttribute("clip_transformation")));
 }
 
 int GRM::colormapStringToInt(const std::string &colormap_str)
@@ -5723,21 +5718,21 @@ std::string GRM::yAxisLocationIntToString(int location)
   throw std::logic_error("The given location is unknown.\n");
 }
 
-int GRM::modelStringToInt(const std::string &model_str)
+int GRM::colorModelStringToInt(const std::string &color_model_str)
 {
-  if (model_string_to_int.count(model_str)) return model_string_to_int[model_str];
-  logger((stderr, "Got unknown model \"%s\"\n", model_str.c_str()));
-  throw std::logic_error("Given model is unknown.\n");
+  if (color_model_string_to_int.count(color_model_str)) return color_model_string_to_int[color_model_str];
+  logger((stderr, "Got unknown color model \"%s\"\n", color_model_str.c_str()));
+  throw std::logic_error("Given color model is unknown.\n");
 }
 
-std::string GRM::modelIntToString(int model)
+std::string GRM::colorModelIntToString(int color_model)
 {
-  for (auto const &map_elem : model_string_to_int)
+  for (auto const &map_elem : color_model_string_to_int)
     {
-      if (map_elem.second == model) return map_elem.first;
+      if (map_elem.second == color_model) return map_elem.first;
     }
-  logger((stderr, "Got unknown model \"%i\"\n", model));
-  throw std::logic_error("The given model is unknown.\n");
+  logger((stderr, "Got unknown color model \"%i\"\n", color_model));
+  throw std::logic_error("The given color model is unknown.\n");
 }
 
 int GRM::textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str)
@@ -5977,7 +5972,7 @@ static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *ti
 
       axis->setAttribute("num_ticks", static_cast<int>(axis_ref->getAttribute("num_ticks")));
       axis->setAttribute("num_tick_labels", static_cast<int>(axis_ref->getAttribute("num_tick_labels")));
-      auto org = static_cast<double>(axis->getAttribute("org"));
+      auto org = static_cast<double>(axis->getAttribute("origin"));
       auto min = static_cast<double>(axis->getAttribute("min"));
       auto max = static_cast<double>(axis->getAttribute("max"));
       auto tick = static_cast<double>(axis->getAttribute("tick"));
@@ -6302,7 +6297,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       (axis_type == "y" && ((std::isnan(old_window[2]) || old_window[2] == window[2]) &&
                             (std::isnan(old_window[3]) || old_window[3] == window[3]))))
     {
-      if (element->hasAttribute("org")) org = static_cast<double>(element->getAttribute("org"));
+      if (element->hasAttribute("origin")) org = static_cast<double>(element->getAttribute("origin"));
       if (element->hasAttribute("pos")) pos = static_cast<double>(element->getAttribute("pos"));
       if (element->hasAttribute("tick")) tick = static_cast<double>(element->getAttribute("tick"));
       if (element->hasAttribute("major_count")) major_count = static_cast<int>(element->getAttribute("major_count"));
@@ -6386,8 +6381,8 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
     axis.max = static_cast<double>(element->getAttribute("_max_value_set_by_user"));
   if (element->hasAttribute("_tick_set_by_user"))
     axis.tick = static_cast<double>(element->getAttribute("_tick_set_by_user"));
-  if (element->hasAttribute("_org_set_by_user"))
-    axis.org = static_cast<double>(element->getAttribute("_org_set_by_user"));
+  if (element->hasAttribute("_origin_set_by_user"))
+    axis.org = static_cast<double>(element->getAttribute("_origin_set_by_user"));
   if (element->hasAttribute("_pos_set_by_user"))
     axis.position = static_cast<double>(element->getAttribute("_pos_set_by_user"));
   if (element->hasAttribute("_major_count_set_by_user"))
@@ -7277,7 +7272,6 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("char_space"), processCharSpace},
       {std::string("char_up_x"), processCharUp}, // the x element can be used cause both must be set
       {std::string("clip_region"), processClipRegion},
-      {std::string("clip_transformation"), processClipTransformation},
       {std::string("colormap"), processColormap},
       {std::string("fill_color_ind"), processFillColorInd},
       {std::string("fill_int_style"), processFillIntStyle},
@@ -7402,8 +7396,10 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
       ymin = 1;
       if (series_y_min > 0) ymin = grm_min(ymin, series_y_min);
     }
-  bool grplot = plot_element->hasAttribute("grplot") ? static_cast<int>(plot_element->getAttribute("grplot")) : false;
-  if (series != nullptr && series->localName() == "series_barplot" && ymin < 0 && !grplot &&
+  bool use_grplot_changes = plot_element->hasAttribute("use_grplot_changes")
+                                ? static_cast<int>(plot_element->getAttribute("use_grplot_changes"))
+                                : false;
+  if (series != nullptr && series->localName() == "series_barplot" && ymin < 0 && !use_grplot_changes &&
       static_cast<std::string>(series->getAttribute("style")) == "stacked")
     ymin = 0;
 
@@ -7466,9 +7462,12 @@ static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const st
    * functions like `gr_axis` modify the axis text based on the chosen encoding. */
   processTextEncoding(active_figure);
 
-  if (element->hasAttribute("x_org_pos")) x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-  if (element->hasAttribute("y_org_pos")) y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-  if (element->hasAttribute("z_org_pos")) z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+  if (element->hasAttribute("x_origin_pos"))
+    x_org_pos = static_cast<std::string>(element->getAttribute("x_origin_pos"));
+  if (element->hasAttribute("y_origin_pos"))
+    y_org_pos = static_cast<std::string>(element->getAttribute("y_origin_pos"));
+  if (element->hasAttribute("z_origin_pos"))
+    z_org_pos = static_cast<std::string>(element->getAttribute("z_origin_pos"));
 
   getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
                        y_tick, z_tick);
@@ -7695,8 +7694,8 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
         axis.max = static_cast<double>(element->getAttribute("_max_value_set_by_user"));
       if (element->hasAttribute("_tick_set_by_user"))
         axis.tick = static_cast<double>(element->getAttribute("_tick_set_by_user"));
-      if (element->hasAttribute("_org_set_by_user"))
-        axis.org = static_cast<double>(element->getAttribute("_org_set_by_user"));
+      if (element->hasAttribute("_origin_set_by_user"))
+        axis.org = static_cast<double>(element->getAttribute("_origin_set_by_user"));
       if (element->hasAttribute("_pos_set_by_user"))
         axis.position = static_cast<double>(element->getAttribute("_pos_set_by_user"));
       if (element->hasAttribute("_major_count_set_by_user"))
@@ -7782,8 +7781,8 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
         axis.max = static_cast<double>(element->getAttribute("_max_value_set_by_user"));
       if (element->hasAttribute("_tick_set_by_user"))
         axis.tick = static_cast<double>(element->getAttribute("_tick_set_by_user"));
-      if (element->hasAttribute("_org_set_by_user"))
-        axis.org = static_cast<double>(element->getAttribute("_org_set_by_user"));
+      if (element->hasAttribute("_origin_set_by_user"))
+        axis.org = static_cast<double>(element->getAttribute("_origin_set_by_user"));
       if (element->hasAttribute("_pos_set_by_user"))
         axis.position = static_cast<double>(element->getAttribute("_pos_set_by_user"));
       if (element->hasAttribute("_major_count_set_by_user"))
@@ -7976,7 +7975,6 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
   if (!element->hasAttribute("_text_align_vertical_set_by_user") &&
       !element->hasAttribute("_text_align_horizontal_set_by_user"))
     global_render->setTextAlign(element, 2, 3);
-  if (!element->hasAttribute("clip_transformation")) global_render->selectClipXForm(element, 1);
 
   if (edge_color_rgb[0] != -1)
     {
@@ -8738,13 +8736,13 @@ static void processDrawImage(const std::shared_ptr<GRM::Element> &element, const
   auto width = static_cast<int>(element->getAttribute("width"));
   auto height = static_cast<int>(element->getAttribute("height"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  if (element->getAttribute("model").isInt())
+  if (element->getAttribute("color_model").isInt())
     {
-      model = static_cast<int>(element->getAttribute("model"));
+      model = static_cast<int>(element->getAttribute("color_model"));
     }
-  else if (element->getAttribute("model").isString())
+  else if (element->getAttribute("color_model").isString())
     {
-      model = GRM::modelStringToInt(static_cast<std::string>(element->getAttribute("model")));
+      model = GRM::colorModelStringToInt(static_cast<std::string>(element->getAttribute("color_model")));
     }
   applyMoveTransformation(element);
   if (redraw_ws)
@@ -8789,38 +8787,38 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   if (element->parentElement()->parentElement()->hasAttribute("orientation"))
     orientation = static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("orientation"));
 
-  if (!element->hasAttribute("absolute_downwards") && !element->hasAttribute("relative_downwards"))
+  if (!element->hasAttribute("abs_downwards_e") && !element->hasAttribute("rel_downwards_e"))
     throw NotFoundError("Error-bars are missing required attribute downwards.\n");
-  if (!element->hasAttribute("absolute_upwards") && !element->hasAttribute("relative_upwards"))
+  if (!element->hasAttribute("abs_upwards_e") && !element->hasAttribute("rel_upwards_e"))
     throw NotFoundError("Error-bars are missing required attribute upwards.\n");
-  if (element->hasAttribute("absolute_downwards"))
+  if (element->hasAttribute("abs_downwards_e"))
     {
-      absolute_downwards = static_cast<std::string>(element->getAttribute("absolute_downwards"));
+      absolute_downwards = static_cast<std::string>(element->getAttribute("abs_downwards_e"));
       absolute_downwards_vec = GRM::get<std::vector<double>>((*context)[absolute_downwards]);
     }
-  if (element->hasAttribute("relative_downwards"))
+  if (element->hasAttribute("rel_downwards_e"))
     {
-      relative_downwards = static_cast<std::string>(element->getAttribute("relative_downwards"));
+      relative_downwards = static_cast<std::string>(element->getAttribute("rel_downwards_e"));
       relative_downwards_vec = GRM::get<std::vector<double>>((*context)[relative_downwards]);
     }
-  if (element->hasAttribute("absolute_upwards"))
+  if (element->hasAttribute("abs_upwards_e"))
     {
-      absolute_upwards = static_cast<std::string>(element->getAttribute("absolute_upwards"));
+      absolute_upwards = static_cast<std::string>(element->getAttribute("abs_upwards_e"));
       absolute_upwards_vec = GRM::get<std::vector<double>>((*context)[absolute_upwards]);
     }
-  if (element->hasAttribute("relative_upwards"))
+  if (element->hasAttribute("rel_upwards_e"))
     {
-      relative_upwards = static_cast<std::string>(element->getAttribute("relative_upwards"));
+      relative_upwards = static_cast<std::string>(element->getAttribute("rel_upwards_e"));
       relative_upwards_vec = GRM::get<std::vector<double>>((*context)[relative_upwards]);
     }
-  if (element->hasAttribute("absolute_downwards_flt"))
-    absolute_downwards_flt = static_cast<double>(element->getAttribute("absolute_downwards_flt"));
-  if (element->hasAttribute("absolute_upwards_flt"))
-    absolute_upwards_flt = static_cast<double>(element->getAttribute("absolute_upwards_flt"));
-  if (element->hasAttribute("relative_downwards_flt"))
-    relative_downwards_flt = static_cast<double>(element->getAttribute("relative_downwards_flt"));
-  if (element->hasAttribute("relative_upwards_flt"))
-    relative_upwards_flt = static_cast<double>(element->getAttribute("relative_upwards_flt"));
+  if (element->hasAttribute("uniform_abs_downwards_e"))
+    absolute_downwards_flt = static_cast<double>(element->getAttribute("uniform_abs_downwards_e"));
+  if (element->hasAttribute("uniform_abs_upwards_e"))
+    absolute_upwards_flt = static_cast<double>(element->getAttribute("uniform_abs_upwards_e"));
+  if (element->hasAttribute("uniform_rel_downwards_e"))
+    relative_downwards_flt = static_cast<double>(element->getAttribute("uniform_rel_downwards_e"));
+  if (element->hasAttribute("uniform_rel_upwards_e"))
+    relative_upwards_flt = static_cast<double>(element->getAttribute("uniform_rel_upwards_e"));
   if (element->hasAttribute("error_bar_style"))
     error_bar_style = static_cast<int>(element->getAttribute("error_bar_style"));
 
@@ -8925,12 +8923,12 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
                 {
                   if (e_upwards != FLT_MAX)
                     {
-                      error_bar->setAttribute("e_upwards", e_upwards);
+                      error_bar->setAttribute("upwards_e", e_upwards);
                       error_bar->setAttribute("upwards_cap_color", color_upwards_cap);
                     }
                   if (e_downwards != FLT_MAX)
                     {
-                      error_bar->setAttribute("e_downwards", e_downwards);
+                      error_bar->setAttribute("downwards_e", e_downwards);
                       error_bar->setAttribute("downwards_cap_color", color_downwards_cap);
                     }
                   if (e_downwards != FLT_MAX || e_upwards != FLT_MAX)
@@ -9011,8 +9009,8 @@ static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const 
 
   if (element->hasAttribute("cap_x_min")) cap_x_min = static_cast<double>(element->getAttribute("cap_x_min"));
   if (element->hasAttribute("cap_x_max")) cap_x_max = static_cast<double>(element->getAttribute("cap_x_max"));
-  if (element->hasAttribute("e_upwards")) e_upwards = static_cast<double>(element->getAttribute("e_upwards"));
-  if (element->hasAttribute("e_downwards")) e_downwards = static_cast<double>(element->getAttribute("e_downwards"));
+  if (element->hasAttribute("upwards_e")) e_upwards = static_cast<double>(element->getAttribute("upwards_e"));
+  if (element->hasAttribute("downwards_e")) e_downwards = static_cast<double>(element->getAttribute("downwards_e"));
   if (element->hasAttribute("upwards_cap_color"))
     color_upwards_cap = static_cast<int>(element->getAttribute("upwards_cap_color"));
   if (element->hasAttribute("downwards_cap_color"))
@@ -10905,9 +10903,12 @@ static void processGrid3d(const std::shared_ptr<GRM::Element> &element, const st
   double x_org, y_org, z_org;
   int x_major, y_major, z_major;
   std::string x_org_pos = PLOT_DEFAULT_ORG_POS, y_org_pos = PLOT_DEFAULT_ORG_POS, z_org_pos = PLOT_DEFAULT_ORG_POS;
-  if (element->hasAttribute("x_org_pos")) x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-  if (element->hasAttribute("y_org_pos")) y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-  if (element->hasAttribute("z_org_pos")) z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+  if (element->hasAttribute("x_origin_pos"))
+    x_org_pos = static_cast<std::string>(element->getAttribute("x_origin_pos"));
+  if (element->hasAttribute("y_origin_pos"))
+    y_org_pos = static_cast<std::string>(element->getAttribute("y_origin_pos"));
+  if (element->hasAttribute("z_origin_pos"))
+    z_org_pos = static_cast<std::string>(element->getAttribute("z_origin_pos"));
 
   getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
                        y_tick, z_tick);
@@ -10931,7 +10932,7 @@ static void processGridLine(const std::shared_ptr<GRM::Element> &element, const 
   auto axis_type = static_cast<std::string>(axis_elem->getAttribute("axis_type"));
   auto min_val = static_cast<double>(axis_elem->getAttribute("min_value"));
   auto max_val = static_cast<double>(axis_elem->getAttribute("max_value"));
-  auto org = static_cast<double>(axis_elem->getAttribute("org"));
+  auto org = static_cast<double>(axis_elem->getAttribute("origin"));
   auto pos = static_cast<double>(axis_elem->getAttribute("pos"));
   auto tick = static_cast<double>(axis_elem->getAttribute("tick"));
   auto major_count = static_cast<int>(axis_elem->getAttribute("major_count"));
@@ -13838,7 +13839,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   int child_id = 0;
   int theta_colormap = -2, r_colormap = -2, edge_color = 1, face_color = 989;
   double count, bin_width = -1.0, r_max;
-  int num_bins, num_bin_edges = 0, class_nr;
+  int num_bins, num_bin_edges = 0, bin_nr;
   std::string norm = "count", str;
   bool theta_flip = false, draw_edges = false, keep_radii_axes = false, r_lim = false, is_colormap = false,
        r_log = false;
@@ -13850,8 +13851,8 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
-  // class_nr is used for the position of the bar in the histogram
-  class_nr = static_cast<int>(element->getAttribute("class_nr"));
+  // bin_nr is used for the position of the bar in the histogram
+  bin_nr = static_cast<int>(element->getAttribute("bin_nr"));
   // count is already converted by normalization
   count = static_cast<double>(element->getAttribute("count"));
 
@@ -13889,7 +13890,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
       auto bin_widths_key = static_cast<std::string>(element->parentElement()->getAttribute("bin_widths"));
       auto bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
       num_bins = (int)bin_widths_vec.size();
-      bin_width = bin_widths_vec[class_nr];
+      bin_width = bin_widths_vec[bin_nr];
     }
   r_max = static_cast<double>(plot_parent->querySelectors("central_region")->getAttribute("r_max"));
   if (r_log) r_max = log10(r_max);
@@ -13947,13 +13948,13 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
 
           if (num_bin_edges == 0)
             {
-              start_angle = M_PI * 2 / ((int)num_bins) * class_nr;
-              end_angle = M_PI * 2 / ((int)num_bins) * (class_nr + 1);
+              start_angle = M_PI * 2 / ((int)num_bins) * bin_nr;
+              end_angle = M_PI * 2 / ((int)num_bins) * (bin_nr + 1);
             }
           else
             {
-              start_angle = bin_edges[class_nr];
-              end_angle = bin_edges[class_nr + 1];
+              start_angle = bin_edges[bin_nr];
+              end_angle = bin_edges[bin_nr + 1];
             }
 
           max_radius = image_size / 2.0;
@@ -14045,7 +14046,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   else
     r = pow((count / (r_lim_max - r_lim_min)), num_bins * 2);
 
-  complex1 = moivre(r, 2 * class_nr, (int)num_bins * 2);
+  complex1 = moivre(r, 2 * bin_nr, (int)num_bins * 2);
 
   // draw_arc rectangle
   rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
@@ -14078,8 +14079,8 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
         }
       else
         {
-          start_angle = class_nr * (360.0 / num_bins);
-          end_angle = (class_nr + 1) * (360.0 / num_bins);
+          start_angle = bin_nr * (360.0 / num_bins);
+          end_angle = (bin_nr + 1) * (360.0 / num_bins);
         }
       if (!draw_edges && !is_colormap)
         {
@@ -14160,8 +14161,8 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
             }
           else
             {
-              start_angle = class_nr * (360.0 / num_bins) / convert;
-              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
+              start_angle = bin_nr * (360.0 / num_bins) / convert;
+              end_angle = (bin_nr + 1) * (360.0 / num_bins) / convert;
             }
 
           // determine number of angles for arc approximations
@@ -15009,18 +15010,18 @@ static void processSurface(const std::shared_ptr<GRM::Element> &element, const s
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  int accelerate = PLOT_DEFAULT_ACCELERATE; /* this argument decides if GR3 or GR is used to plot the surface */
+  int use_gr3 = PLOT_DEFAULT_USE_GR3; /* this argument decides if GR3 or GR is used to plot the surface */
   std::vector<double> x_vec, y_vec, z_vec;
   unsigned int x_length, y_length, z_length;
   double x_min, x_max, y_min, y_max;
 
-  if (element->hasAttribute("accelerate"))
+  if (element->hasAttribute("use_gr3"))
     {
-      accelerate = static_cast<int>(element->getAttribute("accelerate"));
+      use_gr3 = static_cast<int>(element->getAttribute("use_gr3"));
     }
   else
     {
-      element->setAttribute("accelerate", accelerate);
+      element->setAttribute("use_gr3", use_gr3);
     }
 
   if (element->hasAttribute("x"))
@@ -15148,7 +15149,7 @@ static void processSurface(const std::shared_ptr<GRM::Element> &element, const s
 
   applyMoveTransformation(element);
   processSpace3d(element->parentElement());
-  if (!accelerate)
+  if (!use_gr3)
     {
       double *px_p = &(x_vec[0]);
       double *py_p = &(y_vec[0]);
@@ -15936,7 +15937,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
    */
   double z_min, z_max;
   unsigned int dims, z_data_length, i, j, k;
-  bool grplot = false;
+  bool use_grplot_changes = false;
   int rows, cols;
   auto plot_parent = element->parentElement(), central_region = element->parentElement();
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
@@ -15945,9 +15946,9 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   std::vector<int> z_dims_vec;
 
   getPlotParent(plot_parent);
-  if (plot_parent->hasAttribute("grplot"))
+  if (plot_parent->hasAttribute("use_grplot_changes"))
     {
-      grplot = static_cast<int>(plot_parent->getAttribute("grplot"));
+      use_grplot_changes = static_cast<int>(plot_parent->getAttribute("use_grplot_changes"));
     }
   if (std::isnan(static_cast<double>(element->getAttribute("z_range_min"))))
     throw NotFoundError("Imshow series is missing required attribute z_range.\n");
@@ -16026,7 +16027,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
       y_max = y_min;
       y_min = tmp;
     }
-  if (grplot)
+  if (use_grplot_changes)
     {
       double tmp = y_min;
       y_min = y_max;
@@ -16080,6 +16081,7 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
       element->setAttribute("world_coordinates",
                             static_cast<int>(element->getAttribute("_world_coordinates_set_by_user")));
     }
+  gr_inqtextcolorind(&text_color_ind);
   if (element->parentElement()->parentElement()->hasAttribute("text_color_ind"))
     text_color_ind = static_cast<int>(element->parentElement()->parentElement()->getAttribute("text_color_ind"));
   if (element->parentElement()->hasAttribute("text_color_ind"))
@@ -16716,7 +16718,7 @@ static void processTick(const std::shared_ptr<GRM::Element> &element, const std:
   auto axis_type = static_cast<std::string>(axis_elem->getAttribute("axis_type"));
   auto min_val = static_cast<double>(axis_elem->getAttribute("min_value"));
   auto max_val = static_cast<double>(axis_elem->getAttribute("max_value"));
-  auto org = static_cast<double>(axis_elem->getAttribute("org"));
+  auto org = static_cast<double>(axis_elem->getAttribute("origin"));
   auto pos = static_cast<double>(axis_elem->getAttribute("pos"));
   auto tick = static_cast<double>(axis_elem->getAttribute("tick"));
   auto major_count = static_cast<int>(axis_elem->getAttribute("major_count"));
@@ -17867,6 +17869,10 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
           radial_axes = element->querySelectors("radial_axes[_child_id=" + std::to_string(child_id++) + "]");
           if (radial_axes != nullptr) global_render->createRadialAxes(radial_axes);
         }
+      if (radial_axes != nullptr)
+        {
+          if (!radial_axes->hasAttribute("text_color_ind")) radial_axes->setAttribute("text_color_ind", 1);
+        }
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -17878,6 +17884,10 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
         {
           theta_axes = element->querySelectors("theta_axes[_child_id=" + std::to_string(child_id++) + "]");
           if (theta_axes != nullptr) global_render->createThetaAxes(theta_axes);
+        }
+      if (theta_axes != nullptr)
+        {
+          if (!theta_axes->hasAttribute("text_color_ind")) theta_axes->setAttribute("text_color_ind", 1);
         }
     }
   else
@@ -17924,9 +17934,9 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             }
           if (grid_3d != nullptr)
             {
-              if (!grid_3d->hasAttribute("x_org_pos")) grid_3d->setAttribute("x_org_pos", "low");
-              if (!grid_3d->hasAttribute("y_org_pos")) grid_3d->setAttribute("y_org_pos", "high");
-              if (!grid_3d->hasAttribute("z_org_pos")) grid_3d->setAttribute("z_org_pos", "low");
+              if (!grid_3d->hasAttribute("x_origin_pos")) grid_3d->setAttribute("x_origin_pos", "low");
+              if (!grid_3d->hasAttribute("y_origin_pos")) grid_3d->setAttribute("y_origin_pos", "high");
+              if (!grid_3d->hasAttribute("z_origin_pos")) grid_3d->setAttribute("z_origin_pos", "low");
               if (!grid_3d->hasAttribute("x_major")) grid_3d->setAttribute("x_major", 2);
               if (!grid_3d->hasAttribute("y_major")) grid_3d->setAttribute("y_major", 0);
               if (!grid_3d->hasAttribute("z_major")) grid_3d->setAttribute("z_major", 2);
@@ -17945,9 +17955,9 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             }
           if (grid_3d != nullptr)
             {
-              if (!grid_3d->hasAttribute("x_org_pos")) grid_3d->setAttribute("x_org_pos", "low");
-              if (!grid_3d->hasAttribute("y_org_pos")) grid_3d->setAttribute("y_org_pos", "high");
-              if (!grid_3d->hasAttribute("z_org_pos")) grid_3d->setAttribute("z_org_pos", "low");
+              if (!grid_3d->hasAttribute("x_origin_pos")) grid_3d->setAttribute("x_origin_pos", "low");
+              if (!grid_3d->hasAttribute("y_origin_pos")) grid_3d->setAttribute("y_origin_pos", "high");
+              if (!grid_3d->hasAttribute("z_origin_pos")) grid_3d->setAttribute("z_origin_pos", "low");
               if (!grid_3d->hasAttribute("x_major")) grid_3d->setAttribute("x_major", 0);
               if (!grid_3d->hasAttribute("y_major")) grid_3d->setAttribute("y_major", 2);
               if (!grid_3d->hasAttribute("z_major")) grid_3d->setAttribute("z_major", 0);
@@ -17972,9 +17982,9 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             }
           if (axes_3d != nullptr)
             {
-              if (!axes_3d->hasAttribute("x_org_pos")) axes_3d->setAttribute("x_org_pos", "low");
-              if (!axes_3d->hasAttribute("y_org_pos")) axes_3d->setAttribute("y_org_pos", "low");
-              if (!axes_3d->hasAttribute("z_org_pos")) axes_3d->setAttribute("z_org_pos", "low");
+              if (!axes_3d->hasAttribute("x_origin_pos")) axes_3d->setAttribute("x_origin_pos", "low");
+              if (!axes_3d->hasAttribute("y_origin_pos")) axes_3d->setAttribute("y_origin_pos", "low");
+              if (!axes_3d->hasAttribute("z_origin_pos")) axes_3d->setAttribute("z_origin_pos", "low");
               if (!axes_3d->hasAttribute("y_tick")) axes_3d->setAttribute("y_tick", 0);
               if (!axes_3d->hasAttribute("y_major")) axes_3d->setAttribute("y_major", 0);
               if (!axes_3d->hasAttribute("z_index")) axes_3d->setAttribute("z_index", 7);
@@ -17998,9 +18008,9 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
             }
           if (axes_3d != nullptr)
             {
-              if (!axes_3d->hasAttribute("x_org_pos")) axes_3d->setAttribute("x_org_pos", "high");
-              if (!axes_3d->hasAttribute("y_org_pos")) axes_3d->setAttribute("y_org_pos", "low");
-              if (!axes_3d->hasAttribute("z_org_pos")) axes_3d->setAttribute("z_org_pos", "low");
+              if (!axes_3d->hasAttribute("x_origin_pos")) axes_3d->setAttribute("x_origin_pos", "high");
+              if (!axes_3d->hasAttribute("y_origin_pos")) axes_3d->setAttribute("y_origin_pos", "low");
+              if (!axes_3d->hasAttribute("z_origin_pos")) axes_3d->setAttribute("z_origin_pos", "low");
               if (!axes_3d->hasAttribute("x_tick")) axes_3d->setAttribute("x_tick", 0);
               if (!axes_3d->hasAttribute("z_tick")) axes_3d->setAttribute("z_tick", 0);
               if (!axes_3d->hasAttribute("x_major")) axes_3d->setAttribute("x_major", 0);
@@ -19005,17 +19015,17 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
           int row_start, row_stop, col_start, col_stop;
           if (child->localName() != "layout_grid_element" && child->localName() != "layout_grid") return;
 
-          auto abs_height = (child->hasAttribute("absolute_height"))
-                                ? static_cast<double>(child->getAttribute("absolute_height"))
+          auto abs_height = (child->hasAttribute("viewport_height_abs"))
+                                ? static_cast<double>(child->getAttribute("viewport_height_abs"))
                                 : -1.0;
-          auto abs_width = (child->hasAttribute("absolute_width"))
-                               ? static_cast<double>(child->getAttribute("absolute_width"))
+          auto abs_width = (child->hasAttribute("viewport_width_abs"))
+                               ? static_cast<double>(child->getAttribute("viewport_width_abs"))
                                : -1.0;
-          auto relative_height = (child->hasAttribute("relative_height"))
-                                     ? static_cast<double>(child->getAttribute("relative_height"))
+          auto relative_height = (child->hasAttribute("viewport_height_rel"))
+                                     ? static_cast<double>(child->getAttribute("viewport_height_rel"))
                                      : -1.0;
-          auto relative_width = (child->hasAttribute("relative_width"))
-                                    ? static_cast<double>(child->getAttribute("relative_width"))
+          auto relative_width = (child->hasAttribute("viewport_width_rel"))
+                                    ? static_cast<double>(child->getAttribute("viewport_width_rel"))
                                     : -1.0;
           auto aspect_ratio =
               (child->hasAttribute("aspect_ratio")) ? static_cast<double>(child->getAttribute("aspect_ratio")) : -1.0;
@@ -19443,31 +19453,23 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                                                            const std::string &attribute_name)
 {
   static std::unordered_map<std::string, std::vector<std::string>> attribute_to_tooltip{
-      {std::string("absolute_downwards"),
-       std::vector<std::string>{"None", "A context reference for the absolute downward errors"}},
-      {std::string("absolute_downwards_flt"),
-       std::vector<std::string>{"None", "The flat absolute downward error. It is applied at all error points"}},
-      {std::string("absolute_upwards"),
-       std::vector<std::string>{"None", "A context reference for the absolute upward errors"}},
-      {std::string("absolute_upwards_flt"),
-       std::vector<std::string>{"None", "The flat absolute upward error. It is applied at all error points"}},
-      {std::string("absolute_height"),
-       std::vector<std::string>{"None", "Absolute height as a percentage of the window"}},
-      {std::string("absolute_width"), std::vector<std::string>{"None", "Absolute width as a percentage of the window"}},
-      {std::string("accelerate"),
-       std::vector<std::string>{"1", "Determines whether the GR3 or the GR surface should be used"}},
+      {std::string("abs_downwards_e"),
+       std::vector<std::string>{"None", "A context reference for the absolute errors facing downwards"}},
+      {std::string("abs_upwards_e"),
+       std::vector<std::string>{"None", "A context reference for the absolute errors facing upwards"}},
       {std::string("active"), std::vector<std::string>{"None", "Determines whether the element is shown/active"}},
       {std::string("adjust_x_lim"),
-       std::vector<std::string>{"1", "Determines whether the x-limits should be adjusted"}},
+       std::vector<std::string>{"1", "Determines whether the x-limits should be automatically adjusted"}},
       {std::string("adjust_y_lim"),
-       std::vector<std::string>{"1", "Determines whether the y-limits should be adjusted"}},
+       std::vector<std::string>{"1", "Determines whether the y-limits should be automatically adjusted"}},
       {std::string("adjust_z_lim"),
-       std::vector<std::string>{"1", "Determines whether the z-limits should be adjusted"}},
+       std::vector<std::string>{"1", "Determines whether the z-limits should be automatically adjusted"}},
       {std::string("aspect_ratio"),
        std::vector<std::string>{
            "None", "Defines the aspect ratio of the layout element which will define its width and height"}},
       {std::string("algorithm"), std::vector<std::string>{"sum", "The algorithm used for the calculation"}},
-      {std::string("ambient"), std::vector<std::string>{"0.2", "The ambient light"}},
+      {std::string("ambient"),
+       std::vector<std::string>{"0.2", "The ambient light. Values between 0.0 and 1.0 are valid"}},
       {std::string("angle_label"), std::vector<std::string>{"", "The angle labels for the theta axes"}},
       {std::string("angle_line_num"), std::vector<std::string>{"8", "The number of angle lines"}},
       {std::string("arc_label"), std::vector<std::string>{"", "The arc labels for the radial axes"}},
@@ -19475,6 +19477,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("bar_width"), std::vector<std::string>{"None", "The width of all bars"}},
       {std::string("bin_counts"), std::vector<std::string>{"None", "References the bin counts stored in the context"}},
       {std::string("bin_edges"), std::vector<std::string>{"None", "References the bin edges stored in the context"}},
+      {std::string("bin_nr"), std::vector<std::string>{"None", "Specify the polar bar by a number"}},
       {std::string("bin_width"), std::vector<std::string>{"None", "The width all bins have"}},
       {std::string("bin_widths"), std::vector<std::string>{"None", "References the bin widths stored in the context"}},
       {std::string("bins"), std::vector<std::string>{"None", "References the bin-values stored in the context"}},
@@ -19486,15 +19489,13 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("c_lim_min"), std::vector<std::string>{"NAN", "The lower color-limit"}},
       {std::string("c_range_max"), std::vector<std::string>{"None", "The upper color-value"}},
       {std::string("c_range_min"), std::vector<std::string>{"None", "The lower color-value"}},
-      {std::string("cap_y_max"), std::vector<std::string>{"None", "The y-value for the upwards cap"}},
-      {std::string("cap_y_min"), std::vector<std::string>{"None", "The y-value for the downwards cap"}},
-      {std::string("char_height"), std::vector<std::string>{"None", "The height of the chars"}},
+      {std::string("cap_x_max"), std::vector<std::string>{"None", "The maximum x-value for the error cap"}},
+      {std::string("cap_x_min"), std::vector<std::string>{"None", "The minimum x-value for the error cap"}},
+      {std::string("char_height"), std::vector<std::string>{"None", "The height of the characters"}},
       {std::string("char_up_x"),
        std::vector<std::string>{"None", "X component of the character up vector. Used to rotate the text"}},
       {std::string("char_up_y"),
        std::vector<std::string>{"None", "Y Component of the character up vector. Used to rotate the text"}},
-      {std::string("class_nr"), std::vector<std::string>{"None", "Specify the polar bar by a number"}},
-      {std::string("clip_transformation"), std::vector<std::string>{"None", "The transformation for clipping"}},
       {std::string("clip_negative"),
        std::vector<std::string>{"False",
                                 "Determines whether negative radii are clipped, otherwise they will be mirrored"}},
@@ -19505,44 +19506,56 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "Define the number of columns the grid element contains"}},
       {std::string("color_ind_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in index format"}},
+      {std::string("color_model"),
+       std::vector<std::string>{"None", "The used color model for the image. Valid options are hsv and rgb"}},
       {std::string("color_rgb_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in rgb format"}},
       {std::string("colored"), std::vector<std::string>{"1", "Determines whether the quiver plot is shown in color"}},
       {std::string("colormap"), std::vector<std::string>{"viridis", "Sets the current colormap"}},
       {std::string("colormap_inverted"),
        std::vector<std::string>{"0", "Determines whether the colormap should be inverted"}},
-      {std::string("count"), std::vector<std::string>{"None", "The total number of bars"}},
+      {std::string("count"), std::vector<std::string>{"None", "The count value of a polar bar"}},
       {std::string("counts"),
        std::vector<std::string>{"None", "References the polar histogram counts stored in the context"}},
-      {std::string("data"), std::vector<std::string>{"None", "Data which is displayed in the graphic"}},
-      {std::string("diffuse"), std::vector<std::string>{"0.8", "The diffuse light"}},
-      {std::string("d_max"), std::vector<std::string>{"None", "The upper dimension for the volume"}},
-      {std::string("d_min"), std::vector<std::string>{"None", "The lower dimension for the volume"}},
+      {std::string("data"),
+       std::vector<std::string>{"None",
+                                "References the data values in the context which will be displayed in the graphic"}},
+      {std::string("diffuse"),
+       std::vector<std::string>{"0.8", "The diffuse light. Values between 0.0 and 1.0 are valid"}},
+      {std::string("d_max"),
+       std::vector<std::string>{
+           "None", "Used as maximum data value when applying the colormap. If it is negative, the variable will be set "
+                   "to the actual occurring maximum and that value will be used instead"}},
+      {std::string("d_min"),
+       std::vector<std::string>{
+           "None", "Used as minimum data value when applying the colormap. If it is negative, the variable will be set "
+                   "to the actual occurring maximum and that value will be used instead"}},
       {std::string("disable_x_trans"),
        std::vector<std::string>{
            "0", "Determines whether the parameters for movable transformation in x direction are ignored"}},
       {std::string("disable_y_trans"),
        std::vector<std::string>{
            "0", "Determines whether the parameters for movable transformation in y direction are ignored"}},
-      {std::string("downwards_cap_color"), std::vector<std::string>{"None", "The color-value for the downwards caps"}},
+      {std::string("downwards_cap_color"),
+       std::vector<std::string>{"None", "The index based color-value for the downwards caps"}},
+      {std::string("downwards_e"), std::vector<std::string>{"None", "The y-value for the caps of the downward error"}},
       {std::string("hide"), std::vector<std::string>{"1", "Determines whether the element will be visible or not"}},
       {std::string("draw_edges"),
        std::vector<std::string>{
-           "0", "Used in combination with theta and r colormap to determine whether edges should be drawn"}},
+           "0", "Used in combination with theta- and r-colormap to determine whether edges should be drawn"}},
       {std::string("draw_grid"), std::vector<std::string>{"None", "Determines whether the axis has grid lines or not"}},
-      {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
-      {std::string("e_upwards"), std::vector<std::string>{"None", "The x-value for the upward error"}},
       {std::string("element_type"), std::vector<std::string>{"None", "The type of the overlay element"}},
       {std::string("edge_width"), std::vector<std::string>{"None", "The width of all edges"}},
       {std::string("end_angle"), std::vector<std::string>{"None", "The end angle of the element"}},
       {std::string("error_bar_color"),
-       std::vector<std::string>{"None", "The color-value for the middle error bar caps"}},
+       std::vector<std::string>{"None", "The color-value for the error bar excluding the caps"}},
       {std::string("error_bar_x"), std::vector<std::string>{"None", "The x-value for the error"}},
       {std::string("error_bar_y_max"), std::vector<std::string>{"None", "The upper y-value for the error"}},
       {std::string("error_bar_y_min"), std::vector<std::string>{"None", "The lower y-value for the error"}},
-      {std::string("fill_color_ind"), std::vector<std::string>{"None", "Sets the index of the current fill color"}},
-      {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Color for the bars in RGB format"}},
-      {std::string("fill_int_style"), std::vector<std::string>{"None", "Sets the index of the current fill style"}},
+      {std::string("fill_color_ind"), std::vector<std::string>{"None", "Sets the current fill color in index format"}},
+      {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Sets the current fill color in RGB format"}},
+      {std::string("fill_int_style"),
+       std::vector<std::string>{"None", "Sets the index of the current fill interior style"}},
       {std::string("fill_style"),
        std::vector<std::string>{"None", "If the fill_int_style is set to hatch or pattern the fill style defines which "
                                         "pattern or hatch should be used"}},
@@ -19554,16 +19567,13 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"False", "Define if the rows and cols inside the layout should be flipped"}},
       {std::string("font"), std::vector<std::string>{"computermodern", "The used text font"}},
       {std::string("font_precision"), std::vector<std::string>{"precision_outline", "The precision of the text font"}},
-      {std::string("grplot"),
-       std::vector<std::string>{
-           "0",
-           "Determines whether GRPlot should be used or not. This could change some aspects in the displayed plot"}},
       {std::string("height"), std::vector<std::string>{"None", "The height of the element"}},
       {std::string("height_abs"),
        std::vector<std::string>{"None",
-                                "The absolut height of the imported graphic. The value has to be between 0 and 1."}},
+                                "The absolut height of the imported graphic. The value has to be between 0.0 and 1.0"}},
       {std::string("indices"),
-       std::vector<std::string>{"None", "References the bars which is calculated as inner bars stored in the context"}},
+       std::vector<std::string>{"None",
+                                "References the bars which are calculated as inner bars stored in the context"}},
       {std::string("int_lim_high"), std::vector<std::string>{"None", "Sets the upper-limit for the integral"}},
       {std::string("int_lim_low"), std::vector<std::string>{"0", "Sets the lower-limit for the integral"}},
       {std::string("int_limits_high"),
@@ -19574,10 +19584,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("is_mirrored"), std::vector<std::string>{"None", "Determines whether the tick is mirrored"}},
       {std::string("isovalue"), std::vector<std::string>{"0.5", "The used isovalue"}},
       {std::string("keep_aspect_ratio"),
-       std::vector<std::string>{"1", "Determines whether the aspect ratio shoulkd be kept"}},
+       std::vector<std::string>{"1", "Determines whether the aspect ratio should be kept"}},
       {std::string("keep_radii_axes"),
        std::vector<std::string>{"False",
-                                "Determines whether the radii axes respect the ranges defined by y_lim_max/min"}},
+                                "Determines whether the radii axes respect the ranges defined by r_lim_max/min"}},
       {std::string("keep_size_if_swapped"),
        std::vector<std::string>{"True", "If the position of this layout grid element is changed it's size is kept"}},
       {std::string("keep_window"),
@@ -19592,7 +19602,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("label_pos"),
        std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
-      {std::string("line_color_ind"), std::vector<std::string>{"1", "The line color index"}},
+      {std::string("line_color_ind"), std::vector<std::string>{"1", "Color for the lines in index format"}},
       {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the lines in rgb format"}},
       {std::string("line_spec"), std::vector<std::string>{"", "Sets the string specifier for line styles"}},
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
@@ -19618,7 +19628,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("max_y_length"), std::vector<std::string>{"None", "The maximum y length inside the barplot"}},
       {std::string("min_value"), std::vector<std::string>{"None", "The minimum-value of the axis"}},
       {std::string("mirrored_axis"), std::vector<std::string>{"0", "Determines whether the axis should be mirrored"}},
-      {std::string("model"), std::vector<std::string>{"None", "The used model for the image"}},
       {std::string("movable"),
        std::vector<std::string>{"0", "Determines whether the element can be moved via interaction. This attribute "
                                      "allows to only move certain parts"}},
@@ -19630,12 +19639,11 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("num_tick_labels"), std::vector<std::string>{"None", "Number of tick labels"}},
       {std::string("num_ticks"), std::vector<std::string>{"None", "Number of ticks"}},
       {std::string("norm"), std::vector<std::string>{"None", "Specify the used normalisation"}},
-      {std::string("offset"), std::vector<std::string>{"None", "The offset for the side region viewport"}},
       {std::string("only_square_aspect_ratio"),
        std::vector<std::string>{"0", "Determines whether the aspect ratio must be square and should be retained"}},
-      {std::string("org"), std::vector<std::string>{"None", "The org of the axis. Needed if org != min_value"}},
       {std::string("orientation"),
        std::vector<std::string>{"horizontal", "The orientation of all elements. Only works for some 2D kinds."}},
+      {std::string("origin"), std::vector<std::string>{"None", "The origin of the axis. Needed if org != min_value"}},
       {std::string("theta"), std::vector<std::string>{"None", "References the theta angles stored in the context"}},
       {std::string("theta_dim"), std::vector<std::string>{"None", "The dimension of the theta angles"}},
       {std::string("theta_max"), std::vector<std::string>{"None", "The upper theta angle of the polar cell array"}},
@@ -19667,31 +19675,23 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("r_lim_max"), std::vector<std::string>{"None", "The upper radius-limit"}},
       {std::string("r_lim_min"), std::vector<std::string>{"None", "The lower radius-limit"}},
       {std::string("r_log"), std::vector<std::string>{"0", "Set if the r-values are logarithmic"}},
-      {std::string("r_range_max"), std::vector<std::string>{"None", "The upper radius value"}},
-      {std::string("r_range_min"), std::vector<std::string>{"None", "The lower radius value"}},
+      {std::string("r_range_max"), std::vector<std::string>{"None", "The upper radius-value"}},
+      {std::string("r_range_min"), std::vector<std::string>{"None", "The lower radius-value"}},
       {std::string("r_max"), std::vector<std::string>{"None", "The upper-value for the radius"}},
       {std::string("r_min"), std::vector<std::string>{"None", "The lower-value for the radius"}},
       {std::string("ref_x_axis_location"), std::vector<std::string>{"x", "The by the series referenced x axis"}},
       {std::string("ref_y_axis_location"), std::vector<std::string>{"y", "The by the series referenced y axis"}},
-      {std::string("relative_downwards"),
-       std::vector<std::string>{"None", "A context reference for the relative downward errors"}},
-      {std::string("relative_downwards_flt"),
-       std::vector<std::string>{"None", "The flat relative downward error. It is applied at all error points"}},
-      {std::string("relative_height"),
-       std::vector<std::string>{"None", "Height in percent relative to the parent`s height"}},
-      {std::string("relative_width"),
-       std::vector<std::string>{"None", "Width in percent relative to the parent`s width"}},
-      {std::string("relative_upwards"),
-       std::vector<std::string>{"None", "A context reference for the relative upward errors"}},
-      {std::string("relative_upwards_flt"),
-       std::vector<std::string>{"None", "The flat relative upward error. It is applied at all error points"}},
+      {std::string("rel_downwards_e"),
+       std::vector<std::string>{"None", "A context reference for the relative errors facing downward"}},
+      {std::string("rel_upwards_e"),
+       std::vector<std::string>{"None", "A context reference for the relative errors facing upwards"}},
       {std::string("resample_method"), std::vector<std::string>{"None", "The used resample method"}},
       {std::string("row_span"),
        std::vector<std::string>{"None", "Define the number of rows the grid element contains"}},
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
       {std::string("scientific_format"),
        std::vector<std::string>{"None", "Set the used format which will determine how a specific text will be drawn. "
-                                        "The text can be plain or for example interpreted with LaTeX"}},
+                                        "The text can be plain (default) or for example interpreted with LaTeX"}},
       {std::string("select_specific_xform"),
        std::vector<std::string>{
            "None", "Selects a predefined transformation from world-coordinates to normalized device-coordinates"}},
@@ -19714,8 +19714,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
                    "used, while every other value will apply a perspective projection to the displayed plot"}},
       {std::string("space_3d_phi"), std::vector<std::string>{"40.0", "The phi angle for the 3D space"}},
       {std::string("space_3d_theta"), std::vector<std::string>{"60.0", "The theta angle for the 3D space"}},
-      {std::string("specs"), std::vector<std::string>{"None", "The string specifiers for styles"}},
-      {std::string("specular"), std::vector<std::string>{"0.7", "The specular light"}},
+      {std::string("specular"),
+       std::vector<std::string>{"0.7", "The specular light. Values between 0.0 and 1.0 are valid"}},
       {std::string("specular_power"), std::vector<std::string>{"128", "The specular light power"}},
       {std::string("set_text_color_for_background"),
        std::vector<std::string>{"False", "0 or 1. If this flag is true, the text color will be changed depending on "
@@ -19723,11 +19723,11 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("stairs"),
        std::vector<std::string>{"0", "This is a format of the polar histogram where only outline edges are drawn"}},
       {std::string("start_angle"), std::vector<std::string>{"None", "The start angle of the element"}},
-      {std::string("start_col"), std::vector<std::string>{"None", "Start column"}},
-      {std::string("start_row"), std::vector<std::string>{"None", "Start row"}},
+      {std::string("start_col"), std::vector<std::string>{"None", "The start column"}},
+      {std::string("start_row"), std::vector<std::string>{"None", "The start row"}},
       {std::string("step_where"), std::vector<std::string>{"None", "Sets where the next stair step should start"}},
-      {std::string("stop_col"), std::vector<std::string>{"None", "Stop column"}},
-      {std::string("stop_row"), std::vector<std::string>{"None", "Stop row"}},
+      {std::string("stop_col"), std::vector<std::string>{"None", "The stop column"}},
+      {std::string("stop_row"), std::vector<std::string>{"None", "The stop row"}},
       {std::string("style"), std::vector<std::string>{"default", "The barplot style (default, lined, stacked)"}},
       {std::string("text"), std::vector<std::string>{"None", "The text displayed by this element"}},
       {std::string("text_align_horizontal"),
@@ -19755,8 +19755,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("tick_orientation"), std::vector<std::string>{"None", "The orientation of the axes ticks"}},
       {std::string("tick_size"), std::vector<std::string>{"0.005", "The size of the ticks"}},
       {std::string("title"), std::vector<std::string>{"None", "The plot title"}},
-      {std::string("transformation"), std::vector<std::string>{"5", "The used transformation"}},
-      {std::string("transparency"), std::vector<std::string>{"None", "Sets the transparency-value"}},
+      {std::string("transformation"), std::vector<std::string>{"histogram_equalized", "The used transformation"}},
+      {std::string("transparency"),
+       std::vector<std::string>{"None", "Sets the transparency-value. Valid values are between 0.0 and 1.0"}},
       {std::string("trim_col"),
        std::vector<std::string>{"False", "Define if the program should remove empty cells columnwise inside the layout "
                                          "grid if this reduces the number of columns"}},
@@ -19764,13 +19765,35 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"False", "Define if the program should remove empty cells rowwise inside the layout "
                                          "grid if this reduces the number of rows"}},
       {std::string("u"), std::vector<std::string>{"None", "References the u-values stored in the context"}},
-      {std::string("upwards_cap_color"), std::vector<std::string>{"None", "The color-value for the upwards caps"}},
+      {std::string("uniform_abs_downwards_e"),
+       std::vector<std::string>{"None",
+                                "The uniform absolute error facing downwards. It is applied at all error points"}},
+      {std::string("uniform_abs_upwards_e"),
+       std::vector<std::string>{"None",
+                                "The uniform absolute error facing upwards. It is applied at all error points"}},
+      {std::string("uniform_rel_downwards_e"),
+       std::vector<std::string>{"None",
+                                "The uniform relative error facing downwards. It is applied at all error points"}},
+      {std::string("uniform_rel_upwards_e"),
+       std::vector<std::string>{"None",
+                                "The uniform relative error facing upwards. It is applied at all error points"}},
+      {std::string("use_gr3"),
+       std::vector<std::string>{"1", "Determines whether the GR3 or the GR surface should be used"}},
+      {std::string("upwards_e"), std::vector<std::string>{"None", "The y-value for the caps of the upward error"}},
+      {std::string("use_grplot_changes"),
+       std::vector<std::string>{
+           "0", "If set some aspects in the code gets handled different which should lead to more uniform results. "
+                "This could change some aspects in the displayed plot if compared to GR"}},
+      {std::string("upwards_cap_color"),
+       std::vector<std::string>{"None", "The index based color-value for the upwards caps"}},
       {std::string("v"), std::vector<std::string>{"None", "References the v-values stored in the context"}},
-      {std::string("value"), std::vector<std::string>{"None", "The-value/number of the tick"}},
-      {std::string("viewport_x_max"), std::vector<std::string>{"None", "The upper viewport x-coordinate"}},
-      {std::string("viewport_x_min"), std::vector<std::string>{"None", "The lower viewport x-coordinate"}},
-      {std::string("viewport_y_max"), std::vector<std::string>{"None", "The upper viewport y-coordinate"}},
-      {std::string("viewport_y_min"), std::vector<std::string>{"None", "The lower viewport y-coordinate"}},
+      {std::string("value"), std::vector<std::string>{"None", "The value/number of the tick"}},
+      {std::string("viewport_height_abs"),
+       std::vector<std::string>{"None",
+                                "Absolut viewport height as a percentage. Values between 0.0 and 1.0 are valid"}},
+      {std::string("viewport_height_rel"),
+       std::vector<std::string>{"None", "Viewport height as a percentage in relation to the other plots with relative "
+                                        "height. Values between 0.0 and 1.0 are valid"}},
       {std::string("viewport_normalized_x_max"),
        std::vector<std::string>{"None", "The upper normalized viewport x-coordinate"}},
       {std::string("viewport_normalized_x_min"),
@@ -19779,7 +19802,20 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "The upper normalized viewport y-coordinate"}},
       {std::string("viewport_normalized_y_min"),
        std::vector<std::string>{"None", "The lower normalized viewport y-coordinate"}},
-      {std::string("weights"), std::vector<std::string>{"None", "References the weights stored in the context"}},
+      {std::string("viewport_offset"), std::vector<std::string>{"None", "The offset for the side region viewport"}},
+      {std::string("viewport_x_max"), std::vector<std::string>{"None", "The upper viewport x-coordinate"}},
+      {std::string("viewport_x_min"), std::vector<std::string>{"None", "The lower viewport x-coordinate"}},
+      {std::string("viewport_y_max"), std::vector<std::string>{"None", "The upper viewport y-coordinate"}},
+      {std::string("viewport_y_min"), std::vector<std::string>{"None", "The lower viewport y-coordinate"}},
+      {std::string("viewport_width_abs"),
+       std::vector<std::string>{"None",
+                                "Absolute viewport width as a percentage. Values between 0.0 and 1.0 are valid"}},
+      {std::string("viewport_width_rel"),
+       std::vector<std::string>{"None", "Viewport width as a percentage in relation to the other plots with relative "
+                                        "width. Values between 0.0 and 1.0 are valid"}},
+      {std::string("weights"),
+       std::vector<std::string>{
+           "None", "References the weights stored in the context which get applied to the histogram bins"}},
       {std::string("width"),
        std::vector<std::string>{"None", "The width of the side region element - inflicting the viewport"}},
       {std::string("width_abs"),
@@ -19813,7 +19849,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("x_ind"),
        std::vector<std::string>{" 1", "An index which is used to highlight a specific x position"}},
       {std::string("x_label"), std::vector<std::string>{"None", "The label of the x axis"}},
-      {std::string("x_label_3d"), std::vector<std::string>{"None", "The label of the x axis"}},
+      {std::string("x_label_3d"), std::vector<std::string>{"None", "The label of the 3D x axis"}},
       {std::string("x_lim_max"), std::vector<std::string>{"None", "The upper x-limit"}},
       {std::string("x_lim_min"), std::vector<std::string>{"None", "The lower x-limit"}},
       {std::string("x_log"), std::vector<std::string>{"0", "Determines whether the x-values are logarithmic"}},
@@ -19831,9 +19867,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"0", "The lower x border shift for movable transformation in NDC space"}},
       {std::string("x_min_shift_wc"),
        std::vector<std::string>{"0", "The lower x border shift for movable transformation in WC space"}},
-      {std::string("x_org"),
+      {std::string("x_origin"),
        std::vector<std::string>{"0", "The world-coordinates of the origin (point of intersection) of the x axis"}},
-      {std::string("x_org_pos"),
+      {std::string("x_origin_pos"),
        std::vector<std::string>{"low",
                                 "The world-coordinates position of the origin (point of intersection) of the x axis"}},
       {std::string("x_range_max"), std::vector<std::string>{"None", "The upper x-value"}},
@@ -19853,7 +19889,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("y_ind"),
        std::vector<std::string>{"-1", "An index which is used to highlight a specific y position"}},
       {std::string("y_label"), std::vector<std::string>{"None", "The label of the y axis"}},
-      {std::string("y_label_3d"), std::vector<std::string>{"None", "The label of the y axis"}},
+      {std::string("y_label_3d"), std::vector<std::string>{"None", "The label of the 3D y axis"}},
       {std::string("y_labels"), std::vector<std::string>{"None", "References the y labels stored in the context"}},
       {std::string("y_lim_max"), std::vector<std::string>{"None", "The upper y-limit"}},
       {std::string("y_lim_min"), std::vector<std::string>{"None", "The lower y-limit"}},
@@ -19873,9 +19909,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"0", "The lower y border shift for movable transformation in NDC space"}},
       {std::string("y_min_shift_wc"),
        std::vector<std::string>{"0", "The lower y border shift for movable transformation in WC space"}},
-      {std::string("y_org"),
+      {std::string("y_origin"),
        std::vector<std::string>{"0", "The world-coordinates of the origin (point of intersection) of the y axis"}},
-      {std::string("y_org_pos"),
+      {std::string("y_origin_pos"),
        std::vector<std::string>{"low",
                                 "The world-coordinates position of the origin (point of intersection) of the y axis"}},
       {std::string("y_range_max"), std::vector<std::string>{"None", "The upper y-value"}},
@@ -19891,7 +19927,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("z_dims"), std::vector<std::string>{"None", "References the z dimensions stored in the context"}},
       {std::string("z_flip"), std::vector<std::string>{"0", "Determines whether the z axis should be flipped"}},
       {std::string("z_grid"), std::vector<std::string>{"1", "When set a z grid is created"}},
-      {std::string("z_label_3d"), std::vector<std::string>{"None", "The label of the z axis"}},
+      {std::string("z_label_3d"), std::vector<std::string>{"None", "The label of the 3D z axis"}},
       {std::string("z_lim_max"), std::vector<std::string>{"NAN", "The upper z-limit"}},
       {std::string("z_lim_min"), std::vector<std::string>{"NAN", "The lower z-limit"}},
       {std::string("z_log"), std::vector<std::string>{"0", "Determines whether the z-values are logarithmic"}},
@@ -19908,9 +19944,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{
            "None",
            "The minimum z-coordinate of a contour(f) plot (after transforming the input data to a rectangular grid)"}},
-      {std::string("z_org"),
+      {std::string("z_origin"),
        std::vector<std::string>{"0", "The world-coordinates of the origin (point of intersection) of the z axis"}},
-      {std::string("z_org_pos"),
+      {std::string("z_origin_pos"),
        std::vector<std::string>{"low",
                                 "The world-coordinates position of the origin (point of intersection) of the z axis"}},
       {std::string("z_range_max"), std::vector<std::string>{"None", "The upper z-value"}},
@@ -20174,7 +20210,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createAxis(double min_val, double max
   element->setAttribute("min_value", min_val);
   element->setAttribute("max_value", max_val);
   element->setAttribute("tick", tick);
-  element->setAttribute("org", org);
+  element->setAttribute("origin", org);
   element->setAttribute("pos", pos);
   element->setAttribute("major_count", major_count);
   element->setAttribute("num_ticks", num_ticks);
@@ -20319,7 +20355,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double y
   element->setAttribute("y_max", ymax);
   element->setAttribute("width", width);
   element->setAttribute("height", height);
-  element->setAttribute("model", model);
+  element->setAttribute("color_model", model);
   element->setAttribute("data", data_key);
   if (data != std::nullopt) (*use_context)[data_key] = *data;
 
@@ -20680,9 +20716,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createGrid3d(double x_tick, double y_
   element->setAttribute("x_tick", x_tick);
   element->setAttribute("y_tick", y_tick);
   element->setAttribute("z_tick", z_tick);
-  element->setAttribute("x_org", x_org);
-  element->setAttribute("y_org", y_org);
-  element->setAttribute("z_org", z_org);
+  element->setAttribute("x_origin", x_org);
+  element->setAttribute("y_origin", y_org);
+  element->setAttribute("z_origin", z_org);
   element->setAttribute("x_major", x_major);
   element->setAttribute("y_major", y_major);
   element->setAttribute("z_major", z_major);
@@ -20712,9 +20748,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createAxes3d(double x_tick, double y_
   element->setAttribute("x_tick", x_tick);
   element->setAttribute("y_tick", y_tick);
   element->setAttribute("z_tick", z_tick);
-  element->setAttribute("x_org", x_org);
-  element->setAttribute("y_org", y_org);
-  element->setAttribute("z_org", z_org);
+  element->setAttribute("x_origin", x_org);
+  element->setAttribute("y_origin", y_org);
+  element->setAttribute("z_origin", z_org);
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
   element->setAttribute("major_z", major_z);
@@ -20822,10 +20858,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const GRM::Grid &gri
 {
   auto element = createElement("layout_grid");
 
-  if (grid.abs_height != -1) element->setAttribute("absolute_height", grid.abs_height);
-  if (grid.abs_width != -1) element->setAttribute("absolute_width", grid.abs_width);
-  if (grid.relative_height != -1) element->setAttribute("relative_height", grid.relative_height);
-  if (grid.relative_width != -1) element->setAttribute("relative_width", grid.relative_width);
+  if (grid.abs_height != -1) element->setAttribute("viewport_height_abs", grid.abs_height);
+  if (grid.abs_width != -1) element->setAttribute("viewport_width_abs", grid.abs_width);
+  if (grid.relative_height != -1) element->setAttribute("viewport_height_rel", grid.relative_height);
+  if (grid.relative_width != -1) element->setAttribute("viewport_width_rel", grid.relative_width);
   if (grid.aspect_ratio != -1) element->setAttribute("aspect_ratio", grid.aspect_ratio);
   element->setAttribute("fit_parents_height", grid.fit_parents_height);
   element->setAttribute("fit_parents_width", grid.fit_parents_width);
@@ -20840,12 +20876,12 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const GRM::Gr
 {
   auto element = createElement("layout_grid_element");
 
-  if (grid_element.abs_height != -1) element->setAttribute("absolute_height", grid_element.abs_height);
-  if (grid_element.abs_width != -1) element->setAttribute("absolute_width", grid_element.abs_width);
+  if (grid_element.abs_height != -1) element->setAttribute("viewport_height_abs", grid_element.abs_height);
+  if (grid_element.abs_width != -1) element->setAttribute("viewport_width_abs", grid_element.abs_width);
   element->setAttribute("fit_parents_height", grid_element.fit_parents_height);
   element->setAttribute("fit_parents_width", grid_element.fit_parents_width);
-  if (grid_element.relative_height != -1) element->setAttribute("relative_height", grid_element.relative_height);
-  if (grid_element.relative_width != -1) element->setAttribute("relative_width", grid_element.relative_width);
+  if (grid_element.relative_height != -1) element->setAttribute("viewport_height_rel", grid_element.relative_height);
+  if (grid_element.relative_width != -1) element->setAttribute("viewport_width_rel", grid_element.relative_width);
   if (grid_element.aspect_ratio != -1) element->setAttribute("aspect_ratio", grid_element.aspect_ratio);
   element->setAttribute("_start_row", slice.row_start);
   element->setAttribute("_stop_row", slice.row_stop);
@@ -20874,13 +20910,13 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createPolarBar(double count, int class_nr,
+std::shared_ptr<GRM::Element> GRM::Render::createPolarBar(double count, int bin_nr,
                                                           const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polar_bar") : ext_element;
 
   element->setAttribute("count", count);
-  element->setAttribute("class_nr", class_nr);
+  element->setAttribute("bin_nr", bin_nr);
 
   return element;
 }
@@ -21469,15 +21505,6 @@ void GRM::Render::setBorderWidth(const std::shared_ptr<GRM::Element> &element, d
   element->setAttribute("border_width", width);
 }
 
-void GRM::Render::selectClipXForm(const std::shared_ptr<GRM::Element> &element, int form)
-{
-  /*!
-   * This function can be used to set the clip_transformation of a GRM::Element
-   * \param[in] element A GRM::Element
-   * \param[in] form the clip_transformation
-   */
-  element->setAttribute("clip_transformation", form);
-}
 
 void GRM::Render::setCharHeight(const std::shared_ptr<GRM::Element> &element, double height)
 {
@@ -21582,15 +21609,15 @@ void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element)
 void GRM::Render::setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                                     const std::string &y_org_pos)
 {
-  element->setAttribute("x_org_pos", x_org_pos);
-  element->setAttribute("y_org_pos", y_org_pos);
+  element->setAttribute("x_origin_pos", x_org_pos);
+  element->setAttribute("y_origin_pos", y_org_pos);
 }
 
 void GRM::Render::setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                                       const std::string &y_org_pos, const std::string &z_org_pos)
 {
   setOriginPosition(element, x_org_pos, y_org_pos);
-  element->setAttribute("z_org_pos", z_org_pos);
+  element->setAttribute("z_origin_pos", z_org_pos);
 }
 
 void GRM::Render::setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
@@ -21771,7 +21798,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y2",
   };
   std::vector<std::string> error_bar{
-      "cap_x_max", "cap_x_min", "e_downwards", "e_upwards", "error_bar_x", "error_bar_y_max", "error_bar_y_min",
+      "cap_x_max", "cap_x_min", "downwards_e", "error_bar_x", "error_bar_y_max", "error_bar_y_min", "upwards_e",
   };
   std::vector<std::string> error_bars{
       "error_bar_style",
@@ -21786,12 +21813,11 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
   };
   std::vector<std::string> polar_bar{
-      "bin_width",      "bin_widths", "bin_edges",      "class_nr", "count",      "draw_edges",     "fill_color_ind",
-      "fill_int_style", "fill_style", "line_color_ind", "norm",     "theta_flip", "theta_colormap", "r_colormap",
+      "bin_width",      "bin_widths", "bin_edges",      "bin_nr", "count",      "draw_edges",     "fill_color_ind",
+      "fill_int_style", "fill_style", "line_color_ind", "norm",   "theta_flip", "theta_colormap", "r_colormap",
   };
   std::vector<std::string> series_barplot{
       "bar_width",
-      "clip_transformation",
       "color_ind_values",
       "color_rgb_values",
       "fill_color_ind",
@@ -21891,7 +21917,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "line_color_ind", "line_spec", "x", "y", "y_range_min",
   };
   std::vector<std::string> series_surface{
-      "accelerate",
+      "use_gr3",
       "x",
       "y",
       "z",
@@ -22111,7 +22137,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           if (side_region_child->querySelectors("colorbar"))
                             {
                               side_region_child->querySelectors("colorbar")->parentElement()->remove();
-                              side_region_child->setAttribute("offset", PLOT_DEFAULT_SIDEREGION_OFFSET);
+                              side_region_child->setAttribute("viewport_offset", PLOT_DEFAULT_SIDEREGION_OFFSET);
                               side_region_child->setAttribute("width", PLOT_DEFAULT_SIDEREGION_WIDTH);
                             }
                         }
@@ -22320,8 +22346,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               plot->setAttribute("_update_limits", 1);
 
               /* overwrite attributes for which a kind dependent default exists */
-              bool grplot = plot->hasAttribute("grplot") ? static_cast<int>(plot->getAttribute("grplot")) : false;
-              if (grplot)
+              bool use_grplot_changes = plot->hasAttribute("use_grplot_changes")
+                                            ? static_cast<int>(plot->getAttribute("use_grplot_changes"))
+                                            : false;
+              if (use_grplot_changes)
                 {
                   plot->setAttribute("_overwrite_kind_dependent_defaults", 1);
                   applyPlotDefaults(plot);
@@ -22361,7 +22389,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   auto left_side_region = plot->querySelectors("side_region[location=\"left\"]");
                   auto bottom_side_region = plot->querySelectors("side_region[location=\"bottom\"]");
                   auto old_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
-                  if (grplot && old_type == "2d" &&
+                  if (use_grplot_changes && old_type == "2d" &&
                       new_type == "2d") // special case which will reset the tick_orientation when kind is changed
                     {
                       coordinate_system->setAttribute("_update_required", true);
@@ -22450,7 +22478,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                             }
                         }
                     }
-                  if (grplot && (new_kind == "barplot" || old_kind == "barplot"))
+                  if (use_grplot_changes && (new_kind == "barplot" || old_kind == "barplot"))
                     {
                       // barplot has different x_major value
                       int major_count, x_major = 1;
@@ -22523,16 +22551,16 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                             }
                         }
                     }
-                  if (grplot && strEqualsAny(new_kind, "barplot", "stem"))
+                  if (use_grplot_changes && strEqualsAny(new_kind, "barplot", "stem"))
                     {
                       if (coordinate_system->hasAttribute("y_line")) coordinate_system->setAttribute("y_line", true);
                     }
-                  else if (grplot && strEqualsAny(old_kind, "barplot", "stem"))
+                  else if (use_grplot_changes && strEqualsAny(old_kind, "barplot", "stem"))
                     {
                       if (coordinate_system->hasAttribute("y_line")) coordinate_system->setAttribute("y_line", false);
                     }
                   // heatmap and marginal_heatmap have a different default behaviour when it comes to adjust lims
-                  if (grplot && strEqualsAny(new_kind, "heatmap", "marginal_heatmap", "barplot"))
+                  if (use_grplot_changes && strEqualsAny(new_kind, "heatmap", "marginal_heatmap", "barplot"))
                     {
                       bool no_other_kind = true;
                       for (const auto &series : central_region->children())
@@ -22556,7 +22584,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           plot_parent->setAttribute("adjust_z_lim", false);
                         }
                     }
-                  else if (grplot && strEqualsAny(new_kind, "heatmap", "marginal_heatmap", "barplot"))
+                  else if (use_grplot_changes && strEqualsAny(new_kind, "heatmap", "marginal_heatmap", "barplot"))
                     {
                       for (const auto &child : coordinate_system->children())
                         {
@@ -22568,7 +22596,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                     }
                   // need to change tick_orientation if old_kind was heatmap, marginal_heatmap or shade and no other
                   // series of these kinds is left
-                  if (grplot && (strEqualsAny(old_kind, "contourf", "heatmap", "marginal_heatmap", "shade")))
+                  if (use_grplot_changes &&
+                      (strEqualsAny(old_kind, "contourf", "heatmap", "marginal_heatmap", "shade")))
                     {
                       bool one_of_these_kinds_left = true;
                       for (const auto &series : central_region->children())
@@ -22627,7 +22656,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                     side_region = global_render->createSideRegion(PLOT_DEFAULT_SIDEREGION_LOCATION);
                   else
                     side_plot = side_region->querySelectors("side_plot_region");
-                  side_region->setAttribute("offset", offset + PLOT_DEFAULT_COLORBAR_OFFSET);
+                  side_region->setAttribute("viewport_offset", offset + PLOT_DEFAULT_COLORBAR_OFFSET);
                   side_region->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
                   side_region->setAttribute("_update_required", true);
 
@@ -23008,10 +23037,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                       parent->parentElement()->querySelectors("side_region[location=" + new_location + "]");
                   auto parent_text = static_cast<std::string>(parent->getAttribute("text_content"));
                   auto parent_width = static_cast<double>(parent->getAttribute("width"));
-                  auto parent_offset = static_cast<double>(parent->getAttribute("offset"));
+                  auto parent_offset = static_cast<double>(parent->getAttribute("viewport_offset"));
                   auto other_parent_text = static_cast<std::string>(other_parent->getAttribute("text_content"));
                   auto other_parent_width = static_cast<double>(other_parent->getAttribute("width"));
-                  auto other_parent_offset = static_cast<double>(other_parent->getAttribute("offset"));
+                  auto other_parent_offset = static_cast<double>(other_parent->getAttribute("viewport_offset"));
 
                   for (const auto &child : other_parent->querySelectorsAll(element->localName()))
                     {
@@ -23040,8 +23069,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                       // reset width and offset cause with the side_plot_region change they could be different
                       other_parent->setAttribute("width", parent_width);
                       parent->setAttribute("width", other_parent_width);
-                      other_parent->setAttribute("offset", parent_offset);
-                      parent->setAttribute("offset", other_parent_offset);
+                      other_parent->setAttribute("viewport_offset", parent_offset);
+                      parent->setAttribute("viewport_offset", other_parent_offset);
                     }
                   element->setAttribute("_update_required", 1);
                   resetOldBoundingBoxes(element);
@@ -23230,8 +23259,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                   if (!strEqualsAny(std::string(value), "twin_x", "twin_y"))
                                     {
                                       new_parent->appendChild(element);
-                                      new_parent->setAttribute("offset", 0.02);
-                                      if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                                      new_parent->setAttribute("viewport_offset", 0.02);
+                                      if (new_location == "right") new_parent->setAttribute("viewport_offset", 0.05);
                                       new_parent->setAttribute("width", PLOT_DEFAULT_ADDITIONAL_AXIS_WIDTH);
                                       element->setAttribute("mirrored_axis", true);
                                       element->setAttribute("draw_grid", true);
@@ -23291,8 +23320,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                 {
                                   new_parent->appendChild(parent);
                                 }
-                              new_parent->setAttribute("offset", 0.02);
-                              if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                              new_parent->setAttribute("viewport_offset", 0.02);
+                              if (new_location == "right") new_parent->setAttribute("viewport_offset", 0.05);
                               new_parent->setAttribute("width", PLOT_DEFAULT_ADDITIONAL_AXIS_WIDTH);
                               for (const auto &child : element->children())
                                 {
@@ -24167,9 +24196,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               element->setAttribute("_viewport_normalized_y_max_org",
                                     static_cast<double>(element->getAttribute("viewport_normalized_y_max")));
             }
-          else if (strEqualsAny(attr, "offset"))
+          else if (strEqualsAny(attr, "viewport_offset"))
             {
-              element->setAttribute("_offset_set_by_user", true);
+              element->setAttribute("_viewport_offset_set_by_user", true);
             }
           else if (strEqualsAny(attr, "width"))
             {
@@ -24200,10 +24229,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               element->setAttribute("_delete_children", 2);
               element->setAttribute("_update_required", true);
             }
-          else if (strEqualsAny(attr, "org"))
+          else if (strEqualsAny(attr, "origin"))
             {
-              auto org = static_cast<double>(element->getAttribute("org"));
-              element->setAttribute("_org_set_by_user", org);
+              auto org = static_cast<double>(element->getAttribute("origin"));
+              element->setAttribute("_origin_set_by_user", org);
             }
           else if (strEqualsAny(attr, "pos"))
             {
