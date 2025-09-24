@@ -5376,6 +5376,8 @@ void gr_axis(char which, axis_t *axis)
         }
     }
 
+  if (axis->num_ticks > 0 || axis->num_tick_labels > 0) return;
+
   if (scale_option & lx.scale_options)
     {
       axis->num_tick_labels = igauss(blog(base, axis->max / axis->min)) + 2;
