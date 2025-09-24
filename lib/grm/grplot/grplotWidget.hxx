@@ -49,7 +49,7 @@ class GRPlotWidget : public QWidget
 
 public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool listen_mode = false, int listen_port = 8002,
-                        bool test_mode = false, QString test_commands = "");
+                        bool test_mode = false, const QString &test_commands = "");
   explicit GRPlotWidget(QMainWindow *parent, grm_args_t *args);
   virtual ~GRPlotWidget() override;
   void redraw(bool full_redraw = false, bool tree_update = true);
@@ -58,7 +58,7 @@ public:
   eraseCurrentSelection(std::list<std::unique_ptr<BoundingObject>>::const_iterator current_selection);
   void attributeEditEvent(bool highlight_location = false);
   void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **line_edit);
-  void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
+  void attributeSetForComboBox(const std::string &attr_type, const std::shared_ptr<GRM::Element> &element,
                                const std::string &value, const std::string &label);
   void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
                                         QWidget **line_edit);
@@ -68,13 +68,14 @@ public:
   void setSelectedParent(BoundingObject *parent);
   void setCurrentSelection(BoundingObject *current_selection);
   void setTreeUpdate(bool status);
-  void setReferencedElements(std::vector<BoundingObject> referenced_elements);
-  void colorIndexPopUp(std::string attribute_name, int current_index, const std::shared_ptr<GRM::Element> element);
-  void colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element);
+  void setReferencedElements(const std::vector<BoundingObject> &referenced_elements);
+  void colorIndexPopUp(const std::string &attribute_name, int current_index,
+                       const std::shared_ptr<GRM::Element> &element);
+  void colorRGBPopUp(const std::string &attribute_name, const std::shared_ptr<GRM::Element> &element);
   void createHistoryElement(std::string flag = "");
-  void removeHistoryElement();
+  static void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
-  void setUpPreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height);
+  void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int width, int height);
 
   inline bool isDarkMode()
   {
@@ -95,7 +96,7 @@ public:
   QStringList getComboBoxAttributes();
   QStringList getColorIndAttributes();
   QStringList getColorRGBAttributes();
-  QStringList getSilderAttributes();
+  QStringList getSliderAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
   bool getEnableAdvancedEditor();
@@ -151,6 +152,12 @@ public:
   QAction *getShowLocationSubMenuAct();
   QAction *getHideLimSubMenuAct();
   QAction *getShowLimSubMenuAct();
+  QAction *getHideLogSubMenuAct();
+  QAction *getShowLogSubMenuAct();
+  QAction *getHideFlipSubMenuAct();
+  QAction *getShowFlipSubMenuAct();
+  QAction *getHidePlotTypeSubMenuAct();
+  QAction *getShowPlotTypeSubMenuAct();
   QAction *getAddSeperatorAct();
   QAction *getXLogAct();
   QAction *getYLogAct();
@@ -186,12 +193,14 @@ public:
   QAction *getShowTextPreviewAct();
   QAction *getShowSelectionListWidgetAct();
   QAction *getShowIconBarAct();
+  QAction *getShowAddElementAct();
   QAction *getHideEditElementAct();
   QAction *getHideTreeWidgetAct();
   QAction *getHideTableWidgetAct();
   QAction *getHideTextPreviewAct();
   QAction *getHideSelectionListWidgetAct();
   QAction *getHideIconBarAct();
+  QAction *getHideAddElementAct();
   QAction *getXLimAct();
   QAction *getYLimAct();
   QAction *getZLimAct();
@@ -203,6 +212,7 @@ public:
   QWidget *getTextPreviewWidget();
   QWidget *getSelectionListWidget();
   QWidget *getIconBarWidget();
+  QWidget *getAddElementWidget();
 
 protected:
   virtual void draw();
@@ -444,7 +454,9 @@ private:
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
       *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
-      *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act;
+      *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act,
+      *hide_log_sub_menu_act, *show_log_sub_menu_act, *hide_flip_sub_menu_act, *show_flip_sub_menu_act,
+      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act;
@@ -456,9 +468,9 @@ private:
   QMenu *add_overlay_menu;
   QAction *add_text_act, *add_image_act;
   QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
-      *show_selection_list_widget_act, *show_icon_bar_widget_act;
+      *show_selection_list_widget_act, *show_icon_bar_widget_act, *show_add_element_act;
   QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act,
-      *hide_selection_list_widget_act, *hide_icon_bar_widget_act;
+      *hide_selection_list_widget_act, *hide_icon_bar_widget_act, *hide_add_element_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
   QAction *icon_bar_act;
   bool overlay_element_edit = false, called_by_location_change = false;
@@ -472,11 +484,11 @@ private:
   QSize sizeHint() const override;
   void sizeCallback(const grm_event_t *);
   void cmdCallback(const grm_request_event_t *);
-  void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
+  void adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_parent);
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);
   void overlayElementEdit();
-  void colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index, QGridLayout *grid_layout,
+  void colorIndexHelper(const std::shared_ptr<GRM::Element> &plot_elem, int current_index, QGridLayout *grid_layout,
                         QList<QRadioButton *> *radio_buttons, int max_index, int index_name_start);
 };
 

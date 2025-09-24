@@ -57,13 +57,12 @@ void CollapsibleSection::setContentLayout(QLayout &content_layout, bool clicked)
   auto content_height = content_layout.sizeHint().height();
   for (int i = 0; i < toggle_animation.animationCount() - 1; ++i)
     {
-      QPropertyAnimation *collapsible_section_animation =
-          static_cast<QPropertyAnimation *>(toggle_animation.animationAt(i));
+      auto collapsible_section_animation = static_cast<QPropertyAnimation *>(toggle_animation.animationAt(i));
       collapsible_section_animation->setDuration(animation_duration);
       collapsible_section_animation->setStartValue(collapsed_height);
       collapsible_section_animation->setEndValue(collapsed_height + content_height);
     }
-  QPropertyAnimation *content_animation =
+  auto content_animation =
       static_cast<QPropertyAnimation *>(toggle_animation.animationAt(toggle_animation.animationCount() - 1));
   content_animation->setDuration(animation_duration);
   content_animation->setStartValue(0);

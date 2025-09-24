@@ -276,6 +276,12 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
           &IconBarWidget::showAspectRatioSubMenu);
   connect(grplot_widget->getHideLimSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideLimSubMenu);
   connect(grplot_widget->getShowLimSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showLimSubMenu);
+  connect(grplot_widget->getHideLogSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideLogSubMenu);
+  connect(grplot_widget->getShowLogSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showLogSubMenu);
+  connect(grplot_widget->getHideFlipSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideFlipSubMenu);
+  connect(grplot_widget->getShowFlipSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showFlipSubMenu);
+  connect(grplot_widget->getHidePlotTypeSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hidePlotTypeSubMenu);
+  connect(grplot_widget->getShowPlotTypeSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showPlotTypeSubMenu);
 
   h_box_layout->addWidget(type_tool_button);
   h_box_layout->addWidget(algo_tool_button);
@@ -367,6 +373,42 @@ void IconBarWidget::showLimSubMenu()
 {
   lim_sub_menu->menuAction()->setVisible(true);
   lim_tool_button->setEnabled(true);
+}
+
+void IconBarWidget::hideLogSubMenu()
+{
+  log_sub_menu->menuAction()->setVisible(false);
+  log_tool_button->setEnabled(false);
+}
+
+void IconBarWidget::showLogSubMenu()
+{
+  log_sub_menu->menuAction()->setVisible(true);
+  log_tool_button->setEnabled(true);
+}
+
+void IconBarWidget::hideFlipSubMenu()
+{
+  flip_sub_menu->menuAction()->setVisible(false);
+  flip_tool_button->setEnabled(false);
+}
+
+void IconBarWidget::showFlipSubMenu()
+{
+  flip_sub_menu->menuAction()->setVisible(true);
+  flip_tool_button->setEnabled(true);
+}
+
+void IconBarWidget::hidePlotTypeSubMenu()
+{
+  type_sub_menu->menuAction()->setVisible(false);
+  type_tool_button->setEnabled(false);
+}
+
+void IconBarWidget::showPlotTypeSubMenu()
+{
+  type_sub_menu->menuAction()->setVisible(true);
+  type_tool_button->setEnabled(true);
 }
 
 void IconBarWidget::addSeperator()

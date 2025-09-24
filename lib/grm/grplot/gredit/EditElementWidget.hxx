@@ -39,8 +39,8 @@ private slots:
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;
-  bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
-                           bool inherit_elem = false);
+  static bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
+                                  bool inherit_elem = false);
   bool setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
 
 private:

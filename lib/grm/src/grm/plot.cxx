@@ -3271,8 +3271,8 @@ grm_error_t plotIsosurface(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
           std::vector<double> foreground_vec(temp_colors, temp_colors + i);
-          (*context)["c_rgb" + str] = foreground_vec;
-          sub_group->setAttribute("color_rgb_values", "c_rgb" + str);
+          (*context)["color_rgb" + str] = foreground_vec;
+          sub_group->setAttribute("color_rgb", "color_rgb" + str);
         }
 
       global_root->setAttribute("_id", ++id);

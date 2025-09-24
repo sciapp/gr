@@ -134,7 +134,7 @@ If some data from the data file should be plotted to a different axis as the res
 
 ## Editor
 
-The editor can be disabled by setting the environment variable `GRDISPLAY` to the value of `view`. If `GRDISPLAY` isn't set to `view`, the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts.
+The editor can be disabled by setting the environment variable `GRDISPLAY` to the value of `view`. If `GRDISPLAY` isn't set to `view`, the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts. For that an element of the picture which attributes should be modified can be selected via double-clicked or by using the internal tree structure. There is also an even more advanced editor which can be enabled in the menu as well, which allows way more attribute changes. While using the editor some features of the view mode are disabled.
 
 ## Advanced information for each plot type
 

@@ -35,6 +35,12 @@ private slots:
   void showLocationSubMenu();
   void hideLimSubMenu();
   void showLimSubMenu();
+  void hideLogSubMenu();
+  void showLogSubMenu();
+  void hideFlipSubMenu();
+  void showFlipSubMenu();
+  void hidePlotTypeSubMenu();
+  void showPlotTypeSubMenu();
   void addSeperator();
 };
 

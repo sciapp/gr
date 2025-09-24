@@ -1,6 +1,6 @@
 #include "CustomQListWidgetItem.hxx"
 
-CustomQListWidgetItem::CustomQListWidgetItem(const QString &text, std::shared_ptr<GRM::Element> selection,
+CustomQListWidgetItem::CustomQListWidgetItem(const QString &text, const std::shared_ptr<GRM::Element> &selection,
                                              QListWidget *parent)
     : QListWidgetItem(text, parent)
 {
