@@ -23,7 +23,7 @@ TableWidget::TableWidget(GRPlotWidget *widget, QWidget *parent) : QTableWidget(p
 }
 
 std::map<std::string, std::list<std::string>>
-TableWidget::extractContextNames(const std::shared_ptr<GRM::Context> context)
+TableWidget::extractContextNames(const std::shared_ptr<GRM::Context> &context)
 {
   int col_cnt = 0;
   std::map<std::string, std::list<std::string>> context_data;
@@ -46,7 +46,7 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
   int max_rows = 0, col = 0;
   std::map<std::string, std::list<std::string>> context_data;
 
-  // disconnect so that a reread wont trigger applyTableChanges
+  // disconnect so that a reread won't trigger applyTableChanges
   disconnect(this, SIGNAL(cellChanged(int, int)), this, SLOT(applyTableChanges(int, int)));
   this->context = context;
   this->context_attributes = GRM::getContextAttributes();
@@ -142,7 +142,7 @@ void TableWidget::applyTableChanges(int row, int column)
             }
           else
             {
-              // only allow to edit non empty lines to prevent multiple complications with size mismatches
+              // only allow to edit non-empty lines to prevent multiple complications with size mismatches
               this->item(row, column)->setText("");
             }
         }
@@ -156,7 +156,7 @@ void TableWidget::applyTableChanges(int row, int column)
             }
           else
             {
-              // only allow to edit non empty lines to prevent multiple complications with size mismatches
+              // only allow to edit non-empty lines to prevent multiple complications with size mismatches
               this->item(row, column)->setText("");
             }
         }
@@ -170,7 +170,7 @@ void TableWidget::applyTableChanges(int row, int column)
             }
           else
             {
-              // only allow to edit non empty lines to prevent multiple complications with size mismatches
+              // only allow to edit non-empty lines to prevent multiple complications with size mismatches
               this->item(row, column)->setText("");
             }
         }
@@ -244,7 +244,7 @@ void TableWidget::applyTableChanges(int row, int column)
 void TableWidget::showUsagesOfContext(int row, int column)
 {
   referenced_attributes.clear();
-  if (row != 0) row = 0; // complety columns highlight this way not only the header line
+  if (row != 0) row = 0; // complete columns highlight this way not only the header line
 
   if (this->item(row, column) == nullptr) return;
   auto context_ref_name = this->item(row, column)->text().toStdString();
@@ -279,7 +279,7 @@ void TableWidget::showUsagesOfContext(int row, int column)
               auto bbox_x_max = static_cast<double>(elem->getAttribute("_bbox_x_max"));
               auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
               auto bbox_y_max = static_cast<double>(elem->getAttribute("_bbox_y_max"));
-              const BoundingObject bbox = BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, elem);
+              const auto bbox = BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, elem);
               for (const auto &vec_elem : referenced_attributes)
                 {
                   if (vec_elem.getRef() == elem)

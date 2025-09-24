@@ -965,7 +965,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="ambient" type="xs:double"/>
-            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="color_rgb" type="xs:string"/>
             <xs:attribute name="diffuse" type="xs:double"/>
             <!-- `d_min` and `d_max` must only be set if a volume was switched
                 to an isosurface (so it can be switched back) -->

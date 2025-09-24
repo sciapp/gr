@@ -53,8 +53,7 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
     {
       for (const auto &elem : contract_elements)
         {
-          auto elem_locked = elem.lock();
-          if (elem_locked == ref)
+          if (auto elem_locked = elem.lock(); elem_locked == ref)
             {
               item->setExpanded(false);
               break;
@@ -181,7 +180,7 @@ void TreeWidget::mouseReleaseEvent(QMouseEvent *event)
   checkboxStatusChanged(plot_tree);
 }
 
-bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem)
+bool TreeWidget::selectItem(const std::shared_ptr<GRM::Element> &ref, CustomTreeWidgetItem *tree_elem)
 {
   auto item = plot_tree;
   if (tree_elem) item = tree_elem;
@@ -214,6 +213,7 @@ void TreeWidget::checkIfCollapsed(std::shared_ptr<GRM::Element> ref, CustomTreeW
   for (int i = 0; i < tree_elem->childCount(); i++)
     {
       auto cur_elem = tree_elem->child(i);
-      checkIfCollapsed(((CustomTreeWidgetItem *)cur_elem)->getRef(), (CustomTreeWidgetItem *)cur_elem);
+      checkIfCollapsed(static_cast<CustomTreeWidgetItem *>(cur_elem)->getRef(),
+                       static_cast<CustomTreeWidgetItem *>(cur_elem));
     }
 }

@@ -12,7 +12,7 @@ class SelectionListWidget : public QListWidget
   Q_OBJECT
 public:
   explicit SelectionListWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
-  void updateSelectionList(std::vector<std::shared_ptr<GRM::Element>> multiple_selections);
+  void updateSelectionList(const std::vector<std::shared_ptr<GRM::Element>> &multiple_selections);
 
 private:
   GRPlotWidget *grplot_widget;

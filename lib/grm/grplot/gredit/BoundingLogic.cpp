@@ -55,8 +55,8 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   auto max_width_height = std::max(width, height);
-  dx = (double)x / max_width_height;
-  dy = (double)(height - y) / max_width_height;
+  dx = static_cast<double>(x) / max_width_height;
+  dy = static_cast<double>(height - y) / max_width_height;
 
   auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &dx, &dy);
 
@@ -83,10 +83,10 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
       gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
       gr_ndctowc(&dx, &dy);
 
-      x_range_min = (double)(x - 50) / max_width_height;
-      x_range_max = (double)(x + 50) / max_width_height;
-      y_range_min = (double)(height - (y + 50)) / max_width_height;
-      y_range_max = (double)(height - (y - 50)) / max_width_height;
+      x_range_min = static_cast<double>(x - 50) / max_width_height;
+      x_range_max = static_cast<double>(x + 50) / max_width_height;
+      y_range_min = static_cast<double>(height - (y + 50)) / max_width_height;
+      y_range_max = static_cast<double>(height - (y - 50)) / max_width_height;
 
       gr_ndctowc(&x_range_min, &y_range_min);
       gr_ndctowc(&x_range_max, &y_range_max);
@@ -194,7 +194,6 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
   std::sort(ret.begin(), ret.end(), boundingObjectCompareFunction);
   return ret;
 }
-
 
 void BoundingLogic::addBoundingObject(int id, double xmin, double xmax, double ymin, double ymax,
                                       std::shared_ptr<GRM::Element> ref)

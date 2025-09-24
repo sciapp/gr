@@ -5,7 +5,7 @@ SelectionListWidget::SelectionListWidget(GRPlotWidget *widget, QWidget *parent) 
   grplot_widget = widget;
 }
 
-void SelectionListWidget::updateSelectionList(std::vector<std::shared_ptr<GRM::Element>> multiple_selections)
+void SelectionListWidget::updateSelectionList(const std::vector<std::shared_ptr<GRM::Element>> &multiple_selections)
 {
   this->clear();
   for (const auto &selection : multiple_selections)

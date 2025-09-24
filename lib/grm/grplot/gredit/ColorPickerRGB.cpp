@@ -11,7 +11,7 @@ ColorPickerRGB::ColorPickerRGB(GRPlotWidget *widget, QDialog *parent) : QDialog(
   grplot_widget = widget;
 }
 
-void ColorPickerRGB::start(std::string attribute_name, const std::shared_ptr<GRM::Element> element)
+void ColorPickerRGB::start(std::string attribute_name, const std::shared_ptr<GRM::Element> &element)
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
@@ -19,8 +19,7 @@ void ColorPickerRGB::start(std::string attribute_name, const std::shared_ptr<GRM
                                                     : global_root->querySelectors("figure[active=1]");
   const auto plot_elem = figure_elem->querySelectors("plot");
 
-  QString title(attribute_name.c_str());
-  this->setWindowTitle(title);
+  this->setWindowTitle(attribute_name.c_str());
   this->setFixedSize(400, 230);
   auto grid_layout = new QGridLayout;
 
@@ -154,8 +153,7 @@ void ColorPickerRGB::reject()
 void ColorPickerRGB::accept()
 {
   grplot_widget->createHistoryElement();
-  auto elem_locked = elem.lock();
-  if (elem_locked != nullptr)
+  if (auto elem_locked = elem.lock(); elem_locked != nullptr)
     {
       auto global_root = grm_get_document_root();
       auto id = static_cast<int>(global_root->getAttribute("_id"));

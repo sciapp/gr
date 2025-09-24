@@ -143,6 +143,17 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(edit_element_dock_widget, SIGNAL(resizeMainWindow()), this,
                            SLOT(closeEditElementDockSlot()));
 
+          add_element_dock_widget = new GRPlotDockWidget("Add Element:", RIGHT_AREA_WIDTH, height, this);
+          add_element_dock_widget->setWidget(grplot_widget_->getAddElementWidget());
+          add_element_dock_widget->setAllowedAreas(Qt::RightDockWidgetArea);
+          add_element_dock_widget->hide();
+          addDockWidget(Qt::RightDockWidgetArea, add_element_dock_widget);
+          QObject::connect(grplot_widget_->getHideAddElementAct(), SIGNAL(triggered()), this,
+                           SLOT(hideAddElementDockSlot()));
+          QObject::connect(grplot_widget_->getShowAddElementAct(), SIGNAL(triggered()), this,
+                           SLOT(showAddElementDockSlot()));
+          QObject::connect(add_element_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeAddElementDockSlot()));
+
           tree_dock_widget = new GRPlotDockWidget("Element Tree:", LEFT_AREA_WIDTH, height, this);
           tree_dock_widget->setWidget(grplot_widget_->getTreeWidget());
           tree_dock_widget->setAllowedAreas(Qt::LeftDockWidgetArea);
@@ -203,12 +214,18 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(icon_bar_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeIconBarDockSlot()));
 
           this->tabifyDockWidget(tree_dock_widget, table_dock_widget);
+          this->tabifyDockWidget(edit_element_dock_widget, add_element_dock_widget);
 
           // this way the existing tabs gets shown on the top side of the DockWidgetArea instead of the bottom side
           this->setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
           this->setTabPosition(Qt::BottomDockWidgetArea, QTabWidget::North);
           this->setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
           this->setTabPosition(Qt::TopDockWidgetArea, QTabWidget::North);
+
+          // the top corners shouldn't be part of the top-area so that the icon-menu stays where it is regardless if the
+          // left- and right-area are shown
+          this->setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
+          this->setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
 
           resizeGRPlotWidget(width, height);
         }
@@ -300,6 +317,16 @@ void GRPlotMainWindow::showIconBarDockSlot()
   center();
 }
 
+void GRPlotMainWindow::showAddElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  add_element_dock_widget->show();
+  add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
 void GRPlotMainWindow::hideEditElementDockSlot()
 {
   auto w = grplot_widget_->width();
@@ -351,6 +378,16 @@ void GRPlotMainWindow::hideIconBarDockSlot()
   auto w = grplot_widget_->width();
   auto h = grplot_widget_->height();
   icon_bar_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::hideAddElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+  add_element_dock_widget->hide();
+  add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
   resizeGRPlotWidget(w, h);
   center();
 }
@@ -411,6 +448,16 @@ void GRPlotMainWindow::closeIconBarDockSlot()
   auto h = grplot_widget_->height();
 
   icon_bar_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  center();
+}
+
+void GRPlotMainWindow::closeAddElementDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  add_element_dock_widget->hide();
   resizeGRPlotWidget(w, h);
   center();
 }

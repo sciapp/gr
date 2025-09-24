@@ -114,8 +114,7 @@ void AddElementWidget::elementSelected(int i)
                   auto bbox_x_max = static_cast<double>(pos_par->getAttribute("_bbox_x_max"));
                   auto bbox_y_min = static_cast<double>(pos_par->getAttribute("_bbox_y_min"));
                   auto bbox_y_max = static_cast<double>(pos_par->getAttribute("_bbox_y_max"));
-                  const BoundingObject bbox =
-                      BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, pos_par);
+                  const auto bbox = BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, pos_par);
 
                   // check if the new child can be added without passing max occurs
                   for (const auto &child : pos_par->children())
@@ -175,16 +174,17 @@ void AddElementWidget::parentSelected(int i)
               if (combo_box_attr.contains(attr_name.c_str()))
                 {
                   attr_line_edit = new QComboBox;
-                  ((QComboBox *)attr_line_edit)->addItem(""); // default all attributes are empty
+                  static_cast<QComboBox *>(attr_line_edit)->addItem(""); // default all attributes are empty
                   grplot_widget->attributeComboBoxHandler(attr_name, selected_element_name, &attr_line_edit);
-                  int index = ((QComboBox *)attr_line_edit)->count();
-                  ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
+                  int index = static_cast<QComboBox *>(attr_line_edit)->count();
+                  static_cast<QComboBox *>(attr_line_edit)->setCurrentIndex(index);
 
                   if (attr_name == "kind" && util::startsWith(selected_element_name, "series_"))
                     {
-                      index = ((QComboBox *)attr_line_edit)->findText(selected_element_name.erase(0, 7).c_str());
-                      if (index == -1) index += ((QComboBox *)attr_line_edit)->count();
-                      ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
+                      index =
+                          static_cast<QComboBox *>(attr_line_edit)->findText(selected_element_name.erase(0, 7).c_str());
+                      if (index == -1) index += static_cast<QComboBox *>(attr_line_edit)->count();
+                      static_cast<QComboBox *>(attr_line_edit)->setCurrentIndex(index);
                     }
                 }
               else if (check_box_attr.contains(attr_name.c_str()))
@@ -194,8 +194,8 @@ void AddElementWidget::parentSelected(int i)
               else
                 {
                   attr_line_edit = new QLineEdit;
-                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attr_line_edit)->setFocus();
+                  static_cast<QLineEdit *>(attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  attr_line_edit->setFocus();
                 }
               if (child->hasAttribute("use")) attr_name = "*" + attr_name + ":";
               attr_label = new QLabel(tr(attr_name.c_str()));
@@ -233,18 +233,18 @@ void AddElementWidget::parentSelected(int i)
                           if (combo_box_attr.contains(attr_name.c_str()))
                             {
                               attr_line_edit = new QComboBox;
-                              ((QComboBox *)attr_line_edit)->addItem(""); // default all attributes are empty
+                              static_cast<QComboBox *>(attr_line_edit)->addItem(""); // default all attributes are empty
                               grplot_widget->attributeComboBoxHandler(attr_name, selected_element_name,
                                                                       &attr_line_edit);
-                              int index = ((QComboBox *)attr_line_edit)->count();
-                              ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
+                              int index = static_cast<QComboBox *>(attr_line_edit)->count();
+                              static_cast<QComboBox *>(attr_line_edit)->setCurrentIndex(index);
 
                               if (attr_name == "kind" && util::startsWith(selected_element_name, "series_"))
                                 {
-                                  index = ((QComboBox *)attr_line_edit)
+                                  index = static_cast<QComboBox *>(attr_line_edit)
                                               ->findText(selected_element_name.erase(0, 7).c_str());
-                                  if (index == -1) index += ((QComboBox *)attr_line_edit)->count();
-                                  ((QComboBox *)attr_line_edit)->setCurrentIndex(index);
+                                  if (index == -1) index += static_cast<QComboBox *>(attr_line_edit)->count();
+                                  static_cast<QComboBox *>(attr_line_edit)->setCurrentIndex(index);
                                 }
                             }
                           else if (check_box_attr.contains(attr_name.c_str()))
@@ -254,8 +254,8 @@ void AddElementWidget::parentSelected(int i)
                           else
                             {
                               attr_line_edit = new QLineEdit;
-                              ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
-                              ((QLineEdit *)attr_line_edit)->setFocus();
+                              static_cast<QLineEdit *>(attr_line_edit)->setPlaceholderText("Placeholder Text");
+                              attr_line_edit->setFocus();
                             }
                           if (childchild->hasAttribute("use")) attr_name = "*" + attr_name + ":";
                           attr_label = new QLabel(tr(attr_name.c_str()));
@@ -276,8 +276,8 @@ void AddElementWidget::parentSelected(int i)
 
                   attr_label = new QLabel(tr("Colorrep-index:"));
                   attr_line_edit = new QLineEdit;
-                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attr_line_edit)->setFocus();
+                  static_cast<QLineEdit *>(attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  attr_line_edit->setFocus();
 
                   add_attributes_layout->addWidget(attr_label, line, 0);
                   add_attributes_layout->addWidget(attr_line_edit, line++, 1);
@@ -289,8 +289,8 @@ void AddElementWidget::parentSelected(int i)
 
                   attr_label = new QLabel(tr("Colorrep-value:"));
                   attr_line_edit = new QLineEdit;
-                  ((QLineEdit *)attr_line_edit)->setPlaceholderText("Placeholder Text");
-                  ((QLineEdit *)attr_line_edit)->setFocus();
+                  static_cast<QLineEdit *>(attr_line_edit)->setPlaceholderText("Placeholder Text");
+                  attr_line_edit->setFocus();
 
                   add_attributes_layout->addWidget(attr_label, line, 0);
                   add_attributes_layout->addWidget(attr_line_edit, line++, 1);
@@ -340,17 +340,17 @@ void AddElementWidget::accept()
   for (int i = 0; i < attribute_name_vec.size(); i++)
     {
       auto &field = *fields[i];
-      if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
+      if (typeid(field) == typeid(QLineEdit) && static_cast<QLineEdit *>(fields[i])->isModified())
         {
           {
             if (attribute_name_vec[i] == "Colorrep-index") /* special case for colorrep attribute */
               {
-                new_element->setAttribute("colorrep." + ((QLineEdit *)fields[i])->text().toStdString(),
-                                          ((QLineEdit *)fields[i + 1])->text().toStdString());
+                new_element->setAttribute("colorrep." + static_cast<QLineEdit *>(fields[i])->text().toStdString(),
+                                          static_cast<QLineEdit *>(fields[i + 1])->text().toStdString());
               }
             else if (attribute_name_vec[i] != "Colorrep-value")
               {
-                auto value = ((QLineEdit *)fields[i])->text().toStdString();
+                auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
                 if ((attribute_type_vec[i] == "xs:string" || attribute_type_vec[i] == "strint") &&
                     !util::isDigits(value))
                   {
@@ -375,9 +375,9 @@ void AddElementWidget::accept()
         }
       else if (typeid(field) == typeid(QComboBox))
         {
-          int index = ((QComboBox *)fields[i])->currentIndex();
+          int index = static_cast<QComboBox *>(fields[i])->currentIndex();
 
-          const auto value = ((QComboBox *)fields[i])->itemText(index).toStdString();
+          const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();
           if (!value.empty())
             {
               grplot_widget->attributeSetForComboBox(attribute_type_vec[i], new_element, value, attribute_name_vec[i]);
@@ -385,7 +385,7 @@ void AddElementWidget::accept()
         }
       else if (typeid(field) == typeid(QCheckBox))
         {
-          new_element->setAttribute(attribute_name_vec[i], ((QCheckBox *)fields[i])->isChecked());
+          new_element->setAttribute(attribute_name_vec[i], static_cast<QCheckBox *>(fields[i])->isChecked());
         }
     }
 
