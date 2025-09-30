@@ -9516,8 +9516,11 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
           for (j = 0; j < 3; j++)
             {
               xa[j] = px[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_X & lx.scale_options) xa[j] = lx.xmax - xa[j] + lx.xmin;
               ya[j] = py[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_Y & lx.scale_options) ya[j] = lx.ymax - ya[j] + lx.ymin;
               za[j] = pz[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_Z & lx.scale_options) za[j] = lx.zmax - za[j] + lx.zmin;
             }
           if (is_nan(xa[0]) || is_nan(xa[1]) || is_nan(xa[2])) continue;
           if (is_nan(ya[0]) || is_nan(ya[1]) || is_nan(ya[2])) continue;
