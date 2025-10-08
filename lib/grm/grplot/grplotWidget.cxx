@@ -869,7 +869,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
             }
           else if (cur_attr_name == "line_type")
             {
-              if (auto line_type = QPixmap((":/preview_images/line_types/" + elem.toStdString() + ".png").c_str());
+              if (auto line_type = QPixmap(
+                      (":/preview_images/line_types/" + elem.toStdString() + (isDarkMode() ? "_dark" : "") + ".png")
+                          .c_str());
                   !line_type.isNull())
                 {
                   line_type.setDevicePixelRatio(15);
@@ -878,7 +880,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
             }
           else if (cur_attr_name == "fill_style")
             {
-              if (auto fill_style = QPixmap((":/preview_images/fill_styles/" + elem.toStdString() + ".png").c_str());
+              if (auto fill_style = QPixmap(
+                      (":/preview_images/fill_styles/" + elem.toStdString() + (isDarkMode() ? "_dark" : "") + ".png")
+                          .c_str());
                   !fill_style.isNull())
                 {
                   fill_style = fill_style.scaled(30, 30, Qt::KeepAspectRatio);
@@ -887,8 +891,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
             }
           else if (cur_attr_name == "font_precision")
             {
-              if (auto font_precision =
-                      QPixmap((":/preview_images/font_precisions/" + elem.toStdString() + ".png").c_str());
+              if (auto font_precision = QPixmap((":/preview_images/font_precisions/" + elem.toStdString() +
+                                                 (isDarkMode() ? "_dark" : "") + ".png")
+                                                    .c_str());
                   !font_precision.isNull())
                 {
                   font_precision.setDevicePixelRatio(15);
@@ -897,7 +902,9 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
             }
           else if (cur_attr_name == "font")
             {
-              if (auto font = QPixmap((":/preview_images/fonts/" + elem.toStdString() + ".png").c_str());
+              if (auto font =
+                      QPixmap((":/preview_images/fonts/" + elem.toStdString() + (isDarkMode() ? "_dark" : "") + ".png")
+                                  .c_str());
                   !font.isNull())
                 {
                   font.setDevicePixelRatio(15);
@@ -1858,7 +1865,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
             {
               selection->setAttribute("_selected_for_move", 0);
             }
-          if (current_selection)
+          if (current_selection && current_selection->getRef() != nullptr)
             {
               current_selection->getRef()->removeAttribute("_highlighted");
               prev_highlighted_tick_group_elem.reset();
@@ -2489,7 +2496,7 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
 
           if (amount_scrolled > 50)
             {
-              if (!clicked.empty() && current_selection != nullptr)
+              if (!clicked.empty() && current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   for (int i = 0; i < clicked.size(); i++)
                     {
@@ -2514,7 +2521,7 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
             }
           else if (amount_scrolled < -50)
             {
-              if (!clicked.empty() && current_selection != nullptr)
+              if (!clicked.empty() && current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   for (auto i = static_cast<int>(clicked.size()) - 1; i >= 0; i--)
                     {
@@ -3441,6 +3448,7 @@ void GRPlotWidget::colormapSlot()
   QDialog dialog(this);
   QString title("Colormaps");
   dialog.setWindowTitle(title);
+  dialog.setMinimumWidth(300);
   auto form = new QFormLayout;
   auto colormap_names = GRM::getColormaps();
 
@@ -3959,7 +3967,7 @@ void GRPlotWidget::legendSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, legend_elem);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -3993,7 +4001,7 @@ void GRPlotWidget::colorbarSlot()
           new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, colorbar->parentElement());
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4032,7 +4040,7 @@ void GRPlotWidget::leftAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr)
+              if (current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   current_selection->getRef()->removeAttribute("_highlighted");
                   prev_highlighted_tick_group_elem.reset();
@@ -4073,7 +4081,7 @@ void GRPlotWidget::rightAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr)
+              if (current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   current_selection->getRef()->removeAttribute("_highlighted");
                   prev_highlighted_tick_group_elem.reset();
@@ -4114,7 +4122,7 @@ void GRPlotWidget::bottomAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr)
+              if (current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   current_selection->getRef()->removeAttribute("_highlighted");
                   prev_highlighted_tick_group_elem.reset();
@@ -4155,7 +4163,7 @@ void GRPlotWidget::topAxisSlot()
               auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
               editor_action->trigger(); // open the editor view to update the location
-              if (current_selection != nullptr)
+              if (current_selection != nullptr && current_selection->getRef() != nullptr)
                 {
                   current_selection->getRef()->removeAttribute("_highlighted");
                   prev_highlighted_tick_group_elem.reset();
@@ -4192,7 +4200,7 @@ void GRPlotWidget::twinXAxisSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4227,7 +4235,7 @@ void GRPlotWidget::twinYAxisSlot()
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, axis);
 
       editor_action->trigger(); // open the editor view to update the location
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4799,7 +4807,7 @@ void GRPlotWidget::undoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4819,7 +4827,7 @@ void GRPlotWidget::undoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4860,7 +4868,7 @@ void GRPlotWidget::redoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -4881,7 +4889,7 @@ void GRPlotWidget::redoSlot()
           hide_edit_element_act->trigger();
         }
       current_selections.clear();
-      if (current_selection != nullptr)
+      if (current_selection != nullptr && current_selection->getRef() != nullptr)
         {
           current_selection->getRef()->removeAttribute("_highlighted");
           prev_highlighted_tick_group_elem.reset();
@@ -5338,7 +5346,8 @@ BoundingObject *GRPlotWidget::getSelectedParent()
 
 void GRPlotWidget::setCurrentSelection(BoundingObject *p_current_selection)
 {
-  if (current_selection != nullptr) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection != nullptr && current_selection->getRef() != nullptr)
+    current_selection->getRef()->removeAttribute("_highlighted");
   this->current_selection = p_current_selection;
   current_selection->getRef()->setAttribute("_highlighted", true);
 
@@ -5425,7 +5434,8 @@ void GRPlotWidget::setTreeUpdate(bool status)
 
 void GRPlotWidget::editElementAccepted(bool highlight_location)
 {
-  if (current_selection) current_selection->getRef()->removeAttribute("_highlighted");
+  if (current_selection && current_selection->getRef() != nullptr)
+    current_selection->getRef()->removeAttribute("_highlighted");
   prev_highlighted_tick_group_elem.reset();
   current_selection = nullptr;
   mouse_move_selection = nullptr;
@@ -5440,6 +5450,7 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
   current_selections.clear();
   selection_list_widget->hide();
   hide_selection_list_widget_act->trigger();
+  hide_preview_text_act->trigger();
   if (highlight_location) hide_edit_element_act->trigger();
   redraw();
 }
@@ -6420,11 +6431,13 @@ void GRPlotWidget::overlayElementEdit()
   overlay_element_edit = false;
 }
 
-void GRPlotWidget::setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int width,
-                                          int height)
+void GRPlotWidget::setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color,
+                                          int font_precision, int width, int height)
 {
   // 250 based on the fixed size of the right dock widget area, even if width would be the real size of the text
-  preview_text_widget->initialize(text, scientific_format, text_color, std::max(250, width), height);
+  // 15 so empty text fields have a decent preview if beeing edited
+  preview_text_widget->initialize(text, scientific_format, text_color, font_precision, std::max(250, width),
+                                  std::max(15, height));
   preview_text_widget->show();
   preview_text_widget->update();
   show_preview_text_act->trigger();

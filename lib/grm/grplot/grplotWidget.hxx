@@ -75,7 +75,8 @@ public:
   void createHistoryElement(std::string flag = "");
   static void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
-  void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int width, int height);
+  void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int font_precision,
+                              int width, int height);
 
   inline bool isDarkMode()
   {
