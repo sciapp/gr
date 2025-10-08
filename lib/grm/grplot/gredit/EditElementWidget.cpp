@@ -15,6 +15,7 @@ static const int VERTICAL_SPACING = 5;
 static const int HORIZONTAL_SPACING = 2;
 static const int LABEL_WIDTH = 80;
 static std::string context_name;
+static bool dial_text_changed = false;
 
 static void clearLayout(QLayout *layout)
 {
@@ -458,6 +459,15 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           line_edit->setToolTip(tooltip_string);
           if (!multiple_selections.empty())
             static_cast<QComboBox *>(line_edit)->setCurrentIndex(static_cast<QComboBox *>(line_edit)->count() - 1);
+
+          if (cur_attr_name == "scientific_format")
+            {
+              line_edit->setFixedWidth(120);
+#if QT_VERSION >= 0x060000
+              connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                      [=]() { openTextPreview(); });
+#endif
+            }
         }
       else if (check_box_attr.contains(cur_attr_name.c_str()))
         {
@@ -562,24 +572,18 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
         }
       else if (cur_attr_name == "char_up_x")
         {
-          line_edit = new QDial(this);
-          line_edit->setToolTip(
-              "The character up vector which is used to rotate the text. Default: (0,1) or 90 degrees");
-          static_cast<QDial *>(line_edit)->setRange(0, 360);
-          static_cast<QDial *>(line_edit)->setWrapping(true);
-          static_cast<QDial *>(line_edit)->setInvertedAppearance(true);
-          line_edit->setFixedSize(40, 40);
-          static_cast<QDial *>(line_edit)->setNotchesVisible(true);
-          static_cast<QDial *>(line_edit)->setNotchTarget(15);
+          line_edit = new QLineEdit(this);
 
           auto up_x = static_cast<double>((*current_selection)->getRef()->getAttribute(cur_attr_name));
           auto up_y = static_cast<double>((*current_selection)->getRef()->getAttribute("char_up_y"));
           auto angle = std::atan2(up_y, up_x);
           if (angle < 0) angle += M_PI * 2;
           if (multiple_selections.empty())
-            static_cast<QDial *>(line_edit)->setValue(angle / M_PI * 180 + DIAL_OFFSET);
+            static_cast<QLineEdit *>(line_edit)->setText(QString::number(angle / M_PI * 180, 'f', 2));
           else
-            static_cast<QDial *>(line_edit)->setValue(90 + DIAL_OFFSET);
+            static_cast<QLineEdit *>(line_edit)->setText(QString::number(90, 'f', 2));
+          line_edit->setToolTip(tooltip_string);
+          line_edit->setMaximumWidth(50);
         }
       else if (cur_attr_name == "char_up_y")
         {
@@ -606,8 +610,53 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           line_edit->setToolTip(tooltip_string);
         }
 
-      if (cur_attr_name == "line_color_ind" || cur_attr_name == "line_color_rgb" || cur_attr_name == "line_spec" ||
-          cur_attr_name == "line_type" || cur_attr_name == "line_width")
+      if (cur_attr_name == "char_up_x")
+        {
+          auto widget = new QWidget(this);
+          auto grid_layout = new QGridLayout();
+
+          text_label = QString("text angle");
+          tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
+
+          auto dial = new QDial(this);
+          dial->setToolTip("The character up vector which is used to rotate the text. Default: (0,1) or 90 degrees");
+          dial->setRange(0, 360);
+          dial->setWrapping(true);
+          dial->setInvertedAppearance(true);
+          dial->setFixedSize(40, 40);
+          dial->setNotchesVisible(true);
+          dial->setNotchTarget(15);
+          dial->setPageStep(15); // for arrow keys to inc angle by 15
+
+          dial->setValue(static_cast<QLineEdit *>(line_edit)->text().toDouble() + DIAL_OFFSET);
+
+          grid_layout->addWidget(line_edit, 0, 1);
+          grid_layout->addWidget(dial, 0, 0);
+          grid_layout->setContentsMargins(0, 0, 0, 0);
+          grid_layout->setSpacing(10);
+          widget->setLayout(grid_layout);
+          widget->setContentsMargins(0, 0, 0, 0);
+
+          connect(dial, &QSlider::valueChanged, this, [=] {
+            double val = dial->value();
+            val = qRound((val - 0) / static_cast<double>(179 - 0) * (270 - 90) + 270) % 360;
+            val = int((static_cast<int>(val) % 15 >= 7) ? (val / 15 + 1) : (val / 15)) * 15;
+            if (!dial_text_changed)
+              {
+                static_cast<QLineEdit *>(line_edit)->setText(QString::number(val, 'f', 2));
+                static_cast<QLineEdit *>(line_edit)->setModified(true);
+              }
+            dial_text_changed = false;
+          });
+          connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=] {
+            double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
+            dial_text_changed = true;
+            dial->setValue(val + DIAL_OFFSET);
+          });
+          form->addRow(text_label, widget);
+        }
+      else if (cur_attr_name == "line_color_ind" || cur_attr_name == "line_color_rgb" || cur_attr_name == "line_spec" ||
+               cur_attr_name == "line_type" || cur_attr_name == "line_width")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
@@ -652,6 +701,12 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               form->addRow(text_modification);
               text_modification_added = true;
             }
+
+#if QT_VERSION >= 0x060000
+          if (cur_attr_name == "font_precision")
+            connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                    [=]() { openTextPreview(); });
+#endif
 
           if (text_modification_added) text_modification_form->addRow(label, line_edit);
         }
@@ -1127,6 +1182,15 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               tick_label_modification_added = true;
             }
 
+          if (cur_attr_name == "scientific_format")
+            {
+              line_edit->setFixedWidth(120);
+#if QT_VERSION >= 0x060000
+              connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                      [=]() { openTextPreview(); });
+#endif
+            }
+
           if (tick_label_modification_added)
             {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -1243,15 +1307,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
         }
       else
         {
-          if (cur_attr_name == "char_up_x")
-            {
-              text_label = QString("text angle");
-              tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
-            }
-          else
-            {
-              text_label = QString(attrNameToLabel(cur_attr_name).c_str());
-            }
+          text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
           label->setFixedWidth(LABEL_WIDTH);
           label->setWordWrap(true);
@@ -1295,20 +1351,10 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           else if (cur_attr_name == "text" || cur_attr_name == "x_label_3d" || cur_attr_name == "y_label_3d" ||
                    cur_attr_name == "z_label_3d" || cur_attr_name == "tick_label")
             {
-              auto widget = new QWidget(this);
-              auto grid_layout = new QGridLayout();
-              auto button = new QPushButton(this);
-              connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-              button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
-#else
-              button->setText("Preview");
+#if QT_VERSION >= 0x060000
+              connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=]() { openTextPreview(); });
 #endif
-              grid_layout->addWidget(label, 0, 0, 1, 2);
-              grid_layout->addWidget(line_edit, 0, 2, 1, 2);
-              grid_layout->addWidget(button, 0, 4);
-              widget->setLayout(grid_layout);
-              form->addRow(widget);
+              form->addRow(label, line_edit);
             }
           else if (slider_attr.contains(cur_attr_name.c_str()))
             {
@@ -1443,6 +1489,15 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       grplot_widget->advancedAttributeComboBoxHandler(
                           attr_name, (*current_selection)->getRef()->localName(), &line_edit);
                       line_edit->setToolTip(tooltip_string);
+
+                      if (attr_name == "scientific_format")
+                        {
+                          line_edit->setFixedWidth(120);
+#if QT_VERSION >= 0x060000
+                          connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                                  [=]() { openTextPreview(); });
+#endif
+                        }
                     }
                   else if (check_box_attr.contains(attr_name.c_str()))
                     {
@@ -1505,15 +1560,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                     }
                   else if (attr_name == "char_up_x")
                     {
-                      line_edit = new QDial(this);
+                      line_edit = new QLineEdit(this);
                       line_edit->setToolTip("The rotation of the text defined by an angle. Default: 90 degrees");
-                      static_cast<QDial *>(line_edit)->setRange(0, 360);
-                      static_cast<QDial *>(line_edit)->setWrapping(true);
-                      static_cast<QDial *>(line_edit)->setInvertedAppearance(true);
-                      static_cast<QDial *>(line_edit)->setValue(90 + DIAL_OFFSET);
-                      line_edit->setFixedSize(40, 40);
-                      static_cast<QDial *>(line_edit)->setNotchesVisible(true);
-                      static_cast<QDial *>(line_edit)->setNotchTarget(15);
+
+                      static_cast<QLineEdit *>(line_edit)->setPlaceholderText(QString::number(90, 'f', 2));
+                      line_edit->setMaximumWidth(50);
                     }
                   else if (attr_name == "char_up_y")
                     {
@@ -1525,21 +1576,58 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       line_edit->setToolTip(tooltip_string);
                       static_cast<QLineEdit *>(line_edit)->setText("");
                     }
-                  if (attr_name == "char_up_x")
-                    {
-                      text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("text angle");
-                      tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
-                    }
-                  else
-                    {
-                      text_label =
-                          QString("<span style='color:#ff0000;'>%1</span>").arg(attrNameToLabel(attr_name).c_str());
-                    }
+                  text_label =
+                      QString("<span style='color:#ff0000;'>%1</span>").arg(attrNameToLabel(attr_name).c_str());
                   auto label = new QLabel(text_label, this);
                   label->setFixedWidth(LABEL_WIDTH);
                   label->setWordWrap(true);
                   label->setToolTip(tooltip_string);
-                  if (highlight_location && attr_name == "location")
+
+                  if (attr_name == "char_up_x")
+                    {
+                      auto widget = new QWidget(this);
+                      auto grid_layout = new QGridLayout();
+
+                      text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("text angle");
+                      tooltip_string = QString("The rotation of the text defined by an angle. Default: 90 degrees");
+
+                      auto dial = new QDial(this);
+                      dial->setRange(0, 360);
+                      dial->setWrapping(true);
+                      dial->setInvertedAppearance(true);
+                      dial->setValue(90 + DIAL_OFFSET);
+                      dial->setFixedSize(40, 40);
+                      dial->setNotchesVisible(true);
+                      dial->setNotchTarget(15);
+                      dial->setPageStep(15);
+
+                      grid_layout->addWidget(line_edit, 0, 1);
+                      grid_layout->addWidget(dial, 0, 0);
+                      grid_layout->setContentsMargins(0, 0, 0, 0);
+                      grid_layout->setSpacing(10);
+                      widget->setLayout(grid_layout);
+                      widget->setContentsMargins(0, 0, 0, 0);
+
+                      connect(dial, &QSlider::valueChanged, this, [=] {
+                        double val = dial->value();
+                        val = qRound((val - 0) / static_cast<double>(179 - 0) * (270 - 90) + 270) % 360;
+                        val = int((static_cast<int>(val) % 15 >= 7) ? (val / 15 + 1) : (val / 15)) * 15;
+                        if (!dial_text_changed)
+                          {
+                            static_cast<QLineEdit *>(line_edit)->setText(QString::number(val - DIAL_OFFSET, 'f', 2));
+                            static_cast<QLineEdit *>(line_edit)->setModified(true);
+                          }
+                        dial_text_changed = false;
+                      });
+                      connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=] {
+                        double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
+                        dial_text_changed = true;
+                        dial->setValue(val + DIAL_OFFSET);
+                      });
+                      form->addRow(text_label, widget);
+                      label->clear();
+                    }
+                  else if (highlight_location && attr_name == "location")
                     {
                       text_label = QString("<span style='color:#0000ff;'>%1</span>").arg(attr_name.c_str());
                       label = new QLabel(text_label, this);
@@ -1736,6 +1824,15 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                           tick_label_modification_added = true;
                         }
 
+                      if (attr_name == "scientific_format")
+                        {
+                          line_edit->setFixedWidth(120);
+#if QT_VERSION >= 0x060000
+                          connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                                  [=]() { openTextPreview(); });
+#endif
+                        }
+
                       if (tick_label_modification_added)
                         {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -1812,21 +1909,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       else if (attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
                                attr_name == "z_label_3d" || attr_name == "tick_label")
                         {
-                          auto widget = new QWidget(this);
-                          auto grid_layout = new QGridLayout();
-                          auto button = new QPushButton(this);
-                          connect(button, SIGNAL(clicked()), this, SLOT(openTextPreview()));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-                          button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
-#else
-                          button->setText("Preview");
+#if QT_VERSION >= 0x060000
+                          connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this,
+                                  [=]() { openTextPreview(); });
 #endif
-                          grid_layout->addWidget(label, 0, 0, 1, 2);
-                          grid_layout->addWidget(line_edit, 0, 2, 1, 2);
-                          button->setFixedWidth(30);
-                          grid_layout->addWidget(button, 0, 4);
-                          widget->setLayout(grid_layout);
-                          form->addRow(widget);
+                          form->addRow(label, line_edit);
                         }
                       else if (attr_name == "ambient" || attr_name == "diffuse" || attr_name == "specular" ||
                                attr_name == "specular_power")
@@ -2019,6 +2106,15 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                   grplot_widget->advancedAttributeComboBoxHandler(
                                       attr_name, (*current_selection)->getRef()->localName(), &line_edit);
                                   line_edit->setToolTip(tooltip_string);
+
+                                  if (attr_name == "scientific_format")
+                                    {
+                                      line_edit->setFixedWidth(120);
+#if QT_VERSION >= 0x060000
+                                      connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged,
+                                              this, [=]() { openTextPreview(); });
+#endif
+                                    }
                                 }
                               else if (check_box_attr.contains(attr_name.c_str()))
                                 {
@@ -2124,6 +2220,12 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                       form->addRow(text_modification);
                                       text_modification_added = true;
                                     }
+
+#if QT_VERSION >= 0x060000
+                                  if (attr_name == "font_precision")
+                                    connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
+                                            [=]() { openTextPreview(); });
+#endif
 
                                   if (text_modification_added) text_modification_form->addRow(label, line_edit);
                                 }
@@ -2636,7 +2738,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
   scroll_area_content->setLayout(form);
 
   auto scroll_area = new QScrollArea;
-  scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
   scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
   scroll_area->setWidgetResizable(true);
   scroll_area->setWidget(scroll_area_content);
@@ -2651,6 +2753,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 void EditElementWidget::reject()
 {
   grplot_widget->setTreeUpdate(false);
+  grplot_widget->getHideTextPreviewAct()->trigger();
   fields.clear();
   labels.clear();
   attr_type.clear();
@@ -2711,79 +2814,96 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
         {
           if (static_cast<QLineEdit *>(fields[i])->isModified())
             {
-              auto name = static_cast<std::string>(current_selection->getAttribute("name"));
-              if (static_cast<QLineEdit *>(fields[i])->text().toStdString().empty() && attr_name != "tick_label" &&
-                  attr_name != "text")
+              if (labels[i].toStdString() == "text angle")
                 {
-                  /* remove attributes from tree when the value got removed */
-                  current_selection->removeAttribute(attr_name);
-                  if (current_selection->hasAttribute("_" + attr_name + "_set_by_user"))
-                    current_selection->removeAttribute("_" + attr_name + "_set_by_user");
+                  bool update;
+                  auto render = grm_get_render();
+                  auto val = static_cast<QLineEdit *>(fields[i])->text().toDouble();
+                  render->getAutoUpdate(&update);
+                  render->setAutoUpdate(false);
+                  current_selection->setAttribute("char_up_x", std::cos(val * M_PI / 180.0));
+                  render->setAutoUpdate(update);
+                  current_selection->setAttribute("char_up_y", std::sin(val * M_PI / 180.0));
                 }
               else
                 {
-                  if (attr_name == "text")
+                  auto name = static_cast<std::string>(current_selection->getAttribute("name"));
+                  if (static_cast<QLineEdit *>(fields[i])->text().toStdString().empty() && attr_name != "tick_label" &&
+                      attr_name != "text")
                     {
-                      const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
-                      if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                          !util::isDigits(value))
-                        {
-                          if (current_selection->parentElement()->localName() == "text_region")
-                            {
-                              current_selection->parentElement()->parentElement()->setAttribute("text_content", value);
-                            }
-                          else if (name == "xlabel" || name == "ylabel")
-                            {
-                              current_selection->parentElement()->parentElement()->querySelectors(name)->setAttribute(
-                                  name, value);
-                            }
-                        }
-                      else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
-                        {
-                          current_selection->parentElement()->setAttribute(attr_name, std::stod(value));
-                        }
-                      else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
-                               util::isDigits(value))
-                        {
-                          current_selection->parentElement()->setAttribute(attr_name, std::stoi(value));
-                        }
+                      /* remove attributes from tree when the value got removed */
+                      current_selection->removeAttribute(attr_name);
+                      if (current_selection->hasAttribute("_" + attr_name + "_set_by_user"))
+                        current_selection->removeAttribute("_" + attr_name + "_set_by_user");
                     }
-                  if (attr_name == "Colorrep-index")
+                  else
                     {
-                      /* special case for colorrep attribute */
-                      current_selection->setAttribute("colorrep." +
-                                                          static_cast<QLineEdit *>(fields[i])->text().toStdString(),
-                                                      static_cast<QLineEdit *>(fields[i + 1])->text().toStdString());
-                    }
-                  else if (attr_name != "Colorrep-value")
-                    {
-                      const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
-                      if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                          !util::isDigits(value))
+                      if (attr_name == "text")
                         {
-                          current_selection->setAttribute(attr_name, value);
+                          const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
+                          if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                              !util::isDigits(value))
+                            {
+                              if (current_selection->parentElement()->localName() == "text_region")
+                                {
+                                  current_selection->parentElement()->parentElement()->setAttribute("text_content",
+                                                                                                    value);
+                                }
+                              else if (name == "xlabel" || name == "ylabel")
+                                {
+                                  current_selection->parentElement()
+                                      ->parentElement()
+                                      ->querySelectors(name)
+                                      ->setAttribute(name, value);
+                                }
+                            }
+                          else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                            {
+                              current_selection->parentElement()->setAttribute(attr_name, std::stod(value));
+                            }
+                          else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
+                                   util::isDigits(value))
+                            {
+                              current_selection->parentElement()->setAttribute(attr_name, std::stoi(value));
+                            }
                         }
-                      else if (attr_type[attr_name] == "xs:string" &&
-                               (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
-                                attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
-                                attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
-                                attr_name == "z_label_3d"))
+                      if (attr_name == "Colorrep-index")
                         {
-                          current_selection->setAttribute(attr_name, value);
+                          /* special case for colorrep attribute */
+                          current_selection->setAttribute(
+                              "colorrep." + static_cast<QLineEdit *>(fields[i])->text().toStdString(),
+                              static_cast<QLineEdit *>(fields[i + 1])->text().toStdString());
                         }
-                      else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                      else if (attr_name != "Colorrep-value")
                         {
-                          current_selection->setAttribute(attr_name, std::stod(value));
-                        }
-                      else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
-                               util::isDigits(value))
-                        {
-                          current_selection->setAttribute(attr_name, std::stoi(value));
-                        }
-                      else
-                        {
-                          fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
-                                  attr_name.c_str(), attr_type[attr_name].c_str());
+                          const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
+                          if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                              !util::isDigits(value))
+                            {
+                              current_selection->setAttribute(attr_name, value);
+                            }
+                          else if (attr_type[attr_name] == "xs:string" &&
+                                   (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
+                                    attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
+                                    attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
+                                    attr_name == "z_label_3d"))
+                            {
+                              current_selection->setAttribute(attr_name, value);
+                            }
+                          else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                            {
+                              current_selection->setAttribute(attr_name, std::stod(value));
+                            }
+                          else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
+                                   util::isDigits(value))
+                            {
+                              current_selection->setAttribute(attr_name, std::stoi(value));
+                            }
+                          else
+                            {
+                              fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
+                                      attr_name.c_str(), attr_type[attr_name].c_str());
+                            }
                         }
                     }
                 }
@@ -2822,21 +2942,7 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
       else if (typeid(field) == typeid(QDial))
         {
           auto val = static_cast<QDial *>(fields[i])->value();
-          if (labels[i].toStdString() == "text angle")
-            {
-              bool update;
-              auto render = grm_get_render();
-              val = ((val % 15 >= 7) ? (val / 15 + 1) : (val / 15)) * 15;
-              render->getAutoUpdate(&update);
-              render->setAutoUpdate(false);
-              current_selection->setAttribute("char_up_x", std::cos((val - DIAL_OFFSET) * M_PI / 180.0));
-              render->setAutoUpdate(update);
-              current_selection->setAttribute("char_up_y", std::sin((val - DIAL_OFFSET) * M_PI / 180.0));
-            }
-          else
-            {
-              current_selection->setAttribute(attr_name, val);
-            }
+          current_selection->setAttribute(attr_name, val);
         }
     }
   return highlight_location;
@@ -2888,6 +2994,7 @@ void EditElementWidget::colorIndexSlot()
   auto current_selection = grplot_widget->getCurrentSelection();
   auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attribute_name));
   grplot_widget->colorIndexPopUp(attribute_name, index, (*current_selection)->getRef());
+  openTextPreview();
 }
 
 void EditElementWidget::colorRGBSlot()
@@ -4050,7 +4157,7 @@ void EditElementWidget::openTextPreview()
   if (auto current_selection = grplot_widget->getCurrentSelection(); current_selection != nullptr)
     {
       std::string text;
-      int text_color = 1, scientific_format = 1;
+      int text_color = 1, scientific_format = 1, font_precision = 3;
 
       for (const auto &attr : {"text", "x_label_3d", "y_label_3d", "z_label_3d", "tick_label"})
         {
@@ -4065,6 +4172,9 @@ void EditElementWidget::openTextPreview()
 
       if ((*current_selection)->getRef()->hasAttribute("scientific_format"))
         scientific_format = static_cast<int>((*current_selection)->getRef()->getAttribute("scientific_format"));
+
+      if ((*current_selection)->getRef()->hasAttribute("font_precision"))
+        font_precision = static_cast<int>((*current_selection)->getRef()->getAttribute("font_precision"));
 
       for (int i = 0; i < labels.count(); i++)
         {
@@ -4119,6 +4229,6 @@ void EditElementWidget::openTextPreview()
               height = tmp;
             }
         }
-      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, width, height);
+      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, width, height);
     }
 }
