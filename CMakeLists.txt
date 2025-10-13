@@ -680,6 +680,7 @@ foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   if(WIN32)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} ws2_32)
   endif()
+  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Libpng::Libpng)
   target_include_directories(
     ${LIBRARY}
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/include/>

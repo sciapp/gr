@@ -41,7 +41,7 @@ GRM_EXPORT int grm_merge_named(const grm_args_t *args, const char *identificator
 GRM_EXPORT int grm_plot(const grm_args_t *args);
 GRM_EXPORT int grm_render(void);
 GRM_EXPORT int grm_process_tree(void);
-GRM_EXPORT int grm_export(const char *file_path);
+GRM_EXPORT int grm_export(const char *file_path, int export_xml);
 GRM_EXPORT int grm_switch(unsigned int id);
 GRM_EXPORT int grm_get_error_code();
 

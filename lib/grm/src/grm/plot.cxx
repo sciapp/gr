@@ -28,6 +28,7 @@ extern "C" {
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
+#include <png.h>
 
 #include "base64_int.h"
 #include <grm/dump.h>
@@ -41,6 +42,12 @@ extern "C" {
 #include "logging_int.h"
 }
 #include "utilcpp_int.hxx"
+
+// centos 7 system dependency uses libpng15 which doesn't have the restricted pointers
+#if PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR <= 5
+typedef png_structp png_structrp;
+typedef png_infop png_inforp;
+#endif
 
 #ifndef NO_XERCES_C
 #include <xercesc/sax/InputSource.hpp>
@@ -5265,7 +5272,62 @@ private:
 class FileBinInputStream : public BinInputStream
 {
 public:
-  explicit FileBinInputStream(FILE *file) : file_(file) {}
+  explicit FileBinInputStream(FILE *file)
+  {
+    unsigned char sig[8];
+    fread(sig, 1, 8, file);
+    if (png_sig_cmp(sig, 0, 8) == 0)
+      {
+        std::string save_file_name;
+
+        rewind(file); // reset the file pointer so that png_read_png doesn't crash
+        png_structrp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp) nullptr, nullptr, nullptr);
+        if (png_ptr == nullptr)
+          {
+            fclose(file);
+            fprintf(stderr, "Error while creating png_ptr.\n");
+            exit(1);
+          }
+
+        png_inforp info_ptr = png_create_info_struct(png_ptr);
+        if (info_ptr == nullptr)
+          {
+            fclose(file);
+            fprintf(stderr, "Error while creating info_ptr.\n");
+            png_destroy_read_struct((png_structpp)&png_ptr, nullptr, nullptr);
+            exit(1);
+          }
+        png_init_io(png_ptr, file);
+        png_read_png(png_ptr, info_ptr, 0, nullptr);
+
+        // read png text
+        int num_text;
+        png_textp text;
+
+        png_get_text(png_ptr, info_ptr, &text, &num_text);
+        fclose(file);
+
+        if (num_text == 0)
+          {
+            fprintf(stderr, "File is missing xml-data.\n");
+            return;
+          }
+        else
+          {
+            save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+            if (save_file_name.empty()) return;
+            std::ofstream save_file_stream(save_file_name);
+            save_file_stream << text[num_text - 1].text << std::endl;
+            save_file_stream.close();
+            file_ = fopen(save_file_name.c_str(), "rb");
+          }
+      }
+    else
+      {
+        rewind(file);
+        file_ = file;
+      }
+  }
 
   [[nodiscard]] XMLFilePos curPos() const override { return cur_pos_; }
 
@@ -6783,11 +6845,65 @@ int grm_process_tree(void)
   return 1;
 }
 
-int grm_export(const char *file_path)
+int grm_export(const char *file_path, int export_xml)
 {
   gr_beginprint(const_cast<char *>(file_path));
   int return_value = grm_plot(nullptr);
   gr_endprint();
+
+  if (export_xml)
+    {
+      png_inforp info_ptr;
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      auto fp = std::fopen(file_path, "rb");
+      if (fp != nullptr)
+        {
+          png_structrp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+          if (png_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating png_ptr.\n");
+              exit(1);
+            }
+
+          info_ptr = png_create_info_struct(png_ptr);
+          if (info_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating info_ptr.\n");
+              png_destroy_read_struct((png_structpp)&png_ptr, nullptr, nullptr);
+              exit(1);
+            }
+          png_init_io(png_ptr, fp);
+          png_read_png(png_ptr, info_ptr, 0, nullptr);
+          png_free_data(png_ptr, info_ptr, PNG_FREE_TEXT, -1);
+
+          fclose(fp);
+        }
+      fp = std::fopen(file_path, "wb");
+      if (fp != nullptr)
+        {
+          png_structrp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+          if (png_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating png_ptr.\n");
+              exit(1);
+            }
+
+          png_init_io(png_ptr, fp);
+
+          png_text t[1];
+
+          t[0].key = (char *)"XML File";
+          t[0].text = graphics_tree_str.get();
+          t[0].compression = PNG_TEXT_COMPRESSION_NONE;
+          png_set_text(png_ptr, info_ptr, t, 1);
+
+          png_write_png(png_ptr, info_ptr, 0, nullptr);
+          fclose(fp);
+        }
+    }
   return return_value;
 }
 
