@@ -363,7 +363,43 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   else
     {
       grm_args_push(args_, "keep_aspect_ratio", "i", 1);
-      if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
+
+      std::string file_name, optional_file;
+      for (int i = 1; i < argc; i++)
+        {
+          std::string token = argv[i];
+
+          /* parameter needed for import.cxx are handled differently than grm-parameters */
+          if (util::startsWith(token, "file:"))
+            {
+              file_name = token.substr(5, token.length() - 1);
+              break;
+            }
+          else if (i == 1 && (token.find(":") == std::string::npos || (token.find(":") == 1 && token.find('/') == 2)))
+            {
+              optional_file = token; /* it's only used, if no "file:" keyword was found */
+            }
+        }
+      if (file_name.empty()) file_name = optional_file;
+
+      if (util::endsWith(file_name, ".xml.png") || util::endsWith(file_name, ".xml"))
+        {
+#ifndef NO_XERCES_C
+          fprintf(stderr, "%s\n", file_name.c_str());
+          auto file = fopen(file_name.c_str(), "rb");
+          grm_load_graphics_tree(file);
+          redraw();
+#else
+          std::stringstream text_stream;
+          text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
+          QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+          return;
+#endif
+        }
+      else
+        {
+          if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
+        }
       if (test_mode)
         {
           test_commands_file = new QFile(test_commands);
@@ -1404,16 +1440,24 @@ void GRPlotWidget::draw()
 {
   if (!file_export.empty())
     {
-      std::string kind;
-      static char file[50];
+      if (file_export == "png" || file_export == "jpg" || file_export == "jpeg")
+        {
+          std::string kind;
+          static char file[50];
 
-      const auto global_root = grm_get_document_root();
-      if (auto plot_elem = global_root->querySelectorsAll("plot"); plot_elem.size() > 1)
-        kind = "multiplot";
+          const auto global_root = grm_get_document_root();
+          if (auto plot_elem = global_root->querySelectorsAll("plot"); plot_elem.size() > 1)
+            kind = "multiplot";
+          else
+            kind = static_cast<std::string>(plot_elem[0]->getAttribute("_kind"));
+          snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
+          grm_export(file, false);
+        }
       else
-        kind = static_cast<std::string>(plot_elem[0]->getAttribute("_kind"));
-      snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
-      grm_export(file);
+        {
+          grm_export(file_export.c_str(), true);
+        }
+      file_export.clear();
     }
   bool was_successful;
   if (!draw_called_at_least_once || in_listen_mode)
@@ -4449,7 +4493,7 @@ void GRPlotWidget::loadFileSlot()
     {
 #ifndef NO_XERCES_C
       std::string path =
-          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml.png)").toStdString();
       if (path.empty()) return;
 
       auto file = fopen(path.c_str(), "r");
@@ -4461,6 +4505,7 @@ void GRPlotWidget::loadFileSlot()
           return;
         }
       if (enable_editor) createHistoryElement();
+
       grm_load_graphics_tree(file);
       redraw();
       if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
@@ -4483,19 +4528,11 @@ void GRPlotWidget::saveFileSlot()
           return;
         }
       std::string save_file_name =
-          QFileDialog::getSaveFileName(this, "Save XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+          QFileDialog::getSaveFileName(this, "Save XML", QDir::homePath(), "XML files (*.xml.png)").toStdString();
       if (save_file_name.empty()) return;
-      std::ofstream save_file_stream(save_file_name);
-      if (!save_file_stream)
-        {
-          std::stringstream text_stream;
-          text_stream << "Could not save the graphics tree to the XML file \"" << save_file_name << "\".";
-          QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
-          return;
-        }
-      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
-      save_file_stream << graphics_tree_str.get() << std::endl;
-      save_file_stream.close();
+
+      file_export = save_file_name.c_str();
+      redraw();
     }
 }
 
