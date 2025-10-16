@@ -5404,10 +5404,11 @@ protected:
         grm_args_iter(internal_args.get()), argsIteratorDelete);
     grm_arg_t *arg;
     auto transformed_attribute_value = std::stringstream();
+    bool first_iteration = true;
     while ((arg = args_it->next(args_it.get())) != nullptr)
       {
         /* Check if there is already content in the string stream (after first iteration) */
-        if (transformed_attribute_value.rdbuf()->in_avail() > 0) transformed_attribute_value << " ";
+        if (!first_iteration) transformed_attribute_value << " ";
         transformed_attribute_value << arg->key << "=" << attribute_delimiter;
         if (*arg->value_format)
           {
@@ -5455,6 +5456,7 @@ protected:
               }
           }
         transformed_attribute_value << attribute_delimiter;
+        first_iteration = false;
       }
 
     auto transformed_look_ahead_buffer = std::vector<char>();
