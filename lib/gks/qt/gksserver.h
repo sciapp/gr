@@ -25,12 +25,15 @@ struct SocketFunction
 };
 
 
+class GKSServer;
+
+
 class GKSConnection : public QObject
 {
   Q_OBJECT
 
 public:
-  GKSConnection(QTcpSocket *socket);
+  GKSConnection(QTcpSocket *socket, GKSServer &server);
   virtual ~GKSConnection();
   void newWidget();
 
@@ -47,6 +50,7 @@ signals:
 
 private:
   static unsigned int index;
+  GKSServer &server;
   unsigned int widget_index;
   static const int window_shift;
   QTcpSocket *socket;
@@ -64,6 +68,7 @@ class GKSServer : public QTcpServer
 public:
   GKSServer(QObject *parent = 0);
   virtual ~GKSServer();
+  bool has_multiple_connections();
 
 public slots:
   void connectSocket();

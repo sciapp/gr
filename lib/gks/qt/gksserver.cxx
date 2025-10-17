@@ -37,8 +37,8 @@ inline QRect &operator-=(QRect &rect, const QMargins &margins)
 #endif
 
 
-GKSConnection::GKSConnection(QTcpSocket *socket)
-    : socket(socket), widget(NULL), dl(NULL), dl_size(0), socket_function(SocketFunction::unknown)
+GKSConnection::GKSConnection(QTcpSocket *socket, GKSServer &server)
+    : server(server), socket(socket), widget(NULL), dl(NULL), dl_size(0), socket_function(SocketFunction::unknown)
 {
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
@@ -114,11 +114,22 @@ void GKSConnection::readClient()
           }
           break;
         case SocketFunction::close_window:
-          if (widget != NULL)
-            {
-              widget->close();
-            }
-          socket_function = SocketFunction::unknown;
+          {
+            bool is_last_connection = !server.has_multiple_connections();
+            if (is_last_connection)
+              {
+                // Prevent new connections from being accepted
+                server.close();
+              }
+            if (widget != NULL)
+              {
+                widget->close();
+              }
+            char reply[1]{static_cast<char>(is_last_connection ? 0 : SocketFunction::is_alive)};
+            socket->write(reply, sizeof(reply));
+            socket->flush();
+            socket_function = SocketFunction::unknown;
+          }
           break;
         case SocketFunction::inq_ws_state:
           {
@@ -284,10 +295,15 @@ GKSServer::~GKSServer()
     }
 }
 
+bool GKSServer::has_multiple_connections()
+{
+  return connections.size() > 1;
+}
+
 void GKSServer::connectSocket()
 {
   QTcpSocket *socket = this->nextPendingConnection();
-  GKSConnection *connection = new GKSConnection(socket);
+  GKSConnection *connection = new GKSConnection(socket, *this);
   connect(connection, SIGNAL(close(GKSConnection &)), this, SLOT(closeConnection(GKSConnection &)));
   connect(connection, SIGNAL(requestApplicationShutdown(GKSConnection &)), this,
           SLOT(closeConnection(GKSConnection &)));
