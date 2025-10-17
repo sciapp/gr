@@ -29,7 +29,7 @@
 #error "Unsupported system"
 #endif
 
-#include "util.hxx"
+#include "Util.hxx"
 
 namespace util
 {

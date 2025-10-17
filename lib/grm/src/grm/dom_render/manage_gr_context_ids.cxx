@@ -1,6 +1,6 @@
-#include "grm/dom_render/ManageGRContextIds.hxx"
+#include "grm/dom_render/manage_gr_context_ids.hxx"
 #include "gr.h"
-#include "grm/dom_render/GRMaxContextReachedError.hxx"
+#include "grm/dom_render/gr_max_context_reached_error.hxx"
 #include <string>
 
 void ManageGRContextIds::destroyGRContexts()

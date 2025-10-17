@@ -26,7 +26,7 @@
 #include <QStyle>
 #include <QIcon>
 
-#include "grplotWidget.hxx"
+#include "GRPlotWidget.hxx"
 
 #include <gks.h>
 

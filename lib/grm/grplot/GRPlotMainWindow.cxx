@@ -7,8 +7,8 @@
 #include <QScreen>
 #include <QGuiApplication>
 #endif
-#include "grplotMainwindow.hxx"
-#include "grplotDockWidget.hxx"
+#include "GRPlotMainWindow.hxx"
+#include "GRPlotDockWidget.hxx"
 
 const unsigned int MAXPATHLEN = 1024;
 const int LEFT_AREA_WIDTH = 300;

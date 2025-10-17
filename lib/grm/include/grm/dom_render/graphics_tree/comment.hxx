@@ -1,7 +1,7 @@
 #ifndef GRM_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
 #define GRM_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
 
-#include <grm/dom_render/graphics_tree/Node.hxx>
+#include <grm/dom_render/graphics_tree/node.hxx>
 #include <grm/util.h>
 
 namespace GRM

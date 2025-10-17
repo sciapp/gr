@@ -1,10 +1,10 @@
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
-#include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
+#include <grm/dom_render/graphics_tree/hierarchy_request_error.hxx>
 #include <iterator>
 #include <grm/utilcpp_int.hxx>
-#include <grm/dom_render/graphics_tree/TypeError.hxx>
+#include <grm/dom_render/graphics_tree/type_error.hxx>
 
 GRM::Element::Element(std::string local_name, const std::shared_ptr<GRM::Document> &owner_document)
     : GRM::Node(GRM::Node::Type::ELEMENT_NODE, owner_document), m_local_name(std::move(local_name))

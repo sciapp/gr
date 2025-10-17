@@ -1,8 +1,8 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
-#include <grm/dom_render/graphics_tree/Comment.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/TypeError.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
+#include <grm/dom_render/graphics_tree/comment.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/type_error.hxx>
 #include <sstream>
 #include <algorithm>
 #include <cmath>

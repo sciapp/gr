@@ -7,8 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <QApplication>
-#include "grplotMainwindow.hxx"
-#include "util.hxx"
+#include "GRPlotMainWindow.hxx"
+#include "Util.hxx"
 
 const unsigned int WIDTH = 600;
 const unsigned int HEIGHT = 450;
