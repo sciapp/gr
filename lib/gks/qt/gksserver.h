@@ -46,7 +46,6 @@ public slots:
 signals:
   void data(char *);
   void close(GKSConnection &connection);
-  void requestApplicationShutdown(GKSConnection &connection);
 
 private:
   static unsigned int index;

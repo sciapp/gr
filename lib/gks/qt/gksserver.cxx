@@ -305,8 +305,6 @@ void GKSServer::connectSocket()
   QTcpSocket *socket = this->nextPendingConnection();
   GKSConnection *connection = new GKSConnection(socket, *this);
   connect(connection, SIGNAL(close(GKSConnection &)), this, SLOT(closeConnection(GKSConnection &)));
-  connect(connection, SIGNAL(requestApplicationShutdown(GKSConnection &)), this,
-          SLOT(closeConnection(GKSConnection &)));
   connections.push_back(connection);
 }
 
