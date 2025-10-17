@@ -26,7 +26,7 @@
 #include <QStyle>
 #include <QIcon>
 
-#include "grplotWidget.hxx"
+#include "GRPlotWidget.hxx"
 
 #include <gks.h>
 
@@ -1789,7 +1789,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       painter.end();
       redraw_pixmap = RedrawType::NONE;
 
-      if (tree_widget != nullptr && tree_update) tree_widget->updateData(grm_get_document_root());
+      if (tree_widget != nullptr && tree_update && enable_editor) tree_widget->updateData(grm_get_document_root());
       if (mouse_move_triggered) collectTooltips();
       emit pixmapRedrawn();
     }

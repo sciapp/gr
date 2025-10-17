@@ -8,8 +8,8 @@
 #include <functional>
 
 #include <grm/dom_render/context.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
 #include <grm/util.h>

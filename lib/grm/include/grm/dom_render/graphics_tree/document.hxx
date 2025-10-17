@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 
-#include <grm/dom_render/graphics_tree/Node.hxx>
-#include <grm/dom_render/graphics_tree/Value.hxx>
+#include <grm/dom_render/graphics_tree/node.hxx>
+#include <grm/dom_render/graphics_tree/value.hxx>
 #include <grm/util.h>
 
 namespace GRM

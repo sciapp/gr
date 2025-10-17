@@ -3,7 +3,7 @@
 
 #include <QListWidget>
 class SelectionListWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 #include "CustomQListWidgetItem.hxx"
 
 

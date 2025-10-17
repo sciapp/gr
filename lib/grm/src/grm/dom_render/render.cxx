@@ -23,13 +23,13 @@
 #include <cmath>
 #include <cfloat>
 #include <climits>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
-#include <grm/dom_render/graphics_tree/Value.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
+#include <grm/dom_render/graphics_tree/value.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
-#include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/InvalidValueError.hxx>
+#include <grm/dom_render/not_found_error.hxx>
+#include <grm/dom_render/invalid_value_error.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -38,10 +38,10 @@
 #include "grm/plot_int.h"
 #include <cm.h>
 #include "grm/utilcpp_int.hxx"
-#include "grm/dom_render/ManageZIndex.hxx"
-#include "grm/dom_render/Drawable.hxx"
-#include "grm/dom_render/ManageGRContextIds.hxx"
-#include "grm/dom_render/ManageCustomColorIndex.hxx"
+#include "grm/dom_render/manage_z_index.hxx"
+#include "grm/dom_render/drawable.hxx"
+#include "grm/dom_render/manage_gr_context_ids.hxx"
+#include "grm/dom_render/manage_custom_color_index.hxx"
 extern "C" {
 #include "grm/datatype/string_map_int.h"
 }
@@ -204,7 +204,6 @@ static std::set<std::string> valid_context_attributes = {"abs_downwards_e",
                                                          "v",
                                                          "weights",
                                                          "x",
-                                                         "x_dummy",
                                                          "y",
                                                          "y_labels",
                                                          "z",
@@ -5029,9 +5028,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
         {
           for (const auto &series : side_region->querySelectors("side_plot_region")->children())
             {
-              // when processing all elements the first side_region has a series with xi while the second side_regions
-              // wasn't processed yet so the series doesn't has the xi attribute; so we skip this side_region/series
-              if (!series->hasAttribute("x_dummy")) continue;
+              if (!series->hasAttribute("x")) continue;
               int i, x_offset = 0, y_offset = 0;
               auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
               auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
@@ -5073,11 +5070,10 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
 
               auto z = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("z"))]);
               auto y = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("y"))]);
-              auto xi =
-                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(series->getAttribute("x_dummy"))]);
               auto x = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("x"))]);
               auto y_length = static_cast<int>(y.size());
-              auto x_length = static_cast<int>(xi.size());
+              auto x_length = static_cast<int>(x.size());
+              auto y_dummy = std::vector<double>(((location == "right") ? (y_length - y_offset) : x_length), 0);
 
               if (plot_group->hasAttribute("x_log") && static_cast<int>(plot_group->getAttribute("x_log")))
                 x_offset = static_cast<int>(x.size()) - x_length;
@@ -5094,24 +5090,23 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                 {
                   if (location == "right")
                     {
-                      y[i] = std::isnan(z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)])
-                                 ? 0
-                                 : z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)];
-                      y_max = grm_max(y_max, y[i]);
+                      y_dummy[i] = std::isnan(z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)])
+                                       ? 0
+                                       : z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)];
+                      y_max = grm_max(y_max, y_dummy[i]);
                     }
                   else
                     {
-                      y[i] = std::isnan(z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)])
-                                 ? 0
-                                 : z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)];
-                      y_max = grm_max(y_max, y[i]);
+                      y_dummy[i] = std::isnan(z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)])
+                                       ? 0
+                                       : z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)];
+                      y_max = grm_max(y_max, y_dummy[i]);
                     }
                 }
               for (i = 0; i < ((location == "right") ? (y_length - y_offset) : x_length); i++)
                 {
                   // + 0.01 and + 0.5 to prevent line clipping, gathered through testing
-                  y[i] = (y[i] / y_max + 0.01) * (c_max / (15 + 0.5));
-                  xi[i] = x[i + x_offset] + ((location == "right") ? ymin : xmin);
+                  y_dummy[i] = (y_dummy[i] / y_max + 0.01) * (c_max / (15 + 0.5));
                 }
 
               double x_pos, y_pos;
@@ -5126,13 +5121,13 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                       x_step_boundaries[0] + int(i / 2) * ((location == "right") ? (ymax - ymin) : (xmax - xmin)) / len;
                 }
               x_step_boundaries[2 * len - 1] = (location == "right") ? ymax : xmax;
-              y_step_values[0] = y[0];
+              y_step_values[0] = y_dummy[0];
               for (i = 2; i < 2 * len; i += 2)
                 {
-                  y_step_values[i - 1] = y[i / 2 - 1];
-                  y_step_values[i] = y[i / 2];
+                  y_step_values[i - 1] = y_dummy[i / 2 - 1];
+                  y_step_values[i] = y_dummy[i / 2];
                 }
-              y_step_values[2 * len - 1] = y[len - 1];
+              y_step_values[2 * len - 1] = y_dummy[len - 1];
 
               auto id = static_cast<int>(global_root->getAttribute("_id"));
               global_root->setAttribute("_id", id + 1);
@@ -5146,7 +5141,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                       line_elem =
                           global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
                       x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
-                      y_pos = y[y_ind];
+                      y_pos = y_dummy[y_ind];
                       marker_elem = global_render->createPolymarker(y_pos, x_pos);
                     }
                   else
@@ -5154,7 +5149,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                       line_elem =
                           global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
                       x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
-                      y_pos = y[x_ind];
+                      y_pos = y_dummy[x_ind];
                       marker_elem = global_render->createPolymarker(x_pos, y_pos);
                     }
 
@@ -5164,9 +5159,9 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                     global_render->setMarkerColorInd(marker_elem, 2);
                   if (!marker_elem->hasAttribute("_marker_type_set_by_user"))
                     global_render->setMarkerType(marker_elem, -1);
-                  global_render->setMarkerSize(marker_elem,
-                                               1.5 * (len / ((location == "right") ? (marker_y_max - marker_y_min)
-                                                                                   : (marker_x_max - marker_x_min))));
+                  auto marker_size = 1.5 * (len / ((location == "right") ? (marker_y_max - marker_y_min)
+                                                                         : (marker_x_max - marker_x_min)));
+                  global_render->setMarkerSize(marker_elem, grm_min(marker_size, 2));
 
                   marker_elem->setAttribute("name", "marginal line");
                   line_elem->setAttribute("name", "marginal line");
@@ -5200,20 +5195,20 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                           if (location == "right")
                             {
                               x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
-                              y_pos = y[y_ind];
+                              y_pos = y_dummy[y_ind];
                               child->setAttribute("x", y_pos);
                               child->setAttribute("y", x_pos);
                             }
                           else
                             {
                               x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
-                              y_pos = y[x_ind];
+                              y_pos = y_dummy[x_ind];
                               child->setAttribute("x", x_pos);
                               child->setAttribute("y", y_pos);
                             }
-                          global_render->setMarkerSize(
-                              child, 1.5 * (len / ((location == "right") ? (marker_y_max - marker_y_min)
-                                                                         : (marker_x_max - marker_x_min))));
+                          auto marker_size = 1.5 * (len / ((location == "right") ? (marker_y_max - marker_y_min)
+                                                                                 : (marker_x_max - marker_x_min)));
+                          global_render->setMarkerSize(child, grm_min(marker_size, 2));
                         }
                     }
                 }
@@ -7998,13 +7993,10 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
     {
       x_min = static_cast<double>(element->getAttribute("x_range_min"));
       x_max = static_cast<double>(element->getAttribute("x_range_max"));
-      if (!element->hasAttribute("bar_width"))
-        {
-          bar_width = (x_max - x_min) / (y_length - 1.0);
-          bar_shift = (x_max - x_min) / (y_length - 1.0);
-          x_min -= 1; // in the later calculation there is always a +1 in combination with x
-          wfac = 0.9 * bar_width;
-        }
+      if (!element->hasAttribute("bar_width")) bar_width = (x_max - x_min) / (y_length - 1.0);
+      bar_shift = (x_max - x_min) / (y_length - 1.0);
+      x_min -= 1; // in the later calculation there is always a +1 in combination with x
+      wfac = 0.9 * (x_max - x_min) / (y_length - 1.0);
     }
   if (style != "stacked" && element->hasAttribute("y_range_min"))
     y_min = static_cast<double>(element->getAttribute("y_range_min"));
@@ -14659,10 +14651,6 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
             }
         }
 
-      std::vector<double> xi_vec((is_vertical ? y_length - y_offset : x_length - x_offset));
-      (*context)["x_dummy" + str] = xi_vec;
-      element->setAttribute("x_dummy", "x_dummy" + str);
-
       processMarginalHeatmapSidePlot(element->parentElement()->parentElement());
       processMarginalHeatmapKind(element_context);
     }
@@ -15428,7 +15416,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
   num_bins_x -= x_offset;
 
   auto y = static_cast<std::string>(element->getAttribute("y"));
-  auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  auto y_vec = std::vector<double>(GRM::get<std::vector<double>>((*context)[y]));
   num_bins_y = y_vec.size();
   if (plot_parent->hasAttribute("y_log") && static_cast<int>(plot_parent->getAttribute("y_log")))
     {
@@ -15458,7 +15446,7 @@ static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &elem
     }
   else
     {
-      heatmap = element->querySelectors("series_heatmap[_child_id=" + std::to_string(child_id++) + "]");
+      heatmap = element->querySelectors("series_heatmap[_child_id=\"" + std::to_string(child_id++) + "\"]");
     }
 
   // for validation
@@ -19859,7 +19847,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("x"), std::vector<std::string>{"None", "References the x-values stored in the context"}},
       {std::string("x_bins"), std::vector<std::string>{"1200", "Bins in x direction"}},
       {std::string("x_dim"), std::vector<std::string>{"None", "The dimension of the x-values"}},
-      {std::string("x_dummy"), std::vector<std::string>{"None", "References the x dummy-values stored in the context"}},
       {std::string("x_flip"), std::vector<std::string>{"0", "Determines whether the x axis should be flipped"}},
       {std::string("x_grid"), std::vector<std::string>{"1", "Determines whether a x grid is shown"}},
       {std::string("x_ind"),

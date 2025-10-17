@@ -1246,7 +1246,6 @@
             <xs:attribute name="label" type="xs:string"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="x_dummy" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>

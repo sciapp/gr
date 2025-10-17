@@ -6,7 +6,7 @@
 #include <QDialog>
 #include "grm.h"
 class ColorPickerRGB;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 class ColorPickerRGB : public QDialog
 {

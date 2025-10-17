@@ -1,4 +1,4 @@
-#include "grplotDockWidget.hxx"
+#include "GRPlotDockWidget.hxx"
 
 GRPlotDockWidget::GRPlotDockWidget(const QString &title, int width, int height, GRPlotMainWindow *parent)
     : QDockWidget(parent), parent(parent)

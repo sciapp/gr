@@ -3,8 +3,8 @@
 #include <variant>
 #include <vector>
 
-#include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/TypeError.hxx>
+#include <grm/dom_render/not_found_error.hxx>
+#include <grm/dom_render/type_error.hxx>
 #include <grm/dom_render/context.hxx>
 
 
@@ -205,7 +205,6 @@ GRM::Context::Inner::operator const std::vector<int> *() const
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
-
 
 GRM::Context::Inner::operator std::vector<double> *()
 {

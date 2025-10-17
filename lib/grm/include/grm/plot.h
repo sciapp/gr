@@ -16,7 +16,7 @@ extern "C" {
 }
 
 /* clang-format off */
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include <grm/dom_render/render.hxx>
 /* clang-format on */
 

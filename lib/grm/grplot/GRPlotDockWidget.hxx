@@ -4,7 +4,7 @@
 #include <QDockWidget>
 
 class GRPlotMainWindow;
-#include "grplotMainwindow.hxx"
+#include "GRPlotMainWindow.hxx"
 
 class GRPlotDockWidget : public QDockWidget
 {

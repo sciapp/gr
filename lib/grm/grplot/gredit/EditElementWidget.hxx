@@ -1,7 +1,7 @@
 #ifndef EDITELEMENTWIDGET_H
 #define EDITELEMENTWIDGET_H
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include <QWidget>
 #include <QScrollArea>
 #include <QLineEdit>
@@ -17,7 +17,7 @@
 #include "grm.h"
 
 class EditElementWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class EditElementWidget : public QWidget
