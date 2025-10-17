@@ -5,7 +5,7 @@
 #include <utility>
 
 class TableWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 class TableWidget : public QTableWidget
 {

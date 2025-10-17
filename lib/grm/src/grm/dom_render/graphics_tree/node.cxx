@@ -1,9 +1,9 @@
-#include <grm/dom_render/graphics_tree/Node.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
-#include <grm/dom_render/graphics_tree/NotFoundError.hxx>
-#include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
-#include <grm/dom_render/graphics_tree/TypeError.hxx>
+#include <grm/dom_render/graphics_tree/node.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
+#include <grm/dom_render/graphics_tree/not_found_error.hxx>
+#include <grm/dom_render/graphics_tree/hierarchy_request_error.hxx>
+#include <grm/dom_render/graphics_tree/type_error.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <algorithm>
 #include <map>

@@ -1,4 +1,4 @@
-#include "grm/dom_render/ManageCustomColorIndex.hxx"
+#include "grm/dom_render/manage_custom_color_index.hxx"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 

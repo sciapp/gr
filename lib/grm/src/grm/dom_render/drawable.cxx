@@ -1,4 +1,4 @@
-#include "grm/dom_render/Drawable.hxx"
+#include "grm/dom_render/drawable.hxx"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 

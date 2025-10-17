@@ -4,10 +4,10 @@
 #include <QTreeWidget>
 #include <utility>
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include "CustomTreeWidgetItem.hxx"
 class TreeWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class TreeWidget : public QTreeWidget

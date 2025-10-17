@@ -1,5 +1,5 @@
-#include <grm/dom_render/graphics_tree/Comment.hxx>
-#include <grm/dom_render/graphics_tree/IndexSizeError.hxx>
+#include <grm/dom_render/graphics_tree/comment.hxx>
+#include <grm/dom_render/graphics_tree/index_size_error.hxx>
 
 GRM::Comment::Comment(std::string data, const std::shared_ptr<GRM::Document> &owner_document)
     : GRM::Node(GRM::Node::Type::COMMENT_NODE, owner_document), m_data(std::move(data))

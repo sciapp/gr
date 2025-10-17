@@ -6,8 +6,8 @@
 #include <QCompleter>
 #include "AddElementWidget.hxx"
 #include "grm/dom_render/graphics_tree/util.hxx"
-#include "../util.hxx"
-#include "grm/dom_render/graphics_tree/NotFoundError.hxx"
+#include "../Util.hxx"
+#include "grm/dom_render/graphics_tree/not_found_error.hxx"
 
 AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {

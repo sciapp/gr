@@ -6,7 +6,7 @@
 #include <QListWidgetItem>
 #include <QListWidget>
 class CustomTreeWidgetItem;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class CustomQListWidgetItem : public QListWidgetItem

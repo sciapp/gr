@@ -5,7 +5,7 @@
 #include <QWidget>
 #include <QToolButton>
 class IconBarWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 class IconBarWidget : public QWidget
 {

@@ -1,9 +1,9 @@
-#include <grm/dom_render/graphics_tree/Document.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
-#include <grm/dom_render/graphics_tree/Comment.hxx>
-#include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
-#include <grm/dom_render/graphics_tree/NotSupportedError.hxx>
+#include <grm/dom_render/graphics_tree/comment.hxx>
+#include <grm/dom_render/graphics_tree/hierarchy_request_error.hxx>
+#include <grm/dom_render/graphics_tree/not_supported_error.hxx>
 
 static void (*render)() = nullptr;
 static void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;

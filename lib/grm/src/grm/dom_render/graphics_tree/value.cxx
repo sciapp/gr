@@ -1,4 +1,4 @@
-#include <grm/dom_render/graphics_tree/Value.hxx>
+#include <grm/dom_render/graphics_tree/value.hxx>
 #include <stdexcept>
 #include <limits>
 

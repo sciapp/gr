@@ -29,7 +29,7 @@ class GRPlotWidget;
 #include "gredit/IconBarWidget.hxx"
 #include "qtterm/Receiver.hxx"
 #include "qtterm/ArgsWrapper.hxx"
-#include "util.hxx"
+#include "Util.hxx"
 
 #include <grm.h>
 

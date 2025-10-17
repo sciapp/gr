@@ -23,13 +23,13 @@
 #include <cmath>
 #include <cfloat>
 #include <climits>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
-#include <grm/dom_render/graphics_tree/Value.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
+#include <grm/dom_render/graphics_tree/value.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
-#include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/InvalidValueError.hxx>
+#include <grm/dom_render/not_found_error.hxx>
+#include <grm/dom_render/invalid_value_error.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -38,10 +38,10 @@
 #include "grm/plot_int.h"
 #include <cm.h>
 #include "grm/utilcpp_int.hxx"
-#include "grm/dom_render/ManageZIndex.hxx"
-#include "grm/dom_render/Drawable.hxx"
-#include "grm/dom_render/ManageGRContextIds.hxx"
-#include "grm/dom_render/ManageCustomColorIndex.hxx"
+#include "grm/dom_render/manage_z_index.hxx"
+#include "grm/dom_render/drawable.hxx"
+#include "grm/dom_render/manage_gr_context_ids.hxx"
+#include "grm/dom_render/manage_custom_color_index.hxx"
 extern "C" {
 #include "grm/datatype/string_map_int.h"
 }
@@ -7998,13 +7998,10 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
     {
       x_min = static_cast<double>(element->getAttribute("x_range_min"));
       x_max = static_cast<double>(element->getAttribute("x_range_max"));
-      if (!element->hasAttribute("bar_width"))
-        {
-          bar_width = (x_max - x_min) / (y_length - 1.0);
-          bar_shift = (x_max - x_min) / (y_length - 1.0);
-          x_min -= 1; // in the later calculation there is always a +1 in combination with x
-          wfac = 0.9 * bar_width;
-        }
+      if (!element->hasAttribute("bar_width")) bar_width = (x_max - x_min) / (y_length - 1.0);
+      bar_shift = (x_max - x_min) / (y_length - 1.0);
+      x_min -= 1; // in the later calculation there is always a +1 in combination with x
+      wfac = 0.9 * (x_max - x_min) / (y_length - 1.0);
     }
   if (style != "stacked" && element->hasAttribute("y_range_min"))
     y_min = static_cast<double>(element->getAttribute("y_range_min"));

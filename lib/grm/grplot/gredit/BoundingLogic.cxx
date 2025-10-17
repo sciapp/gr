@@ -9,7 +9,7 @@
 
 #include "BoundingLogic.hxx"
 
-#include "../util.hxx"
+#include "../Util.hxx"
 
 #include <algorithm>
 #include <vector>

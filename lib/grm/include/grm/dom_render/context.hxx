@@ -10,8 +10,8 @@
 #include <variant>
 
 #include <grm/util.h>
-#include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/TypeError.hxx>
+#include <grm/dom_render/not_found_error.hxx>
+#include <grm/dom_render/type_error.hxx>
 
 namespace GRM
 {
