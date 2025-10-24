@@ -2606,6 +2606,8 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
           int x, y;
           getMousePos(event, &x, &y);
           auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
+          auto group_id = (*GRM::getGroupMask())(x, y);
+          qDebug() << "clicked object with id: " << group_id;
           if (cur_clicked.empty())
             {
               clicked.clear();
