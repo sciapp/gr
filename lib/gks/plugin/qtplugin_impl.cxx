@@ -3,10 +3,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <assert.h>
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <stack>
+#include <memory>
 #include <stack>
 
 #include <QtGlobal>
@@ -92,6 +95,536 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+class GroupMask
+{
+public:
+  GroupMask(int width, int height) : maskImage_(width, height, QImage::Format_ARGB32), maskPainter_(&maskImage_)
+  {
+    maskImage_.fill(Qt::transparent);
+    maskPainter_.setRenderHint(QPainter::Antialiasing, false);
+    maskPainter_.setRenderHint(QPainter::TextAntialiasing, false);
+    maskPainter_.setCompositionMode(QPainter::CompositionMode_Source);
+    auto font = maskPainter_.font();
+    font.setStyleStrategy(QFont::NoAntialias);
+    maskPainter_.setFont(font);
+  }
+
+  void id(unsigned int id)
+  {
+    auto pen = maskPainter_.pen();
+    // Use `| 0xFF000000` to set the alpha channel to 255.
+    pen.setColor(QColor::fromRgba(id | 0xFF000000));
+    maskPainter_.setPen(pen);
+    auto brush = maskPainter_.brush();
+    brush.setColor(QColor::fromRgba(id | 0xFF000000));
+    maskPainter_.setBrush(brush);
+  }
+
+  unsigned int id() const { return maskPainter_.pen().color().rgba() & 0x00FFFFFF; }
+
+  const unsigned int *pixels() const { return reinterpret_cast<const uint32_t *>(this->maskImage_.constBits()); }
+
+  unsigned int operator()(unsigned int x, unsigned int y) const
+  {
+    // Use `& 0x00FFFFFF` to remove the alpha channel which must always unequal zero in the image, otherwise Qt will
+    // use undesired alpha optimizations, effectively breaking the id storage in the mask.
+    return pixels()[y * maskImage_.width() + x] & 0x00FFFFFF;
+  }
+
+  bool hasPixel(unsigned int x, unsigned int y) const { return this->operator()(x, y) != 0; }
+
+  QPainter &painter() { return maskPainter_; }
+  const QPainter &painter() const { return maskPainter_; }
+
+  const QImage &image() const { return maskImage_; }
+
+  unsigned int width() const { return maskImage_.width(); }
+
+  unsigned int height() const { return maskImage_.height(); }
+
+  unsigned int *toCMask() const
+  {
+    unsigned int *cmask =
+        static_cast<unsigned int *>(malloc(maskImage_.width() * maskImage_.height() * sizeof(unsigned int)));
+    memcpy(cmask, pixels(), maskImage_.width() * maskImage_.height() * sizeof(unsigned int));
+    return cmask;
+  }
+
+private:
+  QImage maskImage_;
+  QPainter maskPainter_;
+};
+
+class PainterWithGroupMask
+{
+public:
+  explicit PainterWithGroupMask(QPainter &painter)
+      : painter_(painter), groupMask_(painter.device()->width(), painter.device()->height()),
+        maskPainter_(groupMask_.painter())
+  {
+  }
+
+  explicit PainterWithGroupMask(QPixmap &pixmap)
+      : ownedPainter_(new QPainter(&pixmap)), painter_(*ownedPainter_), groupMask_(pixmap.width(), pixmap.height()),
+        maskPainter_(groupMask_.painter())
+  {
+  }
+
+  void beginGroup(unsigned int id)
+  {
+    groupMask_.id(id);
+    groupStack_.push(id);
+  }
+
+  void endGroup()
+  {
+    groupStack_.pop();
+    groupMask_.id(groupStack_.empty() ? 0 : groupStack_.top());
+  }
+
+  bool hasOpenGroup() const { return !groupStack_.empty(); }
+
+  const GroupMask &groupMask() const { return groupMask_; }
+
+  // Wrapped QPainter methods start here:
+#define paint(method, ...)              \
+  do                                    \
+    {                                   \
+      maskPainter_.method(__VA_ARGS__); \
+      painter_.method(__VA_ARGS__);     \
+    }                                   \
+  while (0)
+#define paint_and_return(method, ...)      \
+  do                                       \
+    {                                      \
+      maskPainter_.method(__VA_ARGS__);    \
+      return painter_.method(__VA_ARGS__); \
+    }                                      \
+  while (0)
+
+
+  bool begin(QPaintDevice *paintDevice) { paint_and_return(begin, paintDevice); }
+  bool end() { paint_and_return(end); }
+  bool isActive() const { return painter_.isActive(); }
+  QPainter::CompositionMode compositionMode() { return painter_.compositionMode(); }
+  void setCompositionMode(QPainter::CompositionMode mode) { paint(setCompositionMode, mode); }
+
+  void setFont(const QFont &f) { paint(setFont, f); }
+
+  QFontMetrics fontMetrics() const { return painter_.fontMetrics(); }
+  QFontInfo fontInfo() const { return painter_.fontInfo(); }
+
+  const QPen &pen() const { return painter_.pen(); }
+  void setPen(const QColor &color)
+  {
+    painter_.setPen(color);
+    auto pen = painter_.pen();
+    pen.setColor(maskPainter_.pen().color());
+    maskPainter_.setPen(pen);
+  }
+  void setPen(const QPen &pen)
+  {
+    painter_.setPen(pen);
+    auto p(pen);
+    p.setColor(maskPainter_.pen().color());
+    maskPainter_.setPen(p);
+  }
+  void setPen(Qt::PenStyle style)
+  {
+    painter_.setPen(style);
+    auto pen = painter_.pen();
+    pen.setColor(maskPainter_.pen().color());
+    maskPainter_.setPen(pen);
+  }
+
+  const QBrush &brush() const { return painter_.brush(); }
+  void setBrush(const QBrush &brush)
+  {
+    painter_.setBrush(brush);
+    QBrush b(brush);
+    b.setColor(maskPainter_.brush().color());
+    maskPainter_.setBrush(b);
+  }
+  void setBrush(Qt::BrushStyle style)
+  {
+    painter_.setBrush(style);
+    auto brush = painter_.brush();
+    brush.setColor(maskPainter_.brush().color());
+    maskPainter_.setBrush(brush);
+  }
+  void setBrush(QColor color)
+  {
+    painter_.setBrush(color);
+    auto brush = painter_.brush();
+    brush.setColor(maskPainter_.brush().color());
+    maskPainter_.setBrush(brush);
+  }
+  void setBrush(Qt::GlobalColor color)
+  {
+    painter_.setBrush(color);
+    auto brush = painter_.brush();
+    brush.setColor(maskPainter_.brush().color());
+    maskPainter_.setBrush(brush);
+  }
+
+  Qt::BGMode backgroundMode() const { return painter_.backgroundMode(); }
+  void setBackgroundMode(Qt::BGMode mode) { paint(setBackgroundMode, mode); }
+
+  QPoint brushOrigin() const { return painter_.brushOrigin(); }
+  void setBrushOrigin(int x, int y) { paint(setBrushOrigin, x, y); }
+  void setBrushOrigin(const QPoint &p) { paint(setBrushOrigin, p); }
+  void setBrushOrigin(const QPointF &p) { paint(setBrushOrigin, p); }
+
+  const QBrush &background() const { return painter_.background(); }
+  void setBackground(const QBrush &bg) { paint(setBackground, bg); }
+
+  qreal opacity() const { return painter_.opacity(); }
+  void setOpacity(qreal opacity) { paint(setOpacity, opacity); }
+
+  void setClipRect(const QRectF &rect, Qt::ClipOperation op = Qt::ReplaceClip) { paint(setClipRect, rect, op); }
+  void setClipRect(const QRect &rect, Qt::ClipOperation op = Qt::ReplaceClip) { paint(setClipRect, rect, op); }
+  void setClipRect(int x, int y, int w, int h, Qt::ClipOperation op = Qt::ReplaceClip)
+  {
+    paint(setClipRect, x, y, w, h, op);
+  }
+
+  QRegion clipRegion() const { return painter_.clipRegion(); }
+  void setClipRegion(const QRegion &region, Qt::ClipOperation op = Qt::ReplaceClip)
+  {
+    paint(setClipRegion, region, op);
+  }
+
+  QPainterPath clipPath() const { return painter_.clipPath(); }
+  void setClipPath(const QPainterPath &path, Qt::ClipOperation op = Qt::ReplaceClip) { paint(setClipPath, path, op); }
+
+  bool hasClipping() const { return painter_.hasClipping(); }
+  void setClipping(bool enable) { paint(setClipping, enable); }
+  QRectF clipBoundingRect() const { return painter_.clipBoundingRect(); }
+
+  void save() { paint(save); }
+  void restore() { paint(restore); }
+
+  const QTransform &transform() const { return painter_.transform(); }
+  void setTransform(const QTransform &transform, bool combine = false) { paint(setTransform, transform, combine); }
+  void resetTransform() { paint(resetTransform); }
+
+  const QTransform &deviceTransform() const { return painter_.deviceTransform(); }
+  const QTransform &worldTransform() const { return painter_.worldTransform(); }
+  void setWorldTransform(const QTransform &matrix, bool combine = false) { paint(setWorldTransform, matrix, combine); }
+
+  QTransform combinedTransform() const { return painter_.combinedTransform(); }
+
+  bool worldMatrixEnabled() const { return painter_.worldMatrixEnabled(); }
+  void setWorldMatrixEnabled(bool enabled) { paint(setWorldMatrixEnabled, enabled); }
+
+  void scale(qreal sx, qreal sy) { paint(scale, sx, sy); }
+  void shear(qreal sh, qreal sv) { paint(shear, sh, sv); }
+  void rotate(qreal a) { paint(rotate, a); }
+
+  void translate(const QPointF &offset) { paint(translate, offset); }
+  void translate(const QPoint &offset) { paint(translate, offset); }
+  void translate(qreal dx, qreal dy) { paint(translate, dx, dy); }
+
+  QRect window() const { return painter_.window(); }
+  void setWindow(const QRect &window) { paint(setWindow, window); }
+  void setWindow(int x, int y, int w, int h) { paint(setWindow, x, y, w, h); }
+
+  QRect viewport() const { return painter_.viewport(); }
+  void setViewport(const QRect &viewport) { paint(setViewport, viewport); }
+  void setViewport(int x, int y, int w, int h) { paint(setViewport, x, y, w, h); }
+
+  bool viewTransformEnabled() const { return painter_.viewTransformEnabled(); }
+  void setViewTransformEnabled(bool enable) { paint(setViewTransformEnabled, enable); }
+
+  void strokePath(const QPainterPath &path, const QPen &pen) { paint(strokePath, path, pen); }
+  void fillPath(const QPainterPath &path, const QBrush &brush) { paint(fillPath, path, brush); }
+  void drawPath(const QPainterPath &path) { paint(drawPath, path); }
+
+  void drawPoint(const QPointF &pt) { paint(drawPoint, pt); }
+  void drawPoint(const QPoint &p) { paint(drawPoint, p); }
+  void drawPoint(int x, int y) { paint(drawPoint, x, y); }
+
+  void drawPoints(const QPointF *points, int pointCount) { paint(drawPoints, points, pointCount); }
+  void drawPoints(const QPolygonF &points) { paint(drawPoints, points); }
+  void drawPoints(const QPoint *points, int pointCount) { paint(drawPoints, points, pointCount); }
+  void drawPoints(const QPolygon &points) { paint(drawPoints, points); }
+
+  void drawLine(const QLineF &line) { paint(drawLine, line); }
+  void drawLine(const QLine &line) { paint(drawLine, line); }
+  void drawLine(int x1, int y1, int x2, int y2) { paint(drawLine, x1, y1, x2, y2); }
+  void drawLine(const QPoint &p1, const QPoint &p2) { paint(drawLine, p1, p2); }
+  void drawLine(const QPointF &p1, const QPointF &p2) { paint(drawLine, p1, p2); }
+
+  void drawLines(const QLineF *lines, int lineCount) { paint(drawLines, lines, lineCount); }
+  void drawLines(const QPointF *pointPairs, int lineCount) { paint(drawLines, pointPairs, lineCount); }
+  void drawLines(const QLine *lines, int lineCount) { paint(drawLines, lines, lineCount); }
+  void drawLines(const QPoint *pointPairs, int lineCount) { paint(drawLines, pointPairs, lineCount); }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  void drawLines(const QList<QLineF> &lines) { paint(drawLines, lines); }
+  void drawLines(const QList<QPointF> &pointPairs) { paint(drawLines, pointPairs); }
+  void drawLines(const QList<QLine> &lines) { paint(drawLines, lines); }
+  void drawLines(const QList<QPoint> &pointPairs) { paint(drawLines, pointPairs); }
+#endif
+
+  void drawRect(const QRectF &rect) { paint(drawRect, rect); }
+  void drawRect(int x1, int y1, int w, int h) { paint(drawRect, x1, y1, w, h); }
+  void drawRect(const QRect &rect) { paint(drawRect, rect); }
+
+  void drawRects(const QRectF *rects, int rectCount) { paint(drawRects, rects, rectCount); }
+  void drawRects(const QRect *rects, int rectCount) { paint(drawRects, rects, rectCount); }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  void drawRects(const QList<QRectF> &rectangles) { paint(drawRects, rectangles); }
+  void drawRects(const QList<QRect> &rectangles) { paint(drawRects, rectangles); }
+#endif
+
+  void drawEllipse(const QRectF &r) { paint(drawEllipse, r); }
+  void drawEllipse(const QRect &r) { paint(drawEllipse, r); }
+  void drawEllipse(int x, int y, int w, int h) { paint(drawEllipse, x, y, w, h); }
+
+  void drawEllipse(const QPointF &center, qreal rx, qreal ry) { paint(drawEllipse, center, rx, ry); }
+  void drawEllipse(const QPoint &center, int rx, int ry) { paint(drawEllipse, center, rx, ry); }
+
+  void drawPolyline(const QPointF *points, int pointCount) { paint(drawPolyline, points, pointCount); }
+  void drawPolyline(const QPolygonF &polyline) { paint(drawPolyline, polyline); }
+  void drawPolyline(const QPoint *points, int pointCount) { paint(drawPolyline, points, pointCount); }
+  void drawPolyline(const QPolygon &polygon) { paint(drawPolyline, polygon); }
+
+  void drawPolygon(const QPointF *points, int pointCount, Qt::FillRule fillRule = Qt::OddEvenFill)
+  {
+    paint(drawPolygon, points, pointCount, fillRule);
+  }
+  void drawPolygon(const QPolygonF &polygon, Qt::FillRule fillRule = Qt::OddEvenFill)
+  {
+    paint(drawPolygon, polygon, fillRule);
+  }
+  void drawPolygon(const QPoint *points, int pointCount, Qt::FillRule fillRule = Qt::OddEvenFill)
+  {
+    paint(drawPolygon, points, pointCount, fillRule);
+  }
+  void drawPolygon(const QPolygon &polygon, Qt::FillRule fillRule = Qt::OddEvenFill)
+  {
+    paint(drawPolygon, polygon, fillRule);
+  }
+
+  void drawConvexPolygon(const QPointF *points, int pointCount) { paint(drawConvexPolygon, points, pointCount); }
+  void drawConvexPolygon(const QPolygonF &polygon) { paint(drawConvexPolygon, polygon); }
+  void drawConvexPolygon(const QPoint *points, int pointCount) { paint(drawConvexPolygon, points, pointCount); }
+  void drawConvexPolygon(const QPolygon &polygon) { paint(drawConvexPolygon, polygon); }
+
+  void drawArc(const QRectF &rect, int a, int alen) { paint(drawArc, rect, a, alen); }
+  void drawArc(const QRect &rect, int a, int alen) { paint(drawArc, rect, a, alen); }
+  void drawArc(int x, int y, int w, int h, int a, int alen) { paint(drawArc, x, y, w, h, a, alen); }
+
+  void drawPie(const QRectF &rect, int a, int alen) { paint(drawPie, rect, a, alen); }
+  void drawPie(int x, int y, int w, int h, int a, int alen) { paint(drawPie, x, y, w, h, a, alen); }
+  void drawPie(const QRect &rect, int a, int alen) { paint(drawPie, rect, a, alen); }
+
+  void drawChord(const QRectF &rect, int a, int alen) { paint(drawChord, rect, a, alen); }
+  void drawChord(int x, int y, int w, int h, int a, int alen) { paint(drawChord, x, y, w, h, a, alen); }
+  void drawChord(const QRect &rect, int a, int alen) { paint(drawChord, rect, a, alen); }
+
+  void drawRoundedRect(const QRectF &rect, qreal xRadius, qreal yRadius, Qt::SizeMode mode = Qt::AbsoluteSize)
+  {
+    paint(drawRoundedRect, rect, xRadius, yRadius, mode);
+  }
+  void drawRoundedRect(int x, int y, int w, int h, qreal xRadius, qreal yRadius, Qt::SizeMode mode = Qt::AbsoluteSize)
+  {
+    paint(drawRoundedRect, x, y, w, h, xRadius, yRadius, mode);
+  }
+  void drawRoundedRect(const QRect &rect, qreal xRadius, qreal yRadius, Qt::SizeMode mode = Qt::AbsoluteSize)
+  {
+    paint(drawRoundedRect, rect, xRadius, yRadius, mode);
+  }
+
+  void drawTiledPixmap(const QRectF &rect, const QPixmap &pm, const QPointF &offset = QPointF())
+  {
+    paint(drawTiledPixmap, rect, pm, offset);
+  }
+  void drawTiledPixmap(int x, int y, int w, int h, const QPixmap &pixmap, int sx = 0, int sy = 0)
+  {
+    paint(drawTiledPixmap, x, y, w, h, pixmap, sx, sy);
+  }
+  void drawTiledPixmap(const QRect &rect, const QPixmap &pixmap, const QPoint &offset = QPoint())
+  {
+    paint(drawTiledPixmap, rect, pixmap, offset);
+  }
+  void drawPicture(const QPointF &p, const QPicture &picture) { paint(drawPicture, p, picture); }
+  void drawPicture(int x, int y, const QPicture &picture) { paint(drawPicture, x, y, picture); }
+  void drawPicture(const QPoint &p, const QPicture &picture) { paint(drawPicture, p, picture); }
+
+  void drawPixmap(const QRectF &targetRect, const QPixmap &pixmap, const QRectF &sourceRect)
+  {
+    paint(drawPixmap, targetRect, pixmap, sourceRect);
+  }
+  void drawPixmap(const QRect &targetRect, const QPixmap &pixmap, const QRect &sourceRect)
+  {
+    paint(drawPixmap, targetRect, pixmap, sourceRect);
+  }
+  void drawPixmap(int x, int y, int w, int h, const QPixmap &pm, int sx, int sy, int sw, int sh)
+  {
+    paint(drawPixmap, x, y, w, h, pm, sx, sy, sw, sh);
+  }
+  void drawPixmap(int x, int y, const QPixmap &pm, int sx, int sy, int sw, int sh)
+  {
+    paint(drawPixmap, x, y, pm, sx, sy, sw, sh);
+  }
+  void drawPixmap(const QPointF &p, const QPixmap &pm, const QRectF &sr) { paint(drawPixmap, p, pm, sr); }
+  void drawPixmap(const QPoint &p, const QPixmap &pm, const QRect &sr) { paint(drawPixmap, p, pm, sr); }
+  void drawPixmap(const QPointF &p, const QPixmap &pm) { paint(drawPixmap, p, pm); }
+  void drawPixmap(const QPoint &p, const QPixmap &pm) { paint(drawPixmap, p, pm); }
+  void drawPixmap(int x, int y, const QPixmap &pm) { paint(drawPixmap, x, y, pm); }
+  void drawPixmap(const QRect &r, const QPixmap &pm) { paint(drawPixmap, r, pm); }
+  void drawPixmap(int x, int y, int w, int h, const QPixmap &pm) { paint(drawPixmap, x, y, w, h, pm); }
+
+  void drawPixmapFragments(const QPainter::PixmapFragment *fragments, int fragmentCount, const QPixmap &pixmap,
+                           QPainter::PixmapFragmentHints hints = QPainter::PixmapFragmentHints())
+  {
+    paint(drawPixmapFragments, fragments, fragmentCount, pixmap, hints);
+  }
+
+  void drawImage(const QRectF &targetRect, const QImage &image, const QRectF &sourceRect,
+                 Qt::ImageConversionFlags flags = Qt::AutoColor)
+  {
+    paint(drawImage, targetRect, image, sourceRect, flags);
+  }
+  void drawImage(const QRect &targetRect, const QImage &image, const QRect &sourceRect,
+                 Qt::ImageConversionFlags flags = Qt::AutoColor)
+  {
+    paint(drawImage, targetRect, image, sourceRect, flags);
+  }
+  void drawImage(const QPointF &p, const QImage &image, const QRectF &sr,
+                 Qt::ImageConversionFlags flags = Qt::AutoColor)
+  {
+    paint(drawImage, p, image, sr, flags);
+  }
+  void drawImage(const QPoint &p, const QImage &image, const QRect &sr, Qt::ImageConversionFlags flags = Qt::AutoColor)
+  {
+    paint(drawImage, p, image, sr, flags);
+  }
+  void drawImage(const QRectF &r, const QImage &image) { paint(drawImage, r, image); }
+  void drawImage(const QRect &r, const QImage &image) { paint(drawImage, r, image); }
+  void drawImage(const QPointF &p, const QImage &image) { paint(drawImage, p, image); }
+  void drawImage(const QPoint &p, const QImage &image) { paint(drawImage, p, image); }
+  void drawImage(int x, int y, const QImage &image, int sx = 0, int sy = 0, int sw = -1, int sh = -1,
+                 Qt::ImageConversionFlags flags = Qt::AutoColor)
+  {
+    paint(drawImage, x, y, image, sx, sy, sw, sh, flags);
+  }
+
+  void setLayoutDirection(Qt::LayoutDirection direction) { paint(setLayoutDirection, direction); }
+
+  void drawGlyphRun(const QPointF &position, const QGlyphRun &glyphRun) { paint(drawGlyphRun, position, glyphRun); }
+
+  void drawStaticText(const QPointF &topLeftPosition, const QStaticText &staticText)
+  {
+    paint(drawStaticText, topLeftPosition, staticText);
+  }
+  void drawStaticText(const QPoint &topLeftPosition, const QStaticText &staticText)
+  {
+    paint(drawStaticText, topLeftPosition, staticText);
+  }
+  void drawStaticText(int left, int top, const QStaticText &staticText)
+  {
+    paint(drawStaticText, left, top, staticText);
+  }
+
+  void drawText(const QPointF &p, const QString &s) { paint(drawText, p, s); }
+  void drawText(const QPoint &p, const QString &s) { paint(drawText, p, s); }
+  void drawText(int x, int y, const QString &s) { paint(drawText, x, y, s); }
+
+  void drawText(const QPointF &p, const QString &str, int tf, int justificationPadding)
+  {
+    paint(drawText, p, str, tf, justificationPadding);
+  }
+
+  void drawText(const QRectF &r, int flags, const QString &text, QRectF *br = nullptr)
+  {
+    paint(drawText, r, flags, text, br);
+  }
+  void drawText(const QRect &r, int flags, const QString &text, QRect *br = nullptr)
+  {
+    paint(drawText, r, flags, text, br);
+  }
+  void drawText(int x, int y, int w, int h, int flags, const QString &text, QRect *br = nullptr)
+  {
+    paint(drawText, x, y, w, h, flags, text, br);
+  }
+
+  void drawText(const QRectF &r, const QString &text, const QTextOption &o = QTextOption())
+  {
+    paint(drawText, r, text, o);
+  }
+
+  QRectF boundingRect(const QRectF &rect, int flags, const QString &text)
+  {
+    paint_and_return(boundingRect, rect, flags, text);
+  }
+  QRect boundingRect(const QRect &rect, int flags, const QString &text)
+  {
+    paint_and_return(boundingRect, rect, flags, text);
+  }
+  QRect boundingRect(int x, int y, int w, int h, int flags, const QString &text)
+  {
+    paint_and_return(boundingRect, x, y, w, h, flags, text);
+  }
+
+  QRectF boundingRect(const QRectF &rect, const QString &text, const QTextOption &o = QTextOption())
+  {
+    paint_and_return(boundingRect, rect, text, o);
+  }
+
+  void drawTextItem(const QPointF &p, const QTextItem &ti) { paint(drawTextItem, p, ti); }
+  void drawTextItem(int x, int y, const QTextItem &ti) { paint(drawTextItem, x, y, ti); }
+  void drawTextItem(const QPoint &p, const QTextItem &ti) { paint(drawTextItem, p, ti); }
+
+  void fillRect(const QRectF &rect, const QBrush &brush) { paint(fillRect, rect, brush); }
+  void fillRect(int x, int y, int w, int h, const QBrush &brush) { paint(fillRect, x, y, w, h, brush); }
+  void fillRect(const QRect &rect, const QBrush &brush) { paint(fillRect, rect, brush); }
+
+  void fillRect(const QRectF &rect, const QColor &color) { paint(fillRect, rect, color); }
+  void fillRect(int x, int y, int w, int h, const QColor &color) { paint(fillRect, x, y, w, h, color); }
+  void fillRect(const QRect &rect, const QColor &color) { paint(fillRect, rect, color); }
+
+  void fillRect(int x, int y, int w, int h, Qt::GlobalColor c) { paint(fillRect, x, y, w, h, c); }
+  void fillRect(const QRect &r, Qt::GlobalColor c) { paint(fillRect, r, c); }
+  void fillRect(const QRectF &r, Qt::GlobalColor c) { paint(fillRect, r, c); }
+
+  void fillRect(int x, int y, int w, int h, Qt::BrushStyle style) { paint(fillRect, x, y, w, h, style); }
+  void fillRect(const QRect &r, Qt::BrushStyle style) { paint(fillRect, r, style); }
+  void fillRect(const QRectF &r, Qt::BrushStyle style) { paint(fillRect, r, style); }
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+  void fillRect(int x, int y, int w, int h, QGradient::Preset preset) { paint(fillRect, x, y, w, h, preset); }
+  void fillRect(const QRect &r, QGradient::Preset preset) { paint(fillRect, r, preset); }
+  void fillRect(const QRectF &r, QGradient::Preset preset) { paint(fillRect, r, preset); }
+#endif
+
+  void eraseRect(const QRectF &rect) { paint(eraseRect, rect); }
+  void eraseRect(int x, int y, int w, int h) { paint(eraseRect, x, y, w, h); }
+  void eraseRect(const QRect &rect) { paint(eraseRect, rect); }
+
+  void setRenderHint(QPainter::RenderHint hint, bool on = true) { paint(setRenderHint, hint, on); }
+  void setRenderHints(QPainter::RenderHints hints, bool on = true) { paint(setRenderHints, hints, on); }
+  bool testRenderHint(QPainter::RenderHint hint) const { paint_and_return(testRenderHint, hint); }
+
+  void beginNativePainting() { paint(beginNativePainting, ); }
+  void endNativePainting() { paint(endNativePainting, ); }
+
+  Qt::LayoutDirection layoutDirection() const { return painter_.layoutDirection(); }
+  QPainter::RenderHints renderHints() const { return painter_.renderHints(); }
+  QPaintEngine *paintEngine() const { return painter_.paintEngine(); }
+
+#undef paint
+#undef paint_and_return
+
+private:
+  std::unique_ptr<QPainter> ownedPainter_;
+  QPainter &painter_;
+  GroupMask groupMask_;
+  QPainter &maskPainter_;
+  std::stack<unsigned int> groupStack_;
+};
+
 static gks_state_list_t gkss_, *gkss = &gkss_;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -111,7 +644,7 @@ typedef struct ws_state_list_t
   QPixmap *pixmap;
   QPixmap *bg;
   QPixmap *selection;
-  QPainter *painter;
+  std::unique_ptr<PainterWithGroupMask> painter;
   int state, wtype;
   int device_dpi_x, device_dpi_y;
   bool has_user_defined_device_pixel_ratio;
@@ -145,6 +678,7 @@ typedef struct ws_state_list_t
   int *memory_plugin_mem_ptr;
   char *memory_plugin_mem_path;
   std::stack<bounding_struct> bounding_stack;
+  void (*mask_callback)(unsigned int, unsigned int, unsigned int *);
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -238,7 +772,7 @@ static void resize_window(void)
       if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
           fabs(p->height * p->device_pixel_ratio - p->pixmap->size().height()) > FEPS)
         {
-          delete p->painter;
+          p->painter.release();
           delete p->pixmap;
 
           p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -252,7 +786,7 @@ static void resize_window(void)
               p->bg = new QPixmap(*p->pixmap);
             }
 
-          p->painter = new QPainter(p->pixmap);
+          p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*p->pixmap));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
@@ -1687,7 +2221,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case BEGIN_SELECTION:
-      delete p->painter;
+      p->painter.release();
       if (p->selection == NULL)
         {
           p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -1696,12 +2230,11 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 #endif
           p->selection->fill(Qt::white);
         }
-      p->painter = new QPainter(p->selection);
+      p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*p->selection));
       break;
 
     case END_SELECTION:
-      delete p->painter;
-      p->painter = new QPainter(p->pixmap);
+      p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*p->pixmap));
       break;
 
     case MOVE_SELECTION:
@@ -1726,9 +2259,12 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
                                                (void (*)(int, double, double, double, double))r1, cur_id});
 #endif
+      p->mask_callback = (void (*)(unsigned int, unsigned int, unsigned int *))r2;
+      p->painter->beginGroup(cur_id);
       break;
 
     case GKS_CANCEL_BBOX_CALLBACK: /* 261 */
+      p->painter->endGroup();
       assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
       top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
@@ -1829,6 +2365,12 @@ static void interp(char *str)
       gks_memory_plugin_write_page();
     }
 
+  if (p->mask_callback != NULL)
+    {
+      const auto &group_mask = p->painter->groupMask();
+      p->mask_callback(group_mask.width(), group_mask.height(), group_mask.toCMask());
+    }
+
   p->interp_was_called = true;
 }
 
@@ -1865,6 +2407,8 @@ static void initialize_data()
   p->window[3] = 1.0;
 
   p->transparency = 255;
+
+  p->mask_callback = NULL;
 }
 
 static void release_data()
@@ -1937,36 +2481,38 @@ static int get_paint_device(void)
     {
       bool has_exclamation_mark = strchr(env, '!');
       bool has_hash_mark = strchr(env, '#');
+      QPainter *painter;
       p->has_user_defined_device_pixel_ratio = has_hash_mark;
       if (has_exclamation_mark && has_hash_mark)
         {
-          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->painter, &p->device_pixel_ratio);
+          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&painter, &p->device_pixel_ratio);
           device = p->widget;
         }
       else if (has_exclamation_mark)
         {
-          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->painter);
+          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&painter);
           device = p->widget;
         }
       else if (has_hash_mark)
         {
-          sscanf(env, "%p#%lf", (void **)&p->painter, &p->device_pixel_ratio);
+          sscanf(env, "%p#%lf", (void **)&painter, &p->device_pixel_ratio);
           p->widget = NULL;
-          device = p->painter->device();
+          device = painter->device();
         }
       else
         {
-          sscanf(env, "%p", (void **)&p->painter);
+          sscanf(env, "%p", (void **)&painter);
           p->widget = NULL;
-          device = p->painter->device();
+          device = painter->device();
         }
 #ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
-      QPixmap *pixmap = dynamic_cast<QPixmap *>(p->painter->device());
+      QPixmap *pixmap = dynamic_cast<QPixmap *>(painter->device());
       if (pixmap != NULL)
         {
           p->pixmap = pixmap;
         }
 #endif
+      p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*painter));
     }
   else
     {

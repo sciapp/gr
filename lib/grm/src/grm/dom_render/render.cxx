@@ -68,6 +68,7 @@ std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds gr_context_id_manager;
 ManageZIndex z_index_manager;
 ManageCustomColorIndex custom_color_index_manager;
+GRM::GroupMask group_mask;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parent_types = {
@@ -4329,7 +4330,7 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
   if (metric_height != nullptr) *metric_height = metric_size[1];
 }
 
-void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
+void bboxReceiveCallback(int id, double x_min, double x_max, double y_min, double y_max)
 {
   if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || boundingMap()[id].expired())
     {
@@ -4341,6 +4342,11 @@ void receiverFunction(int id, double x_min, double x_max, double y_min, double y
   element->setAttribute("_bbox_x_max", x_max);
   element->setAttribute("_bbox_y_min", y_min);
   element->setAttribute("_bbox_y_max", y_max);
+}
+
+void maskReceiveCallback(unsigned int width, unsigned int height, unsigned int *mask)
+{
+  group_mask.own(width, height, &mask);
 }
 
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
@@ -4538,6 +4544,11 @@ std::vector<std::string> GRM::getTransformation()
 void GRM::addValidContextKey(std::string key)
 {
   valid_context_keys.emplace(key);
+}
+
+const GRM::GroupMask *GRM::getGroupMask()
+{
+  return &group_mask;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -19102,7 +19113,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
             {
               bbox_id = idPool().next();
             }
-          gr_setbboxcallback(bbox_id, &receiverFunction);
+          gr_setbboxcallback(bbox_id, &bboxReceiveCallback, &maskReceiveCallback);
           boundingMap()[bbox_id] = element;
         }
 

@@ -3376,14 +3376,16 @@ void gks_resize_selection(int kind, double x, double y)
     gks_report_error(RESIZE_SELECTION, 5);
 }
 
-void gks_set_bbox_callback(int id, void (*callback)(int, double, double, double, double))
+void gks_set_bbox_callback(int id, void (*bbox_callback)(int, double, double, double, double),
+                           void (*mask_callback)(unsigned int, unsigned int, unsigned int *))
 {
   if (state >= GKS_K_WSAC)
     {
       i_arr[0] = id;
 
       /* call the device driver link routine */
-      gks_ddlk(GKS_SET_BBOX_CALLBACK, 1, 1, 1, i_arr, 1, (double *)callback, 0, f_arr_2, 0, c_arr, NULL);
+      gks_ddlk(GKS_SET_BBOX_CALLBACK, 1, 1, 1, i_arr, 1, (double *)bbox_callback, 1, (double *)mask_callback, 0, c_arr,
+               NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state

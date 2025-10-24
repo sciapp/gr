@@ -12938,11 +12938,12 @@ void gr_endselection(void)
   gks_end_selection();
 }
 
-void gr_setbboxcallback(int id, void (*callback)(int, double, double, double, double))
+void gr_setbboxcallback(int id, void (*bbox_callback)(int, double, double, double, double),
+                        void (*mask_callback)(unsigned int, unsigned int, unsigned int *))
 {
   check_autoinit;
 
-  gks_set_bbox_callback(id, callback);
+  gks_set_bbox_callback(id, bbox_callback, mask_callback);
 }
 
 void gr_cancelbboxcallback(void)

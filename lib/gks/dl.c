@@ -419,7 +419,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
     case 260: /* set bbox callback */
 
-      len = 3 * sizeof(int) + sizeof(void(*));
+      len = 3 * sizeof(int) + 2 * sizeof(void(*));
       if (d->nbytes + len >= d->size) reallocate(d, len);
 
       COPY(&len, sizeof(int));
@@ -427,7 +427,11 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&i_arr[0], sizeof(int));
       static_assert(sizeof(double *) == sizeof(void (*)(int, double, double, double, double)),
                     "sizeof(double *) != sizeof(void(*)(int,double,double,double,double) on this architecture");
+      static_assert(
+          sizeof(double *) == sizeof(void (*)(unsigned int, unsigned int, unsigned int *)),
+          "sizeof(double *) != sizeof(void (*)(unsigned int, unsigned int, unsigned int *) on this architecture");
       COPY(&f_arr_1, sizeof(void(*)));
+      COPY(&f_arr_2, sizeof(void(*)));
       break;
 
     case 261: /* cancel bbox callback */
@@ -529,10 +533,11 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       RESOLVE(ia, int, sizeof(int));
       break;
 
-    case 260:                        /* set bbox callback */
-      RESOLVE(ia, int, sizeof(int)); /* id */
-      r1 = *((double **)&s[sp]);     /* callback function */
-      sp += sizeof(double *);
+    case 260:                                         /* set bbox callback */
+      RESOLVE(ia, int, sizeof(int));                  /* id */
+      r1 = *((double **)(s + sp));                    /* bbox callback function */
+      r2 = *((double **)(s + sp + sizeof(double *))); /* mask callback function */
+      sp += 2 * sizeof(double *);
       break;
 
     case 27:  /* set text font and precision */

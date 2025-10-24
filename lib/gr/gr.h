@@ -434,7 +434,8 @@ DLLEXPORT void gr_mathtex3d(double, double, double, char *, int);
 DLLEXPORT void gr_inqmathtex3d(double, double, double, char *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
-DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double));
+DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double),
+                                  void (*)(unsigned int, unsigned int, unsigned int *));
 DLLEXPORT void gr_cancelbboxcallback(void);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
