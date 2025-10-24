@@ -3406,6 +3406,37 @@ void gks_cancel_bbox_callback(void)
     gks_report_error(GKS_CANCEL_BBOX_CALLBACK, 5);
 }
 
+void gks_begin_partial(int id, void (*image_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int,
+                                                      unsigned int *))
+{
+  if (state >= GKS_K_WSAC)
+    {
+      i_arr[0] = id;
+
+      /* call the device driver link routine */
+      gks_ddlk(GKS_BEGIN_PARTIAL, 1, 1, 1, i_arr, 1, (double *)image_callback, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GKS_BEGIN_PARTIAL, 5);
+}
+
+void gks_end_partial(int id)
+{
+  if (state >= GKS_K_WSAC)
+    {
+      i_arr[0] = id;
+
+      /* call the device driver link routine */
+      gks_ddlk(GKS_END_PARTIAL, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GKS_END_PARTIAL, 5);
+}
+
 void gks_set_background(void)
 {
   if (state >= GKS_K_WSAC)

@@ -1808,7 +1808,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       if (tree_widget->isVisible()) tree_widget->selectItem(current_selection->getRef());
     }
 
-  highlightCurrentSelection((QPainter &)painter);
+  // highlightCurrentSelection((QPainter &)painter);
+  grm_render();
   // Todo: only trigger this method in non multiplot case where 1 plot has different series when not all elements has to
   // be processed to figure out which kinds are all used
   if (auto global_root = grm_get_document_root(); global_root->querySelectors("layout_grid") == nullptr)

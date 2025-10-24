@@ -437,6 +437,9 @@ DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double),
                                   void (*)(unsigned int, unsigned int, unsigned int *));
 DLLEXPORT void gr_cancelbboxcallback(void);
+DLLEXPORT void gr_beginpartial(int,
+                               void (*)(int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *));
+DLLEXPORT void gr_endpartial(int);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);

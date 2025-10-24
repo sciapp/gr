@@ -130,6 +130,9 @@ extern "C" {
 #define SET_BACKGROUND 262
 #define CLEAR_BACKGROUND 263
 
+#define GKS_BEGIN_PARTIAL 264
+#define GKS_END_PARTIAL 265
+
 #define ENCODING_LATIN1 300
 #define ENCODING_UTF8 301
 
@@ -315,6 +318,7 @@ DLLEXPORT void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int d
 DLLEXPORT int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
                                void (*fn)(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2,
                                           double *r2, int lc, char *chars, void **ptr));
+DLLEXPORT int gks_dl_has_one_of_item(char *dl, int n, ...);
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
 int gks_debug(void);
 

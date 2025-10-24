@@ -47,7 +47,7 @@ static void create_pixmap(ws_state_list *p)
   p->pixmap->fill(Qt::white);
 
   pixmap_painter = std::unique_ptr<QPainter>(new QPainter(p->pixmap));
-  p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*pixmap_painter));
+  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*pixmap_painter, *p->widget));
   p->painter->setClipRect(0, 0, p->width, p->height);
 
   get_paint_device();
@@ -72,7 +72,7 @@ static void resize_pixmap(int width, int height)
           p->pixmap->fill(Qt::white);
 
           pixmap_painter = std::unique_ptr<QPainter>(new QPainter(p->pixmap));
-          p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*pixmap_painter));
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*pixmap_painter, *p->widget));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
