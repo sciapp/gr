@@ -675,7 +675,8 @@ DLLEXPORT void gks_end_selection(void);
 DLLEXPORT void gks_move_selection(double x, double y);
 DLLEXPORT void gks_resize_selection(int kind, double x, double y);
 
-DLLEXPORT void gks_set_bbox_callback(int id, void (*callback)(int, double, double, double, double));
+DLLEXPORT void gks_set_bbox_callback(int id, void (*bbox_callback)(int, double, double, double, double),
+                                     void (*mask_callback)(unsigned int, unsigned int, unsigned int *));
 DLLEXPORT void gks_cancel_bbox_callback(void);
 
 DLLEXPORT void gks_set_background(void);
