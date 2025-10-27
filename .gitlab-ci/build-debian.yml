@@ -14,11 +14,13 @@ debian-self-contained:
     cmake --install build
   - mv ./install/usr/local/gr ./artifacts-debian11
   - mv build/preview_images ./grplot-preview-images
+  - mv build/icons ./grplot-icon-images
   artifacts:
     expire_in: 1 week
     paths:
     - artifacts-debian11/
     - grplot-preview-images/
+    - grplot-icon-images/
 
 debian-self-contained-aarch64:
   stage: build

@@ -1,7 +1,7 @@
 #ifndef QT_EXAMPLE_CUSTOMTREEWIDGETITEM_H
 #define QT_EXAMPLE_CUSTOMTREEWIDGETITEM_H
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 
 #include <QTreeWidgetItem>
 

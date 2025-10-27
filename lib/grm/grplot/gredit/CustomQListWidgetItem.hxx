@@ -6,13 +6,14 @@
 #include <QListWidgetItem>
 #include <QListWidget>
 class CustomTreeWidgetItem;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class CustomQListWidgetItem : public QListWidgetItem
 {
 public:
-  explicit CustomQListWidgetItem(const QString &text, std::shared_ptr<GRM::Element> selection, QListWidget *parent);
+  explicit CustomQListWidgetItem(const QString &text, const std::shared_ptr<GRM::Element> &selection,
+                                 QListWidget *parent);
 
   std::shared_ptr<GRM::Element> getElementRef();
 
