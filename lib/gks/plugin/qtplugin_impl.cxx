@@ -98,8 +98,12 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 class GroupMask
 {
 public:
-  GroupMask(int width, int height) : maskImage_(width, height, QImage::Format_ARGB32), maskPainter_(&maskImage_)
+  GroupMask(int width, int height, qreal device_pixel_ratio = 1)
+      : maskImage_(width, height, QImage::Format_ARGB32), maskPainter_(&maskImage_)
   {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    maskImage_.setDevicePixelRatio(device_pixel_ratio);
+#endif
     maskImage_.fill(Qt::transparent);
     maskPainter_.setRenderHint(QPainter::Antialiasing, false);
     maskPainter_.setRenderHint(QPainter::TextAntialiasing, false);
@@ -159,13 +163,29 @@ class PainterWithGroupMask
 {
 public:
   explicit PainterWithGroupMask(QPainter &painter)
-      : painter_(painter), groupMask_(painter.device()->width(), painter.device()->height()),
+      : painter_(painter), groupMask_(painter.device()->width(), painter.device()->height(),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+                                      painter.device()->devicePixelRatioF()
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+                                      painter.device()->devicePixelRatio()
+#else
+                                      1.0
+#endif
+                                          ),
         maskPainter_(groupMask_.painter())
   {
   }
 
   explicit PainterWithGroupMask(QPixmap &pixmap)
-      : ownedPainter_(new QPainter(&pixmap)), painter_(*ownedPainter_), groupMask_(pixmap.width(), pixmap.height()),
+      : ownedPainter_(new QPainter(&pixmap)), painter_(*ownedPainter_), groupMask_(pixmap.width(), pixmap.height(),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+                                                                                   pixmap.devicePixelRatioF()
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+                                                                                   pixmap.devicePixelRatio()
+#else
+                                                                                   1.0
+#endif
+                                                                                       ),
         maskPainter_(groupMask_.painter())
   {
   }
