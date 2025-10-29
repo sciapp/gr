@@ -10,17 +10,25 @@
 #define NOMINMAX
 #endif
 
+#include <cmath>
+#include <fstream>
+#include <cstdint>
+#include <array>
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 
-#ifdef QT_VERSION
-#include <QColor>
-#include <QImage>
-#endif
+#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/util.h>
+
+GRM_EXPORT std::shared_ptr<GRM::Element> grm_get_document_root(void);
+
 
 namespace GRM
 {
@@ -50,48 +58,98 @@ public:
   // - Cellarray / Images
 
 
-#ifdef QT_VERSION
-  QImage toColoredImage() const
+  void toPPM(const std::string &filepath, std::optional<std::set<unsigned int>> filter_ids = std::nullopt,
+             bool export_elements = false) const
   {
-    std::set<unsigned int> used_ids;
+    std::set<unsigned int> ids;
 
-    for (unsigned int y = 0; y < height_; y++)
+    if (filter_ids)
       {
-        for (unsigned int x = 0; x < width_; x++)
+        ids = *filter_ids;
+      }
+    else
+      {
+        for (unsigned int y = 0; y < height_; y++)
           {
-            used_ids.insert((*this)(x, y));
+            for (unsigned int x = 0; x < width_; x++)
+              {
+                auto index = (*this)(x, y);
+                if (index < 0) continue;
+                ids.insert(index);
+              }
           }
       }
 
-    float hue_step = 1.0f / used_ids.size();
+    float hue_step = 1.0f / ids.size();
+    std::unordered_map<int, std::array<uint8_t, 3>> id_to_rgb_map{{-1, {255, 255, 255}}};
+    unsigned int index = 0;
+    for (auto id : ids)
+      {
+        std::array<uint8_t, 3> pixel{255, 255, 255};
+        /*
+         * Formula taken from <https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB> with s = 1 and v = 1
+         */
+        auto hue = (hue_step + 0.25f) * index - std::floor((hue_step + 0.25f) * index);
+        auto hue6 = hue * 6.0f;
+        auto color_component = static_cast<uint8_t>(255.0f * (1.0f - std::abs(std::fmod(hue6, 2.0f) - 1.0f)));
+        switch (static_cast<int>(hue6))
+          {
+          case 0:
+            pixel = {255, color_component, 0};
+            break;
+          case 1:
+            pixel = {color_component, 255, 0};
+            break;
+          case 2:
+            pixel = {0, 255, color_component};
+            break;
+          case 3:
+            pixel = {0, color_component, 255};
+            break;
+          case 4:
+            pixel = {color_component, 0, 255};
+            break;
+          default:
+            pixel = {255, 0, color_component};
+            break;
+          }
+        id_to_rgb_map[id] = pixel;
+        ++index;
+      }
 
-    QImage img(width_, height_, QImage::Format_ARGB32);
+    std::ofstream image_file(filepath, std::ios::out | std::ios::binary);
+    image_file << "P6\n";
+    if (export_elements)
+      {
+        const auto &document = grm_get_document_root();
+        for (auto id : ids)
+          {
+            const auto &elem = document->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
+            if (elem == nullptr) continue;
+            image_file << "# " << id << ": " << elem->localName() << " ";
+            for (const auto &attribute_name : elem->getAttributeNames())
+              {
+                image_file << attribute_name << "=\"" << static_cast<std::string>(elem->getAttribute(attribute_name))
+                           << "\" ";
+              }
+            image_file << "\n";
+          }
+      }
+    image_file << std::to_string(width_) << " " << std::to_string(height_) << "\n255\n";
     for (unsigned int y = 0; y < height_; y++)
       {
         for (unsigned int x = 0; x < width_; x++)
           {
-            QColor color;
             auto current_id = (*this)(x, y);
-            if (current_id != 0)
-              {
-                auto id_pos = *used_ids.find(current_id);
-                color.setHsvF((hue_step + 0.25f) * id_pos - (int)((hue_step + 0.25f) * id_pos), 1.0f, 1.0f);
-              }
-            else
-              {
-                color.setRgb(0, 0, 0, 0);
-              }
-            img.setPixelColor(x, y, color);
+            const auto &pixel = id_to_rgb_map[current_id];
+            image_file << pixel[0] << pixel[1] << pixel[2];
           }
       }
-
-    return img;
   }
-#endif
 
-  std::set<unsigned int> getObjectsInBox(unsigned int center_x, unsigned int center_y) const
+  std::unordered_set<unsigned int> getObjectsInBox(unsigned int center_x, unsigned int center_y) const
   {
-    std::set<unsigned int> object_ids;
+    std::unordered_set<unsigned int> object_ids;
     std::cerr << "################################################################################" << std::endl;
     for (int i = std::max<int>(0, center_x - box_size_ / 2); i < std::min<int>(width_, center_x + box_size_ / 2); i++)
       {
@@ -110,12 +168,13 @@ public:
     return object_ids;
   }
 
-  unsigned int operator()(unsigned int x, unsigned int y) const
+  int operator()(unsigned int x, unsigned int y) const
   {
     assert(x < width_ && y < height_);
     // Use `& 0x00FFFFFF` to remove the alpha channel which must always unequal zero in the image, otherwise Qt will
     // use undesired alpha optimizations, effectively breaking the id storage in the mask.
-    return mask_.get()[y * width_ + x] & 0x00FFFFFF;
+    auto id = mask_.get()[y * width_ + x] & 0x00FFFFFF;
+    return (id == 0x00FFFFFF) ? -1 : id;
   }
 
   bool hasPixel(unsigned int x, unsigned int y) const { return this->operator()(x, y) != 0; }
