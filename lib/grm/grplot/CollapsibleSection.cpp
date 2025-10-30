@@ -24,7 +24,7 @@ CollapsibleSection::CollapsibleSection(const QString &title, const int animation
   header_line.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
 
   content_area.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
-  // so all labels are displayed completly
+  // so all labels are displayed completely
   // start out collapsed
   content_area.setMaximumHeight(0);
   content_area.setMinimumHeight(0);
@@ -47,7 +47,9 @@ CollapsibleSection::CollapsibleSection(const QString &title, const int animation
   });
 }
 
-void CollapsibleSection::setContentLayout(QLayout &content_layout)
+CollapsibleSection::~CollapsibleSection() = default;
+
+void CollapsibleSection::setContentLayout(QLayout &content_layout, bool clicked)
 {
   delete content_area.layout();
   content_area.setLayout(&content_layout);
@@ -66,4 +68,5 @@ void CollapsibleSection::setContentLayout(QLayout &content_layout)
   content_animation->setDuration(animation_duration);
   content_animation->setStartValue(0);
   content_animation->setEndValue(content_height);
+  if (clicked) toggle_button.clicked(true);
 }

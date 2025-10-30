@@ -54,8 +54,10 @@ BuildRequires:		Mesa-libGL-devel
 BuildRequires:		libqt4-devel
 BuildRequires:		libqt5-qtbase-devel
 %else
+%if 0%{?rhel} < 10
 BuildRequires:		xorg-x11-server-devel
 BuildRequires:		mesa-libGL-devel
+%endif
 %endif
 
 %if 0%{?rhel_version}

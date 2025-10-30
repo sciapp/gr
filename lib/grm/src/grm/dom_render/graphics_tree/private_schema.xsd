@@ -83,6 +83,37 @@
         </xs:complexType>
     </xs:element>
 
+    <!-- definition of overlay -->
+    <xs:element name="overlay">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_viewport_normalized_x_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_x_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_x_min_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_max_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_max_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_viewport_normalized_y_min_org" type="xs:double"/>
+            <xs:attribute name="_viewport_normalized_y_min_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of overlay_element -->
+    <xs:element name="overlay_element">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_fill_modifications"/>
+            <xs:attributeGroup ref="_line_modifications"/>
+            <xs:attributeGroup ref="_marker_modifications"/>
+            <xs:attributeGroup ref="_text_modifications"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_height" type="xs:integer"/>
+            <xs:attribute name="_width" type="xs:integer"/>
+            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- definition of plot -->
     <xs:element name="plot">
         <xs:complexType>
@@ -117,12 +148,16 @@
             <xs:attribute name="_original_y_min" type="xs:double"/>
             <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
             <xs:attribute name="_plot_id" type="xs:string" use="required"/>
+            <xs:attribute name="_r_lim_max" type="xs:double"/>
+            <xs:attribute name="_r_lim_min" type="xs:double"/>
             <xs:attribute name="_right_window_xform_a" type="xs:double"/>
             <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b" type="xs:double"/>
             <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
-            <xs:attribute name="_selected_for_menu" type="xs:integer"/>
+            <xs:attribute name="_selected_for_menu" type="xs:integer"/> <!-- grplot attribute -->
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
+            <xs:attribute name="_theta_lim_max" type="xs:double"/>
+            <xs:attribute name="_theta_lim_min" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a" type="xs:double"/>
             <xs:attribute name="_top_window_xform_a_org" type="xs:double"/>
             <xs:attribute name="_top_window_xform_b" type="xs:double"/>
@@ -249,6 +284,7 @@
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_axis_id" type="xs:integer" use="required"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_char_up_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_ignore_next_tick_orientation" type="xs:integer"/>
             <xs:attribute name="_label_orientation_set_by_user" type="xs:integer"/>
@@ -325,8 +361,9 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_text_modifications"/>
+            <xs:attribute name="_char_up_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_space_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_world_coordinates_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -427,6 +464,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -436,6 +474,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -445,6 +484,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -454,6 +494,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -530,13 +571,13 @@
             <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
             <xs:attribute name="_r_max_set_by_user" type="xs:double"/>
             <xs:attribute name="_r_min_set_by_user" type="xs:double"/>
+            <xs:attribute name="_r_org_set_by_user" type="xs:double"/>
             <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_max_set_by_user" type="xs:double"/>
             <xs:attribute name="_theta_min_set_by_user" type="xs:double"/>
-            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
-            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_theta_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -548,11 +589,11 @@
             <xs:attribute name="_num_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_num_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_r_dim_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_r_org_set_by_user" type="xs:double"/>
             <xs:attribute name="_start_col_set_by_user" type="xs:integer"/>
             <xs:attribute name="_start_row_set_by_user" type="xs:integer"/>
             <xs:attribute name="_theta_dim_set_by_user" type="xs:integer"/>
-            <xs:attribute name="_x_org_set_by_user" type="xs:double"/>
-            <xs:attribute name="_y_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_theta_org_set_by_user" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -680,6 +721,7 @@
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -718,6 +760,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -750,6 +793,7 @@
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -760,6 +804,7 @@
             <xs:attributeGroup ref="_data"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -779,6 +824,7 @@
             <xs:attributeGroup ref="_data"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -789,6 +835,7 @@
             <xs:attributeGroup ref="_data"/>
             <xs:attributeGroup ref="_marker_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -808,6 +855,7 @@
             <xs:attributeGroup ref="_data"/>
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -818,6 +866,7 @@
             <xs:attributeGroup ref="_data"/>
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hidden" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -938,13 +987,16 @@
         <xs:attribute name="_bbox_y_max" type="xs:double"/>
         <xs:attribute name="_bbox_y_min" type="xs:double"/>
         <xs:attribute name="_delete_children" type="xs:integer"/>
-        <xs:attribute name="_highlighted" type="xs:integer"/>
-        <xs:attribute name="_selected" type="xs:integer"/>
+        <xs:attribute name="_highlighted" type="xs:integer"/> <!-- grplot attribute -->
+        <xs:attribute name="_selected_for_move" type="xs:integer"/>  <!-- grplot attribute -->
         <xs:attribute name="_update_required" type="xs:integer"/>
     </xs:attributeGroup>
 
     <!-- definition of _data attributes -->
     <xs:attributeGroup name="_data">
+        <xs:attribute name="_r_org" type="xs:string"/>
+        <xs:attribute name="_r_range_max_org" type="xs:double"/>
+        <xs:attribute name="_r_range_min_org" type="xs:double"/>
         <xs:attribute name="_x_org" type="xs:string"/>
         <xs:attribute name="_x_range_max_org" type="xs:double"/>
         <xs:attribute name="_x_range_min_org" type="xs:double"/>
