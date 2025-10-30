@@ -124,8 +124,13 @@ public:
         const auto &document = grm_get_document_root();
         for (auto id : ids)
           {
+            std::cerr << "Current id: " << id << std::endl;
             const auto &elem = document->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
-            if (elem == nullptr) continue;
+            if (elem == nullptr)
+              {
+                std::cerr << "Invalid id: " << id << std::endl;
+                continue;
+              }
             image_file << "# " << id << ": " << elem->localName() << " ";
             for (const auto &attribute_name : elem->getAttributeNames())
               {
@@ -150,21 +155,21 @@ public:
   std::unordered_set<unsigned int> getObjectsInBox(unsigned int center_x, unsigned int center_y) const
   {
     std::unordered_set<unsigned int> object_ids;
-    std::cerr << "################################################################################" << std::endl;
+    // std::cerr << "################################################################################" << std::endl;
     for (int i = std::max<int>(0, center_x - box_size_ / 2); i < std::min<int>(width_, center_x + box_size_ / 2); i++)
       {
         for (int j = std::max<int>(0, center_y - box_size_ / 2); j < std::min<int>(height_, center_y + box_size_ / 2);
              j++)
           {
-            unsigned int id;
-            std::cerr << "(" << i << ", " << j << ") = " << this->operator()(i, j) << std::endl;
-            if ((id = (*this)(i, j)) != 0)
+            int id;
+            // std::cerr << "(" << i << ", " << j << ") = " << this->operator()(i, j) << std::endl;
+            if ((id = (*this)(i, j)) >= 0)
               {
                 object_ids.insert(id);
               }
           }
       }
-    std::cerr << "################################################################################" << std::endl;
+    // std::cerr << "################################################################################" << std::endl;
     return object_ids;
   }
 
@@ -173,8 +178,9 @@ public:
     assert(x < width_ && y < height_);
     // Use `& 0x00FFFFFF` to remove the alpha channel which must always unequal zero in the image, otherwise Qt will
     // use undesired alpha optimizations, effectively breaking the id storage in the mask.
-    auto id = mask_.get()[y * width_ + x] & 0x00FFFFFF;
-    return (id == 0x00FFFFFF) ? -1 : id;
+    auto color = mask_.get()[y * width_ + x];
+    auto id = color & 0x00FFFFFF;
+    return (color & 0xFF000000) == 0 ? -1 : id;
   }
 
   bool hasPixel(unsigned int x, unsigned int y) const { return this->operator()(x, y) != 0; }

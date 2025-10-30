@@ -100,7 +100,7 @@ class GroupMask
 public:
   GroupMask(int width, int height) : maskImage_(width, height, QImage::Format_ARGB32), maskPainter_(&maskImage_)
   {
-    maskImage_.fill(Qt::white);
+    maskImage_.fill(Qt::transparent);
     maskPainter_.setRenderHint(QPainter::Antialiasing, false);
     maskPainter_.setRenderHint(QPainter::TextAntialiasing, false);
     maskPainter_.setCompositionMode(QPainter::CompositionMode_Source);
@@ -223,7 +223,7 @@ public:
   bool end() { paint_and_return(end); }
   bool isActive() const { return painter_.isActive(); }
   QPainter::CompositionMode compositionMode() { return painter_.compositionMode(); }
-  void setCompositionMode(QPainter::CompositionMode mode) { paint(setCompositionMode, mode); }
+  void setCompositionMode(QPainter::CompositionMode mode) { painter_.setCompositionMode(mode); }
 
   void setFont(const QFont &f) { paint(setFont, f); }
 
@@ -619,8 +619,8 @@ public:
   void eraseRect(int x, int y, int w, int h) { paint(eraseRect, x, y, w, h); }
   void eraseRect(const QRect &rect) { paint(eraseRect, rect); }
 
-  void setRenderHint(QPainter::RenderHint hint, bool on = true) { paint(setRenderHint, hint, on); }
-  void setRenderHints(QPainter::RenderHints hints, bool on = true) { paint(setRenderHints, hints, on); }
+  void setRenderHint(QPainter::RenderHint hint, bool on = true) { painter_.setRenderHint(hint, on); }
+  void setRenderHints(QPainter::RenderHints hints, bool on = true) { painter_.setRenderHints(hints, on); }
   bool testRenderHint(QPainter::RenderHint hint) const { paint_and_return(testRenderHint, hint); }
 
   void beginNativePainting() { paint(beginNativePainting, ); }
