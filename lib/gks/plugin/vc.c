@@ -312,8 +312,6 @@ void vc_movie_finish(movie_t movie)
 
   if (movie->fmt_ctx && movie->cdc_ctx)
     {
-      avcodec_close(movie->cdc_ctx);
-
       if (!(movie->out_fmt->flags & AVFMT_NOFILE))
         {
           avio_closep(&movie->fmt_ctx->pb);

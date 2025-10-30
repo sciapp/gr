@@ -11,14 +11,18 @@
 #include <QWidget>
 #include <QMainWindow>
 #include <QCursor>
+#include <QRadioButton>
 
 #include "gredit/BoundingObject.hxx"
 #include "gredit/BoundingLogic.hxx"
+#include "gredit/PreviewTextWidget.hxx"
 class GRPlotWidget;
 #include "gredit/TreeWidget.hxx"
 #include "gredit/AddElementWidget.hxx"
 #include "gredit/EditElementWidget.hxx"
 #include "gredit/TableWidget.hxx"
+#include "gredit/ColorPickerRGB.hxx"
+#include "gredit/SelectionListWidget.hxx"
 #include "qtterm/Receiver.hxx"
 #include "qtterm/ArgsWrapper.hxx"
 #include "util.hxx"
@@ -28,6 +32,12 @@ class GRPlotWidget;
 #define DEFAULT_HOVER_MODE 0
 #define MOVABLE_HOVER_MODE 1
 #define INTEGRAL_SIDE_HOVER_MODE 2
+#define LEGEND_ELEMENT_HOVER_MODE 3
+#define VERTICAL_SCALE_HOVER_MODE 4
+#define HORIZONTAL_SCALE_HOVER_MODE 5
+#define B_DIAGONAL_SCALE_HOVER_MODE 6
+#define F_DIAGONAL_SCALE_HOVER_MODE 7
+#define MOVE_HOVER_MODE 8
 
 class GRPlotWidget : public QWidget
 {
@@ -55,13 +65,22 @@ public:
   void setCurrentSelection(BoundingObject *current_selection);
   void setTreeUpdate(bool status);
   void setReferencedElements(std::vector<BoundingObject> referenced_elements);
+  void colorIndexPopUp(std::string attribute_name, int current_index, const std::shared_ptr<GRM::Element> element);
+  void colorRGBPopUp(std::string attribute_name, const std::shared_ptr<GRM::Element> element);
+  void createHistoryElement(std::string flag = "");
+  void removeHistoryElement();
+  void highlightTableWidgetAt(std::string column_name);
+  void setUpPreviewTextWidget(std::string text, int scientific_format, int text_color, int width, int height);
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();
   QStringList getCheckBoxAttributes();
   QStringList getComboBoxAttributes();
+  QStringList getColorIndAttributes();
+  QStringList getColorRGBAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
+  bool getEnableAdvancedEditor();
   QAction *getPdfAct();
   QAction *getPngAct();
   QAction *getJpegAct();
@@ -96,7 +115,6 @@ public:
   QAction *getSaveFileAct();
   QAction *getLoadFileAct();
   QAction *getShowContainerAct();
-  QAction *getShowBoundingBoxesAct();
   QAction *getAddElementAct();
   QAction *getShowContextAct();
   QAction *getAddContextAct();
@@ -107,8 +125,6 @@ public:
   QAction *getShowAlgoMenuAct();
   QAction *getHideMarginalSubMenuAct();
   QAction *getShowMarginalSubMenuAct();
-  QAction *getHideConfigurationMenuAct();
-  QAction *getShowConfigurationMenuAct();
   QAction *getHideOrientationSubMenuAct();
   QAction *getShowOrientationSubMenuAct();
   QAction *getHideAspectRatioSubMenuAct();
@@ -119,6 +135,7 @@ public:
   QAction *getXLogAct();
   QAction *getYLogAct();
   QAction *getZLogAct();
+  QAction *getRLogAct();
   QAction *getXFlipAct();
   QAction *getYFlipAct();
   QAction *getZFlipAct();
@@ -127,7 +144,7 @@ public:
   QAction *getPolarWithPanAct();
   QAction *getKeepWindowAct();
   QAction *getKeepAspectRatioAct();
-  QAction *getOnlyQuadraticAspectRatioAct();
+  QAction *getOnlySquareAspectRatioAct();
   QAction *getVerticalOrientationAct();
   QAction *getHorizontalOrientationAct();
   QAction *getLegendAct();
@@ -139,6 +156,28 @@ public:
   QAction *getTwinXAxisAct();
   QAction *getTwinYAxisAct();
   QAction *getColormapAct();
+  QAction *getUndoAct();
+  QAction *getRedoAct();
+  QAction *getSelectableGridAct();
+  QAction *getAdvancedEditorAct();
+  QAction *getShowEditElementAct();
+  QAction *getShowTreeWidgetAct();
+  QAction *getShowTableWidgetAct();
+  QAction *getShowTextPreviewAct();
+  QAction *getShowSelectionListWidgetAct();
+  QAction *getHideEditElementAct();
+  QAction *getHideTreeWidgetAct();
+  QAction *getHideTableWidgetAct();
+  QAction *getHideTextPreviewAct();
+  QAction *getHideSelectionListWidgetAct();
+  QAction *getXLimAct();
+  QAction *getYLimAct();
+  QAction *getZLimAct();
+  QWidget *getEditElementWidget();
+  QWidget *getTreeWidget();
+  QWidget *getTableWidget();
+  QWidget *getTextPreviewWidget();
+  QWidget *getSelectionListWidget();
 
 protected:
   virtual void draw();
@@ -158,6 +197,7 @@ protected:
 
 signals:
   void pixmapRedrawn();
+  void signalMoved(QRect const &r);
 
 private slots:
   void heatmap();
@@ -191,7 +231,6 @@ private slots:
   void svg();
   void moveableMode();
   void showContainerSlot();
-  void showBoundingBoxesSlot();
   void saveFileSlot();
   void loadFileSlot();
   void enableEditorFunctions();
@@ -205,6 +244,7 @@ private slots:
   void xLogSlot();
   void yLogSlot();
   void zLogSlot();
+  void rLogSlot();
   void xFlipSlot();
   void yFlipSlot();
   void zFlipSlot();
@@ -212,7 +252,7 @@ private slots:
   void accelerateSlot();
   void polarWithPanSlot();
   void keepWindowSlot();
-  void onlyQuadraticAspectRatioSlot();
+  void onlySquareAspectRatioSlot();
   void keepAspectRatioSlot();
   void verticalOrientationSlot();
   void horizontalOrientationSlot();
@@ -225,6 +265,17 @@ private slots:
   void twinXAxisSlot();
   void twinYAxisSlot();
   void colormapSlot();
+  void undoSlot();
+  void redoSlot();
+  void selectableGridSlot();
+  void advancedEditorSlot();
+  void addTextSlot();
+  void xLimSlot();
+  void yLimSlot();
+  void zLimSlot();
+  void addImageSlot();
+  void listItemCheckStatusChanged(QListWidgetItem *item);
+  void listItemPressed(QListWidgetItem *item);
 
 private:
   struct MouseState
@@ -236,6 +287,11 @@ private:
       BOXZOOM,
       MOVABLE_XFORM,
       MOVE_SELECTED,
+      LEGEND_SELECTED,
+      HORIZONTAL_SCALE_SELECTED,
+      VERTICAL_SCALE_SELECTED,
+      B_DIAGONAL_SCALE_SELECTED,
+      F_DIAGONAL_SCALE_SELECTED,
     };
     Mode mode;
     QPoint pressed;
@@ -325,7 +381,6 @@ private:
   std::vector<BoundingObject> clicked, referenced_elements;
   BoundingObject *current_selection, *mouse_move_selection, *selected_parent;
   std::list<std::unique_ptr<BoundingObject>> current_selections;
-  bool highlight_bounding_objects;
   TreeWidget *tree_widget;
   AddElementWidget *add_element_widget;
   int amount_scrolled;
@@ -334,9 +389,15 @@ private:
   std::shared_ptr<GRM::Document> schema_tree;
   bool tree_update = true;
   QSize size_hint;
-  QStringList check_box_attr, combo_box_attr;
+  QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr;
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
+  PreviewTextWidget *preview_text_widget;
+  ColorPickerRGB *color_picker_rgb;
+  SelectionListWidget *selection_list_widget;
+  bool hide_grid_bbox = true;
+  bool enable_advanced_editor = false;
+  int add_pos_x, add_pos_y;
 
   QAction *marginal_heatmap_all_act, *marginal_heatmap_line_act;
   QAction *sum_act, *max_act;
@@ -348,25 +409,31 @@ private:
   QAction *shade_act, *hexbin_act;
   QAction *polar_line_act, *polar_scatter_act;
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
-  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
-      *add_element_action;
-  QAction *moveable_mode_act;
+  QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
+  QAction *moveable_mode_act, *selectable_grid_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
-      *hide_configuration_menu_act, *show_configuration_menu_act, *hide_orientation_sub_menu_act,
-      *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act, *show_aspect_ratio_sub_menu_act,
-      *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act;
+      *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
+      *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
+      *undo_action, *redo_action, *advanced_editor_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
-  QAction *x_log_act, *y_log_act, *z_log_act;
+  QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *accelerate_act, *polar_with_pan_act, *keep_window_act, *colormap_act;
-  QAction *keep_aspect_ratio_act, *only_quadratic_aspect_ratio_act;
+  QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
       *twin_x_axis_act, *twin_y_axis_act;
   QCursor *csr;
+  QMenu *add_overlay_menu;
+  QAction *add_text_act, *add_image_act;
+  QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
+      *show_selection_list_widget_act;
+  QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act,
+      *hide_selection_list_widget_act;
+  QAction *x_lim_act, *y_lim_act, *z_lim_act;
+  bool overlay_element_edit = false, called_by_location_change = false;
 
   void resetPixmap();
-  void moveEvent(QMoveEvent *event) override;
   void highlightCurrentSelection(QPainter &painter);
   void extractBoundingBoxesFromGRM(QPainter &painter);
   void showEvent(QShowEvent *) override;
@@ -377,6 +444,9 @@ private:
   void adjustPlotTypeMenu(std::shared_ptr<GRM::Element> plot_parent);
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);
+  void overlayElementEdit();
+  void colorIndexHelper(const std::shared_ptr<GRM::Element> plot_elem, int current_index, QGridLayout *grid_layout,
+                        QList<QRadioButton *> radio_buttons, int max_index, int index_name_start);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

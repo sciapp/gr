@@ -81,7 +81,7 @@
 #define PLOT_POLAR_CHAR_HEIGHT 0.018
 #define PLOT_DEFAULT_AXES_TICK_SIZE 0.0075
 #define DEFAULT_ASPECT_RATIO_FOR_SCALING (4.0 / 3.0)
-#define PLOT_DEFAULT_ONLY_QUADRATIC_ASPECT_RATIO 0
+#define PLOT_DEFAULT_ONLY_SQUARE_ASPECT_RATIO 0
 #define MIRRORED_AXIS_DEFAULT 1
 #define SCIENTIFIC_FORMAT_OPTION 2
 #define PLOT_DEFAULT_MODEL 0
@@ -150,6 +150,8 @@ GRM_EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str)
 GRM_EXPORT int fillStyleStringToInt(const std::string &fill_style_str);
 GRM_EXPORT int fillIntStyleStringToInt(const std::string &fill_int_style_str);
 GRM_EXPORT int transformationStringToInt(const std::string &transformation_str);
+GRM_EXPORT int labelOrientationStringToInt(const std::string &label_orientation_str);
+GRM_EXPORT int worldCoordinatesStringToInt(const std::string &world_coordinates_str);
 
 GRM_EXPORT std::string algorithmIntToString(int algorithm);
 GRM_EXPORT std::string colormapIntToString(int colormap);
@@ -173,6 +175,8 @@ GRM_EXPORT std::string resampleMethodIntToString(int error_bar_style);
 GRM_EXPORT std::string fillStyleIntToString(int fill_style);
 GRM_EXPORT std::string fillIntStyleIntToString(int fill_int_style);
 GRM_EXPORT std::string transformationIntToString(int transformation);
+GRM_EXPORT std::string labelOrientationIntToString(int label_orientation);
+GRM_EXPORT std::string worldCoordinatesIntToString(int world_coordinates);
 
 GRM_EXPORT std::vector<std::string> getSizeUnits();
 GRM_EXPORT std::vector<std::string> getColormaps();
@@ -226,6 +230,8 @@ class GRM_EXPORT Render : public Document
    */
 
 public:
+  const char *initializeHistory();
+
   /* ------------------------------- create functions ----------------------------------------------------------------*/
 
   static std::shared_ptr<Render> createRender();
@@ -299,15 +305,8 @@ public:
   std::shared_ptr<Element> createGridLine(int is_major, double value,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
-                                        const std::string &specs_key, std::optional<std::vector<std::string>> specs,
-                                        const std::shared_ptr<Context> &ext_context = nullptr,
-                                        const std::shared_ptr<Element> &ext_element = nullptr);
-
-  std::shared_ptr<Element> createPieLegend(const std::string &labels_key,
-                                           std::optional<std::vector<std::string>> labels,
-                                           const std::shared_ptr<Context> &ext_context = nullptr,
-                                           const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createLegend(const std::shared_ptr<Element> &ext_element = nullptr,
+                                        const std::shared_ptr<Context> &ext_context = nullptr);
 
   std::shared_ptr<Element> createPieSegment(const double start_angle, const double end_angle, const std::string &text,
                                             const int color_index,
@@ -434,6 +433,11 @@ public:
                                            const std::shared_ptr<Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createArcGridLine(double value, const std::shared_ptr<Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createOverlay(const std::shared_ptr<Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createOverlayElement(double x, double y, std::string type,
+                                                const std::shared_ptr<Element> &ext_element = nullptr);
 
   //! Modifierfunctions
 

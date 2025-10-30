@@ -66,7 +66,7 @@ if(EMSCRIPTEN)
 endif()
 
 if(GR_USE_BUNDLED_LIBRARIES)
-  list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
+  list(PREPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
   set(GR_THIRDPARTY_LIBRARY_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX})
   set(GR_THIRDPARTY_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
 else()
@@ -149,6 +149,9 @@ if(TARGET Qhull::qhullstatic_r AND NOT TARGET Qhull::qhull_r)
 endif()
 if(NOT EMSCRIPTEN)
   find_package(Tiff)
+  if(TARGET TIFF::tiff AND NOT TARGET Tiff::Tiff)
+    add_library(Tiff::Tiff ALIAS TIFF::tiff)
+  endif()
   find_package(Ffmpeg 57.48.100)
   find_package(glfw3)
   if(TARGET glfw AND NOT TARGET Glfw::Glfw)
@@ -418,8 +421,15 @@ foreach(LIBRARY IN LISTS GR_LIBRARIES)
   else()
     set(GR_LINK_MODE PRIVATE)
   endif()
-  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} gks_static)
+  if(NOT LIBRARY MATCHES "static")
+    target_link_libraries(${LIBRARY} ${GR_LINK_MODE} gks_shared)
+  else()
+    target_link_libraries(${LIBRARY} ${GR_LINK_MODE} gks_static)
+  endif()
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+    if(NOT EMSCRIPTEN)
+      target_link_libraries(${LIBRARY} ${GR_LINK_MODE} pthread)
+    endif()
     target_link_libraries(${LIBRARY} ${GR_LINK_MODE} m)
   endif()
   target_link_libraries(${LIBRARY} ${GR_LINK_MODE} Qhull::qhull_r)
@@ -427,6 +437,11 @@ foreach(LIBRARY IN LISTS GR_LIBRARIES)
   target_link_libraries(${LIBRARY} ${GR_LINK_MODE} Libpng::Libpng)
   if(WIN32)
     target_link_libraries(${LIBRARY} ${GR_LINK_MODE} ws2_32)
+  endif()
+  if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+    if(NOT EMSCRIPTEN)
+      target_compile_options(${LIBRARY} ${GR_LINK_MODE} -pthread)
+    endif()
   endif()
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/>
@@ -493,10 +508,11 @@ foreach(LIBRARY IN LISTS GR3_LIBRARIES)
   endif()
   if(LIBRARY MATCHES "static")
     target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gr_static)
+    target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gks_static)
   else()
     target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gr_shared)
+    target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} gks_shared)
   endif()
-  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Jpeg::Jpeg)
   target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Libpng::Libpng)
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
@@ -644,13 +660,14 @@ foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   if(NOT LIBRARY MATCHES "internal")
     set_target_properties(${LIBRARY} PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
   endif()
-  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   if(LIBRARY MATCHES "static")
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr_static)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr3_static)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gks_static)
   else()
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr_shared)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gr3_shared)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} gks_shared)
   endif()
   if(TARGET XercesC::XercesC)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} XercesC::XercesC)
@@ -1140,8 +1157,12 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/gredit/AddElementWidget.cpp
     lib/grm/grplot/gredit/BoundingLogic.cpp
     lib/grm/grplot/gredit/BoundingObject.cpp
+    lib/grm/grplot/gredit/ColorPickerRGB.cpp
+    lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
     lib/grm/grplot/gredit/EditElementWidget.cpp
+    lib/grm/grplot/gredit/PreviewTextWidget.cpp
+    lib/grm/grplot/gredit/SelectionListWidget.cpp
     lib/grm/grplot/gredit/TableWidget.cpp
     lib/grm/grplot/gredit/TreeWidget.cpp
     lib/grm/grplot/grplotWidget.cxx
@@ -1150,8 +1171,10 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/util.cxx
   )
   target_link_libraries(grplotWidget PUBLIC GR::GRM)
+  target_link_libraries(grplotWidget PUBLIC gks_shared)
   target_link_libraries(grplotWidget PUBLIC GR::GR)
   target_link_libraries(grplotWidget PUBLIC Qt6::Core Qt6::Widgets)
+  target_link_libraries(grplotWidget PUBLIC GR::qt6gr)
   target_include_directories(grplotWidget INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget>)
   target_compile_definitions(grplotWidget PRIVATE GRDIR="${GR_DIRECTORY}")
   if(NOT TARGET XercesC::XercesC)
@@ -1380,11 +1403,16 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/AddElementWidget.cpp
       lib/grm/grplot/gredit/BoundingLogic.cpp
       lib/grm/grplot/gredit/BoundingObject.cpp
+      lib/grm/grplot/gredit/ColorPickerRGB.cpp
+      lib/grm/grplot/gredit/CustomQListWidgetItem.cpp
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
       lib/grm/grplot/gredit/EditElementWidget.cpp
+      lib/grm/grplot/gredit/PreviewTextWidget.cpp
+      lib/grm/grplot/gredit/SelectionListWidget.cpp
       lib/grm/grplot/gredit/TableWidget.cpp
       lib/grm/grplot/gredit/TreeWidget.cpp
       lib/grm/grplot/grplot.cxx
+      lib/grm/grplot/grplotDockWidget.cpp
       lib/grm/grplot/grplotMainwindow.cxx
       lib/grm/grplot/grplotWidget.cxx
       lib/grm/grplot/qtterm/ArgsWrapper.cpp
@@ -1394,21 +1422,25 @@ if((Qt6Widgets_FOUND
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       target_link_libraries(
         grplot
-        PRIVATE Qt6::Widgets
+        PRIVATE GR::qt6gr
+                Qt6::Widgets
                 Qt6::Core
                 Qt6::Gui
                 grm_shared
                 gr_shared
+                gks_shared
       )
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
     else()
       target_link_libraries(
         grplot
-        PRIVATE Qt5::Widgets
+        PRIVATE GR::qt5gr
+                Qt5::Widgets
                 Qt5::Core
                 Qt5::Gui
                 grm_shared
                 gr_shared
+                gks_shared
       )
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
@@ -1529,15 +1561,60 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
+      )
       target_sources(
         grplot
-        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotDockWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotMainwindow.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_grplotWidget.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingObject.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cpp
@@ -1548,13 +1625,18 @@ if((Qt6Widgets_FOUND
       set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
       target_sources(
         grplot
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotMainwindow.hxx
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotDockWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotMainwindow.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplotWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingObject.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx

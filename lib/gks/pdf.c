@@ -736,7 +736,32 @@ static void pdf_close(PDF *p)
       p->content = page->stream;
       pdf_obj(p, page->contents);
       pdf_dict(p);
+
+#ifdef HAVE_ZLIB
+      if (p->compress)
+        {
+          Byte *buffer;
+          uLong length;
+          int err;
+
+          length = p->content->length + 1024;
+          buffer = (Byte *)pdf_calloc((int)length, 1);
+          if ((err = compress(buffer, &length, p->content->buffer, p->content->length)) == Z_OK)
+            {
+              free(p->content->buffer);
+              p->content->buffer = buffer;
+              p->content->size = p->content->length = length;
+              buffer[p->content->length++] = '\n';
+              pdf_printf(p->stream, "/Filter [/FlateDecode]\n");
+            }
+          else
+            {
+              gks_perror("compression failed (err=%d)", err);
+            }
+        }
+#endif
       pdf_printf(p->stream, "/Length %ld\n", p->content->length);
+
       pdf_enddict(p);
       pdf_stream(p);
       pdf_memcpy(p->stream, (char *)p->content->buffer, p->content->length);
@@ -1053,16 +1078,15 @@ static void set_clip_rect(int tnr)
   double x, y, xr, yr;
 
   if (gkss->clip_tnr != 0)
-    clrt = gkss->viewport[gkss->clip_tnr];
-  else if (gkss->clip == GKS_K_CLIP)
-    clrt = gkss->viewport[tnr];
-  else
-    clrt = gkss->viewport[0];
+    tnr = gkss->clip_tnr;
+  else if (gkss->clip == GKS_K_NOCLIP)
+    tnr = 0;
 
+  clrt = gkss->viewport[tnr];
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
     {
       x = 0.5 * (x0 + x1);
       y = 0.5 * (y0 + y1);

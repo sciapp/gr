@@ -12,12 +12,12 @@ debian-self-contained:
   - cmake --build build
   - DESTDIR="${CI_PROJECT_DIR}/install"
     cmake --install build
-  - mv ./install/usr/local/gr ./artifacts-debian10
+  - mv ./install/usr/local/gr ./artifacts-debian11
   - mv build/preview_images ./grplot-preview-images
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-debian10/
+    - artifacts-debian11/
     - grplot-preview-images/
 
 debian-self-contained-aarch64:
@@ -53,11 +53,11 @@ debian-self-contained-aarch64:
   - cmake --build build
   - DESTDIR="${CI_PROJECT_DIR}/install"
     cmake --install build
-  - mv ./install/usr/local/gr ./artifacts-debian10-aarch64
+  - mv ./install/usr/local/gr ./artifacts-debian11-aarch64
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-debian10-aarch64/
+    - artifacts-debian11-aarch64/
 
 debian-self-contained-armhf:
   stage: build
@@ -92,11 +92,11 @@ debian-self-contained-armhf:
   - cmake --build build
   - DESTDIR="${CI_PROJECT_DIR}/install"
     cmake --install build
-  - mv ./install/usr/local/gr ./artifacts-debian10-armhf
+  - mv ./install/usr/local/gr ./artifacts-debian11-armhf
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-debian10-armhf/
+    - artifacts-debian11-armhf/
 
 debian-system-dependencies-armhf:
   stage: build

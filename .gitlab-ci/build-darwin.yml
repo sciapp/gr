@@ -12,9 +12,15 @@ darwin-self-contained:
       for app in gksqt.app grplot.app; do
         mkdir -p "artifacts/Applications/${app}/Contents/Frameworks"
         mkdir -p "artifacts/Applications/${app}/Contents/plugins/platforms"
-        cp /usr/local/qt6/plugins/platforms/libqcocoa.dylib "artifacts/Applications/${app}/Contents/plugins/platforms"
+        mkdir -p "artifacts/Applications/${app}/Contents/plugins/styles"
+        cp /usr/local/qt6/plugins/platforms/libqcocoa.dylib "artifacts/Applications/${app}/Contents/plugins/platforms/"
+        cp /usr/local/qt6/plugins/styles/libqmacstyle.dylib "artifacts/Applications/${app}/Contents/plugins/styles/"
         pushd artifacts/Applications
-        for binary in "${app}/Contents/plugins/platforms/libqcocoa.dylib" "${app}/Contents/MacOS/${app%.*}"; do
+        for binary in \
+          "${app}/Contents/plugins/platforms/libqcocoa.dylib" \
+          "${app}/Contents/plugins/styles/libqmacstyle.dylib" \
+          "${app}/Contents/MacOS/${app%.*}"
+        do
           for qt_framework in $(otool -L "${binary}" | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1 | uniq); do
             rsync -a --exclude Headers --exclude *_debug* "/usr/local/qt6/lib/${qt_framework}.framework" "${app}/Contents/Frameworks/"
             install_name_tool -change `otool -L "${binary}" | grep "${qt_framework}" | cut -d\( -f1 | head -1` "@executable_path/../Frameworks/${qt_framework}.framework/Versions/Current/${qt_framework}" "${binary}"
@@ -24,6 +30,7 @@ darwin-self-contained:
         codesign -f -s - ${app}/Contents/Frameworks/*.framework
         codesign -f -s - ${app}/Contents/Frameworks/Qt*.framework/Qt*
         codesign -f -s - ${app}/Contents/plugins/platforms/libqcocoa.dylib
+        codesign -f -s - ${app}/Contents/plugins/styles/libqmacstyle.dylib
         popd
       done
     }

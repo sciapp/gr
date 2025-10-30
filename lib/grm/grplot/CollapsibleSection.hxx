@@ -17,5 +17,6 @@ private:
 
 public:
   explicit CollapsibleSection(const QString &title = "", const int animation_duration = 100, QWidget *parent = nullptr);
-  void setContentLayout(QLayout &content_layout);
+  ~CollapsibleSection() override;
+  void setContentLayout(QLayout &content_layout, bool clicked = false);
 };

@@ -503,7 +503,10 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       wss->s = open_socket(ia[2]);
       if (wss->s == -1)
         {
-          gks_perror("can't connect to GKS socket application\n");
+          gks_perror("\
+the graphics window could not be opened because no connection to the GKS \
+Qt driver could be established. Please check all Qt warnings to determine \
+whether (or why) 'gksqt' could not be started.\n");
 
           gks_free(wss);
           wss = NULL;
@@ -548,8 +551,15 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 3:
       if (wss->wstype >= 411 && wss->wstype <= 413)
         {
+          char reply;
           request_type = SOCKET_FUNCTION_CLOSE_WINDOW;
           send_socket(wss->s, &request_type, 1, 0);
+          /*
+           * Wait for a close reply to give gksqt time to close its server socket. When the reply is received, the gksqt
+           * server socket is guaranteed to be closed if this was the last active connection.
+           * This avoids opening new connections to a closing gksqt application resulting in broken sockets / pipes.
+           */
+          read_socket(wss->s, &reply, sizeof(reply), 1);
         }
       close_socket(wss->s);
       if (wss->dl.buffer)

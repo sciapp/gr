@@ -1492,12 +1492,11 @@ static void set_clip_path(int tnr)
   int i, found = 0, index;
 
   if (gkss->clip_tnr != 0)
-    vp = gkss->viewport[gkss->clip_tnr];
-  else if (gkss->clip == GKS_K_CLIP)
-    vp = gkss->viewport[tnr];
-  else
-    vp = gkss->viewport[0];
+    tnr = gkss->clip_tnr;
+  else if (gkss->clip == GKS_K_NOCLIP)
+    tnr = 0;
 
+  vp = gkss->viewport[tnr];
   NDC_to_DC(vp[0], vp[2], cxl, cyb);
   NDC_to_DC(vp[1], vp[3], cxr, cyt);
 
@@ -1532,7 +1531,7 @@ static void set_clip_path(int tnr)
       p->cr[p->clip_index].height = height;
       p->cr[p->clip_index].region = gkss->clip_region;
       p->rect_index = p->clip_index;
-      if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
+      if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
         {
           if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
             {

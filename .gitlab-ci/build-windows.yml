@@ -40,7 +40,7 @@ windows-32bit-cross:
     cmake --install build
   - mv qt5-runtime-Windows-i686/*.dll install/usr/local/gr/bin/
   - mv qt5-runtime-Windows-i686/platforms install/usr/local/gr/bin/platforms
-  - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll install/usr/local/gr/bin/
+  - cp /usr/lib/gcc/i686-w64-mingw32/10-win32/libgcc_s_dw2-1.dll install/usr/local/gr/bin/
   - mv ./install/usr/local/gr artifacts-windows-32bit
   artifacts:
     expire_in: 1 week
@@ -89,7 +89,7 @@ windows-64bit-cross:
     cmake --install build
   - mv qt5-runtime-Windows-x86_64/*.dll install/usr/local/gr/bin/
   - mv qt5-runtime-Windows-x86_64/platforms install/usr/local/gr/bin/platforms
-  - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll install/usr/local/gr/bin/
+  - cp /usr/lib/gcc/x86_64-w64-mingw32/10-win32/libgcc_s_seh-1.dll install/usr/local/gr/bin/
   - mv ./install/usr/local/gr artifacts-windows-64bit
   artifacts:
     expire_in: 1 week

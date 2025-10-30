@@ -313,6 +313,7 @@ void AddElementWidget::parentSelected(int i)
 
           auto group_box_layout = new QVBoxLayout;
           group_box_layout->addWidget(scroll_area);
+          group_box_layout->setContentsMargins(2, 2, 2, 2);
           add_attributes_group->setLayout(group_box_layout);
         }
       grplot_widget->redraw();
@@ -400,10 +401,12 @@ void AddElementWidget::accept()
     }
   else
     {
+      grplot_widget->createHistoryElement();
       grplot_ref->getRef()->append(new_element);
       if (!grm_validate())
         {
           msg = new QLabel("Element could not be created. Missing required attributes.");
+          grplot_widget->removeHistoryElement();
           error = true;
         }
       else
@@ -415,6 +418,7 @@ void AddElementWidget::accept()
           catch (NotFoundError &err)
             {
               msg = new QLabel("Element could not be created. Missing or wrong attributes.");
+              grplot_widget->removeHistoryElement();
               error = true;
             }
         }

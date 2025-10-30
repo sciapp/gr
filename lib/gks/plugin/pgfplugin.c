@@ -914,7 +914,7 @@ static void set_clip_rect(int tnr)
           tnr = gkss->clip_tnr;
         }
       if (p->scoped) pgf_printf(p->stream, "\\end{scope}\n");
-      if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+      if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
         {
           double x, y, w, h;
           x = (p->rect[tnr][0][0] + p->rect[tnr][1][0]) / 2;

@@ -62,6 +62,7 @@ $(PREFIX)/src/tiff-$(VERSION)/Makefile: $(PREFIX)/src/tiff-$(VERSION)/configure
 		--disable-lzma \
 		--disable-zstd \
 		--disable-webp \
+		--disable-lerc \
 		$(TIFF_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libtiff.a: $(PREFIX)/src/tiff-$(VERSION)/Makefile

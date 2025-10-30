@@ -4734,17 +4734,21 @@ static void start_pline3d(double x, double y, double z)
 int gr_textext(double x, double y, char *string)
 {
   int errind, tnr, result;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  result = gr_textex(x, y, string, 0, NULL, NULL);
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
+  result = gr_textex(tx, ty, string, 0, NULL, NULL);
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", tx, ty, string);
 
   return result;
 }
@@ -4753,13 +4757,16 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr;
   int i;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  gr_textex(x, y, string, 1, tbx, tby);
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+  gr_textex(tx, ty, string, 1, tbx, tby);
 
   if (tnr != NDC)
     {
@@ -5368,6 +5375,8 @@ void gr_axis(char which, axis_t *axis)
           axis->label_position = x_log(axis->label_position);
         }
     }
+
+  if (axis->num_ticks > 0 || axis->num_tick_labels > 0) return;
 
   if (scale_option & lx.scale_options)
     {
@@ -9507,8 +9516,11 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
           for (j = 0; j < 3; j++)
             {
               xa[j] = px[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_X & lx.scale_options) xa[j] = lx.xmax - xa[j] + lx.xmin;
               ya[j] = py[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_Y & lx.scale_options) ya[j] = lx.ymax - ya[j] + lx.ymin;
               za[j] = pz[triangles[3 * i + j]];
+              if (GR_OPTION_FLIP_Z & lx.scale_options) za[j] = lx.zmax - za[j] + lx.zmin;
             }
           if (is_nan(xa[0]) || is_nan(xa[1]) || is_nan(xa[2])) continue;
           if (is_nan(ya[0]) || is_nan(ya[1]) || is_nan(ya[2])) continue;
@@ -11464,9 +11476,11 @@ static void cubic_bezier(double x[4], double y[4], int n)
  */
 void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 {
-  int i, j = 0, code, nan = 0;
+  int i, j = 0, k = 0, op, nan = 0;
 
   check_autoinit;
+
+  npath = 0;
 
   if (n >= maxpath) reallocate(n);
 
@@ -11476,7 +11490,9 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
       opcode[0] = GR_MOVETO;
     }
   else
-    memmove(opcode, codes, n);
+    {
+      memmove(opcode, codes, n);
+    }
 
   for (i = 0; i < n; i++)
     {
@@ -11497,33 +11513,52 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   for (i = 0; i < j; i++)
     {
-      code = opcode[i];
-      if (code == GR_STOP)
-        break;
-      else if (code == GR_MOVETO)
+      op = opcode[i];
+      if (op == GR_STOP)
         {
-          closepath(fill);
+          break;
+        }
+      else if (op == GR_MOVETO)
+        {
+          code[k++] = 'M';
           addpath(xpoint[i], ypoint[i]);
         }
-      else if (code == GR_LINETO)
-        addpath(xpoint[i], ypoint[i]);
-      else if (code == GR_CURVE3)
+      else if (op == GR_LINETO)
         {
-          quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-          i += 1;
-        }
-      else if (code == GR_CURVE4)
-        {
-          cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-          i += 2;
-        }
-      else if (code == GR_CLOSEPOLY)
-        {
+          code[k++] = 'L';
           addpath(xpoint[i], ypoint[i]);
-          closepath(fill);
+        }
+      else if (op == GR_CURVE3)
+        {
+          code[k++] = 'Q';
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+        }
+      else if (op == GR_CURVE4)
+        {
+          code[k++] = 'C';
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+          i++;
+          addpath(xpoint[i], ypoint[i]);
+        }
+      else if (op == GR_CLOSEPOLY)
+        {
+          code[k++] = 'Z';
         }
     }
-  closepath(fill);
+
+  if (codes != NULL)
+    {
+      code[k] = fill ? 'f' : 's';
+      gks_gdp(npath, xpath, ypath, GKS_K_GDP_DRAW_PATH, k + 1, code);
+    }
+  else
+    {
+      gks_polyline(npath, xpath, ypath);
+    }
 
   if (flag_stream)
     {
@@ -12270,8 +12305,12 @@ void gr_mathtex(double x, double y, char *string)
   int len;
   int unused;
   int prec;
+  double tx, ty;
 
   check_autoinit;
+
+  tx = x + txoff[0];
+  ty = y + txoff[1];
 
   s = start = strdup(string);
   len = strlen(s);
@@ -12284,14 +12323,14 @@ void gr_mathtex(double x, double y, char *string)
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, start, 0, NULL, NULL, NULL);
+      mathtex2(tx, ty, start, 0, NULL, NULL, NULL);
     }
   else
     {
-      mathtex(x, y, start, 0, NULL, NULL);
+      mathtex(tx, ty, start, 0, NULL, NULL);
     }
 
-  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", tx, ty, string);
 
   free(s);
 }
@@ -12302,6 +12341,7 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
   int len;
   int unused;
   int prec;
+  double tx, ty;
 
   check_autoinit;
 
@@ -12313,14 +12353,17 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
       start = s + 1;
     }
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, start, 1, tbx, tby, NULL);
+      mathtex2(tx, ty, start, 1, tbx, tby, NULL);
     }
   else
     {
-      mathtex(x, y, start, 1, tbx, tby);
+      mathtex(tx, ty, start, 1, tbx, tby);
     }
 
   free(s);
@@ -14610,6 +14653,15 @@ void gr_inqclipxform(int *tnr)
   check_autoinit;
 
   gks_inq_clip_xform(&errind, tnr);
+}
+
+void gr_inqclip(int *clsw, double *clrt)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip(&errind, clsw, clrt);
 }
 
 void gr_setclipregion(int region)

@@ -11,7 +11,8 @@ public:
   ~BoundingLogic() = default;
   void addBoundingObject(int id, double xmin, double xmax, double ymin, double ymax, std::shared_ptr<GRM::Element> ref);
   void addBoundingObject(const BoundingObject &obj);
-  std::vector<BoundingObject> getBoundingObjectsAtPoint(int x, int y);
+  std::vector<BoundingObject> getBoundingObjectsAtPoint(int x, int y, bool grid_hidden = false,
+                                                        bool advanced_editor = false);
   void clear();
 
 private:

@@ -174,6 +174,7 @@ static std::shared_ptr<GRM::Element> global_root;
 static std::shared_ptr<GRM::Element> edit_figure;
 static std::weak_ptr<GRM::Element> current_dom_element;
 static std::weak_ptr<GRM::Element> current_central_region_element;
+static int error_code = GRM_ERROR_NONE;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -183,21 +184,35 @@ EventQueue *event_queue = nullptr;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static StringMapEntry kind_to_fmt[] = {
-    {"line", "xys"},           {"hexbin", "xys"},
-    {"polar_line", "xys"},     {"shade", "xys"},
-    {"stem", "xys"},           {"stairs", "xys"},
-    {"contour", "xyzc"},       {"contourf", "xyzc"},
-    {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
-    {"surface", "xyzc"},       {"wireframe", "xyzc"},
-    {"line3", "xyzc"},         {"scatter", "xyzc"},
-    {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-    {"heatmap", "xyzc"},       {"histogram", "x"},
-    {"barplot", "y"},          {"isosurface", "c"},
-    {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
-    {"polar_histogram", "x"},  {"pie", "x"},
-    {"volume", "c"},           {"marginal_heatmap", "xyzc"},
-    {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"},
-    {"polar_scatter", "xys"},
+    {"line", "xys"},
+    {"hexbin", "xys"},
+    {"polar_line", "thetars"},
+    {"shade", "xys"},
+    {"stem", "xys"},
+    {"stairs", "xys"},
+    {"contour", "xyzc"},
+    {"contourf", "xyzc"},
+    {"tricontour", "xyzc"},
+    {"trisurface", "xyzc"},
+    {"surface", "xyzc"},
+    {"wireframe", "xyzc"},
+    {"line3", "xyzc"},
+    {"scatter", "xyzc"},
+    {"scatter3", "xyzc"},
+    {"quiver", "xyuv"},
+    {"heatmap", "xyzc"},
+    {"histogram", "x"},
+    {"barplot", "y"},
+    {"isosurface", "c"},
+    {"imshow", "c"},
+    {"nonuniform_heatmap", "xyzc"},
+    {"polar_histogram", "theta"},
+    {"pie", "x"},
+    {"volume", "c"},
+    {"marginal_heatmap", "xyzc"},
+    {"polar_heatmap", "thetarzc"},
+    {"nonuniform_polar_heatmap", "thetarzc"},
+    {"polar_scatter", "thetars"},
 };
 
 
@@ -301,14 +316,15 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "keep_aspect_ratio",
                                     "keep_radii_axes",
                                     "kind",
-                                    "labels",
                                     "levels",
                                     "location",
                                     "major_h",
                                     "normalization",
-                                    "only_quadratic_aspect_ratio",
+                                    "only_square_aspect_ratio",
                                     "orientation",
                                     "panzoom",
+                                    "r_lim",
+                                    "r_log",
                                     "rel_height",
                                     "rel_width",
                                     "resample_method",
@@ -320,6 +336,8 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "style",
                                     "subplot",
                                     "theta_flip",
+                                    "theta_lim",
+                                    "theta_log",
                                     "tilt",
                                     "title",
                                     "transformation",
@@ -349,6 +367,8 @@ const char *valid_series_keys[] = {"a",
                                    "bin_width",
                                    "bin_edges",
                                    "bin_counts",
+                                   "border_width",
+                                   "border_color_ind",
                                    "c",
                                    "c_dims",
                                    "c_range",
@@ -361,32 +381,44 @@ const char *valid_series_keys[] = {"a",
                                    "error",
                                    "error_bar_style",
                                    "face_color",
+                                   "fill_int_style",
+                                   "fill_style",
                                    "foreground_color",
                                    "indices",
                                    "inner_series",
                                    "int_limits_high",
                                    "int_limits_low",
                                    "isovalue",
+                                   "label",
+                                   "labels",
+                                   "line_color_ind",
                                    "line_spec",
+                                   "line_type",
+                                   "line_width",
+                                   "marker_color_ind",
+                                   "marker_size",
                                    "marker_type",
                                    "num_bins",
+                                   "r",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
-                                   "r_lim",
+                                   "r_colormap",
+                                   "r_range",
                                    "s",
                                    "step_where",
                                    "stairs",
-                                   "theta_lim",
+                                   "theta",
+                                   "theta_colormap",
+                                   "theta_data_lim",
+                                   "theta_range",
                                    "transparency",
                                    "u",
                                    "v",
                                    "weights",
                                    "x",
-                                   "x_colormap",
                                    "x_range",
                                    "y",
-                                   "y_colormap",
                                    "y_labels",
                                    "y_line_pos",
                                    "y_range",
@@ -414,6 +446,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"axes_mod", "a"},
                                           {"background_color", "i"},
                                           {"bar_color", "D|i"},
+                                          {"border_color_ind", "i"},
+                                          {"border_width", "d"},
                                           {"c", "D|I"},
                                           {"c_dims", "I"},
                                           {"c_range", "D"},
@@ -426,6 +460,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"edge_width", "d"},
                                           {"error", "a"},
                                           {"error_bar_style", "i"},
+                                          {"fill_int_style", "i"},
+                                          {"fill_style", "i"},
                                           {"fit_parents_height", "i"},
                                           {"fit_parents_width", "i"},
                                           {"font", "i"},
@@ -439,16 +475,26 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"isovalue", "d"},
                                           {"keep_aspect_ratio", "i"},
                                           {"kind", "s"},
+                                          {"label", "s"},
                                           {"labels", "S"},
                                           {"levels", "i"},
+                                          {"line_color_ind", "i"},
                                           {"line_spec", "s"},
+                                          {"line_type", "i"},
+                                          {"line_width", "d"},
                                           {"location", "i"},
                                           {"marginal_heatmap_kind", "s"},
+                                          {"marker_color_ind", "i"},
+                                          {"marker_size", "d"},
                                           {"marker_type", "i|D"},
                                           {"num_bins", "i"},
-                                          {"only_quadratic_aspect_ratio", "i"},
+                                          {"only_square_aspect_ratio", "i"},
                                           {"orientation", "s"},
                                           {"panzoom", "D"},
+                                          {"r", "D|I"},
+                                          {"r_colormap", "i"},
+                                          {"r_lim", "D"},
+                                          {"r_range", "D"},
                                           {"raw", "s"},
                                           {"ref_x_axis_location", "s"},
                                           {"ref_y_axis_location", "s"},
@@ -463,6 +509,10 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"step_where", "s"},
                                           {"style", "s"},
                                           {"subplot", "D"},
+                                          {"theta", "D|I"},
+                                          {"theta_colormap", "i"},
+                                          {"theta_lim", "D"},
+                                          {"theta_range", "D"},
                                           {"tilt", "d"},
                                           {"title", "s"},
                                           {"transformation", "i"},
@@ -472,7 +522,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"v", "D"},
                                           {"x", "D|I"},
                                           {"x_bins", "i"},
-                                          {"x_colormap", "i"},
                                           {"x_flip", "i"},
                                           {"x_grid", "i"},
                                           {"x_label", "s"},
@@ -482,7 +531,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"x_range", "D"},
                                           {"y", "D"},
                                           {"y_bins", "i"},
-                                          {"y_colormap", "i"},
                                           {"y_flip", "i"},
                                           {"y_form", "i"},
                                           {"y_grid", "i"},
@@ -602,6 +650,7 @@ error_cleanup:
       stringArrayMapDelete(type_map);
       type_map = nullptr;
     }
+  error_code = error;
   return error;
 }
 
@@ -894,6 +943,7 @@ cleanup:
 
   --recursion_level;
 
+  error_code = error;
   return error;
 }
 
@@ -914,14 +964,22 @@ grm_error_t plotInitArgStructure(grm_arg_t *arg, const char **hierarchy_name_ptr
   logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
           next_hierarchy_level_max_id));
   error = argIncreaseArray(arg, next_hierarchy_level_max_id - args_old_array_length);
+  error_code = error;
   returnIfError;
   argValues(arg, "A", &args_array);
   for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
     {
       args_array[i] = grm_args_new();
       grm_args_push(args_array[i], "array_index", "i", i);
-      returnErrorIf(args_array[i] == nullptr, GRM_ERROR_MALLOC);
+
+      if (args_array[i] == nullptr)
+        {
+          error = GRM_ERROR_MALLOC;
+          error_code = error;
+          returnIfError;
+        }
       error = plotInitArgsStructure(args_array[i], hierarchy_name_ptr, 1);
+      error_code = error;
       returnIfError;
       if (strcmp(*hierarchy_name_ptr, "plots") == 0) grm_args_push(args_array[i], "in_use", "i", 0);
     }
@@ -977,6 +1035,7 @@ error_cleanup:
       free(args_array);
     }
 
+  error_code = error;
   return error;
 }
 
@@ -994,6 +1053,7 @@ int plotCheckForRequest(const grm_args_t *args, grm_error_t *error)
   else
     {
       *error = GRM_ERROR_PLOT_INVALID_REQUEST;
+      error_code = GRM_ERROR_PLOT_INVALID_REQUEST;
     }
 
   return is_request;
@@ -1076,7 +1136,17 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
       grm_args_push(subplot_args, "kind", "s", kind);
     }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  if (!strEqualsAny(kind, "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
+                    "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "barplot",
+                    "contour", "contourf", "heatmap", "hexbin", "histogram", "line", "quiver", "scatter", "shade",
+                    "stairs", "stem", "marginal_heatmap", "imshow", "tricontour", "pie"))
+    {
+      error = GRM_ERROR_PLOT_UNKNOWN_KIND;
+      error_code = error;
+      returnIfError;
+    }
   error = plotStoreCoordinateRanges(subplot_args);
+  error_code = error;
   returnIfError;
   plotProcessWindow(subplot_args);
 
@@ -1135,6 +1205,7 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
 
   if (global_grid != nullptr) grm_grid_delete(global_grid);
   error = grm_grid_new(1, 1, &global_grid);
+  error_code = error;
   returnIfError;
   grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != nullptr)
@@ -1156,7 +1227,11 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
           cols_length = 0;
         }
 
-      if (rows_length != cols_length) return GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+      if (rows_length != cols_length)
+        {
+          error_code = GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+          return GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
+        }
 
       grm_args_first_value(*current_subplot_args, "row_span", "I", &row_spans, &row_spans_length);
       grm_args_first_value(*current_subplot_args, "col_span", "I", &col_spans, &col_spans_length);
@@ -1200,15 +1275,19 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
             {
               error = grm_grid_set_element_args_slice(rowstart, rowstop, colstart, colstop, *current_subplot_args,
                                                       current_grid);
+              error_code = error;
               returnIfError;
               error = grm_grid_get_element(rowstart, colstart, current_grid, &current_element);
+              error_code = error;
               returnIfError;
             }
           else
             {
               error = grm_grid_ensure_cells_are_grid(rowstart, rowstop, colstart, colstop, current_grid);
+              error_code = error;
               returnIfError;
               error = grm_grid_get_element(rowstart, colstart, current_grid, (grm_element_t **)&current_grid);
+              error_code = error;
               returnIfError;
               current_element = (grm_element_t *)current_grid;
             }
@@ -1217,26 +1296,31 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
               rel_heights[current_nesting_degree] != -1)
             {
               error = grm_element_set_relative_height(current_element, rel_heights[current_nesting_degree]);
+              error_code = error;
             }
           if (rel_widths != nullptr && rel_widths_length > current_nesting_degree &&
               rel_widths[current_nesting_degree] != -1)
             {
               error = grm_element_set_relative_width(current_element, rel_widths[current_nesting_degree]);
+              error_code = error;
             }
           if (abs_heights != nullptr && abs_heights_length > current_nesting_degree &&
               abs_heights[current_nesting_degree] != -1)
             {
               error = grm_element_set_abs_height(current_element, abs_heights[current_nesting_degree]);
+              error_code = error;
             }
           if (abs_widths != nullptr && abs_widths_length > current_nesting_degree &&
               abs_widths[current_nesting_degree] != -1)
             {
               error = grm_element_set_abs_width(current_element, abs_widths[current_nesting_degree]);
+              error_code = error;
             }
           if (aspect_ratios != nullptr && aspect_ratios_length > current_nesting_degree &&
               aspect_ratios[current_nesting_degree] != -1)
             {
               error = grm_element_set_aspect_ratio(current_element, aspect_ratios[current_nesting_degree]);
+              error_code = error;
             }
           if (fit_parents_heights != nullptr && fit_parents_heights_length > current_nesting_degree &&
               fit_parents_heights[current_nesting_degree] != -1)
@@ -1279,7 +1363,7 @@ void plotProcessWindow(grm_args_t *subplot_args)
 {
   int scale = 0;
   const char *kind, *orientation = PLOT_DEFAULT_ORIENTATION;
-  int x_log, y_log, z_log;
+  int x_log, y_log, z_log, theta_log, r_log;
   int x_flip, y_flip, z_flip;
   double rotation, tilt;
 
@@ -1300,8 +1384,16 @@ void plotProcessWindow(grm_args_t *subplot_args)
     }
   auto plot = strcmp(kind, "marginal_heatmap") != 0 ? central_region->parentElement()
                                                     : central_region->parentElement()->parentElement();
-  if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
-  if (grm_args_values(subplot_args, "y_log", "i", &y_log)) plot->setAttribute("y_log", y_log);
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
+    {
+      if (grm_args_values(subplot_args, "theta_log", "i", &theta_log)) plot->setAttribute("theta_log", theta_log);
+      if (grm_args_values(subplot_args, "r_log", "i", &r_log)) plot->setAttribute("r_log", r_log);
+    }
+  else
+    {
+      if (grm_args_values(subplot_args, "x_log", "i", &x_log)) plot->setAttribute("x_log", x_log);
+      if (grm_args_values(subplot_args, "y_log", "i", &y_log)) plot->setAttribute("y_log", y_log);
+    }
   if (grm_args_values(subplot_args, "z_log", "i", &z_log)) plot->setAttribute("z_log", z_log);
   if (grm_args_values(subplot_args, "x_flip", "i", &x_flip)) plot->setAttribute("x_flip", x_flip);
   if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) plot->setAttribute("y_flip", y_flip);
@@ -1333,7 +1425,7 @@ grm_error_t plotStoreCoordinateRanges(grm_args_t *subplot_args)
 {
   const char *kind;
   grm_error_t error = GRM_ERROR_NONE;
-  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
+  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, theta_min, theta_max, r_min, r_max;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
@@ -1352,25 +1444,42 @@ grm_error_t plotStoreCoordinateRanges(grm_args_t *subplot_args)
     }
   group->setAttribute("_kind", kind);
 
-  if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
-    {
-      group->setAttribute("x_lim_min", x_min);
-      group->setAttribute("x_lim_max", x_max);
-    }
-  if (grm_args_values(subplot_args, "y_lim", "dd", &y_min, &y_max))
-    {
-      group->setAttribute("y_lim_min", y_min);
-      group->setAttribute("y_lim_max", y_max);
-    }
-  if (grm_args_values(subplot_args, "z_lim", "dd", &z_min, &z_max))
-    {
-      group->setAttribute("z_lim_min", z_min);
-      group->setAttribute("z_lim_max", z_max);
-    }
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
     {
       group->setAttribute("c_lim_min", c_min);
       group->setAttribute("c_lim_max", c_max);
+    }
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
+    {
+      if (grm_args_values(subplot_args, "theta_lim", "dd", &theta_min, &theta_max))
+        {
+          group->setAttribute("theta_lim_min", theta_min);
+          group->setAttribute("theta_lim_max", theta_max);
+        }
+      if (grm_args_values(subplot_args, "r_lim", "dd", &r_min, &r_max))
+        {
+          group->setAttribute("r_lim_min", r_min);
+          group->setAttribute("r_lim_max", r_max);
+        }
+    }
+  else
+    {
+      if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
+        {
+          group->setAttribute("x_lim_min", x_min);
+          group->setAttribute("x_lim_max", x_max);
+        }
+      if (grm_args_values(subplot_args, "y_lim", "dd", &y_min, &y_max))
+        {
+          group->setAttribute("y_lim_min", y_min);
+          group->setAttribute("y_lim_max", y_max);
+        }
+    }
+
+  if (grm_args_values(subplot_args, "z_lim", "dd", &z_min, &z_max))
+    {
+      group->setAttribute("z_lim_min", z_min);
+      group->setAttribute("z_lim_max", z_max);
     }
 
   return error;
@@ -1397,17 +1506,6 @@ void plotPostSubplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (grm_args_contains(subplot_args, "labels"))
-    {
-      if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "polar_line", "polar_scatter", "scatter3", "line3"))
-        {
-          plotDrawLegend(subplot_args);
-        }
-      else if (strcmp(kind, "pie") == 0)
-        {
-          plotDrawPieLegend(subplot_args);
-        }
-    }
   if (strcmp(kind, "barplot") == 0)
     {
       plotDrawAxes(subplot_args, 2);
@@ -1425,11 +1523,16 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
   const char *key_hierarchy_name, **current_hierarchy_name_ptr;
   grm_args_t *current_args, **args_array;
   grm_arg_t *current_arg;
+  grm_error_t error;
   unsigned int args_array_length, current_id;
 
   logger((stderr, "Check hierarchy level for key \"%s\"...\n", key));
-  returnErrorIf(!stringMapAt(plot_valid_keys_map, key, static_cast<const char **>(&key_hierarchy_name)),
-                GRM_ERROR_PLOT_UNKNOWN_KEY);
+  if (!stringMapAt(plot_valid_keys_map, key, static_cast<const char **>(&key_hierarchy_name)))
+    {
+      error = GRM_ERROR_PLOT_UNKNOWN_KEY;
+      error_code = error;
+      returnIfError;
+    }
   logger((stderr, "... got hierarchy \"%s\"\n", key_hierarchy_name));
   current_hierarchy_name_ptr = hierarchy_name_start_ptr;
   current_args = args;
@@ -1438,7 +1541,12 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
       while (*++current_hierarchy_name_ptr != nullptr)
         {
           current_arg = argsAt(current_args, *current_hierarchy_name_ptr);
-          returnErrorIf(current_arg == nullptr, GRM_ERROR_INTERNAL);
+          if (current_arg == nullptr)
+            {
+              error = GRM_ERROR_INTERNAL;
+              error_code = error;
+              returnIfError;
+            }
           argFirstValue(current_arg, "A", &args_array, &args_array_length);
           uintMapAt(hierarchy_to_id, *current_hierarchy_name_ptr, &current_id);
           /* Check for the invalid id 0 because id 0 is set for append mode */
@@ -1477,12 +1585,18 @@ grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name
                 {
                   error = eventQueueEnqueueNewPlotEvent(event_queue, (int)current_id - 1);
                 }
+              error_code = error;
               returnIfError;
               grm_args_push(current_args, "in_use", "i", 1);
             }
           if (strcmp(*current_hierarchy_name_ptr, key_hierarchy_name) == 0) break;
         }
-      returnErrorIf(*current_hierarchy_name_ptr == nullptr, GRM_ERROR_INTERNAL);
+      if (*current_hierarchy_name_ptr == nullptr)
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
     }
   if (found_args != nullptr) *found_args = current_args;
   if (found_hierarchy_name_ptr != nullptr) *found_hierarchy_name_ptr = current_hierarchy_name_ptr;
@@ -1506,9 +1620,12 @@ grm_error_t plotLine(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *int_limits_high = nullptr, *int_limits_low = nullptr;
       unsigned int x_length = 0, y_length = 0, limits_high_num = 0, limits_low_num = 0;
-      char *spec;
+      char *spec, *label;
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width, border_width, marker_size;
+      int line_color_ind, line_type, border_color_ind, marker_color_ind;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("line");
       group->append(sub_group);
 
@@ -1518,17 +1635,24 @@ grm_error_t plotLine(grm_args_t *subplot_args)
 
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       if (y_length > 0)
         {
           std::vector<double> y_vec(y, y + y_length);
-          (*context)["y" + str] = y_vec;
-          sub_group->setAttribute("y", "y" + str);
+          (*context)[prefix + "y" + str] = y_vec;
+          sub_group->setAttribute("y", prefix + "y" + str);
         }
       if (grm_args_first_value(*current_series, "x", "D", &x, &x_length))
         {
           std::vector<double> x_vec(x, x + x_length);
-          (*context)["x" + str] = x_vec;
-          sub_group->setAttribute("x", "x" + str);
+          (*context)[prefix + "x" + str] = x_vec;
+          sub_group->setAttribute("x", prefix + "x" + str);
         }
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
@@ -1548,8 +1672,22 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         sub_group->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
 
       // check if there are any attributes for integrals which should be created
       if (grm_args_first_value(*current_series, "int_limits_high", "D", &int_limits_high, &limits_high_num))
@@ -1559,6 +1697,7 @@ grm_error_t plotLine(grm_args_t *subplot_args)
               if (limits_low_num != limits_high_num)
                 {
                   error = GRM_ERROR_PLOT_MISSING_DATA;
+                  error_code = error;
                   returnIfError;
                 }
               else
@@ -1578,12 +1717,14 @@ grm_error_t plotLine(grm_args_t *subplot_args)
           else
             {
               error = GRM_ERROR_PLOT_MISSING_DATA;
+              error_code = error;
               returnIfError;
             }
         }
 
       global_root->setAttribute("_id", ++id);
       error = plotDrawErrorBars(*current_series, x_length);
+      error_code = error;
       returnIfError;
       ++current_series;
     }
@@ -1612,10 +1753,13 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       unsigned int x_length, y_length;
-      char *spec;
+      char *spec, *label;
       const char *where;
       double y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width;
+      int line_color_ind, line_type;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("stairs");
       group->append(sub_group);
 
@@ -1626,13 +1770,20 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       std::vector<double> x_vec(x, x + x_length);
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
 
       std::vector<double> y_vec(y, y + y_length);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -1654,7 +1805,12 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
-
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "step_where", "s", &where)) sub_group->setAttribute("step_where", where);
 
       global_root->setAttribute("_id", ++id);
@@ -1689,6 +1845,10 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       int c_index = -1, marker_type;
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
+      char *label;
+      double marker_size, border_width;
+      int marker_color_ind, border_color_ind;
+      std::string prefix = "";
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1700,26 +1860,41 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       std::vector<double> x_vec(x, x + x_length);
       std::vector<double> y_vec(y, y + y_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
       if (grm_args_first_value(*current_series, "z", "D", &z, &z_length))
         {
           std::vector<double> z_vec(z, z + z_length);
 
-          (*context)["z" + str] = z_vec;
-          sub_group->setAttribute("z", "z" + str);
+          (*context)[prefix + "z" + str] = z_vec;
+          sub_group->setAttribute("z", prefix + "z" + str);
         }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
 
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
           std::vector<double> c_vec(c, c + c_length);
 
-          (*context)["c" + str] = c_vec;
-          sub_group->setAttribute("c", "c" + str);
+          (*context)[prefix + "c" + str] = c_vec;
+          sub_group->setAttribute("c", prefix + "c" + str);
         }
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
@@ -1752,6 +1927,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         sub_group->setAttribute("ref_y_axis_location", y_axis_ref);
 
       error = plotDrawErrorBars(*current_series, x_length);
+      error_code = error;
       returnIfError;
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -1810,6 +1986,7 @@ grm_error_t plotQuiver(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, 256);
+  error_code = error;
 
   return error;
 }
@@ -1825,9 +2002,12 @@ grm_error_t plotStem(grm_args_t *subplot_args)
     {
       double *x, *y;
       unsigned int x_length, y_length;
-      char *spec;
+      char *spec, *label;
       double y_min, y_max, y_line_pos;
       const char *x_axis_ref, *y_axis_ref;
+      double line_width;
+      int line_type, line_color_ind;
+      std::string prefix;
 
       auto sub_group = global_render->createSeries("stem");
       group->append(sub_group);
@@ -1842,10 +2022,17 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       std::vector<double> x_vec(x, x + x_length);
       std::vector<double> y_vec(y, y + x_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
         {
@@ -1862,6 +2049,12 @@ grm_error_t plotStem(grm_args_t *subplot_args)
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -1890,6 +2083,7 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
       unsigned int num_bins = 0, x_length, num_weights;
       double transparency;
       const char *x_axis_ref, *y_axis_ref;
+      int fill_style, fill_int_style;
 
       auto sub_group = global_render->createSeries("histogram");
       group->append(sub_group);
@@ -1906,6 +2100,10 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color_index))
         sub_group->setAttribute("fill_color_ind", bar_color_index);
+      if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+        sub_group->setAttribute("fill_style", fill_style);
+      if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+        sub_group->setAttribute("fill_int_style", fill_int_style);
 
       if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
                           &edge_color_rgb[2]))
@@ -1970,6 +2168,7 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         {
           if (num_bins <= 1) num_bins = (int)(3.3 * log10((int)x_length) + 0.5) + 1;
           error = plotDrawErrorBars(*current_series, num_bins);
+          error_code = error;
         }
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -2014,6 +2213,7 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max, y_line_pos;
       double transparency;
       const char *x_axis_ref, *y_axis_ref;
+      int fill_style, fill_int_style;
 
       auto sub_group = global_render->createSeries("barplot");
       group->append(sub_group);
@@ -2027,21 +2227,15 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           sub_group->setAttribute("fill_color_rgb", "fill_color_rgb" + id_str);
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
-        {
-          sub_group->setAttribute("fill_color_ind", bar_color);
-        }
-      if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
-        {
-          sub_group->setAttribute("bar_width", bar_width);
-        }
-      if (grm_args_values(subplot_args, "style", "s", &style))
-        {
-          sub_group->setAttribute("style", style);
-        }
+        sub_group->setAttribute("fill_color_ind", bar_color);
+      if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+        sub_group->setAttribute("fill_style", fill_style);
+      if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+        sub_group->setAttribute("fill_int_style", fill_int_style);
+      if (grm_args_values(subplot_args, "bar_width", "d", &bar_width)) sub_group->setAttribute("bar_width", bar_width);
+      if (grm_args_values(subplot_args, "style", "s", &style)) sub_group->setAttribute("style", style);
       if (grm_args_values(*current_series, "transparency", "d", &transparency))
-        {
-          sub_group->setAttribute("transparency", transparency);
-        }
+        sub_group->setAttribute("transparency", transparency);
 
       /* Push attributes on the series level to the tree */
       if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
@@ -2052,13 +2246,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           sub_group->setAttribute("line_color_rgb", "line_color_rgb" + id_str);
         }
       if (grm_args_values(*current_series, "edge_color", "i", &edge_color))
-        {
-          sub_group->setAttribute("line_color_ind", edge_color);
-        }
+        sub_group->setAttribute("line_color_ind", edge_color);
       if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
-        {
-          sub_group->setAttribute("edge_width", edge_width);
-        }
+        sub_group->setAttribute("edge_width", edge_width);
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
           sub_group->setAttribute("x_range_min", x_min);
@@ -2116,13 +2306,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           /* Flatten inner_series */
           /* Since the data has to be processed the error handling is done here instead of in the renderer */
           if (c != nullptr)
-            {
-              cleanupAndSetErrorIf((c_length < inner_series_length), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-            }
+            cleanupAndSetErrorIf((c_length < inner_series_length), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
           if (c_rgb != nullptr)
-            {
-              cleanupAndSetErrorIf((c_rgb_length < inner_series_length * 3), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-            }
+            cleanupAndSetErrorIf((c_rgb_length < inner_series_length * 3), GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
           y_vec = {};
           indices_vec = {};
@@ -2248,6 +2434,7 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
     }
 
 cleanup:
+  error_code = error;
 
   return error;
 }
@@ -2318,6 +2505,7 @@ grm_error_t plotContour(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, num_levels);
+  error_code = error;
 
   return error;
 }
@@ -2388,6 +2576,7 @@ grm_error_t plotContourf(grm_args_t *subplot_args)
       ++current_series;
     }
   error = plotDrawColorbar(subplot_args, 0.0, num_levels);
+  error_code = error;
 
   return error;
 }
@@ -2448,7 +2637,7 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int z_log = 0;
   unsigned int cols, rows, z_length;
-  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
+  double *theta = nullptr, *r = nullptr, *z, theta_min, theta_max, r_min, r_max, z_min, z_max, c_min, c_max;
   grm_error_t error = GRM_ERROR_NONE;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
@@ -2460,26 +2649,26 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
       auto sub_group = global_render->createSeries("polar_heatmap");
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &cols);
-      grm_args_first_value(*current_series, "y", "D", &y, &rows);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &cols);
+      grm_args_first_value(*current_series, "r", "D", &r, &rows);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      if (x != nullptr)
+      if (theta != nullptr)
         {
-          std::vector<double> x_vec(x, x + cols);
-          (*context)["x" + str] = x_vec;
-          sub_group->setAttribute("x", "x" + str);
+          std::vector<double> theta_vec(theta, theta + cols);
+          (*context)["theta" + str] = theta_vec;
+          sub_group->setAttribute("theta", "theta" + str);
         }
 
-      if (y != nullptr)
+      if (r != nullptr)
         {
-          std::vector<double> y_vec(y, y + rows);
-          (*context)["y" + str] = y_vec;
-          sub_group->setAttribute("y", "y" + str);
+          std::vector<double> r_vec(r, r + rows);
+          (*context)["r" + str] = r_vec;
+          sub_group->setAttribute("r", "r" + str);
         }
 
       std::vector<double> z_vec(z, z + z_length);
@@ -2488,9 +2677,9 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
 
       group->parentElement()->setAttribute("z_log", z_log);
 
-      if (x == nullptr && y == nullptr)
+      if (theta == nullptr && r == nullptr)
         {
-          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          /* If neither `theta` nor `r` are given, we need more information about the shape of `z` */
           grm_args_values(*current_series, "z_dims", "ii", &cols, &rows);
 
           auto z_dims_vec = std::vector<int>{(int)cols, (int)rows};
@@ -2498,20 +2687,20 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
           (*context)[z_dims_key] = z_dims_vec;
           sub_group->setAttribute("z_dims", z_dims_key);
         }
-      if (x == nullptr)
+      if (theta == nullptr)
         {
-          if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+          if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
             {
-              sub_group->setAttribute("x_range_min", x_min);
-              sub_group->setAttribute("x_range_max", x_max);
+              sub_group->setAttribute("theta_range_min", theta_min);
+              sub_group->setAttribute("theta_range_max", theta_max);
             }
         }
-      if (y == nullptr)
+      if (r == nullptr)
         {
-          if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+          if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
             {
-              sub_group->setAttribute("y_range_min", y_min);
-              sub_group->setAttribute("y_range_max", y_max);
+              sub_group->setAttribute("r_range_min", r_min);
+              sub_group->setAttribute("r_range_max", r_max);
             }
         }
       if (grm_args_values(*current_series, "z_range", "dd", &z_min, &z_max))
@@ -2858,6 +3047,8 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      char *label;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("line3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2868,17 +3059,24 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
       std::vector<double> x_vec(x, x + x_length);
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
 
       std::vector<double> y_vec(y, y + y_length);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
 
       std::vector<double> z_vec(z, z + z_length);
-      (*context)["z" + str] = z_vec;
-      sub_group->setAttribute("z", "z" + str);
+      (*context)[prefix + "z" + str] = z_vec;
+      sub_group->setAttribute("z", prefix + "z" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -2916,6 +3114,8 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      char *label;
+      std::string prefix = "";
       auto sub_group = global_render->createSeries("scatter3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2930,12 +3130,19 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
       std::vector<double> y_vec(y, y + y_length);
       std::vector<double> z_vec(z, z + z_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
-      (*context)["z" + str] = z_vec;
-      sub_group->setAttribute("z", "z" + str);
+      if (grm_args_values(*current_series, "label", "s", &label))
+        {
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
+        }
+
+      (*context)[prefix + "x" + str] = x_vec;
+      sub_group->setAttribute("x", prefix + "x" + str);
+      (*context)[prefix + "y" + str] = y_vec;
+      sub_group->setAttribute("y", prefix + "y" + str);
+      (*context)[prefix + "z" + str] = z_vec;
+      sub_group->setAttribute("z", prefix + "z" + str);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -2956,8 +3163,8 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
           std::vector<double> c_vec(c, c + c_length);
-          (*context)["c" + str] = c_vec;
-          sub_group->setAttribute("c", "c" + str);
+          (*context)[prefix + "c" + str] = c_vec;
+          sub_group->setAttribute("c", prefix + "c" + str);
 
           if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
             {
@@ -3147,8 +3354,10 @@ grm_error_t plotVolume(grm_args_t *subplot_args)
     }
 
   error = plotDrawAxes(subplot_args, 2);
+  error_code = error;
   returnIfError;
   error = plotDrawColorbar(subplot_args, PLOT_3D_COLORBAR_OFFSET, 256);
+  error_code = error;
   returnIfError;
 
   return GRM_ERROR_NONE;
@@ -3163,38 +3372,48 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *x, *y;
-      double y_min, y_max, x_min, x_max;
-      unsigned int y_length, x_length;
-      char *spec;
+      double *theta, *r;
+      double theta_min, theta_max, r_min, r_max;
+      unsigned int theta_length, r_length;
+      char *spec, *label;
       auto sub_group = global_render->createSeries("polar_line");
       int clip_negative = 0, marker_type;
+      double line_width, border_width, marker_size;
+      int line_type, line_color_ind, border_color_ind, marker_color_ind;
+      std::string prefix = "";
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "r", "D", &r, &r_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + y_length);
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> r_vec(r, r + r_length);
 
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
-
-      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "label", "s", &label))
         {
-          sub_group->setAttribute("y_range_min", y_min);
-          sub_group->setAttribute("y_range_max", y_max);
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
         }
-      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+
+      (*context)[prefix + "theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", prefix + "theta" + str);
+      (*context)[prefix + "r" + str] = r_vec;
+      sub_group->setAttribute("r", prefix + "r" + str);
+
+      if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
-          sub_group->setAttribute("x_range_min", x_min);
-          sub_group->setAttribute("x_range_max", x_max);
+          sub_group->setAttribute("r_range_min", r_min);
+          sub_group->setAttribute("r_range_max", r_max);
+        }
+      if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
+        {
+          sub_group->setAttribute("theta_range_min", theta_min);
+          sub_group->setAttribute("theta_range_max", theta_max);
         }
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
@@ -3202,8 +3421,22 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
         }
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) sub_group->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_width", "d", &line_width))
+        sub_group->setAttribute("line_width", line_width);
+      if (grm_args_values(*current_series, "line_type", "i", &line_type))
+        sub_group->setAttribute("line_type", line_type);
+      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+        sub_group->setAttribute("line_color_ind", line_color_ind);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
+      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
+        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
+        sub_group->setAttribute("border_color_ind", border_color_ind);
+      if (grm_args_values(*current_series, "border_width", "d", &border_width))
+        sub_group->setAttribute("border_width", border_width);
 
       global_root->setAttribute("_id", ++id);
       ++current_series;
@@ -3221,37 +3454,46 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *x, *y;
-      double y_min, y_max, x_min, x_max;
-      unsigned int x_length, y_length;
+      double *theta, *r;
+      double theta_min, theta_max, r_min, r_max;
+      unsigned int theta_length, r_length;
+      char *label;
       auto sub_group = global_render->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
+      std::string prefix = "";
       group->append(sub_group);
 
-      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "r", "D", &r, &r_length);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + y_length);
-
-      (*context)["x" + str] = x_vec;
-      sub_group->setAttribute("x", "x" + str);
-      (*context)["y" + str] = y_vec;
-      sub_group->setAttribute("y", "y" + str);
-
-      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "label", "s", &label))
         {
-          sub_group->setAttribute("y_range_min", y_min);
-          sub_group->setAttribute("y_range_max", y_max);
+          prefix = std::string(label) + "_";
+          sub_group->setAttribute("label", label);
+          plotDrawLegend(subplot_args);
         }
-      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> r_vec(r, r + r_length);
+
+      (*context)[prefix + "theta" + str] = theta_vec;
+      sub_group->setAttribute("theta", prefix + "theta" + str);
+      (*context)[prefix + "r" + str] = r_vec;
+      sub_group->setAttribute("r", prefix + "r" + str);
+
+      if (grm_args_values(*current_series, "r_range", "dd", &r_min, &r_max))
         {
-          sub_group->setAttribute("x_range_min", x_min);
-          sub_group->setAttribute("x_range_max", x_max);
+          sub_group->setAttribute("r_range_min", r_min);
+          sub_group->setAttribute("r_range_max", r_max);
+        }
+      if (grm_args_values(*current_series, "theta_range", "dd", &theta_min, &theta_max))
+        {
+          sub_group->setAttribute("theta_range_min", theta_min);
+          sub_group->setAttribute("theta_range_max", theta_max);
         }
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
@@ -3335,23 +3577,22 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
  * */
 grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
 {
-  double *r_lim = nullptr;
-  unsigned int dummy;
   int stairs;
   int keep_radii_axes;
-  int x_colormap, y_colormap;
+  int theta_colormap, r_colormap;
   int draw_edges, theta_flip, edge_color, face_color;
   double transparency;
-  double xrange_min, xrange_max, ylim_min, ylim_max;
+  double theta_range_min, theta_range_max, r_lim_min, r_lim_max;
   grm_args_t **series;
+  int fill_style, fill_int_style;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
   std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
   group->append(series_group);
 
-  // Call classes -> set attributes and data
-  classesPolarHistogram(subplot_args);
+  // Call counts -> set attributes and data
+  countsPolarHistogram(subplot_args);
 
   auto context = global_render->getContext();
 
@@ -3366,6 +3607,10 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   /* face_color */
   if (grm_args_values(*series, "face_color", "i", &face_color))
     series_group->setAttribute("fill_color_ind", face_color);
+  if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
+    series_group->setAttribute("fill_style", fill_style);
+  if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
+    series_group->setAttribute("fill_int_style", fill_int_style);
   /* transparency */
   if (grm_args_values(*series, "transparency", "d", &transparency))
     series_group->setAttribute("transparency", transparency);
@@ -3375,26 +3620,21 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges)) series_group->setAttribute("draw_edges", draw_edges);
   if (grm_args_values(*series, "stairs", "i", &stairs)) series_group->setAttribute("stairs", stairs);
 
-  if (grm_args_first_value(*series, "r_lim", "D", &r_lim, &dummy))
+  if (grm_args_values(subplot_args, "r_lim", "dd", &r_lim_min, &r_lim_max))
     {
-      plot_group->setAttribute("r_lim_min", r_lim[0]);
-      plot_group->setAttribute("r_lim_max", r_lim[1]);
+      plot_group->setAttribute("r_lim_min", r_lim_min);
+      plot_group->setAttribute("r_lim_max", r_lim_max);
     }
 
-  if (grm_args_values(subplot_args, "y_lim", "dd", &ylim_min, &ylim_max))
+  if (grm_args_values(*series, "theta_range", "dd", &theta_range_min, &theta_range_max))
     {
-      plot_group->setAttribute("y_lim_min", ylim_min);
-      plot_group->setAttribute("y_lim_max", ylim_max);
+      series_group->setAttribute("theta_range_min", theta_range_min);
+      series_group->setAttribute("theta_range_max", theta_range_max);
     }
 
-  if (grm_args_values(*series, "x_range", "dd", &xrange_min, &xrange_max))
-    {
-      series_group->setAttribute("x_range_min", xrange_min);
-      series_group->setAttribute("x_range_max", xrange_max);
-    }
-
-  if (grm_args_values(*series, "x_colormap", "i", &x_colormap)) series_group->setAttribute("x_colormap", x_colormap);
-  if (grm_args_values(*series, "y_colormap", "i", &y_colormap)) series_group->setAttribute("y_colormap", y_colormap);
+  if (grm_args_values(*series, "theta_colormap", "i", &theta_colormap))
+    series_group->setAttribute("theta_colormap", theta_colormap);
+  if (grm_args_values(*series, "r_colormap", "i", &r_colormap)) series_group->setAttribute("r_colormap", r_colormap);
   global_root->setAttribute("_id", ++id);
 
   return GRM_ERROR_NONE;
@@ -3404,11 +3644,12 @@ grm_error_t plotPie(grm_args_t *subplot_args)
 {
   grm_args_t *series;
   double *x;
-  unsigned int x_length;
+  unsigned int x_length, num_labels;
   const char *title;
   static unsigned int color_array_length = -1;
   const int *color_indices = nullptr;
   const double *color_rgb_values = nullptr;
+  const char **labels;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
@@ -3457,6 +3698,15 @@ grm_error_t plotPie(grm_args_t *subplot_args)
       side_region->setAttribute("text_content", title);
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
+    }
+  if (grm_args_first_value(series, "labels", "nS", &labels, &num_labels))
+    {
+      std::string labels_key = "labels" + std::to_string(id);
+      std::vector<std::string> labels_vec(labels, labels + num_labels);
+
+      (*context)["labels" + str] = labels_vec;
+      sub_group->setAttribute("labels", "labels" + str);
+      plotDrawLegend(subplot_args);
     }
   global_root->setAttribute("_id", ++id);
 
@@ -3645,6 +3895,7 @@ grm_error_t plotRaw(grm_args_t *plot_args)
 
 cleanup:
   if (graphics_data != nullptr) free(graphics_data);
+  error_code = error;
 
   return error;
 }
@@ -4148,11 +4399,6 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args)
 
   grm_args_values(args, "kind", "s", &kind);
 
-  if (strcmp(kind, "polar_histogram") == 0)
-    {
-      if (grm_args_values(args, "normalization", "s", &norm)) sub_group->setAttribute("normalization", norm);
-    }
-
   if (grm_args_values(args, "theta_flip", "i", &theta_flip)) sub_group->setAttribute("theta_flip", theta_flip);
 
   if (grm_args_values(args, "title", "s", &title))
@@ -4169,66 +4415,14 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args)
 
 grm_error_t plotDrawLegend(grm_args_t *subplot_args)
 {
-  const char **labels;
-  unsigned int num_labels, num_series;
-  grm_args_t **current_series;
   int location;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
-  returnErrorIf(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels),
-                GRM_ERROR_PLOT_MISSING_LABELS);
-  logger((stderr, "Draw a legend with %d labels\n", num_labels));
-  grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
-
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", ++id);
-
-  std::string labels_key = "labels" + std::to_string(id);
-  std::string specs_key = "specs" + std::to_string(id);
-  std::vector<std::string> labels_vec(labels, labels + num_labels);
-
-  std::vector<std::string> specs_vec;
-  while (*current_series != nullptr)
-    {
-      char *spec;
-      if (grm_args_values(*current_series, "line_spec", "s", &spec))
-        {
-          specs_vec.emplace_back(spec);
-        }
-      else
-        {
-          specs_vec.emplace_back("");
-        }
-      ++current_series;
-    }
-
-  auto legend = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
+  auto legend = group->querySelectors("legend");
+  legend = global_render->createLegend(legend);
   if (grm_args_values(subplot_args, "location", "i", &location)) legend->setAttribute("location", location);
   group->append(legend);
-
-  return GRM_ERROR_NONE;
-}
-
-grm_error_t plotDrawPieLegend(grm_args_t *subplot_args)
-{
-  const char **labels;
-  unsigned int num_labels;
-  grm_args_t *series;
-
-  auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
-
-  returnErrorIf(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels),
-                GRM_ERROR_PLOT_MISSING_LABELS);
-  grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
-
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  global_root->setAttribute("_id", ++id);
-  std::string labels_key = "labels" + std::to_string(id);
-  std::vector<std::string> labels_vec(labels, labels + num_labels);
-
-  auto draw_pie_legend_element = global_render->createPieLegend(labels_key, labels_vec);
-  group->append(draw_pie_legend_element);
 
   return GRM_ERROR_NONE;
 }
@@ -4265,6 +4459,7 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
 {
   grm_arg_t *arg_ptr;
   grm_args_value_iterator_t *value_it;
+  grm_error_t error = GRM_ERROR_NONE;
   unsigned int length;
   int i, *ii;
 
@@ -4277,12 +4472,21 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
       argsValueIteratorGet(value_it, *upwards_length, *upwards);
       argsValueIteratorDelete(value_it);
 
-      returnErrorIf(*downwards_length != *upwards_length || *downwards_length != x_length,
-                    GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (*downwards_length != *upwards_length || *downwards_length != x_length)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
     }
   else if (strcmp(arg_ptr->value_format, "nD") == 0)
     {
-      returnErrorIf(!grm_args_first_value(error_container, key, "D", downwards, downwards_length), GRM_ERROR_INTERNAL);
+      if (!grm_args_first_value(error_container, key, "D", downwards, downwards_length))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       /* Python encapsulates all single elements into an array */
       if (*downwards_length == 1)
         {
@@ -4291,24 +4495,49 @@ grm_error_t extractMultiTypeArgument(grm_args_t *error_container, const char *ke
           *downwards_length = 0;
           return GRM_ERROR_NONE;
         }
-      returnErrorIf(*downwards_length != x_length, GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (*downwards_length != x_length)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
       *upwards = *downwards;
       *upwards_length = *downwards_length;
     }
   else if (strcmp(arg_ptr->value_format, "d") == 0)
     {
-      returnErrorIf(!grm_args_values(error_container, key, "d", downwards_flt), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(error_container, key, "d", downwards_flt))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt;
     }
   else if (strcmp(arg_ptr->value_format, "nI") == 0)
     {
-      returnErrorIf(!grm_args_first_value(error_container, key, "nI", &ii, &length), GRM_ERROR_INTERNAL);
-      returnErrorIf(length != 1, GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (!grm_args_first_value(error_container, key, "nI", &ii, &length))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
+      if (length != 1)
+        {
+          error = GRM_ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt = (double)ii[0];
     }
   else if (strcmp(arg_ptr->value_format, "i") == 0)
     {
-      returnErrorIf(!grm_args_values(error_container, key, "i", &i), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(error_container, key, "i", &i))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
       *upwards_flt = *downwards_flt = (double)i;
     }
   return GRM_ERROR_NONE;
@@ -4344,15 +4573,22 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
 
   if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
     {
-      returnErrorIf(!grm_args_values(series_args, "error", "a", &error_container), GRM_ERROR_INTERNAL);
+      if (!grm_args_values(series_args, "error", "a", &error_container))
+        {
+          error = GRM_ERROR_INTERNAL;
+          error_code = error;
+          returnIfError;
+        }
 
       error = extractMultiTypeArgument(error_container, "absolute", x_length, &downwards_length, &upwards_length,
                                        &absolute_downwards, &absolute_upwards, &absolute_downwards_flt,
                                        &absolute_upwards_flt);
+      error_code = error;
       returnIfError;
       error = extractMultiTypeArgument(error_container, "relative", x_length, &downwards_length, &upwards_length,
                                        &relative_downwards, &relative_upwards, &relative_downwards_flt,
                                        &relative_upwards_flt);
+      error_code = error;
       returnIfError;
     }
   else
@@ -4360,6 +4596,7 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
       error = extractMultiTypeArgument(series_args, "error", x_length, &downwards_length, &upwards_length,
                                        &absolute_downwards, &absolute_upwards, &absolute_downwards_flt,
                                        &absolute_upwards_flt);
+      error_code = error;
       returnIfError;
     }
 
@@ -4367,6 +4604,7 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
       relative_upwards_flt == FLT_MAX && absolute_downwards == nullptr && relative_downwards == nullptr &&
       absolute_downwards_flt == FLT_MAX && relative_downwards_flt == FLT_MAX)
     {
+      error_code = GRM_ERROR_PLOT_MISSING_DATA;
       return GRM_ERROR_PLOT_MISSING_DATA;
     }
   if (absolute_upwards != nullptr)
@@ -4586,14 +4824,14 @@ grm_args_t *getSubplotFromNdcPoints(unsigned int n, const double *x, const doubl
 }
 
 /*
- * Calculates the classes for polar histogram
+ * Calculates the counts for polar histogram
  * */
-grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
+grm_error_t countsPolarHistogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
   unsigned int length, num_bin_edges, dummy;
   const char *norm = "count";
-  double *bin_edges = nullptr, *theta_lim = nullptr, *x = nullptr;
+  double *bin_edges = nullptr, *theta_data_lim = nullptr, *theta = nullptr;
   double bin_width;
   int is_bin_counts;
   int *bin_counts = nullptr;
@@ -4618,14 +4856,14 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "bin_counts", "i", &is_bin_counts) == 0)
     {
       is_bin_counts = 0;
-      grm_args_first_value(*series, "x", "D", &x, &length);
-      std::vector<double> x_vec(x, x + length);
-      (*context)["x" + str] = x_vec;
-      series_group->setAttribute("x", "x" + str);
+      grm_args_first_value(*series, "theta", "D", &theta, &length);
+      std::vector<double> theta_vec(theta, theta + length);
+      (*context)["theta" + str] = theta_vec;
+      series_group->setAttribute("theta", "theta" + str);
     }
   else
     {
-      grm_args_first_value(*series, "x", "I", &bin_counts, &length);
+      grm_args_first_value(*series, "theta", "I", &bin_counts, &length);
       std::vector<int> bin_counts_vec(bin_counts, bin_counts + length);
       (*context)["bin_counts" + str] = bin_counts_vec;
       series_group->setAttribute("bin_counts", "bin_counts" + str);
@@ -4636,16 +4874,15 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
       series_group->setAttribute("num_bins", static_cast<int>(num_bins));
     }
 
-  if (grm_args_first_value(*series, "theta_lim", "D", &theta_lim, &dummy))
+  if (grm_args_first_value(*series, "theta_data_lim", "D", &theta_data_lim, &dummy))
     {
-      plot_group->setAttribute("theta_lim_min", theta_lim[0]);
-      plot_group->setAttribute("theta_lim_max", theta_lim[1]);
+      series_group->setAttribute("theta_data_lim_min", theta_data_lim[0]);
+      series_group->setAttribute("theta_data_lim_max", theta_data_lim[1]);
     }
 
   /* bin_edges and nbins */
   if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
-
       if (grm_args_values(*series, "num_bins", "i", &num_bins))
         {
           series_group->setAttribute("num_bins", static_cast<int>(num_bins));
@@ -4663,6 +4900,11 @@ grm_error_t classesPolarHistogram(grm_args_t *subplot_args)
   if (grm_args_values(*series, "bin_width", "d", &bin_width)) series_group->setAttribute("bin_width", bin_width);
 
   return error;
+}
+
+int grm_get_error_code()
+{
+  return error_code;
 }
 } /* end of extern "C" */
 
@@ -4759,6 +5001,7 @@ char *dumpContextStr(DumpEncoding dump_encoding, const std::unordered_set<std::s
     case DUMP_JSON_BASE64:
     case DUMP_BSON_BASE64:
       encoded_string = base64Encode(nullptr, memwriterBuf(memwriter), memwriterSize(memwriter), &error);
+      error_code = error;
       if (error != GRM_ERROR_NONE) logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
       break;
     default:
@@ -4903,6 +5146,7 @@ void loadContextStr(GRM::Context &context, const std::string &context_str, DumpE
       serialized_context = base64Decode(nullptr, context_str.c_str(), nullptr, &error);
       if (error != GRM_ERROR_NONE)
         {
+          error_code = error;
           std::stringstream error_description;
           error_description << "error \"" << error << "\" (\"" << grm_error_names[error] << "\")";
           logger((stderr, "Got %s!\n", error_description.str().c_str()));
@@ -5143,6 +5387,7 @@ protected:
         base64Decode(nullptr, attribute_value.c_str(), nullptr, &error), std::free);
     if (error != GRM_ERROR_NONE)
       {
+        error_code = error;
         logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
         throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + grm_error_names[error] + "\")!");
       }
@@ -5151,6 +5396,7 @@ protected:
     error = fromBsonRead(internal_args.get(), bson_data.get());
     if (error != GRM_ERROR_NONE)
       {
+        error_code = error;
         logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, grm_error_names[error]));
         throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + grm_error_names[error] + "\")!");
       }
@@ -5158,10 +5404,11 @@ protected:
         grm_args_iter(internal_args.get()), argsIteratorDelete);
     grm_arg_t *arg;
     auto transformed_attribute_value = std::stringstream();
+    bool first_iteration = true;
     while ((arg = args_it->next(args_it.get())) != nullptr)
       {
         /* Check if there is already content in the string stream (after first iteration) */
-        if (transformed_attribute_value.rdbuf()->in_avail() > 0) transformed_attribute_value << " ";
+        if (!first_iteration) transformed_attribute_value << " ";
         transformed_attribute_value << arg->key << "=" << attribute_delimiter;
         if (*arg->value_format)
           {
@@ -5202,12 +5449,14 @@ protected:
                     break;
                   default:
                     /* This branch should never be reached */
+                    error_code = GRM_ERROR_INTERNAL;
                     logger((stderr, "Internal error!\n"));
                     assert(false);
                   }
               }
           }
         transformed_attribute_value << attribute_delimiter;
+        first_iteration = false;
       }
 
     auto transformed_look_ahead_buffer = std::vector<char>();
@@ -5774,7 +6023,11 @@ grm_error_t validateGraphicsTree(bool include_private_attributes)
 
   auto schema_filepath{include_private_attributes ? getMergedSchemaFilepath()
                                                   : (std::string(getGrDir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH)};
-  if (!fileExists(schema_filepath.c_str())) return GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+  if (!fileExists(schema_filepath.c_str()))
+    {
+      error_code = GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+      return GRM_ERROR_PARSE_XML_NO_SCHEMA_FILE;
+    }
 
   try
     {
@@ -5783,6 +6036,7 @@ grm_error_t validateGraphicsTree(bool include_private_attributes)
   catch (const XMLException &e)
     {
       std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      error_code = GRM_ERROR_PARSE_XML_PARSING;
       return GRM_ERROR_PARSE_XML_PARSING;
     }
 
@@ -5843,6 +6097,7 @@ bool validateGraphicsTreeWithErrorMessages()
 {
 #ifndef NO_XERCES_C
   grm_error_t validation_error = validateGraphicsTree(true);
+  error_code = validation_error;
   if (validation_error == GRM_ERROR_NONE)
     {
       fprintf(stderr, "The internal graphics tree passed the validity check.\n");
@@ -6030,6 +6285,9 @@ public:
           {
             new_attribute_name = *original_attribute_name;
           }
+        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
+        // shouldnt be exported
+        if (attribute_name == "_highlighted") return false;
         return true;
       }
 
@@ -6041,7 +6299,7 @@ public:
         if (element.hasAttribute(potential_backup_attribute_name))
           {
             if (element.getAttribute(attribute_name) != element.getAttribute(potential_backup_attribute_name) &&
-                strEqualsAny(attribute_name, "x", "y", "z"))
+                strEqualsAny(attribute_name, "r", "theta", "x", "y", "z"))
               {
                 context_keys_to_discard_.insert(static_cast<std::string>(element.getAttribute(attribute_name)));
               }
@@ -6136,9 +6394,15 @@ int grm_merge_extended(const grm_args_t *args, int hold, const char *identificat
         {
           // If this is a request, do not process the argument container further
           processEvents();
+          error_code = error;
           return error == GRM_ERROR_NONE;
         }
-      if (plotMergeArgs(global_root_args, args, nullptr, nullptr, hold) != GRM_ERROR_NONE) return 0;
+      error = plotMergeArgs(global_root_args, args, nullptr, nullptr, hold);
+      if (error != GRM_ERROR_NONE)
+        {
+          error_code = error;
+          return 0;
+        }
       if (!getIdFromArgs(args, &last_merge_plot_id, &last_merge_subplot_id, &last_merge_series_id))
         {
           last_merge_plot_id = 0;
@@ -6169,9 +6433,10 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
 {
   PlotFunc plot_func;
   char *kind;
-  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
+  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_square_aspect_ratio;
   double *subplot;
-  double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
+  double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max, theta_lim_min, theta_lim_max, r_lim_min,
+      r_lim_max;
   int grplot = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
@@ -6189,7 +6454,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
-  if (plotPreSubplot(subplot_args) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotPreSubplot(subplot_args)) != GRM_ERROR_NONE) return 0;
 
   auto central_region =
       (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
@@ -6197,9 +6462,9 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
     }
-  if (grm_args_values(subplot_args, "only_quadratic_aspect_ratio", "i", &only_quadratic_aspect_ratio))
+  if (grm_args_values(subplot_args, "only_square_aspect_ratio", "i", &only_square_aspect_ratio))
     {
-      group->setAttribute("only_quadratic_aspect_ratio", only_quadratic_aspect_ratio);
+      group->setAttribute("only_square_aspect_ratio", only_square_aspect_ratio);
     }
   if (grm_args_values(subplot_args, "location", "i", &location))
     {
@@ -6217,16 +6482,33 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       group->setAttribute("_viewport_normalized_y_max_org", subplot[3]);
     }
 
-  if (grm_args_values(subplot_args, "x_lim", "dd", &x_lim_min, &x_lim_max))
+  if (strEqualsAny(kind, "polar_line", "polar_scatter", "polar_heatmap", "polar_histogram", "nonuniform_polar_heatmap"))
     {
-      group->setAttribute("x_lim_min", x_lim_min);
-      group->setAttribute("x_lim_max", x_lim_max);
+      if (grm_args_values(subplot_args, "theta_lim", "dd", &theta_lim_min, &theta_lim_max))
+        {
+          group->setAttribute("theta_lim_min", theta_lim_min);
+          group->setAttribute("theta_lim_max", theta_lim_max);
+        }
+      if (grm_args_values(subplot_args, "r_lim", "dd", &r_lim_min, &r_lim_max))
+        {
+          group->setAttribute("r_lim_min", r_lim_min);
+          group->setAttribute("r_lim_max", r_lim_max);
+        }
     }
-  if (grm_args_values(subplot_args, "y_lim", "dd", &y_lim_min, &y_lim_max))
+  else
     {
-      group->setAttribute("y_lim_min", y_lim_min);
-      group->setAttribute("y_lim_max", y_lim_max);
+      if (grm_args_values(subplot_args, "x_lim", "dd", &x_lim_min, &x_lim_max))
+        {
+          group->setAttribute("x_lim_min", x_lim_min);
+          group->setAttribute("x_lim_max", x_lim_max);
+        }
+      if (grm_args_values(subplot_args, "y_lim", "dd", &y_lim_min, &y_lim_max))
+        {
+          group->setAttribute("y_lim_min", y_lim_min);
+          group->setAttribute("y_lim_max", y_lim_max);
+        }
     }
+
   if (grm_args_values(subplot_args, "z_lim", "dd", &z_lim_min, &z_lim_max))
     {
       group->setAttribute("z_lim_min", z_lim_min);
@@ -6245,7 +6527,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "grplot", "i", &grplot)) group->setAttribute("grplot", grplot);
 
   if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
-  if (plot_func(subplot_args) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;
 
   plotPostSubplot(subplot_args);
   return 1;
@@ -6391,7 +6673,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
         }
       if (!edit_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
         {
-          if (plotProcessGridArguments(edit_plot_args) != GRM_ERROR_NONE) return 0;
+          if ((error_code = plotProcessGridArguments(edit_plot_args)) != GRM_ERROR_NONE) return 0;
         }
       current_grid = reinterpret_cast<GRM::Grid *>(global_grid);
       int nrows = current_grid->getNRows();
@@ -6534,8 +6816,8 @@ int grm_switch(unsigned int id)
       global_render->setActiveFigure(edit_figure);
     }
 
-  if (plotInitStaticVariables() != GRM_ERROR_NONE) return 0;
-  if (plotInitArgsStructure(global_root_args, plot_hierarchy_names, id + 1) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotInitStaticVariables()) != GRM_ERROR_NONE) return 0;
+  if ((error_code = plotInitArgsStructure(global_root_args, plot_hierarchy_names, id + 1)) != GRM_ERROR_NONE) return 0;
   if (!grm_args_first_value(global_root_args, "plots", "A", &args_array, &args_array_length)) return 0;
   if (id + 1 > args_array_length) return 0;
 
@@ -6549,6 +6831,7 @@ int grm_validate(void)
 {
 #ifndef NO_XERCES_C
   grm_error_t validation_error = validateGraphicsTree();
+  error_code = validation_error;
   return (validation_error == GRM_ERROR_NONE);
 #endif
   return 0;
