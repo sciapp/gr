@@ -2263,7 +2263,8 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
           prev_highlighted_tick_group_elem.reset();
           amount_scrolled = 0;
           auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
-          GRM::getGroupMask()->toPPM("group_mask.ppm", std::nullopt, true);
+          GRM::getGroupMask()->toPPM("group_mask_distinct_colors.ppm", std::nullopt, true, true);
+          GRM::getGroupMask()->toPPM("group_mask_unmodified_rbg.ppm", std::nullopt, false, true);
           auto group_ids = GRM::getGroupMask()->getObjectsInBox(x, y);
           if (!group_ids.empty())
             {

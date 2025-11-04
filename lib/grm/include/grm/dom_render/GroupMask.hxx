@@ -59,7 +59,7 @@ public:
 
 
   void toPPM(const std::string &filepath, std::optional<std::set<unsigned int>> filter_ids = std::nullopt,
-             bool export_elements = false) const
+             bool distinct_colors = true, bool export_elements = false) const
   {
     std::set<unsigned int> ids;
 
@@ -82,39 +82,51 @@ public:
 
     float hue_step = 1.0f / ids.size();
     std::unordered_map<int, std::array<uint8_t, 3>> id_to_rgb_map{{-1, {255, 255, 255}}};
-    unsigned int index = 0;
-    for (auto id : ids)
+    if (distinct_colors)
       {
-        std::array<uint8_t, 3> pixel{255, 255, 255};
-        /*
-         * Formula taken from <https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB> with s = 1 and v = 1
-         */
-        auto hue = (hue_step + 0.25f) * index - std::floor((hue_step + 0.25f) * index);
-        auto hue6 = hue * 6.0f;
-        auto color_component = static_cast<uint8_t>(255.0f * (1.0f - std::abs(std::fmod(hue6, 2.0f) - 1.0f)));
-        switch (static_cast<int>(hue6))
+        unsigned int index = 0;
+        for (auto id : ids)
           {
-          case 0:
-            pixel = {255, color_component, 0};
-            break;
-          case 1:
-            pixel = {color_component, 255, 0};
-            break;
-          case 2:
-            pixel = {0, 255, color_component};
-            break;
-          case 3:
-            pixel = {0, color_component, 255};
-            break;
-          case 4:
-            pixel = {color_component, 0, 255};
-            break;
-          default:
-            pixel = {255, 0, color_component};
-            break;
+            std::array<uint8_t, 3> pixel;
+            /*
+             * Formula taken from <https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB> with s = 1 and v = 1
+             */
+            auto hue = (hue_step + 0.25f) * index - std::floor((hue_step + 0.25f) * index);
+            auto hue6 = hue * 6.0f;
+            auto color_component = static_cast<uint8_t>(255.0f * (1.0f - std::abs(std::fmod(hue6, 2.0f) - 1.0f)));
+            switch (static_cast<int>(hue6))
+              {
+              case 0:
+                pixel = {255, color_component, 0};
+                break;
+              case 1:
+                pixel = {color_component, 255, 0};
+                break;
+              case 2:
+                pixel = {0, 255, color_component};
+                break;
+              case 3:
+                pixel = {0, color_component, 255};
+                break;
+              case 4:
+                pixel = {color_component, 0, 255};
+                break;
+              default:
+                pixel = {255, 0, color_component};
+                break;
+              }
+            id_to_rgb_map[id] = pixel;
+            ++index;
           }
-        id_to_rgb_map[id] = pixel;
-        ++index;
+      }
+    else
+      {
+        for (auto id : ids)
+          {
+            id_to_rgb_map[id] =
+                std::array<uint8_t, 3>{static_cast<uint8_t>((id >> 16) & 0xFF), static_cast<uint8_t>((id >> 8) & 0xFF),
+                                       static_cast<uint8_t>(id & 0xFF)};
+          }
       }
 
     std::ofstream image_file(filepath, std::ios::out | std::ios::binary);
@@ -124,7 +136,6 @@ public:
         const auto &document = grm_get_document_root();
         for (auto id : ids)
           {
-            std::cerr << "Current id: " << id << std::endl;
             const auto &elem = document->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
             if (elem == nullptr)
               {
@@ -180,6 +191,7 @@ public:
     // use undesired alpha optimizations, effectively breaking the id storage in the mask.
     auto color = mask_.get()[y * width_ + x];
     auto id = color & 0x00FFFFFF;
+    auto alpha = static_cast<uint8_t>((color >> 24) & 0xFF);
     return (color & 0xFF000000) == 0 ? -1 : id;
   }
 
