@@ -234,53 +234,39 @@ public:
   void setPen(const QColor &color)
   {
     painter_.setPen(color);
-    auto pen = painter_.pen();
-    pen.setColor(maskPainter_.pen().color());
-    maskPainter_.setPen(pen);
+    applyPenToMask();
   }
   void setPen(const QPen &pen)
   {
     painter_.setPen(pen);
-    auto p(pen);
-    p.setColor(maskPainter_.pen().color());
-    maskPainter_.setPen(p);
+    applyPenToMask();
   }
   void setPen(Qt::PenStyle style)
   {
     painter_.setPen(style);
-    auto pen = painter_.pen();
-    pen.setColor(maskPainter_.pen().color());
-    maskPainter_.setPen(pen);
+    applyPenToMask();
   }
 
   const QBrush &brush() const { return painter_.brush(); }
   void setBrush(const QBrush &brush)
   {
     painter_.setBrush(brush);
-    QBrush b(brush);
-    b.setColor(maskPainter_.brush().color());
-    maskPainter_.setBrush(b);
+    applyBrushToMask();
   }
   void setBrush(Qt::BrushStyle style)
   {
     painter_.setBrush(style);
-    auto brush = painter_.brush();
-    brush.setColor(maskPainter_.brush().color());
-    maskPainter_.setBrush(brush);
+    applyBrushToMask();
   }
   void setBrush(QColor color)
   {
     painter_.setBrush(color);
-    auto brush = painter_.brush();
-    brush.setColor(maskPainter_.brush().color());
-    maskPainter_.setBrush(brush);
+    applyBrushToMask();
   }
   void setBrush(Qt::GlobalColor color)
   {
     painter_.setBrush(color);
-    auto brush = painter_.brush();
-    brush.setColor(maskPainter_.brush().color());
-    maskPainter_.setBrush(brush);
+    applyBrushToMask();
   }
 
   Qt::BGMode backgroundMode() const { return painter_.backgroundMode(); }
@@ -292,7 +278,11 @@ public:
   void setBrushOrigin(const QPointF &p) { paint(setBrushOrigin, p); }
 
   const QBrush &background() const { return painter_.background(); }
-  void setBackground(const QBrush &bg) { paint(setBackground, bg); }
+  void setBackground(const QBrush &bg)
+  {
+    painter_.setBackground(bg);
+    maskPainter_.setBackground(createMaskBrush(&bg));
+  }
 
   qreal opacity() const { return painter_.opacity(); }
   void setOpacity(qreal opacity) { paint(setOpacity, opacity); }
@@ -352,8 +342,16 @@ public:
   bool viewTransformEnabled() const { return painter_.viewTransformEnabled(); }
   void setViewTransformEnabled(bool enable) { paint(setViewTransformEnabled, enable); }
 
-  void strokePath(const QPainterPath &path, const QPen &pen) { paint(strokePath, path, pen); }
-  void fillPath(const QPainterPath &path, const QBrush &brush) { paint(fillPath, path, brush); }
+  void strokePath(const QPainterPath &path, const QPen &pen)
+  {
+    painter_.strokePath(path, pen);
+    maskPainter_.strokePath(path, createMaskPen(&pen));
+  }
+  void fillPath(const QPainterPath &path, const QBrush &brush)
+  {
+    painter_.fillPath(path, brush);
+    maskPainter_.fillPath(path, createMaskBrush(&brush));
+  }
   void drawPath(const QPainterPath &path) { paint(drawPath, path); }
 
   void drawPoint(const QPointF &pt) { paint(drawPoint, pt); }
@@ -593,26 +591,74 @@ public:
   void drawTextItem(int x, int y, const QTextItem &ti) { paint(drawTextItem, x, y, ti); }
   void drawTextItem(const QPoint &p, const QTextItem &ti) { paint(drawTextItem, p, ti); }
 
-  void fillRect(const QRectF &rect, const QBrush &brush) { paint(fillRect, rect, brush); }
-  void fillRect(int x, int y, int w, int h, const QBrush &brush) { paint(fillRect, x, y, w, h, brush); }
-  void fillRect(const QRect &rect, const QBrush &brush) { paint(fillRect, rect, brush); }
+  void fillRect(const QRectF &rect, const QBrush &brush)
+  {
+    painter_.fillRect(rect, brush);
+    maskPainter_.fillRect(rect, createMaskBrush(&brush));
+  }
+  void fillRect(int x, int y, int w, int h, const QBrush &brush)
+  {
+    painter_.fillRect(x, y, w, h, brush);
+    maskPainter_.fillRect(x, y, w, h, createMaskBrush(&brush));
+  }
+  void fillRect(const QRect &rect, const QBrush &brush)
+  {
+    painter_.fillRect(rect, brush);
+    maskPainter_.fillRect(rect, createMaskBrush(&brush));
+  }
 
-  void fillRect(const QRectF &rect, const QColor &color) { paint(fillRect, rect, color); }
-  void fillRect(int x, int y, int w, int h, const QColor &color) { paint(fillRect, x, y, w, h, color); }
-  void fillRect(const QRect &rect, const QColor &color) { paint(fillRect, rect, color); }
+  void fillRect(const QRectF &rect, const QColor &color)
+  {
+    painter_.fillRect(rect, color);
+    maskPainter_.fillRect(rect, maskPainter_.brush().color());
+  }
+  void fillRect(int x, int y, int w, int h, const QColor &color)
+  {
+    painter_.fillRect(x, y, w, h, color);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
+  }
+  void fillRect(const QRect &rect, const QColor &color)
+  {
+    painter_.fillRect(rect, color);
+    maskPainter_.fillRect(rect, maskPainter_.brush().color());
+  }
 
-  void fillRect(int x, int y, int w, int h, Qt::GlobalColor c) { paint(fillRect, x, y, w, h, c); }
-  void fillRect(const QRect &r, Qt::GlobalColor c) { paint(fillRect, r, c); }
-  void fillRect(const QRectF &r, Qt::GlobalColor c) { paint(fillRect, r, c); }
+  void fillRect(int x, int y, int w, int h, Qt::GlobalColor c)
+  {
+    painter_.fillRect(x, y, w, h, c);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
+  }
+  void fillRect(const QRect &r, Qt::GlobalColor c)
+  {
+    painter_.fillRect(r, c);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
+  void fillRect(const QRectF &r, Qt::GlobalColor c)
+  {
+    painter_.fillRect(r, c);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
 
   void fillRect(int x, int y, int w, int h, Qt::BrushStyle style) { paint(fillRect, x, y, w, h, style); }
   void fillRect(const QRect &r, Qt::BrushStyle style) { paint(fillRect, r, style); }
   void fillRect(const QRectF &r, Qt::BrushStyle style) { paint(fillRect, r, style); }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-  void fillRect(int x, int y, int w, int h, QGradient::Preset preset) { paint(fillRect, x, y, w, h, preset); }
-  void fillRect(const QRect &r, QGradient::Preset preset) { paint(fillRect, r, preset); }
-  void fillRect(const QRectF &r, QGradient::Preset preset) { paint(fillRect, r, preset); }
+  void fillRect(int x, int y, int w, int h, QGradient::Preset preset)
+  {
+    painter_.fillRect(x, y, w, h, preset);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
+  }
+  void fillRect(const QRect &r, QGradient::Preset preset)
+  {
+    painter_.fillRect(r, preset);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
+  void fillRect(const QRectF &r, QGradient::Preset preset)
+  {
+    painter_.fillRect(r, preset);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
 #endif
 
   void eraseRect(const QRectF &rect) { paint(eraseRect, rect); }
@@ -632,6 +678,28 @@ public:
 
 #undef paint
 #undef paint_and_return
+
+protected:
+  QBrush createMaskBrush(const QBrush *brush = nullptr)
+  {
+    if (!brush) brush = &painter_.brush();
+    auto brush_ = QBrush(*brush);
+    brush_.setColor(maskPainter_.brush().color());
+    return brush_;
+  }
+
+  void applyBrushToMask() { maskPainter_.setBrush(createMaskBrush()); }
+
+  QPen createMaskPen(const QPen *pen = nullptr)
+  {
+    if (!pen) pen = &painter_.pen();
+    auto pen_ = QPen(*pen);
+    pen_.setColor(maskPainter_.pen().color());
+    if (pen_.widthF() < 1.0) pen_.setWidth(1);
+    return pen_;
+  }
+
+  void applyPenToMask() { maskPainter_.setPen(createMaskPen()); }
 
 private:
   std::unique_ptr<QPainter> ownedPainter_;
