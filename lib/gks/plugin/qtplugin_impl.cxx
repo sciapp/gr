@@ -452,77 +452,142 @@ public:
 
   void drawTiledPixmap(const QRectF &rect, const QPixmap &pm, const QPointF &offset = QPointF())
   {
-    paint(drawTiledPixmap, rect, pm, offset);
+    painter_.drawTiledPixmap(rect, pm, offset);
+    maskPainter_.fillRect(rect, maskPainter_.brush().color());
   }
   void drawTiledPixmap(int x, int y, int w, int h, const QPixmap &pixmap, int sx = 0, int sy = 0)
   {
-    paint(drawTiledPixmap, x, y, w, h, pixmap, sx, sy);
+    painter_.drawTiledPixmap(x, y, w, h, pixmap, sx, sy);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
   }
   void drawTiledPixmap(const QRect &rect, const QPixmap &pixmap, const QPoint &offset = QPoint())
   {
-    paint(drawTiledPixmap, rect, pixmap, offset);
+    painter_.drawTiledPixmap(rect, pixmap, offset);
+    maskPainter_.fillRect(rect, maskPainter_.brush().color());
   }
-  void drawPicture(const QPointF &p, const QPicture &picture) { paint(drawPicture, p, picture); }
-  void drawPicture(int x, int y, const QPicture &picture) { paint(drawPicture, x, y, picture); }
-  void drawPicture(const QPoint &p, const QPicture &picture) { paint(drawPicture, p, picture); }
+  void drawPicture(const QPointF &p, const QPicture &picture)
+  {
+    painter_.drawPicture(p, picture);
+    maskPainter_.fillRect(QRectF(p, picture.boundingRect().size()), maskPainter_.brush().color());
+  }
+  void drawPicture(int x, int y, const QPicture &picture)
+  {
+    painter_.drawPicture(x, y, picture);
+    maskPainter_.fillRect(QRect(QPoint(x, y), picture.boundingRect().size()), maskPainter_.brush().color());
+  }
+  void drawPicture(const QPoint &p, const QPicture &picture)
+  {
+    painter_.drawPicture(p, picture);
+    maskPainter_.fillRect(QRect(p, picture.boundingRect().size()), maskPainter_.brush().color());
+  }
 
   void drawPixmap(const QRectF &targetRect, const QPixmap &pixmap, const QRectF &sourceRect)
   {
-    paint(drawPixmap, targetRect, pixmap, sourceRect);
+    painter_.drawPixmap(targetRect, pixmap, sourceRect);
+    maskPainter_.fillRect(targetRect, maskPainter_.brush().color());
   }
   void drawPixmap(const QRect &targetRect, const QPixmap &pixmap, const QRect &sourceRect)
   {
-    paint(drawPixmap, targetRect, pixmap, sourceRect);
+    painter_.drawPixmap(targetRect, pixmap, sourceRect);
+    maskPainter_.fillRect(targetRect, maskPainter_.brush().color());
   }
   void drawPixmap(int x, int y, int w, int h, const QPixmap &pm, int sx, int sy, int sw, int sh)
   {
-    paint(drawPixmap, x, y, w, h, pm, sx, sy, sw, sh);
+    painter_.drawPixmap(x, y, w, h, pm, sx, sy, sw, sh);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
   }
   void drawPixmap(int x, int y, const QPixmap &pm, int sx, int sy, int sw, int sh)
   {
-    paint(drawPixmap, x, y, pm, sx, sy, sw, sh);
+    painter_.drawPixmap(x, y, pm, sx, sy, sw, sh);
+    maskPainter_.fillRect(QRect(QPoint(x, y), pm.size()), maskPainter_.brush().color());
   }
-  void drawPixmap(const QPointF &p, const QPixmap &pm, const QRectF &sr) { paint(drawPixmap, p, pm, sr); }
-  void drawPixmap(const QPoint &p, const QPixmap &pm, const QRect &sr) { paint(drawPixmap, p, pm, sr); }
-  void drawPixmap(const QPointF &p, const QPixmap &pm) { paint(drawPixmap, p, pm); }
-  void drawPixmap(const QPoint &p, const QPixmap &pm) { paint(drawPixmap, p, pm); }
-  void drawPixmap(int x, int y, const QPixmap &pm) { paint(drawPixmap, x, y, pm); }
-  void drawPixmap(const QRect &r, const QPixmap &pm) { paint(drawPixmap, r, pm); }
-  void drawPixmap(int x, int y, int w, int h, const QPixmap &pm) { paint(drawPixmap, x, y, w, h, pm); }
+  void drawPixmap(const QPointF &p, const QPixmap &pm, const QRectF &sr)
+  {
+    painter_.drawPixmap(p, pm, sr);
+    maskPainter_.fillRect(QRectF(p, pm.size()), maskPainter_.brush().color());
+  }
+  void drawPixmap(const QPoint &p, const QPixmap &pm, const QRect &sr)
+  {
+    painter_.drawPixmap(p, pm, sr);
+    maskPainter_.fillRect(QRect(p, pm.size()), maskPainter_.brush().color());
+  }
+  void drawPixmap(const QPointF &p, const QPixmap &pm)
+  {
+    painter_.drawPixmap(p, pm);
+    maskPainter_.fillRect(QRectF(p, pm.size()), maskPainter_.brush().color());
+  }
+  void drawPixmap(const QPoint &p, const QPixmap &pm)
+  {
+    painter_.drawPixmap(p, pm);
+    maskPainter_.fillRect(QRect(p, pm.size()), maskPainter_.brush().color());
+  }
+  void drawPixmap(int x, int y, const QPixmap &pm) { painter_.drawPixmap(x, y, pm); }
+  void drawPixmap(const QRect &r, const QPixmap &pm)
+  {
+    painter_.drawPixmap(r, pm);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
+  void drawPixmap(int x, int y, int w, int h, const QPixmap &pm)
+  {
+    painter_.drawPixmap(x, y, w, h, pm);
+    maskPainter_.fillRect(x, y, w, h, maskPainter_.brush().color());
+  }
 
   void drawPixmapFragments(const QPainter::PixmapFragment *fragments, int fragmentCount, const QPixmap &pixmap,
                            QPainter::PixmapFragmentHints hints = QPainter::PixmapFragmentHints())
   {
-    paint(drawPixmapFragments, fragments, fragmentCount, pixmap, hints);
+    painter_.drawPixmapFragments(fragments, fragmentCount, pixmap, hints);
+    // TODO: Use rectangles to represent fragments in the mask image
   }
 
   void drawImage(const QRectF &targetRect, const QImage &image, const QRectF &sourceRect,
                  Qt::ImageConversionFlags flags = Qt::AutoColor)
   {
-    paint(drawImage, targetRect, image, sourceRect, flags);
+    painter_.drawImage(targetRect, image, sourceRect, flags);
+    maskPainter_.fillRect(targetRect, maskPainter_.brush().color());
   }
   void drawImage(const QRect &targetRect, const QImage &image, const QRect &sourceRect,
                  Qt::ImageConversionFlags flags = Qt::AutoColor)
   {
-    paint(drawImage, targetRect, image, sourceRect, flags);
+    painter_.drawImage(targetRect, image, sourceRect, flags);
+    maskPainter_.fillRect(targetRect, maskPainter_.brush().color());
   }
   void drawImage(const QPointF &p, const QImage &image, const QRectF &sr,
                  Qt::ImageConversionFlags flags = Qt::AutoColor)
   {
-    paint(drawImage, p, image, sr, flags);
+    painter_.drawImage(p, image, sr, flags);
+    maskPainter_.fillRect(QRectF(p, image.size()), maskPainter_.brush().color());
   }
   void drawImage(const QPoint &p, const QImage &image, const QRect &sr, Qt::ImageConversionFlags flags = Qt::AutoColor)
   {
-    paint(drawImage, p, image, sr, flags);
+    painter_.drawImage(p, image, sr, flags);
+    maskPainter_.fillRect(QRect(p, image.size()), maskPainter_.brush().color());
   }
-  void drawImage(const QRectF &r, const QImage &image) { paint(drawImage, r, image); }
-  void drawImage(const QRect &r, const QImage &image) { paint(drawImage, r, image); }
-  void drawImage(const QPointF &p, const QImage &image) { paint(drawImage, p, image); }
-  void drawImage(const QPoint &p, const QImage &image) { paint(drawImage, p, image); }
+  void drawImage(const QRectF &r, const QImage &image)
+  {
+    painter_.drawImage(r, image);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
+  void drawImage(const QRect &r, const QImage &image)
+  {
+    painter_.drawImage(r, image);
+    maskPainter_.fillRect(r, maskPainter_.brush().color());
+  }
+  void drawImage(const QPointF &p, const QImage &image)
+  {
+    painter_.drawImage(p, image);
+    maskPainter_.fillRect(QRectF(p, image.size()), maskPainter_.brush().color());
+  }
+  void drawImage(const QPoint &p, const QImage &image)
+  {
+    painter_.drawImage(p, image);
+    maskPainter_.fillRect(QRect(p, image.size()), maskPainter_.brush().color());
+  }
   void drawImage(int x, int y, const QImage &image, int sx = 0, int sy = 0, int sw = -1, int sh = -1,
                  Qt::ImageConversionFlags flags = Qt::AutoColor)
   {
-    paint(drawImage, x, y, image, sx, sy, sw, sh, flags);
+    painter_.drawImage(x, y, image, sx, sy, sw, sh, flags);
+    maskPainter_.fillRect(QRect(QPoint(x, y), image.size()), maskPainter_.brush().color());
   }
 
   void setLayoutDirection(Qt::LayoutDirection direction) { paint(setLayoutDirection, direction); }

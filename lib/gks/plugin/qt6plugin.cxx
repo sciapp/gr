@@ -8,6 +8,7 @@
 #include <QtGui/QPainter>
 #include <QtGui/QPainterPath>
 #include <QtGui/QImage>
+#include <QtGui/QPicture>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 

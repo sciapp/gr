@@ -20,6 +20,7 @@
 #include <QtGui/QPainterPath>
 #include <QtGui/QResizeEvent>
 #include <QtGui/QImage>
+#include <QtGui/QPicture>
 #include <QIcon>
 #include <QProcessEnvironment>
 
