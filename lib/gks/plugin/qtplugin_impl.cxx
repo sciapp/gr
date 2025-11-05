@@ -98,9 +98,11 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 class GroupMask
 {
 public:
-  GroupMask(int width, int height) : maskImage_(width, height, QImage::Format_ARGB32), maskPainter_(&maskImage_)
+  // Use RGB32 instead of RGB888 to increase performance.
+  GroupMask(int width, int height) : maskImage_(width, height, QImage::Format_RGB32), maskPainter_(&maskImage_)
   {
-    maskImage_.fill(Qt::transparent);
+    // `white` or `0xFFFFFFFF` is no valid ID.
+    maskImage_.fill(Qt::white);
     maskPainter_.setRenderHint(QPainter::Antialiasing, false);
     maskPainter_.setRenderHint(QPainter::TextAntialiasing, false);
     maskPainter_.setCompositionMode(QPainter::CompositionMode_Source);
@@ -112,22 +114,20 @@ public:
   void id(unsigned int id)
   {
     auto pen = maskPainter_.pen();
-    // Use `| 0xFF000000` to set the alpha channel to 255.
-    pen.setColor(QColor::fromRgba(id | 0xFF000000));
+    pen.setColor(QColor::fromRgb(id));
     maskPainter_.setPen(pen);
     auto brush = maskPainter_.brush();
-    brush.setColor(QColor::fromRgba(id | 0xFF000000));
+    brush.setColor(QColor::fromRgb(id));
     maskPainter_.setBrush(brush);
   }
 
-  unsigned int id() const { return maskPainter_.pen().color().rgba() & 0x00FFFFFF; }
+  unsigned int id() const { return maskPainter_.pen().color().rgb() & 0x00FFFFFF; }
 
   const unsigned int *pixels() const { return reinterpret_cast<const uint32_t *>(this->maskImage_.constBits()); }
 
   unsigned int operator()(unsigned int x, unsigned int y) const
   {
-    // Use `& 0x00FFFFFF` to remove the alpha channel which must always unequal zero in the image, otherwise Qt will
-    // use undesired alpha optimizations, effectively breaking the id storage in the mask.
+    // Use `& 0x00FFFFFF` to remove the alpha channel which is always `0xFF` because of the RGB32 format.
     return pixels()[y * maskImage_.width() + x] & 0x00FFFFFF;
   }
 

@@ -187,12 +187,9 @@ public:
   int operator()(unsigned int x, unsigned int y) const
   {
     assert(x < width_ && y < height_);
-    // Use `& 0x00FFFFFF` to remove the alpha channel which must always unequal zero in the image, otherwise Qt will
-    // use undesired alpha optimizations, effectively breaking the id storage in the mask.
-    auto color = mask_.get()[y * width_ + x];
-    auto id = color & 0x00FFFFFF;
-    auto alpha = static_cast<uint8_t>((color >> 24) & 0xFF);
-    return (color & 0xFF000000) == 0 ? -1 : id;
+    // Use `& 0x00FFFFFF` to remove the alpha channel which is always `0xFF` because of the RGB32 format.
+    auto id = mask_.get()[y * width_ + x] & 0x00FFFFFF;
+    return id == 0x00FFFFFF ? -1 : id; // 0x00FFFFFF or white is used as invalid / no id indicator
   }
 
   bool hasPixel(unsigned int x, unsigned int y) const { return this->operator()(x, y) != 0; }
