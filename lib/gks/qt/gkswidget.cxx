@@ -46,7 +46,7 @@ static void create_pixmap(ws_state_list *p)
 
   // TODO: Avoid memory leak!
   QPainter *painter = new QPainter(p->pixmap);
-  p->painter = std::make_unique<PainterWithGroupMask>(*painter);
+  p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*painter));
   p->painter->setClipRect(0, 0, p->width, p->height);
 
   get_paint_device();
@@ -71,7 +71,7 @@ static void resize_pixmap(int width, int height)
           p->pixmap->fill(Qt::white);
 
           QPainter *painter = new QPainter(p->pixmap);
-          p->painter = std::make_unique<PainterWithGroupMask>(*painter);
+          p->painter = std::unique_ptr<PainterWithGroupMask>(new PainterWithGroupMask(*painter));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
