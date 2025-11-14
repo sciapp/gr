@@ -679,6 +679,10 @@ DLLEXPORT void gks_set_bbox_callback(int id, void (*bbox_callback)(int, double, 
                                      void (*mask_callback)(unsigned int, unsigned int, unsigned int *));
 DLLEXPORT void gks_cancel_bbox_callback(void);
 
+DLLEXPORT void gks_begin_partial(int id, void (*image_callback)(int, unsigned int, unsigned int, unsigned int,
+                                                                unsigned int, unsigned int *));
+DLLEXPORT void gks_end_partial(int id);
+
 DLLEXPORT void gks_set_background(void);
 DLLEXPORT void gks_clear_background(void);
 
