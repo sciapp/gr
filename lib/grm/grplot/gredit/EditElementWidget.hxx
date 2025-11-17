@@ -1,7 +1,7 @@
 #ifndef EDITELEMENTWIDGET_H
 #define EDITELEMENTWIDGET_H
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include <QWidget>
 #include <QScrollArea>
 #include <QLineEdit>
@@ -17,7 +17,7 @@
 #include "grm.h"
 
 class EditElementWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class EditElementWidget : public QWidget
@@ -39,9 +39,9 @@ private slots:
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;
-  bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
-                           bool inherit_elem = false);
-  void setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
+  static bool isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
+                                  bool inherit_elem = false);
+  bool setAttributesDuringAccept(std::shared_ptr<GRM::Element> current_selection);
 
 private:
   GRPlotWidget *grplot_widget;

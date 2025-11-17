@@ -48,26 +48,26 @@
                 <xs:element ref="layout_grid_element" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_width" type="xs:double"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
             <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
             <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
             <xs:attribute name="flip_col_and_row" type="xs:integer"/>
             <xs:attribute name="num_col" type="xs:integer" use="required"/>
             <xs:attribute name="num_row" type="xs:integer" use="required"/>
-            <xs:attribute name="relative_height" type="xs:double"/>
-            <xs:attribute name="relative_width" type="xs:double"/>
             <xs:attribute name="start_col" type="xs:integer"/>
             <xs:attribute name="start_row" type="xs:integer"/>
             <xs:attribute name="stop_col" type="xs:integer"/>
             <xs:attribute name="stop_row" type="xs:integer"/>
             <xs:attribute name="trim_col" type="xs:integer"/>
             <xs:attribute name="trim_row" type="xs:integer"/>
+            <xs:attribute name="viewport_height_abs" type="xs:double"/>
+            <xs:attribute name="viewport_height_rel" type="xs:double"/>
             <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
             <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
             <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
             <xs:attribute name="viewport_normalized_y_min" type="xs:double"/>
+            <xs:attribute name="viewport_width_abs" type="xs:double"/>
+            <xs:attribute name="viewport_width_rel" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -78,21 +78,21 @@
                 <xs:element ref="plot" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_width" type="xs:double"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
             <xs:attribute name="col_span" type="xs:integer"/>
             <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
             <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
             <xs:attribute name="keep_size_if_swapped" type="xs:integer"/>
             <xs:attribute name="position" type="xs:string"/>
-            <xs:attribute name="relative_height" type="xs:double"/>
-            <xs:attribute name="relative_width" type="xs:double"/>
             <xs:attribute name="row_span" type="xs:integer"/>
+            <xs:attribute name="viewport_height_abs" type="xs:double"/>
+            <xs:attribute name="viewport_height_rel" type="xs:double"/>
             <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
             <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
             <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
             <xs:attribute name="viewport_normalized_y_min" type="xs:double"/>
+            <xs:attribute name="viewport_width_abs" type="xs:double"/>
+            <xs:attribute name="viewport_width_rel" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -163,7 +163,6 @@
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="colormap" type="strint"/>
             <xs:attribute name="colormap_inverted" type="xs:integer"/>
-            <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
             <xs:attribute name="keep_radii_axes" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
@@ -179,6 +178,7 @@
             <xs:attribute name="theta_lim_max" type="xs:double"/>
             <xs:attribute name="theta_lim_min" type="xs:double"/>
             <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="use_grplot_changes" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="viewport_normalized_x_max" type="xs:double"/>
             <xs:attribute name="viewport_normalized_x_min" type="xs:double"/>
             <xs:attribute name="viewport_normalized_y_max" type="xs:double"/>
@@ -291,9 +291,9 @@
             <xs:attribute name="clip_region" type="xs:integer"/>
             <xs:attribute name="location" type="strint" use="required"/>
             <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
-            <xs:attribute name="offset" type="xs:double"/>
             <xs:attribute name="text_content" type="xs:string"/>
             <xs:attribute name="text_is_title" type="xs:integer"/>
+            <xs:attribute name="viewport_offset" type="xs:double"/>
             <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="window_x_max" type="xs:double"/>
             <xs:attribute name="window_x_min" type="xs:double"/>
@@ -371,11 +371,11 @@
             <xs:attributeGroup ref="grid"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="x_major" type="xs:integer" use="required"/>
-            <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="x_origin_pos" type="xs:string" use="required"/>
             <xs:attribute name="y_major" type="xs:integer" use="required"/>
-            <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="y_origin_pos" type="xs:string" use="required"/>
             <xs:attribute name="z_major" type="xs:integer"/>
-            <xs:attribute name="z_org_pos" type="xs:string"/>
+            <xs:attribute name="z_origin_pos" type="xs:string"/>
             <xs:attribute name="z_tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
@@ -406,7 +406,7 @@
             <xs:attribute name="min_value" type="xs:double"/>
             <xs:attribute name="mirrored_axis" type="xs:integer"/>
             <xs:attribute name="pos" type="xs:double"/>
-            <xs:attribute name="org" type="xs:double"/>
+            <xs:attribute name="origin" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="text_angle" type="xs:integer"/>
@@ -479,8 +479,8 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="z_index" type="xs:integer"/>
             <xs:attribute name="z_major" type="xs:integer"/>
-            <xs:attribute name="z_org" type="xs:double"/>
-            <xs:attribute name="z_org_pos" type="xs:string"/>
+            <xs:attribute name="z_origin" type="xs:double"/>
+            <xs:attribute name="z_origin_pos" type="xs:string"/>
             <xs:attribute name="z_tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
@@ -629,17 +629,17 @@
             </xs:choice>
             <xs:attributeGroup ref="fill_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="absolute_downwards" type="xs:string"/>
-            <xs:attribute name="absolute_downwards_flt" type="xs:double"/>
-            <xs:attribute name="absolute_upwards" type="xs:string"/>
-            <xs:attribute name="absolute_upwards_flt" type="xs:double"/>
+            <xs:attribute name="abs_downwards_e" type="xs:string"/>
+            <xs:attribute name="abs_upwards_e" type="xs:string"/>
             <xs:attribute name="downwards_cap_color" type="xs:integer"/>
             <xs:attribute name="error_bar_color" type="xs:integer"/>
             <xs:attribute name="error_bar_style" type="xs:integer"/>
-            <xs:attribute name="relative_downwards" type="xs:string"/>
-            <xs:attribute name="relative_downwards_flt" type="xs:double"/>
-            <xs:attribute name="relative_upwards" type="xs:string"/>
-            <xs:attribute name="relative_upwards_flt" type="xs:double"/>
+            <xs:attribute name="rel_downwards_e" type="xs:string"/>
+            <xs:attribute name="rel_upwards_e" type="xs:string"/>
+            <xs:attribute name="uniform_rel_upwards_e" type="xs:double"/>
+            <xs:attribute name="uniform_abs_upwards_e" type="xs:double"/>
+            <xs:attribute name="uniform_rel_downwards_e" type="xs:double"/>
+            <xs:attribute name="uniform_abs_downwards_e" type="xs:double"/>
             <xs:attribute name="upwards_cap_color" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -790,9 +790,9 @@
     <xs:element name="draw_image">
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="color_model" type="strint" use="required"/>
             <xs:attribute name="data" type="xs:string" use="required"/>
             <xs:attribute name="height" type="xs:integer" use="required"/>
-            <xs:attribute name="model" type="strint" use="required"/>
             <xs:attribute name="resample_method" type="strint"/>
             <xs:attribute name="width" type="xs:integer" use="required"/>
             <xs:attribute name="x_max" type="xs:double" use="required"/>
@@ -855,7 +855,6 @@
             <xs:attributeGroup ref="series"/>
             <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="bar_width" type="xs:double"/>
-            <xs:attribute name="clip_transformation" type="xs:integer"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="edge_width" type="xs:double"/>
@@ -966,7 +965,7 @@
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="series"/>
             <xs:attribute name="ambient" type="xs:double"/>
-            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="color_rgb" type="xs:string"/>
             <xs:attribute name="diffuse" type="xs:double"/>
             <!-- `d_min` and `d_max` must only be set if a volume was switched
                 to an isosurface (so it can be switched back) -->
@@ -1276,8 +1275,8 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="accelerate" type="xs:integer" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="use_gr3" type="xs:integer" use="required"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -1353,13 +1352,13 @@
             <xs:attribute name="cap_x_max" type="xs:double"/>
             <xs:attribute name="cap_x_min" type="xs:double"/>
             <xs:attribute name="downwards_cap_color" type="xs:integer"/>
-            <xs:attribute name="e_downwards" type="xs:double"/>
-            <xs:attribute name="e_upwards" type="xs:double"/>
+            <xs:attribute name="downwards_e" type="xs:double"/>
             <xs:attribute name="error_bar_color" type="xs:integer" use="required"/>
             <xs:attribute name="error_bar_x" type="xs:double" use="required"/>
             <xs:attribute name="error_bar_y_max" type="xs:double" use="required"/>
             <xs:attribute name="error_bar_y_min" type="xs:double" use="required"/>
             <xs:attribute name="upwards_cap_color" type="xs:integer"/>
+            <xs:attribute name="upwards_e" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1423,9 +1422,9 @@
             <xs:attributeGroup ref="line_modifications"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="bin_edges" type="xs:string"/>
+            <xs:attribute name="bin_nr" type="xs:integer" use="required"/>
             <xs:attribute name="bin_width" type="xs:double"/>
             <xs:attribute name="bin_widths" type="xs:double"/>
-            <xs:attribute name="class_nr" type="xs:integer" use="required"/>
             <xs:attribute name="count" type="xs:double" use="required"/>
             <xs:attribute name="draw_edges" type="xs:integer"/>
             <xs:attribute name="norm" type="xs:string"/>
@@ -1513,12 +1512,12 @@
         <xs:attribute name="tick_orientation" type="xs:integer" use="required"/>
         <xs:attribute name="tick_size" type="xs:double"/>
         <xs:attribute name="x_major" type="xs:integer"/>
-        <xs:attribute name="x_org" type="xs:double"/>
-        <xs:attribute name="x_org_pos" type="xs:string"/>
+        <xs:attribute name="x_origin" type="xs:double"/>
+        <xs:attribute name="x_origin_pos" type="xs:string"/>
         <xs:attribute name="x_tick" type="xs:double"/>
         <xs:attribute name="y_major" type="xs:integer"/>
-        <xs:attribute name="y_org" type="xs:double"/>
-        <xs:attribute name="y_org_pos" type="xs:string"/>
+        <xs:attribute name="y_origin" type="xs:double"/>
+        <xs:attribute name="y_origin_pos" type="xs:string"/>
         <xs:attribute name="y_tick" type="xs:double"/>
     </xs:attributeGroup>
 
@@ -1535,9 +1534,9 @@
 
     <!-- definition of grid attributes -->
     <xs:attributeGroup name="grid">
-        <xs:attribute name="x_org" type="xs:double"/>
+        <xs:attribute name="x_origin" type="xs:double"/>
         <xs:attribute name="x_tick" type="xs:double"/>
-        <xs:attribute name="y_org" type="xs:double"/>
+        <xs:attribute name="y_origin" type="xs:double"/>
         <xs:attribute name="y_tick" type="xs:double"/>
     </xs:attributeGroup>
 

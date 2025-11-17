@@ -18,7 +18,7 @@ extern "C" {
 #include <optional>
 
 #include <grm/dom_render/context.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 
 #include <grm/plot.h>
 extern "C" {

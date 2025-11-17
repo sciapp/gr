@@ -5,14 +5,14 @@
 #include <utility>
 
 class TableWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 class TableWidget : public QTableWidget
 {
   Q_OBJECT
 public:
   explicit TableWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
-  std::map<std::string, std::list<std::string>> extractContextNames(const std::shared_ptr<GRM::Context> context);
+  std::map<std::string, std::list<std::string>> extractContextNames(const std::shared_ptr<GRM::Context> &context);
   void updateData(std::shared_ptr<GRM::Context> context);
   std::vector<std::string> getContextNames();
 

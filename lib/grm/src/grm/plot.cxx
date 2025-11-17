@@ -1,7 +1,7 @@
 /* ######################### includes ############################################################################### */
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Comment.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/comment.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 
@@ -28,6 +28,7 @@ extern "C" {
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
+#include <png.h>
 
 #include "base64_int.h"
 #include <grm/dump.h>
@@ -41,6 +42,12 @@ extern "C" {
 #include "logging_int.h"
 }
 #include "utilcpp_int.hxx"
+
+// centos 7 system dependency uses libpng15 which doesn't have the restricted pointers
+#if PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR <= 5
+typedef png_structp png_structrp;
+typedef png_infop png_inforp;
+#endif
 
 #ifndef NO_XERCES_C
 #include <xercesc/sax/InputSource.hpp>
@@ -292,7 +299,6 @@ const char *valid_plot_keys[] = {"clear", "raw", "size", "subplots", "update", n
 
 const char *valid_subplot_keys[] = {"abs_height",
                                     "abs_width",
-                                    "accelerate",
                                     "adjust_x_lim",
                                     "adjust_y_lim",
                                     "adjust_z_lim",
@@ -311,7 +317,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "font",
                                     "font_precision",
                                     "grid_element",
-                                    "grplot",
                                     "marginal_heatmap_kind",
                                     "keep_aspect_ratio",
                                     "keep_radii_axes",
@@ -341,6 +346,8 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "tilt",
                                     "title",
                                     "transformation",
+                                    "use_gr3",
+                                    "use_grplot_changes",
                                     "x_bins",
                                     "x_flip",
                                     "x_grid",
@@ -435,7 +442,6 @@ const char *valid_series_keys[] = {"a",
 static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"abs_height", "d"},
                                           {"abs_width", "d"},
-                                          {"accelerate", "i"},
                                           {"algorithm", "i|s"},
                                           {"adjust_x_lim", "i"},
                                           {"adjust_y_lim", "i"},
@@ -468,7 +474,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"font_precision", "i"},
                                           {"foreground_color", "D"},
                                           {"grid_element", "s"},
-                                          {"grplot", "i"},
                                           {"hold_plots", "i"},
                                           {"int_limits_high", "D"},
                                           {"int_limits_low", "D"},
@@ -519,6 +524,8 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"transparency", "d"},
                                           {"u", "D"},
                                           {"update", "i"},
+                                          {"use_gr3", "i"},
+                                          {"use_grplot_changes", "i"},
                                           {"v", "D"},
                                           {"x", "D|I"},
                                           {"x_bins", "i"},
@@ -2960,13 +2967,13 @@ grm_error_t plotSurface(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   grm_error_t error = GRM_ERROR_NONE;
-  int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
+  int use_gr3; /* this argument decides if GR3 or GRM is used to plot the surface */
   double xmin, xmax, ymin, ymax;
 
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
+  bool has_use_gr3 = grm_args_values(subplot_args, "use_gr3", "i", &use_gr3);
 
   while (*current_series != nullptr)
     {
@@ -2975,7 +2982,7 @@ grm_error_t plotSurface(grm_args_t *subplot_args)
 
       auto sub_group = global_render->createSeries("surface");
       group->append(sub_group);
-      if (has_accelerate) sub_group->setAttribute("accelerate", accelerate);
+      if (has_use_gr3) sub_group->setAttribute("use_gr3", use_gr3);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3271,8 +3278,8 @@ grm_error_t plotIsosurface(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
           std::vector<double> foreground_vec(temp_colors, temp_colors + i);
-          (*context)["c_rgb" + str] = foreground_vec;
-          sub_group->setAttribute("color_rgb_values", "c_rgb" + str);
+          (*context)["color_rgb" + str] = foreground_vec;
+          sub_group->setAttribute("color_rgb", "color_rgb" + str);
         }
 
       global_root->setAttribute("_id", ++id);
@@ -4445,7 +4452,7 @@ grm_error_t plotDrawColorbar(grm_args_t *subplot_args, double off, unsigned int 
   if (grm_args_values(subplot_args, "x_flip", "i", &flip) && flip) colorbar->setAttribute("x_flip", flip);
   if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip) colorbar->setAttribute("y_flip", flip);
 
-  side_region->setAttribute("offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
+  side_region->setAttribute("viewport_offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
   colorbar->setAttribute("char_height", PLOT_DEFAULT_COLORBAR_CHAR_HEIGHT);
   side_region->setAttribute("location", PLOT_DEFAULT_COLORBAR_LOCATION);
   side_region->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
@@ -4610,31 +4617,31 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
   if (absolute_upwards != nullptr)
     {
       std::vector<double> absolute_upwards_vec(absolute_upwards, absolute_upwards + upwards_length);
-      (*context)["absolute_upwards" + str] = absolute_upwards_vec;
-      sub_group->setAttribute("absolute_upwards", "absolute_upwards" + str);
+      (*context)["abs_upwards_e" + str] = absolute_upwards_vec;
+      sub_group->setAttribute("abs_upwards_e", "abs_upwards_e" + str);
     }
   if (relative_upwards != nullptr)
     {
       std::vector<double> relative_upwards_vec(relative_upwards, relative_upwards + upwards_length);
-      (*context)["relative_upwards" + str] = relative_upwards_vec;
-      sub_group->setAttribute("relative_upwards", "relative_upwards" + str);
+      (*context)["rel_upwards_e" + str] = relative_upwards_vec;
+      sub_group->setAttribute("rel_upwards_e", "rel_upwards_e" + str);
     }
   if (absolute_downwards != nullptr)
     {
       std::vector<double> absolute_downwards_vec(absolute_downwards, absolute_downwards + downwards_length);
-      (*context)["absolute_downwards" + str] = absolute_downwards_vec;
-      sub_group->setAttribute("absolute_downwards", "absolute_downwards" + str);
+      (*context)["abs_downwards_e" + str] = absolute_downwards_vec;
+      sub_group->setAttribute("abs_downwards_e", "abs_downwards_e" + str);
     }
   if (relative_downwards != nullptr)
     {
       std::vector<double> relative_downwards_vec(relative_downwards, relative_downwards + downwards_length);
-      (*context)["relative_downwards" + str] = relative_downwards_vec;
-      sub_group->setAttribute("relative_downwards", "relative_downwards" + str);
+      (*context)["rel_downwards_e" + str] = relative_downwards_vec;
+      sub_group->setAttribute("rel_downwards_e", "rel_downwards_e" + str);
     }
-  if (absolute_downwards_flt != FLT_MAX) sub_group->setAttribute("absolute_downwards_flt", absolute_downwards_flt);
-  if (relative_downwards_flt != FLT_MAX) sub_group->setAttribute("relative_downwards_flt", relative_downwards_flt);
-  if (absolute_upwards_flt != FLT_MAX) sub_group->setAttribute("absolute_upwards_flt", absolute_upwards_flt);
-  if (relative_upwards_flt != FLT_MAX) sub_group->setAttribute("relative_upwards_flt", relative_upwards_flt);
+  if (absolute_downwards_flt != FLT_MAX) sub_group->setAttribute("uniform_abs_downwards_e", absolute_downwards_flt);
+  if (relative_downwards_flt != FLT_MAX) sub_group->setAttribute("uniform_rel_downwards_e", relative_downwards_flt);
+  if (absolute_upwards_flt != FLT_MAX) sub_group->setAttribute("uniform_abs_upwards_e", absolute_upwards_flt);
+  if (relative_upwards_flt != FLT_MAX) sub_group->setAttribute("uniform_rel_upwards_e", relative_upwards_flt);
 
   if (grm_args_values(series_args, "error_bar_style", "i", &error_bar_style))
     {
@@ -5265,7 +5272,62 @@ private:
 class FileBinInputStream : public BinInputStream
 {
 public:
-  explicit FileBinInputStream(FILE *file) : file_(file) {}
+  explicit FileBinInputStream(FILE *file)
+  {
+    unsigned char sig[8];
+    fread(sig, 1, 8, file);
+    if (png_sig_cmp(sig, 0, 8) == 0)
+      {
+        std::string save_file_name;
+
+        rewind(file); // reset the file pointer so that png_read_png doesn't crash
+        png_structrp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp) nullptr, nullptr, nullptr);
+        if (png_ptr == nullptr)
+          {
+            fclose(file);
+            fprintf(stderr, "Error while creating png_ptr.\n");
+            exit(1);
+          }
+
+        png_inforp info_ptr = png_create_info_struct(png_ptr);
+        if (info_ptr == nullptr)
+          {
+            fclose(file);
+            fprintf(stderr, "Error while creating info_ptr.\n");
+            png_destroy_read_struct((png_structpp)&png_ptr, nullptr, nullptr);
+            exit(1);
+          }
+        png_init_io(png_ptr, file);
+        png_read_png(png_ptr, info_ptr, 0, nullptr);
+
+        // read png text
+        int num_text;
+        png_textp text;
+
+        png_get_text(png_ptr, info_ptr, &text, &num_text);
+        fclose(file);
+
+        if (num_text == 0)
+          {
+            fprintf(stderr, "File is missing xml-data.\n");
+            return;
+          }
+        else
+          {
+            save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+            if (save_file_name.empty()) return;
+            std::ofstream save_file_stream(save_file_name);
+            save_file_stream << text[num_text - 1].text << std::endl;
+            save_file_stream.close();
+            file_ = fopen(save_file_name.c_str(), "rb");
+          }
+      }
+    else
+      {
+        rewind(file);
+        file_ = file;
+      }
+  }
 
   [[nodiscard]] XMLFilePos curPos() const override { return cur_pos_; }
 
@@ -6437,7 +6499,7 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max, theta_lim_min, theta_lim_max, r_lim_min,
       r_lim_max;
-  int grplot = 0;
+  int use_grplot_changes = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -6524,7 +6586,8 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       group->setAttribute("adjust_y_lim", adjust_y_lim);
     }
 
-  if (grm_args_values(subplot_args, "grplot", "i", &grplot)) group->setAttribute("grplot", grplot);
+  if (grm_args_values(subplot_args, "use_grplot_changes", "i", &use_grplot_changes))
+    group->setAttribute("use_grplot_changes", use_grplot_changes);
 
   if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
   if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;
@@ -6782,11 +6845,65 @@ int grm_process_tree(void)
   return 1;
 }
 
-int grm_export(const char *file_path)
+int grm_export(const char *file_path, int export_xml)
 {
   gr_beginprint(const_cast<char *>(file_path));
   int return_value = grm_plot(nullptr);
   gr_endprint();
+
+  if (export_xml)
+    {
+      png_inforp info_ptr;
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      auto fp = std::fopen(file_path, "rb");
+      if (fp != nullptr)
+        {
+          png_structrp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+          if (png_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating png_ptr.\n");
+              exit(1);
+            }
+
+          info_ptr = png_create_info_struct(png_ptr);
+          if (info_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating info_ptr.\n");
+              png_destroy_read_struct((png_structpp)&png_ptr, nullptr, nullptr);
+              exit(1);
+            }
+          png_init_io(png_ptr, fp);
+          png_read_png(png_ptr, info_ptr, 0, nullptr);
+          png_free_data(png_ptr, info_ptr, PNG_FREE_TEXT, -1);
+
+          fclose(fp);
+        }
+      fp = std::fopen(file_path, "wb");
+      if (fp != nullptr)
+        {
+          png_structrp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+          if (png_ptr == nullptr)
+            {
+              fclose(fp);
+              fprintf(stderr, "Error while creating png_ptr.\n");
+              exit(1);
+            }
+
+          png_init_io(png_ptr, fp);
+
+          png_text t[1];
+
+          t[0].key = (char *)"XML File";
+          t[0].text = graphics_tree_str.get();
+          t[0].compression = PNG_TEXT_COMPRESSION_NONE;
+          png_set_text(png_ptr, info_ptr, t, 1);
+
+          png_write_png(png_ptr, info_ptr, 0, nullptr);
+          fclose(fp);
+        }
+    }
   return return_value;
 }
 

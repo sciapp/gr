@@ -6,14 +6,14 @@
 #include <QDialog>
 #include "grm.h"
 class ColorPickerRGB;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 class ColorPickerRGB : public QDialog
 {
   Q_OBJECT
 public:
   explicit ColorPickerRGB(GRPlotWidget *widget, QDialog *parent = nullptr);
-  void start(std::string attribute_name, const std::shared_ptr<GRM::Element> element);
+  void start(std::string attribute_name, const std::shared_ptr<GRM::Element> &element);
 
 private slots:
   void redSliderChangeSlot();
