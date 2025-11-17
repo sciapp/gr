@@ -12953,6 +12953,21 @@ void gr_cancelbboxcallback(void)
   gks_cancel_bbox_callback();
 }
 
+void gr_beginpartial(int id, void (*image_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int,
+                                                    unsigned int *))
+{
+  check_autoinit;
+
+  gks_begin_partial(id, image_callback);
+}
+
+void gr_endpartial(int id)
+{
+  check_autoinit;
+
+  gks_end_partial(id);
+}
+
 void gr_moveselection(double x, double y)
 {
   check_autoinit;
