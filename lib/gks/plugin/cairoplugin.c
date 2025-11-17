@@ -2647,6 +2647,12 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
+              /* We ensure that the height and width are divisible by 2 to
+                 avoid problems in ffmpeg when converting a PNG image sequence
+                 into a video file
+               */
+              p->width -= p->width % 2;
+              p->height -= p->height % 2;
               p->nominal_size = min(p->width, p->height) / 500.0;
               if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
             }
