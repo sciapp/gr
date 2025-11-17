@@ -13,6 +13,7 @@
 #include "gr.h"
 #include "grm/layout.hxx"
 #include <grm/util.h>
+#include <grm/dom_render/GroupMask.hxx>
 
 /* ========================= macros ================================================================================= */
 
@@ -197,6 +198,8 @@ GRM_EXPORT std::vector<std::string> getFillIntStyles();
 GRM_EXPORT std::vector<std::string> getTransformation();
 
 GRM_EXPORT void addValidContextKey(std::string key);
+
+GRM_EXPORT const GRM::GroupMask *getGroupMask();
 
 /* ========================= classes ================================================================================ */
 

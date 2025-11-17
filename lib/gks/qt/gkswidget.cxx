@@ -20,6 +20,7 @@
 #include <QtGui/QPainterPath>
 #include <QtGui/QResizeEvent>
 #include <QtGui/QImage>
+#include <QtGui/QPicture>
 #include <QIcon>
 #include <QProcessEnvironment>
 
@@ -43,7 +44,9 @@ static void create_pixmap(ws_state_list *p)
 #endif
   p->pixmap->fill(Qt::white);
 
-  p->painter = new QPainter(p->pixmap);
+  // TODO: Avoid memory leak!
+  QPainter *painter = new QPainter(p->pixmap);
+  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter));
   p->painter->setClipRect(0, 0, p->width, p->height);
 
   get_paint_device();
@@ -58,7 +61,7 @@ static void resize_pixmap(int width, int height)
 
       if (p->pixmap)
         {
-          delete p->painter;
+          p->painter.release();
           delete p->pixmap;
 
           p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -67,7 +70,8 @@ static void resize_pixmap(int width, int height)
 #endif
           p->pixmap->fill(Qt::white);
 
-          p->painter = new QPainter(p->pixmap);
+          QPainter *painter = new QPainter(p->pixmap);
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }

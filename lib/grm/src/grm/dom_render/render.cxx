@@ -68,6 +68,7 @@ std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds gr_context_id_manager;
 ManageZIndex z_index_manager;
 ManageCustomColorIndex custom_color_index_manager;
+GRM::GroupMask group_mask;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parent_types = {
@@ -4329,7 +4330,7 @@ void GRM::Render::getFigureSize(int *pixel_width, int *pixel_height, double *met
   if (metric_height != nullptr) *metric_height = metric_size[1];
 }
 
-void receiverFunction(int id, double x_min, double x_max, double y_min, double y_max)
+void bboxReceiveCallback(int id, double x_min, double x_max, double y_min, double y_max)
 {
   if ((x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX) || boundingMap()[id].expired())
     {
@@ -4341,6 +4342,11 @@ void receiverFunction(int id, double x_min, double x_max, double y_min, double y
   element->setAttribute("_bbox_x_max", x_max);
   element->setAttribute("_bbox_y_min", y_min);
   element->setAttribute("_bbox_y_max", y_max);
+}
+
+void maskReceiveCallback(unsigned int width, unsigned int height, unsigned int *mask)
+{
+  group_mask.own(width, height, &mask);
 }
 
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
@@ -4538,6 +4544,11 @@ std::vector<std::string> GRM::getTransformation()
 void GRM::addValidContextKey(std::string key)
 {
   valid_context_keys.emplace(key);
+}
+
+const GRM::GroupMask *GRM::getGroupMask()
+{
+  return &group_mask;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -12213,6 +12224,30 @@ static void processPolarCellArray(const std::shared_ptr<GRM::Element> &element,
                       n_row, color);
 }
 
+static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
+                                  unsigned int *pixels)
+{
+  const std::string filepath{"test_partial.ppm"};
+  std::ofstream image_file(filepath, std::ios::out | std::ios::binary);
+  image_file << "P6\n" << std::to_string(width) << " " << std::to_string(height) << "\n255\n";
+  for (unsigned int j = y; j < height; j++)
+    {
+      for (unsigned int i = x; i < width; i++)
+        {
+          const auto pixel = reinterpret_cast<uint8_t *>(pixels + j * width + i);
+          if (pixel[3] == 0)
+            {
+              image_file << (uint8_t)255 << (uint8_t)255 << (uint8_t)255;
+            }
+          else
+            {
+              image_file << pixel[0] << pixel[1] << pixel[2];
+            }
+        }
+    }
+  std::free(pixels);
+}
+
 static void processPolyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -12225,6 +12260,8 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
 
   auto name = static_cast<std::string>(element->getAttribute("name"));
   bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
+
+  gr_beginpartial(1, processPartialDrawing);
 
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(0);
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
@@ -12263,6 +12300,8 @@ static void processPolyline(const std::shared_ptr<GRM::Element> &element, const 
       if (redraw_ws && !hidden) gr_polyline(2, x, y);
     }
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(1);
+
+  gr_endpartial(1);
 }
 
 static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
@@ -19102,7 +19141,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
             {
               bbox_id = idPool().next();
             }
-          gr_setbboxcallback(bbox_id, &receiverFunction);
+          gr_setbboxcallback(bbox_id, &bboxReceiveCallback, &maskReceiveCallback);
           boundingMap()[bbox_id] = element;
         }
 

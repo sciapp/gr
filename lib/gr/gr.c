@@ -12942,11 +12942,12 @@ void gr_endselection(void)
   gks_end_selection();
 }
 
-void gr_setbboxcallback(int id, void (*callback)(int, double, double, double, double))
+void gr_setbboxcallback(int id, void (*bbox_callback)(int, double, double, double, double),
+                        void (*mask_callback)(unsigned int, unsigned int, unsigned int *))
 {
   check_autoinit;
 
-  gks_set_bbox_callback(id, callback);
+  gks_set_bbox_callback(id, bbox_callback, mask_callback);
 }
 
 void gr_cancelbboxcallback(void)
@@ -12954,6 +12955,21 @@ void gr_cancelbboxcallback(void)
   check_autoinit;
 
   gks_cancel_bbox_callback();
+}
+
+void gr_beginpartial(int id, void (*image_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int,
+                                                    unsigned int *))
+{
+  check_autoinit;
+
+  gks_begin_partial(id, image_callback);
+}
+
+void gr_endpartial(int id)
+{
+  check_autoinit;
+
+  gks_end_partial(id);
 }
 
 void gr_moveselection(double x, double y)

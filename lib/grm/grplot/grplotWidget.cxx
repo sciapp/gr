@@ -2263,6 +2263,25 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
           prev_highlighted_tick_group_elem.reset();
           amount_scrolled = 0;
           auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
+          GRM::getGroupMask()->toPPM("group_mask_distinct_colors.ppm", std::nullopt, true, true);
+          GRM::getGroupMask()->toPPM("group_mask_unmodified_rbg.ppm", std::nullopt, false, true);
+          auto group_ids = GRM::getGroupMask()->getObjectsInBox(x, y);
+          if (!group_ids.empty())
+            {
+              for (auto group_id : group_ids)
+                {
+                  qDebug() << "clicked object with id: " << group_id;
+                  auto root = grm_get_document_root();
+                  auto elem = root->querySelectors("[_bbox_id=\"" + std::to_string(group_id) + "\"]");
+                  if (elem)
+                    {
+                      qDebug() << "found element: " << elem->localName();
+                      if (elem->parentElement()->hasAttribute("label"))
+                        qDebug() << "    " << static_cast<std::string>(elem->parentElement()->getAttribute("label"));
+                    }
+                }
+              qDebug() << "================================================================================";
+            }
           if (cur_clicked.empty())
             {
               clicked.clear();
@@ -2576,6 +2595,8 @@ void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
           int x, y;
           getMousePos(event, &x, &y);
           auto cur_clicked = bounding_logic->getBoundingObjectsAtPoint(x, y, hide_grid_bbox, enable_advanced_editor);
+          auto group_id = (*GRM::getGroupMask())(x, y);
+          qDebug() << "clicked object with id: " << group_id;
           if (cur_clicked.empty())
             {
               clicked.clear();
