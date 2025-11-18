@@ -12224,9 +12224,48 @@ static void processPolarCellArray(const std::shared_ptr<GRM::Element> &element,
                       n_row, color);
 }
 
+static std::vector<u_int32_t> processPartialDrawing(unsigned int x, unsigned int y, unsigned int width,
+                                                    unsigned int height, const unsigned int *pixels)
+{
+  const u_int32_t color = 0xFFFF00FF;
+  std::vector<u_int32_t> image;
+  const int box_size = 9;
+
+  image.resize(width * height, 0xFFFFFFFF);
+
+  for (unsigned int j = 0; j < height; j++)
+    {
+      for (unsigned int i = 0; i < width; i++)
+        {
+          auto found_pixel = false;
+          for (int box_offset_y = -box_size / 2; box_offset_y < box_size; box_offset_y++)
+            {
+              if (j + box_offset_y < 0 || j + box_offset_y >= height) continue;
+              for (int box_offset_x = -box_size / 2; box_offset_x < box_size; box_offset_x++)
+                {
+                  if (i + box_offset_x < 0 || i + box_offset_x >= width) continue;
+                  if (pixels[(j + box_offset_y) * width + (i + box_offset_x)] != 0xFFFFFFFF)
+                    {
+                      found_pixel = true;
+                      break;
+                    }
+                }
+              if (found_pixel) break;
+            }
+          if (found_pixel)
+            {
+              image[j * width + i] = color;
+            }
+        }
+    }
+
+  return image;
+}
+
 static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
                                   unsigned int *pixels)
 {
+  auto processed_image = processPartialDrawing(x, y, width, height, pixels);
   const std::string filepath{"test_partial.ppm"};
   std::ofstream image_file(filepath, std::ios::out | std::ios::binary);
   image_file << "P6\n" << std::to_string(width) << " " << std::to_string(height) << "\n255\n";
@@ -12234,7 +12273,7 @@ static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsign
     {
       for (unsigned int i = 0; i < width; i++)
         {
-          const auto pixel = reinterpret_cast<uint8_t *>(pixels + j * width + i);
+          const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
           if (pixel[3] == 0)
             {
               image_file << (uint8_t)255 << (uint8_t)255 << (uint8_t)255;
