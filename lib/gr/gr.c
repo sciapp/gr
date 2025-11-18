@@ -1577,7 +1577,11 @@ void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
 
   check_autoinit;
 
-  gks_inq_open_ws(n, &errind, &ol, &wkid);
+  if (!flag_printing)
+    gks_inq_open_ws(n, &errind, &ol, &wkid);
+  else
+    wkid = 6;
+
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   gks_inq_max_ds_size(wtype, &errind, &dcunit, mwidth, mheight, width, height);
 }
@@ -4093,7 +4097,7 @@ static void wsviewport(int workstation_id, rect_t *rect)
 {
   int wkid = workstation_id;
 
-  gks_set_ws_viewport(wkid, rect->xmin, rect->xmax, rect->ymin, rect->ymax);
+  if (!flag_printing || wkid == 6) gks_set_ws_viewport(wkid, rect->xmin, rect->xmax, rect->ymin, rect->ymax);
 }
 
 /*!
