@@ -28,6 +28,8 @@
 
 #include "GRPlotWidget.hxx"
 
+#include "grm/utilcpp_int.hxx"
+
 #include <gks.h>
 
 #ifndef GR_UNUSED
@@ -391,7 +393,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
           redraw();
 #else
           std::stringstream text_stream;
-          text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
+          text_stream << "XML support not compiled in. Please recompile GRPlot with xerces support.";
           QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
           return;
 #endif
@@ -689,15 +691,16 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
               SLOT(listItemCheckStatusChanged(QListWidgetItem *)));
       connect(selection_list_widget, SIGNAL(itemPressed(QListWidgetItem *)), this,
               SLOT(listItemPressed(QListWidgetItem *)));
-    }
-  icon_bar_widget = new IconBarWidget(this);
-  icon_bar_widget->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-  icon_bar_widget->setMinimumWidth(0);
 
-  icon_bar_act = new QAction(tr("&Icon bar"));
-  icon_bar_act->setCheckable(true);
-  icon_bar_act->setChecked(true);
-  QObject::connect(icon_bar_act, SIGNAL(triggered()), this, SLOT(showIconBarSlot()));
+      icon_bar_widget = new IconBarWidget(this);
+      icon_bar_widget->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+      icon_bar_widget->setMinimumWidth(0);
+
+      icon_bar_act = new QAction(tr("&Icon bar"));
+      icon_bar_act->setCheckable(true);
+      icon_bar_act->setChecked(true);
+      QObject::connect(icon_bar_act, SIGNAL(triggered()), this, SLOT(showIconBarSlot()));
+    }
 }
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, grm_args_t *args)
@@ -1440,22 +1443,13 @@ void GRPlotWidget::draw()
 {
   if (!file_export.empty())
     {
-      if (file_export == "png" || file_export == "jpg" || file_export == "jpeg")
+      if (util::endsWith(file_export, ".xml.png"))
         {
-          std::string kind;
-          static char file[50];
-
-          const auto global_root = grm_get_document_root();
-          if (auto plot_elem = global_root->querySelectorsAll("plot"); plot_elem.size() > 1)
-            kind = "multiplot";
-          else
-            kind = static_cast<std::string>(plot_elem[0]->getAttribute("_kind"));
-          snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
-          grm_export(file, false);
+          grm_export(file_export.c_str(), true);
         }
       else
         {
-          grm_export(file_export.c_str(), true);
+          grm_export(file_export.c_str(), false);
         }
       file_export.clear();
     }
@@ -3286,19 +3280,28 @@ void GRPlotWidget::pdf()
 
 void GRPlotWidget::png()
 {
-  file_export = "png";
+  std::string save_file_name =
+      QFileDialog::getSaveFileName(this, "Save PNG", QDir::homePath(), "PNG files (*.png)").toStdString();
+  if (save_file_name.empty()) return;
+  file_export = save_file_name;
   redraw();
 }
 
 void GRPlotWidget::jpeg()
 {
-  file_export = "jpeg";
+  std::string save_file_name =
+      QFileDialog::getSaveFileName(this, "Save JPEG", QDir::homePath(), "JPEG files (*.jpeg)").toStdString();
+  if (save_file_name.empty()) return;
+  file_export = save_file_name;
   redraw();
 }
 
 void GRPlotWidget::svg()
 {
-  file_export = "svg";
+  std::string save_file_name =
+      QFileDialog::getSaveFileName(this, "Save SVG", QDir::homePath(), "SVG files (*.svg)").toStdString();
+  if (save_file_name.empty()) return;
+  file_export = save_file_name;
   redraw();
 }
 
@@ -3716,7 +3719,7 @@ void GRPlotWidget::colorRGBPopUp(const std::string &attribute_name, const std::s
 }
 
 void GRPlotWidget::colorIndexHelper(const std::shared_ptr<GRM::Element> &plot_elem, int current_index,
-                                    QGridLayout *grid_layout, QList<QRadioButton *> *radio_buttons, int max_index,
+                                    QGridLayout *grid_layout, QList<QRadioButton *> &radio_buttons, int max_index,
                                     int index_name_start)
 {
   int col = 0;
@@ -3753,7 +3756,7 @@ void GRPlotWidget::colorIndexHelper(const std::shared_ptr<GRM::Element> &plot_el
       grid_layout->addWidget(label, index / 6, col++ % 18);
 
       connect(button, SIGNAL(clicked()), this, SLOT(multipleRadioButtonGroupsListener()));
-      (*radio_buttons) << button;
+      radio_buttons << button;
       index_name_start += 1;
     }
 }
@@ -3772,67 +3775,67 @@ void GRPlotWidget::colorIndexPopUp(const std::string &attribute_name, int curren
   auto form = new QVBoxLayout;
 
   auto grid_layout_ansi = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_ansi, &radio_buttons, 8, 0);
+  colorIndexHelper(plot_elem, current_index, grid_layout_ansi, radio_buttons, 8, 0);
   auto horizontal_group_box_ansi = new QGroupBox(tr("Ansi colors"));
   horizontal_group_box_ansi->setLayout(grid_layout_ansi);
 
   auto grid_layout_cmap_reduced = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cmap_reduced, &radio_buttons, 80 - 8, 8);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap_reduced, radio_buttons, 80 - 8, 8);
   auto horizontal_group_box_cmap_reduced = new QGroupBox(tr("Reduced colormap"));
   horizontal_group_box_cmap_reduced->setLayout(grid_layout_cmap_reduced);
 
   auto grid_layout_diff_colors = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_diff_colors, &radio_buttons, 257 - 80, 80);
+  colorIndexHelper(plot_elem, current_index, grid_layout_diff_colors, radio_buttons, 257 - 80, 80);
   auto horizontal_group_box_diff_colors = new QGroupBox(tr("Mixed colors"));
   horizontal_group_box_diff_colors->setLayout(grid_layout_diff_colors);
 
   auto grid_layout_rainbow = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_rainbow, &radio_buttons, 588 - 257, 257);
+  colorIndexHelper(plot_elem, current_index, grid_layout_rainbow, radio_buttons, 588 - 257, 257);
   auto horizontal_group_box_rainbow = new QGroupBox(tr("Rainbow"));
   horizontal_group_box_rainbow->setLayout(grid_layout_rainbow);
 
   auto grid_layout_gray = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_gray, &radio_buttons, 644 - 588, 588);
+  colorIndexHelper(plot_elem, current_index, grid_layout_gray, radio_buttons, 644 - 588, 588);
   auto horizontal_group_box_gray = new QGroupBox(tr("Gray"));
   horizontal_group_box_gray->setLayout(grid_layout_gray);
 
   auto grid_layout_blue = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_blue, &radio_buttons, 700 - 644, 644);
+  colorIndexHelper(plot_elem, current_index, grid_layout_blue, radio_buttons, 700 - 644, 644);
   auto horizontal_group_box_blue = new QGroupBox(tr("Blue"));
   horizontal_group_box_blue->setLayout(grid_layout_blue);
 
   auto grid_layout_magenta = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_magenta, &radio_buttons, 756 - 700, 700);
+  colorIndexHelper(plot_elem, current_index, grid_layout_magenta, radio_buttons, 756 - 700, 700);
   auto horizontal_group_box_magenta = new QGroupBox(tr("Magenta"));
   horizontal_group_box_magenta->setLayout(grid_layout_magenta);
 
   auto grid_layout_red = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_red, &radio_buttons, 812 - 756, 756);
+  colorIndexHelper(plot_elem, current_index, grid_layout_red, radio_buttons, 812 - 756, 756);
   auto horizontal_group_box_red = new QGroupBox(tr("Red"));
   horizontal_group_box_red->setLayout(grid_layout_red);
 
   auto grid_layout_yellow = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_yellow, &radio_buttons, 868 - 812, 812);
+  colorIndexHelper(plot_elem, current_index, grid_layout_yellow, radio_buttons, 868 - 812, 812);
   auto horizontal_group_box_yellow = new QGroupBox(tr("Yellow"));
   horizontal_group_box_yellow->setLayout(grid_layout_yellow);
 
   auto grid_layout_green = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_green, &radio_buttons, 924 - 868, 868);
+  colorIndexHelper(plot_elem, current_index, grid_layout_green, radio_buttons, 924 - 868, 868);
   auto horizontal_group_box_green = new QGroupBox(tr("Green"));
   horizontal_group_box_green->setLayout(grid_layout_green);
 
   auto grid_layout_cian = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cian, &radio_buttons, 980 - 924, 924);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cian, radio_buttons, 980 - 924, 924);
   auto horizontal_group_box_cian = new QGroupBox(tr("Cian"));
   horizontal_group_box_cian->setLayout(grid_layout_cian);
 
   auto grid_layout_high_diff_colors = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_high_diff_colors, &radio_buttons, 1000 - 980, 980);
+  colorIndexHelper(plot_elem, current_index, grid_layout_high_diff_colors, radio_buttons, 1000 - 980, 980);
   auto horizontal_group_box_high_diff_colors = new QGroupBox(tr("Easily distinguishable colors"));
   horizontal_group_box_high_diff_colors->setLayout(grid_layout_high_diff_colors);
 
   auto grid_layout_cmap = new QGridLayout;
-  colorIndexHelper(plot_elem, current_index, grid_layout_cmap, &radio_buttons, 1255 - 1000, 1000);
+  colorIndexHelper(plot_elem, current_index, grid_layout_cmap, radio_buttons, 1255 - 1000, 1000);
   auto horizontal_group_box_cmap = new QGroupBox(tr("Colormap"));
   horizontal_group_box_cmap->setLayout(grid_layout_cmap);
 
@@ -5423,27 +5426,27 @@ BoundingObject **GRPlotWidget::getCurrentSelection()
   return &(this->current_selection);
 }
 
-QStringList GRPlotWidget::getCheckBoxAttributes()
+const QStringList &GRPlotWidget::getCheckBoxAttributes()
 {
   return check_box_attr;
 }
 
-QStringList GRPlotWidget::getComboBoxAttributes()
+const QStringList &GRPlotWidget::getComboBoxAttributes()
 {
   return combo_box_attr;
 }
 
-QStringList GRPlotWidget::getColorIndAttributes()
+const QStringList &GRPlotWidget::getColorIndAttributes()
 {
   return color_ind_attr;
 }
 
-QStringList GRPlotWidget::getColorRGBAttributes()
+const QStringList &GRPlotWidget::getColorRGBAttributes()
 {
   return color_rgb_attr;
 }
 
-QStringList GRPlotWidget::getSliderAttributes()
+const QStringList &GRPlotWidget::getSliderAttributes()
 {
   return slider_attr;
 }
@@ -5564,13 +5567,16 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
       x_flip_act->setVisible(true);
       y_flip_act->setVisible(true);
       only_square_aspect_ratio_act->setVisible(true);
-      hide_orientation_sub_menu_act->trigger();
-      hide_aspect_ratio_sub_menu_act->trigger();
-      show_log_sub_menu_act->trigger();
-      show_flip_sub_menu_act->trigger();
-      show_lim_sub_menu_act->trigger();
-      show_plot_type_sub_menu_act->trigger();
-      if (edit_enabled) hide_location_sub_menu_act->trigger();
+      if (edit_enabled)
+        {
+          hide_orientation_sub_menu_act->trigger();
+          hide_aspect_ratio_sub_menu_act->trigger();
+          show_log_sub_menu_act->trigger();
+          show_flip_sub_menu_act->trigger();
+          show_lim_sub_menu_act->trigger();
+          show_plot_type_sub_menu_act->trigger();
+          hide_location_sub_menu_act->trigger();
+        }
 
       if (grm_args_contains(args_, "error"))
         {

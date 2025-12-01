@@ -8906,7 +8906,7 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
       else if (error_bar_style == 1 && color_error_bar >= 0)
         {
           std::vector<double> f1, f2;
-          std::shared_ptr<GRM::Element> fill_area;
+          std::shared_ptr<GRM::Element> fill_area, bar;
           std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
           if (element->parentElement()->parentElement()->hasAttribute("orientation"))
@@ -8914,59 +8914,128 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
                 static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("orientation"));
           auto is_horizontal = orientation == "horizontal";
 
-          if (i == 0) continue;
+          if (kind == "barplot" || kind == "histogram")
+            {
+              double x[2], y[2];
+              double bar_width = 0.8, transparency = 0.4;
+              if (element->parentElement()->hasAttribute("bar_width"))
+                bar_width = static_cast<double>(element->parentElement()->getAttribute("bar_width"));
 
-          // fill vector
-          if (is_horizontal)
-            {
-              f1.push_back(x_vec[i - 1]);
-              f2.push_back(last_line_y[0]);
-              f1.push_back(x_vec[i - 1]);
-              f2.push_back(last_line_y[1]);
-              f1.push_back(x_vec[i]);
-              f2.push_back(line_y[1]);
-              f1.push_back(x_vec[i]);
-              f2.push_back(line_y[0]);
-            }
-          else
-            {
-              f2.push_back(x_vec[i - 1]);
-              f1.push_back(last_line_y[0]);
-              f2.push_back(x_vec[i - 1]);
-              f1.push_back(last_line_y[1]);
-              f2.push_back(x_vec[i]);
-              f1.push_back(line_y[1]);
-              f2.push_back(x_vec[i]);
-              f1.push_back(line_y[0]);
-            }
+              if (kind == "barplot")
+                {
+                  if (element->parentElement()->hasAttribute("x_range_min") &&
+                      element->parentElement()->hasAttribute("x_range_max"))
+                    {
+                      x_min = static_cast<double>(element->parentElement()->getAttribute("x_range_min"));
+                      x_max = static_cast<double>(element->parentElement()->getAttribute("x_range_max"));
+                      if (!element->hasAttribute("bar_width")) bar_width = (x_max - x_min) / (y_vec.size() - 1.0);
+                    }
+                }
+              else
+                {
+                  bar_width = 1.0;
+                }
 
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
-          global_root->setAttribute("_id", id + 1);
-          auto str = std::to_string(id);
-
-          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-            {
-              fill_area = global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar);
-              fill_area->setAttribute("_child_id", child_id++);
-              element->append(fill_area);
-            }
-          else
-            {
-              fill_area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-              if (fill_area != nullptr)
-                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar, fill_area);
-            }
-          if (fill_area != nullptr)
-            {
-              double transparency = 0.4;
-              int fill_int_style = 1;
+              auto id = static_cast<int>(global_root->getAttribute("_id"));
+              global_root->setAttribute("_id", id + 1);
+              auto str = std::to_string(id);
 
               if (element->hasAttribute("transparency"))
                 transparency = static_cast<double>(element->getAttribute("transparency"));
-              fill_area->setAttribute("transparency", transparency);
-              if (element->hasAttribute("fill_int_style"))
-                fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
-              fill_area->setAttribute("fill_int_style", fill_int_style);
+              element->setAttribute("transparency", transparency);
+
+              if (is_horizontal)
+                {
+                  x[0] = x_vec[i] - bar_width / 2.0;
+                  x[1] = x[0] + bar_width;
+                  y[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
+                  y[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
+                }
+              else
+                {
+                  x[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
+                  x[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
+                  y[0] = x_vec[i] - bar_width / 2.0;
+                  y[1] = y[0] + bar_width;
+                }
+              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                {
+                  bar = global_render->createBar(x[0], x[1], y[0], y[1], 1, 1, "", "", 1, "");
+                  bar->setAttribute("_child_id", child_id++);
+                  element->append(bar);
+                }
+              else
+                {
+                  bar = element->querySelectors("bar[_child_id=" + std::to_string(child_id++) + "]");
+                  if (bar != nullptr) global_render->createBar(x[0], x[1], y[0], y[1], 1, 1, "", "", 1, "", bar);
+                }
+              if (bar != nullptr)
+                {
+                  int fill_int_style = 1;
+
+                  if (element->hasAttribute("fill_int_style"))
+                    fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
+                  bar->setAttribute("fill_int_style", fill_int_style);
+                }
+            }
+          else
+            {
+              if (i == 0) continue;
+
+              // fill vector
+              if (is_horizontal)
+                {
+                  f1.push_back(x_vec[i - 1]);
+                  f2.push_back(last_line_y[0]);
+                  f1.push_back(x_vec[i - 1]);
+                  f2.push_back(last_line_y[1]);
+                  f1.push_back(x_vec[i]);
+                  f2.push_back(line_y[1]);
+                  f1.push_back(x_vec[i]);
+                  f2.push_back(line_y[0]);
+                }
+              else
+                {
+                  f2.push_back(x_vec[i - 1]);
+                  f1.push_back(last_line_y[0]);
+                  f2.push_back(x_vec[i - 1]);
+                  f1.push_back(last_line_y[1]);
+                  f2.push_back(x_vec[i]);
+                  f1.push_back(line_y[1]);
+                  f2.push_back(x_vec[i]);
+                  f1.push_back(line_y[0]);
+                }
+
+              auto id = static_cast<int>(global_root->getAttribute("_id"));
+              global_root->setAttribute("_id", id + 1);
+              auto str = std::to_string(id);
+
+              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                {
+                  fill_area =
+                      global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar);
+                  fill_area->setAttribute("_child_id", child_id++);
+                  element->append(fill_area);
+                }
+              else
+                {
+                  fill_area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
+                  if (fill_area != nullptr)
+                    global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar,
+                                                  fill_area);
+                }
+              if (fill_area != nullptr)
+                {
+                  double transparency = 0.4;
+                  int fill_int_style = 1;
+
+                  if (element->hasAttribute("transparency"))
+                    transparency = static_cast<double>(element->getAttribute("transparency"));
+                  fill_area->setAttribute("transparency", transparency);
+                  if (element->hasAttribute("fill_int_style"))
+                    fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
+                  fill_area->setAttribute("fill_int_style", fill_int_style);
+                }
             }
         }
     }
@@ -11248,8 +11317,7 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
     {
       for (i = 0; i < rows * cols; i++)
         {
-          rgba[i] = 0;
-          if (data[i] != -1) rgba[i] = (255 << 24) + icmap[data[i]];
+          rgba[i] = data[i] != -1 ? (255 << 24) + icmap[data[i]] : 0;
         }
 
       std::shared_ptr<GRM::Element> cell_array;
@@ -19000,7 +19068,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       custom_color_index_manager.selectContext(drawable->getGrContextId());
       drawable->draw();
 
-      gr_cancelbboxcallback();
+      if (bounding_boxes) gr_cancelbboxcallback();
     }
   gr_context_id_manager.markAllIdsAsUnused();
   parent_to_context = {};

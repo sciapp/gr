@@ -11,7 +11,7 @@ ColorPickerRGB::ColorPickerRGB(GRPlotWidget *widget, QDialog *parent) : QDialog(
   grplot_widget = widget;
 }
 
-void ColorPickerRGB::start(std::string attribute_name, const std::shared_ptr<GRM::Element> &element)
+void ColorPickerRGB::start(const std::string &attribute_name, const std::shared_ptr<GRM::Element> &element)
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");

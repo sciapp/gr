@@ -624,6 +624,7 @@
     <xs:element name="error_bars">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="error_bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="fill_area" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>

@@ -93,11 +93,11 @@ public:
 
   const std::list<std::unique_ptr<BoundingObject>> &getCurrentSelections() const;
   std::shared_ptr<GRM::Document> getSchemaTree();
-  QStringList getCheckBoxAttributes();
-  QStringList getComboBoxAttributes();
-  QStringList getColorIndAttributes();
-  QStringList getColorRGBAttributes();
-  QStringList getSliderAttributes();
+  const QStringList &getCheckBoxAttributes();
+  const QStringList &getComboBoxAttributes();
+  const QStringList &getColorIndAttributes();
+  const QStringList &getColorRGBAttributes();
+  const QStringList &getSliderAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
   bool getEnableAdvancedEditor();
@@ -490,7 +490,7 @@ private:
   void cursorHandler(int x, int y);
   void overlayElementEdit();
   void colorIndexHelper(const std::shared_ptr<GRM::Element> &plot_elem, int current_index, QGridLayout *grid_layout,
-                        QList<QRadioButton *> *radio_buttons, int max_index, int index_name_start);
+                        QList<QRadioButton *> &radio_buttons, int max_index, int index_name_start);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

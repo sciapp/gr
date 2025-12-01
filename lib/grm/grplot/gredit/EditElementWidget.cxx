@@ -37,7 +37,7 @@ static void clearLayout(QLayout *layout)
   delete layout;
 }
 
-static std::string attrNameToLabel(std::string attr_name)
+static std::string attrNameToLabel(const std::string &attr_name)
 {
   auto label = attr_name;
   std::replace(label.begin(), label.end(), '_', ' ');
@@ -405,7 +405,6 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
   for (const auto &cur_attr_name : sorted_names)
     {
       QLabel *label;
-      ;
       bool was_added = true;
       if (util::startsWith(cur_attr_name, "_")) continue;
       if ((*current_selection)->getRef()->localName() == "layout_grid" &&
@@ -463,10 +462,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           if (cur_attr_name == "scientific_format")
             {
               line_edit->setFixedWidth(120);
-#if QT_VERSION >= 0x060000
-              connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                      [=]() { openTextPreview(); });
-#endif
+              connect(static_cast<QComboBox *>(line_edit),
+                      static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                      &EditElementWidget::openTextPreview);
             }
         }
       else if (check_box_attr.contains(cur_attr_name.c_str()))
@@ -500,6 +498,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           color_pic = color_pic.scaled(20, 20);
           if (multiple_selections.empty()) static_cast<QPushButton *>(line_edit)->setIcon(QIcon(color_pic));
 
+          std::weak_ptr<GRM::Element> ref = (*current_selection)->getRef();
           QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
           QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
             QImage new_image(1, 1, QImage::Format_RGB32);
@@ -507,7 +506,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             int err;
             double new_r, new_g, new_b;
 
-            auto new_index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+            auto new_index = static_cast<int>(ref.lock()->getAttribute(cur_attr_name));
             static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
 
             gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
@@ -702,11 +701,10 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               text_modification_added = true;
             }
 
-#if QT_VERSION >= 0x060000
           if (cur_attr_name == "font_precision")
-            connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                    [=]() { openTextPreview(); });
-#endif
+            connect(static_cast<QComboBox *>(line_edit),
+                    static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                    &EditElementWidget::openTextPreview);
 
           if (text_modification_added) text_modification_form->addRow(label, line_edit);
         }
@@ -980,7 +978,6 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
           if (element_movement_modification_added)
             {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
               if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
                 {
                   if (slider_attr.contains(cur_attr_name.c_str()))
@@ -1006,6 +1003,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       widget->setContentsMargins(0, 0, 0, 0);
                       widget->setFixedHeight(30);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                       connect(slider, &QSlider::sliderMoved, this, [=] {
                         double val = slider->value();
                         static_cast<QLineEdit *>(line_edit)->setText(QString::number(val / 100.0, 'f', 2));
@@ -1020,43 +1018,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                         double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
                         slider->setValue(val * 100.0);
                       });
-                      element_movement_modification_form->addRow(label, widget);
-                    }
-                  else
-                    {
-                      element_movement_modification_form->addRow(label, line_edit);
-                    }
-                }
-              if (!advanced_editor)
-                element_movement_modification_form->setRowVisible(
-                    element_movement_modification_form->rowCount() - 1,
-                    !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #else
-              if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name))
-                {
-                  if (slider_attr.contains(cur_attr_name.c_str()))
-                    {
-                      auto widget = new QWidget(this);
-                      auto grid_layout = new QGridLayout();
-                      auto slider = new QSlider(this);
-                      slider->setOrientation(Qt::Horizontal);
-                      slider->setRange(0, 100);
-                      slider->setFixedWidth(80);
-                      if (multiple_selections.empty())
-                        {
-                          auto value = static_cast<double>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-                          ((QLineEdit *)line_edit)->setText(QString::number(value, 'f', 2));
-                          slider->setValue(value * 100.0);
-                        }
-                      line_edit->setMaximumWidth(40);
-                      grid_layout->addWidget(line_edit, 0, 0);
-                      grid_layout->addWidget(slider, 0, 1);
-                      grid_layout->setContentsMargins(0, 0, 0, 0);
-                      grid_layout->setSpacing(10);
-                      widget->setLayout(grid_layout);
-                      widget->setContentsMargins(0, 0, 0, 0);
-                      widget->setFixedHeight(30);
-
                       connect(slider, &QSlider::sliderMoved, this, [=] {
                         double val = slider->value();
                         ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
@@ -1071,6 +1033,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                         double val = ((QLineEdit *)line_edit)->text().toDouble();
                         slider->setValue(val * 100.0);
                       });
+#endif
                       element_movement_modification_form->addRow(label, widget);
                     }
                   else
@@ -1078,6 +1041,11 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       element_movement_modification_form->addRow(label, line_edit);
                     }
                 }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+              if (!advanced_editor)
+                element_movement_modification_form->setRowVisible(
+                    element_movement_modification_form->rowCount() - 1,
+                    !isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name));
 #endif
             }
           if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), cur_attr_name)) was_added = false;
@@ -1185,10 +1153,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           if (cur_attr_name == "scientific_format")
             {
               line_edit->setFixedWidth(120);
-#if QT_VERSION >= 0x060000
-              connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                      [=]() { openTextPreview(); });
-#endif
+              connect(static_cast<QComboBox *>(line_edit),
+                      static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                      &EditElementWidget::openTextPreview);
             }
 
           if (tick_label_modification_added)
@@ -1351,9 +1318,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           else if (cur_attr_name == "text" || cur_attr_name == "x_label_3d" || cur_attr_name == "y_label_3d" ||
                    cur_attr_name == "z_label_3d" || cur_attr_name == "tick_label")
             {
-#if QT_VERSION >= 0x060000
-              connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=]() { openTextPreview(); });
-#endif
+              connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this,
+                      &EditElementWidget::openTextPreview);
               form->addRow(label, line_edit);
             }
           else if (slider_attr.contains(cur_attr_name.c_str()))
@@ -1493,10 +1459,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       if (attr_name == "scientific_format")
                         {
                           line_edit->setFixedWidth(120);
-#if QT_VERSION >= 0x060000
-                          connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                                  [=]() { openTextPreview(); });
-#endif
+                          connect(static_cast<QComboBox *>(line_edit),
+                                  static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                                  &EditElementWidget::openTextPreview);
                         }
                     }
                   else if (check_box_attr.contains(attr_name.c_str()))
@@ -1827,10 +1792,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       if (attr_name == "scientific_format")
                         {
                           line_edit->setFixedWidth(120);
-#if QT_VERSION >= 0x060000
-                          connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                                  [=]() { openTextPreview(); });
-#endif
+                          connect(static_cast<QComboBox *>(line_edit),
+                                  static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                                  &EditElementWidget::openTextPreview);
                         }
 
                       if (tick_label_modification_added)
@@ -1909,10 +1873,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       else if (attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
                                attr_name == "z_label_3d" || attr_name == "tick_label")
                         {
-#if QT_VERSION >= 0x060000
                           connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this,
-                                  [=]() { openTextPreview(); });
-#endif
+                                  &EditElementWidget::openTextPreview);
                           form->addRow(label, line_edit);
                         }
                       else if (attr_name == "ambient" || attr_name == "diffuse" || attr_name == "specular" ||
@@ -2110,10 +2072,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                   if (attr_name == "scientific_format")
                                     {
                                       line_edit->setFixedWidth(120);
-#if QT_VERSION >= 0x060000
-                                      connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged,
-                                              this, [=]() { openTextPreview(); });
-#endif
+                                      connect(static_cast<QComboBox *>(line_edit),
+                                              static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+                                              this, &EditElementWidget::openTextPreview);
                                     }
                                 }
                               else if (check_box_attr.contains(attr_name.c_str()))
@@ -2221,11 +2182,10 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                       text_modification_added = true;
                                     }
 
-#if QT_VERSION >= 0x060000
                                   if (attr_name == "font_precision")
-                                    connect(static_cast<QComboBox *>(line_edit), &QComboBox::currentIndexChanged, this,
-                                            [=]() { openTextPreview(); });
-#endif
+                                    connect(static_cast<QComboBox *>(line_edit),
+                                            static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+                                            this, &EditElementWidget::openTextPreview);
 
                                   if (text_modification_added) text_modification_form->addRow(label, line_edit);
                                 }
@@ -2353,7 +2313,6 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
                                   if (element_movement_modification_added)
                                     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                                       if (is_non_advanced_element)
                                         {
                                           if (slider_attr.contains(attr_name.c_str()))
@@ -2373,6 +2332,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                               widget->setContentsMargins(0, 0, 0, 0);
                                               widget->setFixedHeight(30);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
                                               connect(slider, &QSlider::sliderMoved, this, [=] {
                                                 double val = slider->value();
                                                 static_cast<QLineEdit *>(line_edit)->setText(
@@ -2391,37 +2351,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                                             static_cast<QLineEdit *>(line_edit)->text().toDouble();
                                                         slider->setValue(val * 100.0);
                                                       });
-                                              element_movement_modification_form->addRow(label, widget);
-                                            }
-                                          else
-                                            {
-                                              element_movement_modification_form->addRow(label, line_edit);
-                                            }
-                                        }
-                                      if (!advanced_editor && is_non_advanced_element)
-                                        element_movement_modification_form->setRowVisible(
-                                            element_movement_modification_form->rowCount() - 1,
-                                            !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #else
-                                      if (is_non_advanced_element)
-                                        {
-                                          if (slider_attr.contains(attr_name.c_str()))
-                                            {
-                                              auto widget = new QWidget(this);
-                                              auto grid_layout = new QGridLayout();
-                                              auto slider = new QSlider(this);
-                                              slider->setOrientation(Qt::Horizontal);
-                                              slider->setRange(0, 100);
-                                              slider->setFixedWidth(80);
-                                              line_edit->setMaximumWidth(40);
-                                              grid_layout->addWidget(line_edit, 0, 0);
-                                              grid_layout->addWidget(slider, 0, 1);
-                                              grid_layout->setContentsMargins(0, 0, 0, 0);
-                                              grid_layout->setSpacing(10);
-                                              widget->setLayout(grid_layout);
-                                              widget->setContentsMargins(0, 0, 0, 0);
-                                              widget->setFixedHeight(30);
-
                                               connect(slider, &QSlider::sliderMoved, this, [=] {
                                                 double val = slider->value();
                                                 ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
@@ -2436,6 +2366,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                                 double val = ((QLineEdit *)line_edit)->text().toDouble();
                                                 slider->setValue(val * 100.0);
                                               });
+#endif
                                               element_movement_modification_form->addRow(label, widget);
                                             }
                                           else
@@ -2443,12 +2374,17 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                               element_movement_modification_form->addRow(label, line_edit);
                                             }
                                         }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                                      if (!advanced_editor && is_non_advanced_element)
+                                        element_movement_modification_form->setRowVisible(
+                                            element_movement_modification_form->rowCount() - 1,
+                                            !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
 #endif
+                                      if ((!advanced_editor &&
+                                           isAdvancedAttribute((*current_selection)->getRef(), attr_name)) ||
+                                          !is_non_advanced_element)
+                                        was_added = false;
                                     }
-                                  if ((!advanced_editor &&
-                                       isAdvancedAttribute((*current_selection)->getRef(), attr_name)) ||
-                                      !is_non_advanced_element)
-                                    was_added = false;
                                 }
                               else
                                 {
@@ -2994,7 +2930,7 @@ void EditElementWidget::colorIndexSlot()
   auto current_selection = grplot_widget->getCurrentSelection();
   auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attribute_name));
   grplot_widget->colorIndexPopUp(attribute_name, index, (*current_selection)->getRef());
-  openTextPreview();
+  if (attribute_name == "text_color_ind") openTextPreview();
 }
 
 void EditElementWidget::colorRGBSlot()

@@ -8,7 +8,7 @@ This program allows to create plots from the command line while using simple key
 
 The following parameters are key-value pairs which can be used for every plot type.
 
-- `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe. Another option are `.xml`- or `.xml.png`-files, which can be used instead of a data file. These files contain the internal representation of a specific plot, which then can be restored during the start of 'grplot'. If using these files all given parameters gets ignored.
+- `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe. Another option are `.xml`- or `.xml.png`-files, which can be used instead of a data file. These files contain the internal representation of a specific plot, which then can be restored during the start of 'grplot'. If using these files all given parameters are ignored.
 - `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `line3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
@@ -136,7 +136,7 @@ If some data from the data file should be plotted to a different axis as the res
 
 ## Editor
 
-The editor can be disabled by setting the environment variable `GRDISPLAY` to the value of `view`. If `GRDISPLAY` isn't set to `view`, the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts. For that an element of the picture which attributes should be modified can be selected via double-clicked or by using the internal tree structure. There is also an even more advanced editor which can be enabled in the menu as well, which allows way more attribute changes. While using the editor some features of the view mode are disabled.
+The editor can be disabled by setting the environment variable `GRDISPLAY` to the value of `view`. If `GRDISPLAY` isn't set to `view`, the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts. For that an element of the picture, whose attributes should be modified can be selected via double-click or by using the internal tree structure. There is also an even more advanced editor which can be enabled in the menu as well, which allows way more attribute changes. While using the editor some features of the view mode are disabled.
 
 ## Advanced information for each plot type
 
