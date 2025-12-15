@@ -32,6 +32,9 @@ typedef __int64 int64_t;
 #include <sys/stat.h>
 #include <math.h>
 #include <time.h>
+#ifdef __APPLE__
+#include <fcntl.h>
+#endif
 
 #include <cairo/cairo.h>
 #ifndef NO_FT
@@ -205,6 +208,8 @@ typedef struct ws_state_list_t
 static ws_state_list *p;
 
 static int idle = 0;
+
+static char file_path[MAXPATHLEN];
 
 static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
@@ -2317,6 +2322,16 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->conid = ia[1];
       p->path = chars;
       p->wtype = ia[2];
+#ifdef __APPLE__
+      if (p->wtype == 140 && chars != NULL)
+        {
+          if (*chars == '!') p->conid = atoi(chars + 1);
+          if (fcntl(p->conid, F_GETPATH, file_path) != -1)
+            {
+              p->path = file_path;
+            }
+        }
+#endif
 #ifndef _WIN32
       if (p->wtype == 151 || p->wtype == 152)
         {
