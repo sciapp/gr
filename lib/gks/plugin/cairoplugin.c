@@ -2325,10 +2325,13 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 #ifdef __APPLE__
       if (p->wtype == 140 && chars != NULL)
         {
-          if (*chars == '!') p->conid = atoi(chars + 1);
-          if (fcntl(p->conid, F_GETPATH, file_path) != -1)
+          if (*chars == '!')
             {
-              p->path = file_path;
+              p->conid = atoi(chars + 1);
+              if (fcntl(p->conid, F_GETPATH, file_path) != -1)
+                {
+                  p->path = file_path;
+                }
             }
         }
 #endif
