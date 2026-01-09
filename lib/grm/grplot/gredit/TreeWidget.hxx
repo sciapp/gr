@@ -4,10 +4,10 @@
 #include <QTreeWidget>
 #include <utility>
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include "CustomTreeWidgetItem.hxx"
 class TreeWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class TreeWidget : public QTreeWidget
@@ -16,7 +16,7 @@ class TreeWidget : public QTreeWidget
 public:
   explicit TreeWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
   void updateData(std::shared_ptr<GRM::Element> ref);
-  bool selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem = nullptr);
+  bool selectItem(const std::shared_ptr<GRM::Element> &ref, CustomTreeWidgetItem *tree_elem = nullptr);
   void clearContractElements();
 
 protected:

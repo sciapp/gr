@@ -2,7 +2,7 @@
 #define GR_ADDELEMENTWIDGET_H
 
 
-#include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
 #include <QWidget>
 #include <QLineEdit>
 #include <QComboBox>
@@ -14,7 +14,7 @@
 #include "grm.h"
 #include "BoundingObject.hxx"
 class AddElementWidget;
-#include "../grplotWidget.hxx"
+#include "../GRPlotWidget.hxx"
 
 
 class AddElementWidget : public QWidget
