@@ -434,8 +434,18 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&f_arr_2, sizeof(void(*)));
       break;
 
-    case 261: /* cancel bbox callback */
     case 262: /* set background */
+
+      len = 2 * sizeof(int) + 4 * sizeof(double);
+      if (d->nbytes + len > d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
+      break;
+
+    case 261: /* cancel bbox callback */
     case 263: /* clear background */
 
       len = 2 * sizeof(int);
@@ -623,7 +633,13 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
 
     case 251: /* end selection */
+      break;
+
     case 262: /* set background */
+      RESOLVE(r1, double, 2 * sizeof(double));
+      RESOLVE(r2, double, 2 * sizeof(double));
+      break;
+
     case 263: /* clear background */
       break;
 

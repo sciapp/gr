@@ -443,7 +443,7 @@ DLLEXPORT void gr_endpartial(int);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);
-DLLEXPORT void gr_setbackground(void);
+DLLEXPORT void gr_setbackground(double, double, double, double);
 DLLEXPORT void gr_clearbackground(void);
 DLLEXPORT double gr_precision(void);
 DLLEXPORT int gr_text_maxsize(void);

@@ -18750,20 +18750,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       if (element->localName() == "plot")
         {
-          if ((active_figure->querySelectors("plot[_active=\"1\"]") != nullptr ||
-               active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr) &&
-              element->parentElement()->parentElement()->localName() == "layout_grid" && redraw_ws)
-            {
-              double viewport_x_min, viewport_x_max, viewport_y_min, viewport_y_max;
-
-              if (!GRM::Render::getViewport(element, &viewport_x_min, &viewport_x_max, &viewport_y_min,
-                                            &viewport_y_max))
-                throw NotFoundError(element->localName() + " doesn't have a viewport but it should.\n");
-              int color[1] = {0};
-              gr_selntran(0);
-              gr_cellarray(viewport_x_min, viewport_x_max, viewport_y_min, viewport_y_max, 1, 1, 1, 1, 1, 1, color);
-              gr_selntran(1);
-            }
           std::shared_ptr<GRM::Element> central_region_parent = element;
           processPlot(element, context);
           // if the kind is marginal_heatmap plot can only have 1 child and this child is the marginal_heatmap_plot

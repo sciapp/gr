@@ -12995,7 +12995,7 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
   gks_inq_bbox(&errind, xmin, xmax, ymin, ymax);
 }
 
-void gr_setbackground()
+void gr_setbackground(double xmin, double xmax, double ymin, double ymax)
 {
   int clearflag = double_buf ? GKS_K_CLEAR_CONDITIONALLY : GKS_K_CLEAR_ALWAYS;
   int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
@@ -13005,7 +13005,7 @@ void gr_setbackground()
 
   foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
-  gks_set_background();
+  gks_set_background(xmin, xmax, ymin, ymax);
 
   foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
 }

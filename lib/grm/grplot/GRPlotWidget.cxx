@@ -1754,10 +1754,22 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               previous_active_plot.reset();
               gr_clearbackground();
             }
-          else if (active_plot_changed ||
-                   active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr)
+          else if (auto active_plot_through_update =
+                       active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+                   active_plot_changed || active_plot_through_update != nullptr)
             {
-              gr_setbackground();
+              double viewport[4];
+              if (active_plot_through_update != nullptr)
+                {
+                  GRM::Render::getViewport(active_plot_through_update, &viewport[0], &viewport[1], &viewport[2],
+                                           &viewport[3]);
+                }
+              else
+                {
+                  auto active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
+                  GRM::Render::getViewport(active_plot, &viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+                }
+              gr_setbackground(viewport[0], viewport[1], viewport[2], viewport[3]);
             }
         }
       active_plot_changed = false;
@@ -1766,9 +1778,12 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
 
       active_figure = global_root->querySelectors("figure[active=\"1\"]");
       is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
-      if (is_multiplot && active_figure->querySelectors("plot[_active_through_update=\"1\"]") != nullptr)
+      if (auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+          is_multiplot && active_plot_through_update != nullptr)
         {
-          gr_setbackground();
+          double viewport[4];
+          GRM::Render::getViewport(active_plot_through_update, &viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+          gr_setbackground(viewport[0], viewport[1], viewport[2], viewport[3]);
           auto render = grm_get_render();
           bool auto_update;
           render->getAutoUpdate(&auto_update);

@@ -683,7 +683,7 @@ DLLEXPORT void gks_begin_partial(int id, void (*image_callback)(int, unsigned in
                                                                 unsigned int, unsigned int *));
 DLLEXPORT void gks_end_partial(int id);
 
-DLLEXPORT void gks_set_background(void);
+DLLEXPORT void gks_set_background(double xmin, double xmax, double ymin, double ymax);
 DLLEXPORT void gks_clear_background(void);
 
 DLLEXPORT void gks_inq_bbox(int *errind, double *xmin, double *xmax, double *ymin, double *ymax);
