@@ -1560,7 +1560,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
     {
       ch = chars[i];
       if (ch == '(' || ch == ')' || ch == '\\') *cp++ = '\\';
-      *cp++ = ch;
+      *cp++ = ch == '-' ? 0xad : ch;
     }
   *cp = '\0';
 
