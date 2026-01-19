@@ -63,6 +63,7 @@ public:
   void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
                                         QWidget **line_edit);
   void editElementAccepted(bool highlight_location);
+  void editElementRejected();
   void processTestCommandsFile();
 
   void setSelectedParent(BoundingObject *parent);
@@ -77,6 +78,7 @@ public:
   void highlightTableWidgetAt(std::string column_name);
   void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int font_precision,
                               int width, int height);
+  void addTreeSelection(int id);
 
   inline bool isDarkMode()
   {
@@ -315,6 +317,7 @@ private slots:
   void showIconBarSlot();
   void multipleRadioButtonGroupsListener();
   void colorIndexSlot();
+  void possibleElementsMenuSlot();
 
 private:
   struct MouseState
@@ -418,11 +421,11 @@ private:
   QTextDocument label;
   BoundingLogic *bounding_logic;
   std::vector<BoundingObject> clicked, referenced_elements;
-  BoundingObject *current_selection, *mouse_move_selection, *selected_parent;
+  BoundingObject *current_selection, *selected_parent;
+  std::unordered_set<int> mouse_move_selections, tree_selections;
   std::list<std::unique_ptr<BoundingObject>> current_selections;
   TreeWidget *tree_widget;
   AddElementWidget *add_element_widget;
-  int amount_scrolled;
   bool enable_editor;
   Receiver *receiver;
   std::shared_ptr<GRM::Document> schema_tree;
@@ -466,7 +469,7 @@ private:
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,
       *twin_x_axis_act, *twin_y_axis_act;
   QCursor *csr;
-  QMenu *add_overlay_menu;
+  QMenu *add_overlay_menu, *possible_elems_menu;
   QAction *add_text_act, *add_image_act;
   QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
       *show_selection_list_widget_act, *show_icon_bar_widget_act, *show_add_element_act;
@@ -474,8 +477,9 @@ private:
       *hide_selection_list_widget_act, *hide_icon_bar_widget_act, *hide_add_element_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
   QAction *icon_bar_act;
-  bool overlay_element_edit = false, called_by_location_change = false;
+  bool overlay_element_edit = false, called_by_location_change = false, selected_elem_via_menu = false;
   QRadioButton *last_checked_radio_button = nullptr;
+  int ignore_resize = 0;
 
   void resetPixmap();
   void highlightCurrentSelection(QPainter &painter);

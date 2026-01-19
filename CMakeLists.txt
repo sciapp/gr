@@ -1170,6 +1170,7 @@ if(Qt6Widgets_FOUND
     lib/grm/grplot/GRPlotWidget.cxx
     lib/grm/grplot/qtterm/ArgsWrapper.cxx
     lib/grm/grplot/qtterm/Receiver.cxx
+    lib/grm/grplot/Threadpool.cxx
     lib/grm/grplot/Util.cxx
   )
   target_link_libraries(grplotWidget PUBLIC GR::GRM)
@@ -1177,12 +1178,22 @@ if(Qt6Widgets_FOUND
   target_link_libraries(grplotWidget PUBLIC GR::GR)
   target_link_libraries(grplotWidget PUBLIC Qt6::Core Qt6::Widgets)
   target_link_libraries(grplotWidget PUBLIC GR::qt6gr)
+  if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+    if(NOT EMSCRIPTEN)
+      target_link_libraries(grplotWidget PRIVATE pthread)
+    endif()
+  endif()
   target_include_directories(grplotWidget INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget>)
   target_compile_definitions(grplotWidget PRIVATE GRDIR="${GR_DIRECTORY}")
   if(NOT TARGET XercesC::XercesC)
     target_compile_definitions(grplotWidget PRIVATE NO_XERCES_C)
   endif()
   target_compile_options(grplotWidget PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+    if(NOT EMSCRIPTEN)
+      target_compile_options(grplotWidget PRIVATE -pthread)
+    endif()
+  endif()
   set_target_properties(grplotWidget PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(grplotWidget PROPERTIES AUTOMOC OFF AUTORCC OFF)
@@ -1422,6 +1433,7 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/GRPlotWidget.cxx
       lib/grm/grplot/qtterm/ArgsWrapper.cxx
       lib/grm/grplot/qtterm/Receiver.cxx
+      lib/grm/grplot/Threadpool.cxx
       lib/grm/grplot/Util.cxx
     )
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
@@ -1449,6 +1461,11 @@ if((Qt6Widgets_FOUND
       )
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
+    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+      if(NOT EMSCRIPTEN)
+        target_link_libraries(grplot PRIVATE pthread)
+      endif()
+    endif()
     target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
     if(NOT TARGET XercesC::XercesC)
       target_compile_definitions(grplot PRIVATE NO_XERCES_C)
@@ -1462,6 +1479,11 @@ if((Qt6Widgets_FOUND
         target_link_options(grplot PRIVATE -mconsole)
       else()
         target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+      endif()
+    endif()
+    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
+      if(NOT EMSCRIPTEN)
+        target_compile_options(grplot PRIVATE -pthread)
       endif()
     endif()
     if(GR_MANUAL_MOC_AND_RCC)
@@ -1614,6 +1636,13 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cxx
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx -o ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotDockWidget.cxx
@@ -1634,6 +1663,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_Receiver.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cxx
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
       )
     else()
       set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
@@ -1657,6 +1687,7 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
       )
     endif()
     if(APPLE)

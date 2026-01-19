@@ -110,6 +110,8 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
       if (!selected_status)
         {
           grplot_widget->addCurrentSelection(std::move(bbox));
+          auto tmp = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
+          grplot_widget->setCurrentSelection(tmp);
         }
       else
         {
@@ -137,13 +139,13 @@ bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
   return false;
 }
 
-bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
+bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item, bool double_click)
 {
   if (!item->isSelected() && item->getRef() != nullptr)
     {
       for (int i = 0; i < item->childCount(); ++i)
         {
-          if (findSelectedItem(dynamic_cast<CustomTreeWidgetItem *>(item->child(i)))) break;
+          if (findSelectedItem(dynamic_cast<CustomTreeWidgetItem *>(item->child(i)), double_click)) break;
         }
     }
   else if (item->getRef() != nullptr)
@@ -155,7 +157,15 @@ bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
       auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
       auto *bbox = new BoundingObject(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
 
-      grplot_widget->setCurrentSelection(bbox);
+      if (double_click)
+        {
+          grplot_widget->addTreeSelection(bbox_id);
+          grplot_widget->redraw(false, false);
+        }
+      else
+        {
+          grplot_widget->setCurrentSelection(bbox);
+        }
       return true;
     }
   return false;
@@ -163,7 +173,7 @@ bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
 
 void TreeWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-  findSelectedItem(plot_tree);
+  findSelectedItem(plot_tree, true);
   grplot_widget->attributeEditEvent();
 }
 
@@ -172,6 +182,7 @@ void TreeWidget::mousePressEvent(QMouseEvent *event)
   QTreeView::mousePressEvent(event);
   findSelectedItem(plot_tree);
   grplot_widget->redraw(false, false);
+  grplot_widget->attributeEditEvent();
 }
 
 void TreeWidget::mouseReleaseEvent(QMouseEvent *event)
