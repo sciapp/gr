@@ -224,8 +224,8 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
-            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
             <xs:attribute name="_viewport_offset" type="xs:double"/>
+            <xs:attribute name="_viewport_offset_set_by_user" type="xs:integer"/>
             <xs:attribute name="_width_set_by_user" type="xs:integer"/>
             <xs:attribute name="_window_set_by_user" type="xs:integer"/>
         </xs:complexType>
@@ -294,7 +294,7 @@
             <xs:attribute name="_min_value_set_by_user" type="xs:double"/>
             <xs:attribute name="_num_tick_set_by_user" type="xs:integer"/>
             <xs:attribute name="_num_tick_labels_set_by_user" type="xs:integer"/>
-            <xs:attribute name="_org_set_by_user" type="xs:double"/>
+            <xs:attribute name="_origin_set_by_user" type="xs:double"/>
             <xs:attribute name="_pos_set_by_user" type="xs:double"/>
             <xs:attribute name="_tick_set_by_user" type="xs:double"/>
             <xs:attribute name="_tick_orientation_set_by_user" type="xs:integer"/>

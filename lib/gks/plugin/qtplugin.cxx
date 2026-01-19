@@ -7,6 +7,7 @@
 #include <QtGui/QWidget>
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
+#include <QtGui/QPicture>
 #include <QtGui/QApplication>
 #include <QtGui/QDesktopWidget>
 

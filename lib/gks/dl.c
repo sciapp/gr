@@ -1,4 +1,4 @@
-
+#include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -419,7 +419,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
     case 260: /* set bbox callback */
 
-      len = 3 * sizeof(int) + sizeof(void(*));
+      len = 3 * sizeof(int) + 2 * sizeof(void(*));
       if (d->nbytes + len >= d->size) reallocate(d, len);
 
       COPY(&len, sizeof(int));
@@ -427,11 +427,25 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&i_arr[0], sizeof(int));
       static_assert(sizeof(double *) == sizeof(void (*)(int, double, double, double, double)),
                     "sizeof(double *) != sizeof(void(*)(int,double,double,double,double) on this architecture");
+      static_assert(
+          sizeof(double *) == sizeof(void (*)(unsigned int, unsigned int, unsigned int *)),
+          "sizeof(double *) != sizeof(void (*)(unsigned int, unsigned int, unsigned int *) on this architecture");
       COPY(&f_arr_1, sizeof(void(*)));
+      COPY(&f_arr_2, sizeof(void(*)));
+      break;
+
+    case 262: /* set background */
+
+      len = 2 * sizeof(int) + 4 * sizeof(double);
+      if (d->nbytes + len > d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
       break;
 
     case 261: /* cancel bbox callback */
-    case 262: /* set background */
     case 263: /* clear background */
 
       len = 2 * sizeof(int);
@@ -439,6 +453,30 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
+      break;
+
+    case 264: /* begin partial drawing */
+
+      len = 3 * sizeof(int) + sizeof(void(*));
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(&i_arr[0], sizeof(int));
+      static_assert(
+          sizeof(double *) == sizeof(void (*)(int, double, double, double, double)),
+          "sizeof(double *) != sizeof(void (*)(int, unsigned int, unsigned int, unsigned int *) on this architecture");
+      COPY(&f_arr_1, sizeof(void(*)));
+      break;
+
+    case 265: /* end partial drawing */
+
+      len = 3 * sizeof(int);
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(&i_arr[0], sizeof(int));
       break;
     }
 
@@ -526,12 +564,20 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
     case 211: /* set clip region */
+    case 265: /* end partial drawing */
       RESOLVE(ia, int, sizeof(int));
       break;
 
-    case 260:                        /* set bbox callback */
+    case 260:                                         /* set bbox callback */
+      RESOLVE(ia, int, sizeof(int));                  /* id */
+      r1 = *((double **)(s + sp));                    /* bbox callback function */
+      r2 = *((double **)(s + sp + sizeof(double *))); /* mask callback function */
+      sp += 2 * sizeof(double *);
+      break;
+
+    case 264:                        /* begin partial drawing */
       RESOLVE(ia, int, sizeof(int)); /* id */
-      r1 = *((double **)&s[sp]);     /* callback function */
+      r1 = *((double **)(s + sp));   /* callback function to pass the finished partial drawing */
       sp += sizeof(double *);
       break;
 
@@ -587,7 +633,13 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
 
     case 251: /* end selection */
+      break;
+
     case 262: /* set background */
+      RESOLVE(r1, double, 2 * sizeof(double));
+      RESOLVE(r2, double, 2 * sizeof(double));
+      break;
+
     case 263: /* clear background */
       break;
 
@@ -714,4 +766,27 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
 
   fn(*fctid, *dx, *dy, *dimx, ia, 0, r1, 0, r2, *lc, chars, (void **)gkss);
   return sp;
+}
+
+int gks_dl_has_one_of_item(char *dl, int n, ...)
+{
+  const char *s = dl;
+  int sp = 0, *len = NULL, *fctid = NULL, i;
+  va_list items;
+
+  while (1)
+    {
+      RESOLVE(len, int, sizeof(int));
+      if (*len == 0) break;
+      RESOLVE(fctid, int, sizeof(int));
+      va_start(items, n);
+      for (i = 0; i < n; i++)
+        {
+          if (*fctid == va_arg(items, int)) return 1;
+        }
+      va_end(items);
+      sp += *len - 2 * sizeof(int);
+    }
+
+  return 0;
 }

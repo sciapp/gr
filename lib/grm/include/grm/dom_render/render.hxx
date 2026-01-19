@@ -8,11 +8,12 @@
 #include <functional>
 
 #include <grm/dom_render/context.hxx>
-#include <grm/dom_render/graphics_tree/Element.hxx>
-#include <grm/dom_render/graphics_tree/Document.hxx>
+#include <grm/dom_render/graphics_tree/element.hxx>
+#include <grm/dom_render/graphics_tree/document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
 #include <grm/util.h>
+#include <grm/dom_render/group_mask.hxx>
 
 /* ========================= macros ================================================================================= */
 
@@ -33,7 +34,7 @@
 #define PLOT_DEFAULT_KEEP_WINDOW 1
 #define PLOT_DEFAULT_TRICONT_LEVELS 20
 #define PLOT_DEFAULT_CONTOUR_LEVELS 20
-#define PLOT_DEFAULT_ACCELERATE 1
+#define PLOT_DEFAULT_USE_GR3 1
 #define SERIES_DEFAULT_SPEC ""
 #define PLOT_DEFAULT_STEP_WHERE "mid"
 #define PLOT_DEFAULT_HEXBIN_NBINS 40
@@ -138,7 +139,7 @@ GRM_EXPORT int xAxisLocationStringToInt(const std::string &location_str);
 GRM_EXPORT int yAxisLocationStringToInt(const std::string &location_str);
 GRM_EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
 GRM_EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
-GRM_EXPORT int modelStringToInt(const std::string &model_str);
+GRM_EXPORT int colorModelStringToInt(const std::string &color_model_str);
 GRM_EXPORT int scientificFormatStringToInt(const std::string &scientific_format_str);
 GRM_EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
 GRM_EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
@@ -163,7 +164,7 @@ GRM_EXPORT std::string xAxisLocationIntToString(int location);
 GRM_EXPORT std::string yAxisLocationIntToString(int location);
 GRM_EXPORT std::string markerTypeIntToString(int marker_type);
 GRM_EXPORT std::string projectionTypeIntToString(int projection_type);
-GRM_EXPORT std::string modelIntToString(int model);
+GRM_EXPORT std::string colorModelIntToString(int color_model);
 GRM_EXPORT std::string scientificFormatIntToString(int scientific_format);
 GRM_EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
 GRM_EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
@@ -190,13 +191,15 @@ GRM_EXPORT std::vector<std::string> getMarkerTypes();
 GRM_EXPORT std::vector<std::string> getTextAlignHorizontal();
 GRM_EXPORT std::vector<std::string> getTextAlignVertical();
 GRM_EXPORT std::vector<std::string> getAlgorithm();
-GRM_EXPORT std::vector<std::string> getModel();
+GRM_EXPORT std::vector<std::string> getColorModel();
 GRM_EXPORT std::vector<std::string> getContextAttributes();
 GRM_EXPORT std::vector<std::string> getFillStyles();
 GRM_EXPORT std::vector<std::string> getFillIntStyles();
 GRM_EXPORT std::vector<std::string> getTransformation();
 
 GRM_EXPORT void addValidContextKey(std::string key);
+
+GRM_EXPORT const GRM::GroupMask *getGroupMask();
 
 /* ========================= classes ================================================================================ */
 
@@ -559,6 +562,8 @@ public:
 
   static void setAutoUpdate(bool update);
 
+  static void setEnableEditor(bool update);
+
   void setActiveFigure(const std::shared_ptr<Element> &element);
 
   /* ------------------------------- getter functions ----------------------------------------------------------------*/
@@ -566,6 +571,8 @@ public:
   std::shared_ptr<Element> getActiveFigure();
 
   static void getAutoUpdate(bool *update);
+
+  static void getEnableEditor(bool *update);
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
@@ -584,6 +591,9 @@ public:
   static void render(const std::shared_ptr<Document> &document,
                      const std::shared_ptr<Context> &ext_context); // external doc and external context; could be static
   void processTree();
+  void renderMaskHighlight(std::shared_ptr<Element> highlighted_element,
+                           void (*image_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int,
+                                                  unsigned int *));
   static void finalize();
   std::shared_ptr<Context> getContext();
 

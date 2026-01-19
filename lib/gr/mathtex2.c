@@ -1899,7 +1899,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
         {
           previous_char = 0;
         }
-      if (previous_char == 0 || strchr("{[<(", previous_char) != NULL)
+      if (previous_char == 0 || strchr("^_{[<(", previous_char) != NULL)
         {
           is_spaced_symbol = 0;
         }
@@ -2745,6 +2745,10 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
           tmp_hlist = get_box_model_node(tmp_hlist_index);
           previous_node_height = tmp_hlist->u.hlist.height - tmp_hlist->u.hlist.shift_amount;
           previous_node_depth = tmp_hlist->u.hlist.depth + tmp_hlist->u.hlist.shift_amount;
+          if (previous_node_depth == 0.0 && previous_node_height == 0.0)
+            {
+              previous_node_height = 0.66 * state->fontsize;
+            }
           if (previous_node->type == BT_CHAR)
             {
               previous_node_width = previous_node->u.character.advance;

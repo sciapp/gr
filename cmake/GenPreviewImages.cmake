@@ -97,6 +97,42 @@ set(GR_FONTS
     dejavusans
     stix_two_math
 )
+set(GR_FONTS_DARK
+    times_roman_dark
+    times_italic_dark
+    times_bold_dark
+    times_bolditalic_dark
+    helvetica_dark
+    helvetica_oblique_dark
+    helvetica_bold_dark
+    helvetica_boldoblique_dark
+    courier_dark
+    courier_oblique_dark
+    courier_bold_dark
+    courier_boldoblique_dark
+    symbol_dark
+    bookman_light_dark
+    bookman_lightitalic_dark
+    bookman_demi_dark
+    bookman_demiitalic_dark
+    newcenturyschlbk_roman_dark
+    newcenturyschlbk_italic_dark
+    newcenturyschlbk_bold_dark
+    newcenturyschlbk_bolditalic_dark
+    avantgarde_book_dark
+    avantgarde_bookoblique_dark
+    avantgarde_demi_dark
+    avantgarde_demioblique_dark
+    palantino_roman_dark
+    palantino_italic_dark
+    palantino_bold_dark
+    palantino_bolditalic_dark
+    zapfchancery_mediumitalic_dark
+    zapfdingbats_dark
+    computermodern_dark
+    dejavusans_dark
+    stix_two_math_dark
+)
 set(GR_FONT_INDICES
     101
     102
@@ -134,6 +170,7 @@ set(GR_FONT_INDICES
     234
 )
 set(GR_FONT_PRECISIONS string char stroke outline)
+set(GR_FONT_PRECISIONS_DARK string_dark char_dark stroke_dark outline_dark)
 set(GR_LINE_TYPES
     solid
     dashed
@@ -147,6 +184,20 @@ set(GR_LINE_TYPES
     spaced_dot
     double_dot
     triple_dot
+)
+set(GR_LINE_TYPES_DARK
+    solid_dark
+    dashed_dark
+    dotted_dark
+    dashed_dotted_dark
+    dash_2_dot_dark
+    dash_3_dot_dark
+    long_dash_dark
+    long_short_dash_dark
+    spaced_dash_dark
+    spaced_dot_dark
+    double_dot_dark
+    triple_dot_dark
 )
 set(GR_LINE_TYPE_INDICES
     1
@@ -247,11 +298,20 @@ endforeach()
 foreach(font IN LISTS GR_FONTS)
   string(APPEND GRPLOT_QRC "        <file>preview_images/fonts/${font}.png</file>\n")
 endforeach()
+foreach(font IN LISTS GR_FONTS)
+  string(APPEND GRPLOT_QRC "        <file>preview_images/fonts/${font}_dark.png</file>\n")
+endforeach()
 foreach(font_precision IN LISTS GR_FONT_PRECISIONS)
   string(APPEND GRPLOT_QRC "        <file>preview_images/font_precisions/${font_precision}.png</file>\n")
 endforeach()
+foreach(font_precision IN LISTS GR_FONT_PRECISIONS)
+  string(APPEND GRPLOT_QRC "        <file>preview_images/font_precisions/${font_precision}_dark.png</file>\n")
+endforeach()
 foreach(line_type IN LISTS GR_LINE_TYPES)
   string(APPEND GRPLOT_QRC "        <file>preview_images/line_types/${line_type}.png</file>\n")
+endforeach()
+foreach(line_type IN LISTS GR_LINE_TYPES)
+  string(APPEND GRPLOT_QRC "        <file>preview_images/line_types/${line_type}_dark.png</file>\n")
 endforeach()
 foreach(marker_type IN LISTS GR_MARKER_TYPES)
   string(APPEND GRPLOT_QRC "        <file>preview_images/marker_types/${marker_type}.png</file>\n")
@@ -260,9 +320,17 @@ foreach(hatch_index RANGE 1 11)
   zero_pad(2 ${hatch_index} hatch_index_str)
   string(APPEND GRPLOT_QRC "        <file>preview_images/fill_styles/hatch${hatch_index_str}.png</file>\n")
 endforeach()
+foreach(hatch_index RANGE 1 11)
+  zero_pad(2 ${hatch_index} hatch_index_str)
+  string(APPEND GRPLOT_QRC "        <file>preview_images/fill_styles/hatch${hatch_index_str}_dark.png</file>\n")
+endforeach()
 foreach(pattern_index RANGE 1 108)
   zero_pad(3 ${pattern_index} pattern_index_str)
   string(APPEND GRPLOT_QRC "        <file>preview_images/fill_styles/pattern${pattern_index_str}.png</file>\n")
+endforeach()
+foreach(pattern_index RANGE 1 108)
+  zero_pad(3 ${pattern_index} pattern_index_str)
+  string(APPEND GRPLOT_QRC "        <file>preview_images/fill_styles/pattern${pattern_index_str}_dark.png</file>\n")
 endforeach()
 string(APPEND GRPLOT_QRC "   </qresource>\n</RCC>")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc" "${GRPLOT_QRC}")
@@ -470,6 +538,42 @@ static void create_fonts(void)\n\
     }\n\
 }\n\
 \n\
+static void create_fonts_dark(void)\n\
+{\n\
+  const entry_t *font = FONTS;\n\
+  char out_pathname[MAX_FILENAME_LENGTH];\n\
+\n\
+  snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfonts\", PATH_SEP);\n\
+  mkdir(out_pathname, 0755);\n\
+  gr_settextcolorind(0);
+  gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
+  gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_HEIGHT / FONT_WIDTH);\n\
+  gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
+  gr_setcharheight(0.6 * FONT_HEIGHT / FONT_WIDTH);\n\
+  while (font->name != NULL)\n\
+    {\n\
+      int font_prec;\n\
+      switch (font->id)\n\
+        {\n\
+        case 113:\n\
+        case 131:\n\
+          font_prec = GKS_K_TEXT_PRECISION_STRING;\n\
+          break;\n\
+        default:\n\
+          font_prec = GKS_K_TEXT_PRECISION_OUTLINE;\n\
+          break;\n\
+        }\n\
+      snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfonts%c%s_dark.png\", PATH_SEP, PATH_SEP, font->name);\n\
+      gr_beginprint(out_pathname);\n\
+      gr_setwswindow(0.0, 1.0, 0.0, 1.0 * FONT_HEIGHT / FONT_WIDTH);\n\
+      gr_setwsviewport(0.0, FONT_WIDTH / 600.0 * 0.0254, 0.0, FONT_HEIGHT / 600.0 * 0.0254);\n\
+      gr_settextfontprec(font->id, font_prec);\n\
+      gr_text(0.0, 0.1 * FONT_HEIGHT / FONT_WIDTH, \"AaBbCcDdEeFfGg\");\n\
+      gr_endprint();\n\
+      ++font;\n\
+    }\n\
+}\n\
+\n\
 static void create_font_precisions(void)\n\
 {\n\
   const entry_t *precision = FONT_PRECISIONS;\n\
@@ -496,6 +600,33 @@ static void create_font_precisions(void)\n\
     }\n\
 }\n\
 \n\
+static void create_font_precisions_dark(void)\n\
+{\n\
+  const entry_t *precision = FONT_PRECISIONS;\n\
+  const entry_t *font = FONTS;\n\
+  char out_pathname[MAX_FILENAME_LENGTH];\n\
+\n\
+  snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfont_precisions\", PATH_SEP);\n\
+  mkdir(out_pathname, 0755);\n\
+  gr_settextcolorind(0);
+  gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
+  gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_PRECISION_HEIGHT / FONT_PRECISION_WIDTH);\n\
+  gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
+  gr_setcharheight(0.7 * FONT_PRECISION_HEIGHT / FONT_PRECISION_WIDTH);\n\
+  while (precision->name != NULL)\n\
+    {\n\
+      snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfont_precisions%c%s_dark.png\", PATH_SEP, PATH_SEP,\n\
+               precision->name);\n\
+      gr_beginprint(out_pathname);\n\
+      gr_setwswindow(0.0, 1.0, 0.0, 1.0 * FONT_PRECISION_HEIGHT / FONT_PRECISION_WIDTH);\n\
+      gr_setwsviewport(0.0, FONT_PRECISION_WIDTH / 600.0 * 0.0254, 0.0, FONT_PRECISION_HEIGHT / 600.0 * 0.0254);\n\
+      gr_settextfontprec(font->id, precision->id);\n\
+      gr_text(0.0, 0.0, (char *)font->name);\n\
+      gr_endprint();\n\
+      ++precision;\n\
+    }\n\
+}\n\
+\n\
 static void create_line_types(void)\n\
 {\n\
   const entry_t *line_type = LINE_TYPES;\n\
@@ -511,6 +642,33 @@ static void create_line_types(void)\n\
   while (line_type->name != NULL)\n\
     {\n\
       snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cline_types%c%s.png\", PATH_SEP, PATH_SEP,\n\
+               line_type->name);\n\
+      gr_beginprint(out_pathname);\n\
+      gr_setwswindow(0.0, 1.0, 0.0, 1.0 * LINE_TYPE_HEIGHT / LINE_TYPE_WIDTH);\n\
+      gr_setwsviewport(0.0, LINE_TYPE_WIDTH / 600.0 * 0.0254, 0.0, LINE_TYPE_HEIGHT / 600.0 * 0.0254);\n\
+      gr_setlinetype(line_type->id);\n\
+      gr_polyline(2, (double *)x, (double *)y);\n\
+      gr_endprint();\n\
+      ++line_type;\n\
+    }\n\
+}\n\
+\n\
+static void create_line_types_dark(void)\n\
+{\n\
+  const entry_t *line_type = LINE_TYPES;\n\
+  const double x[2] = {0.0, 1.0};\n\
+  const double y[2] = {0.5, 0.5};\n\
+  char out_pathname[MAX_FILENAME_LENGTH];\n\
+\n\
+  snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cline_types\", PATH_SEP);\n\
+  mkdir(out_pathname, 0755);\n\
+  gr_setlinecolorind(0);
+  gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
+  gr_setviewport(0.0, 1.0, 0.0, 1.0 * LINE_TYPE_HEIGHT / LINE_TYPE_WIDTH);\n\
+  gr_setlinewidth(50);\n\
+  while (line_type->name != NULL)\n\
+    {\n\
+      snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cline_types%c%s_dark.png\", PATH_SEP, PATH_SEP,\n\
                line_type->name);\n\
       gr_beginprint(out_pathname);\n\
       gr_setwswindow(0.0, 1.0, 0.0, 1.0 * LINE_TYPE_HEIGHT / LINE_TYPE_WIDTH);\n\
@@ -597,6 +755,54 @@ static void create_fill_styles(void)\n\
     }\n\
 }\n\
 \n\
+static void create_fill_styles_dark(void)\n\
+{\n\
+  const double x[4] = {0.0, 1.0, 1.0, 0.0};\n\
+  const double y[4] = {0.0, 0.0, 1.0, 1.0};\n\
+  char out_pathname[MAX_FILENAME_LENGTH];\n\
+  int i;\n\
+\n\
+  snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfill_styles\", PATH_SEP);\n\
+  mkdir(out_pathname, 0755);\n\
+  gr_setlinecolorind(0);
+  gr_setfillcolorind(0);
+  gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
+  gr_setviewport(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
+  gr_setfillintstyle(GKS_K_INTSTYLE_PATTERN);\n\
+  for (i = 1; i <= FILL_STYLE_MAX_PATTERN; ++i)\n\
+    {\n\
+      snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfill_styles%cpattern%03d_dark.png\", PATH_SEP, PATH_SEP,\n\
+               i);\n\
+      gr_beginprint(out_pathname);\n\
+      gr_setwswindow(0.0, 1.0, 0.0, 1.0 * FILL_STYLE_HEIGHT / FILL_STYLE_WIDTH);\n\
+      gr_setwsviewport(0.0, FILL_STYLE_WIDTH / 600.0 * 0.0254, 0.0, FILL_STYLE_HEIGHT / 600.0 * 0.0254);\n\
+      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);\n\
+      gr_setfillcolorind(0);\n\
+      gr_fillarea(4, (double *)x, (double *)y);\n\
+      gr_setfillintstyle(GKS_K_INTSTYLE_PATTERN);\n\
+      gr_setfillcolorind(1);\n\
+      gr_setfillstyle(i);\n\
+      gr_fillarea(4, (double *)x, (double *)y);\n\
+      gr_endprint();\n\
+    }\n\
+  gr_setfillintstyle(GKS_K_INTSTYLE_HATCH);\n\
+  for (i = 1; i <= FILL_STYLE_MAX_HATCH; ++i)\n\
+    {\n\
+      snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfill_styles%chatch%02d_dark.png\", PATH_SEP, PATH_SEP, i);\n\
+      gr_beginprint(out_pathname);\n\
+      gr_setwswindow(0.0, 1.0, 0.0, 1.0 * FILL_STYLE_HEIGHT / FILL_STYLE_WIDTH);\n\
+      gr_setwsviewport(0.0, FILL_STYLE_WIDTH / 600.0 * 0.0254, 0.0, FILL_STYLE_HEIGHT / 600.0 * 0.0254);\n\
+      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);\n\
+      gr_setfillcolorind(0);\n\
+      gr_fillarea(4, (double *)x, (double *)y);\n\
+      gr_setfillintstyle(GKS_K_INTSTYLE_HATCH);\n\
+      gr_setfillcolorind(1);\n\
+      gr_setfillstyle(i);\n\
+      gr_fillarea(4, (double *)x, (double *)y);\n\
+      gr_endprint();\n\
+    }\n\
+}\n\
+\n\
 int main(int argc, char **argv)\n\
 {\n\
 #ifdef _WIN32\n\
@@ -609,10 +815,14 @@ int main(int argc, char **argv)\n\
 \n\
   create_colormaps();\n\
   create_fonts();\n\
+  create_fonts_dark();\n\
   create_font_precisions();\n\
+  create_font_precisions_dark();\n\
   create_line_types();\n\
+  create_line_types_dark();\n\
   create_marker_types();\n\
   create_fill_styles();\n\
+  create_fill_styles_dark();\n\
 \n\
   return 0;\n\
 }\n\
@@ -681,13 +891,13 @@ endif()
 set(GR_COLORMAP_IMAGES "${GR_COLORMAPS}")
 list(TRANSFORM GR_COLORMAP_IMAGES PREPEND "preview_images/colormaps/")
 list(TRANSFORM GR_COLORMAP_IMAGES APPEND ".png")
-set(GR_FONT_IMAGES "${GR_FONTS}")
+set(GR_FONT_IMAGES "${GR_FONTS}" "${GR_FONTS_DARK}")
 list(TRANSFORM GR_FONT_IMAGES PREPEND "preview_images/fonts/")
 list(TRANSFORM GR_FONT_IMAGES APPEND ".png")
-set(GR_FONT_PRECISION_IMAGES "${GR_FONT_PRECISIONS}")
+set(GR_FONT_PRECISION_IMAGES "${GR_FONT_PRECISIONS}" "${GR_FONT_PRECISIONS_DARK}")
 list(TRANSFORM GR_FONT_PRECISION_IMAGES PREPEND "preview_images/font_precisions/")
 list(TRANSFORM GR_FONT_PRECISION_IMAGES APPEND ".png")
-set(GR_LINE_TYPE_IMAGES "${GR_LINE_TYPES}")
+set(GR_LINE_TYPE_IMAGES "${GR_LINE_TYPES}" "${GR_LINE_TYPES_DARK}")
 list(TRANSFORM GR_LINE_TYPE_IMAGES PREPEND "preview_images/line_types/")
 list(TRANSFORM GR_LINE_TYPE_IMAGES APPEND ".png")
 set(GR_MARKER_TYPE_IMAGES "${GR_MARKER_TYPES}")
@@ -698,9 +908,17 @@ foreach(hatch_index RANGE 1 11)
   zero_pad(2 ${hatch_index} hatch_index_str)
   list(APPEND GR_FILL_STYLE_IMAGES "hatch${hatch_index_str}")
 endforeach()
+foreach(hatch_index RANGE 1 11)
+  zero_pad(2 ${hatch_index} hatch_index_str)
+  list(APPEND GR_FILL_STYLE_IMAGES "hatch${hatch_index_str}_dark")
+endforeach()
 foreach(pattern_index RANGE 1 108)
   zero_pad(3 ${pattern_index} pattern_index_str)
   list(APPEND GR_FILL_STYLE_IMAGES "pattern${pattern_index_str}")
+endforeach()
+foreach(pattern_index RANGE 1 108)
+  zero_pad(3 ${pattern_index} pattern_index_str)
+  list(APPEND GR_FILL_STYLE_IMAGES "pattern${pattern_index_str}_dark")
 endforeach()
 list(TRANSFORM GR_FILL_STYLE_IMAGES PREPEND "preview_images/fill_styles/")
 list(TRANSFORM GR_FILL_STYLE_IMAGES APPEND ".png")

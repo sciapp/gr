@@ -3,8 +3,8 @@
 #include <variant>
 #include <vector>
 
-#include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/TypeError.hxx>
+#include <grm/dom_render/not_found_error.hxx>
+#include <grm/dom_render/type_error.hxx>
 #include <grm/dom_render/context.hxx>
 
 
@@ -63,7 +63,6 @@ bool GRM::Context::Inner::stringUsed()
   return context->table_string.find(key) != context->table_string.end();
 }
 
-
 GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<double> vec)
 {
   /*!
@@ -88,7 +87,6 @@ GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<int> vec)
   return *this;
 }
 
-
 GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<std::string> vec)
 {
   /*!
@@ -100,7 +98,6 @@ GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<std::string> vec
   context->table_string[key] = std::move(vec);
   return *this;
 }
-
 
 GRM::Context::Inner::operator std::vector<int> &()
 {
@@ -205,7 +202,6 @@ GRM::Context::Inner::operator const std::vector<int> *() const
   std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
-
 
 GRM::Context::Inner::operator std::vector<double> *()
 {
@@ -342,7 +338,7 @@ GRM::Context::Iterator::Iterator(Context &context, bool is_end_iterator)
     {
       current_it_ = nextIterator();
     }
-};
+}
 
 /*!
  * \brief Overload of the dereference operator.
