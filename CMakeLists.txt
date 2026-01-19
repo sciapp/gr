@@ -1436,6 +1436,7 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/Threadpool.cxx
       lib/grm/grplot/Util.cxx
     )
+    add_dependencies(grplot grplot_preview_images)
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       target_link_libraries(
         grplot
