@@ -32,6 +32,8 @@
 #include "gredit/AddElementWidget.hxx"
 
 #include "grm/utilcpp_int.hxx"
+#include <grm/dom_render/casts.hxx>
+#include <grm/dom_render/render_util.hxx>
 
 #include <gks.h>
 
@@ -1798,7 +1800,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               double viewport[4];
               int width, height;
               double mwidth, mheight;
-              GRM::Render::getFigureSize(&width, &height, &mwidth, &mheight);
+              GRM::getFigureSize(&width, &height, &mwidth, &mheight);
               auto aspect_r = mwidth / mheight;
 
               if (active_plot_through_update != nullptr)
@@ -1843,7 +1845,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
           double viewport[4];
           int width, height;
           double mwidth, mheight;
-          GRM::Render::getFigureSize(&width, &height, &mwidth, &mheight);
+          GRM::getFigureSize(&width, &height, &mwidth, &mheight);
           auto aspect_r = mwidth / mheight;
 
           GRM::Render::getViewport(active_plot_through_update, &viewport[0], &viewport[1], &viewport[2], &viewport[3]);
@@ -1958,7 +1960,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
 
               /* tooltips for filled plot kinds gets a higher alpha value to make the values more visible */
               int width = this->size().width(), height = this->size().height();
-              GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+              GRM::getFigureSize(&width, &height, nullptr, nullptr);
               auto max_width_height = std::max(width, height);
               auto x = (double)tooltip.xPx() / max_width_height;
               auto y = (double)(height - tooltip.yPx()) / max_width_height;
@@ -2211,7 +2213,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       int width = this->size().width(), height = this->size().height();
       getMousePos(event, &mouse_x, &mouse_y);
 
-      GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+      GRM::getFigureSize(&width, &height, nullptr, nullptr);
       auto max_width_height = std::max(width, height);
       x = static_cast<double>(mouse_x) / max_width_height;
       y = static_cast<double>(height - mouse_y) / max_width_height;
@@ -2573,7 +2575,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
         {
           int width, height;
           double viewport[4];
-          GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+          GRM::getFigureSize(&width, &height, nullptr, nullptr);
           auto max_width_height = std::max(width, height);
           auto ndc_x = (double)x / max_width_height;
           auto ndc_y = (double)(height - y) / max_width_height;
@@ -4979,7 +4981,7 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
           int width, height;
           double mwidth, mheight;
           double vp_x_min, vp_x_max, vp_y_min, vp_y_max;
-          GRM::Render::getFigureSize(&width, &height, &mwidth, &mheight);
+          GRM::getFigureSize(&width, &height, &mwidth, &mheight);
           auto aspect_r = mwidth / mheight;
 
           if (!GRM::Render::getViewport(plot_elem, &vp_x_min, &vp_x_max, &vp_y_min, &vp_y_max))
@@ -5483,6 +5485,7 @@ void GRPlotWidget::redoSlot()
 void GRPlotWidget::addTextSlot()
 {
   const auto render = grm_get_render();
+  const auto creator = grm_get_creator();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
@@ -5491,19 +5494,19 @@ void GRPlotWidget::addTextSlot()
 
   if (overlay == nullptr)
     {
-      overlay = render->createOverlay();
+      overlay = creator->createOverlay();
       figure_elem->appendChild(overlay);
     }
 
   int width = this->size().width(), height = this->size().height();
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   auto max_width_height = std::max(width, height);
   auto ndc_x = static_cast<double>(add_pos_x) / max_width_height;
   auto ndc_y = static_cast<double>(height - add_pos_y) / max_width_height;
   bool auto_update;
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
-  auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "text");
+  auto overlay_element = creator->createOverlayElement(ndc_x, ndc_y, "text");
   overlay_element->setAttribute("z_index", 10);
   overlay->appendChild(overlay_element);
   render->setAutoUpdate(auto_update);
@@ -5515,6 +5518,7 @@ void GRPlotWidget::addTextSlot()
 void GRPlotWidget::addImageSlot()
 {
   auto render = grm_get_render();
+  auto creator = grm_get_creator();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
@@ -5524,7 +5528,7 @@ void GRPlotWidget::addImageSlot()
 
   if (overlay == nullptr)
     {
-      overlay = render->createOverlay();
+      overlay = creator->createOverlay();
       figure_elem->appendChild(overlay);
     }
 
@@ -5547,7 +5551,7 @@ void GRPlotWidget::addImageSlot()
   (*context)[data_key] = color_array;
 
   int width = this->size().width(), height = this->size().height();
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   auto max_width_height = std::max(width, height);
   auto ndc_x = static_cast<double>(add_pos_x) / max_width_height;
   auto ndc_y = static_cast<double>(height - add_pos_y) / max_width_height;
@@ -5555,7 +5559,7 @@ void GRPlotWidget::addImageSlot()
   bool auto_update;
   render->getAutoUpdate(&auto_update);
   render->setAutoUpdate(false);
-  auto overlay_element = render->createOverlayElement(ndc_x, ndc_y, "image");
+  auto overlay_element = creator->createOverlayElement(ndc_x, ndc_y, "image");
 
   overlay_element->setAttribute("data", data_key);
   overlay_element->setAttribute("_width", image.width());

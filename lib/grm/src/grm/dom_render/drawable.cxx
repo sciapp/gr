@@ -1,6 +1,7 @@
 #include "grm/dom_render/drawable.hxx"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
+#include "grm/dom_render/process_attributes.hxx"
 
 Drawable::Drawable(
     const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int gr_context_id,
@@ -18,7 +19,7 @@ void Drawable::draw()
   bool old_state;
   GRM::Render::getAutoUpdate(&old_state);
   GRM::Render::setAutoUpdate(false);
-  GRM::Render::processAttributes(element);
+  processAttributes(element);
   drawFunction(element, context);
   GRM::Render::setAutoUpdate(old_state);
   gr_restorestate();

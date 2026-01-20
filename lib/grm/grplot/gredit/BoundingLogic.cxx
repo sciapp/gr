@@ -10,6 +10,8 @@
 #include "BoundingLogic.hxx"
 
 #include "../Util.hxx"
+#include "grm/dom_render/render_util.hxx"
+#include "grm/dom_render/process_attributes.hxx"
 
 #include <algorithm>
 #include <vector>
@@ -53,7 +55,7 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
   int width = 0, height = 0;
   std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   auto max_width_height = std::max(width, height);
   dx = static_cast<double>(x) / max_width_height;
   dy = static_cast<double>(height - y) / max_width_height;
@@ -62,9 +64,9 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
 
   if (subplot_element)
     {
-      GRM::Render::processLimits(subplot_element);
+      GRM::processLimits(subplot_element);
       auto central_region = subplot_element->querySelectors("central_region");
-      GRM::Render::processWindow(central_region);
+      GRM::processWindow(central_region);
       if (central_region->hasAttribute("viewport_x_min"))
         {
           double viewport[4];
@@ -79,7 +81,7 @@ std::vector<BoundingObject> BoundingLogic::getBoundingObjectsAtPoint(int x, int 
                        static_cast<double>(central_region->getAttribute("window_y_min")),
                        static_cast<double>(central_region->getAttribute("window_y_max")));
         }
-      GRM::Render::calculateCharHeight(central_region);
+      GRM::calculateCharHeight(central_region);
       gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
       gr_ndctowc(&dx, &dy);
 
@@ -307,7 +309,7 @@ std::unordered_set<unsigned int> BoundingLogic::getElementsAtPoint(int x, int y,
         {
           int width, height;
           double viewport[4];
-          GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+          GRM::getFigureSize(&width, &height, nullptr, nullptr);
           auto max_width_height = std::max(width, height);
           auto ndc_x = (double)x / max_width_height;
           auto ndc_y = (double)(height - y) / max_width_height;

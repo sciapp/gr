@@ -12,6 +12,7 @@
 #include <QHeaderView>
 #include <QObject>
 #include <grm/dom_render/context.hxx>
+#include <grm/dom_render/casts.hxx>
 
 
 TableWidget::TableWidget(GRPlotWidget *widget, QWidget *parent) : QTableWidget(parent)
