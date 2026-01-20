@@ -18630,7 +18630,6 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
             }
         }
     }
-  if (!element->hasAttribute("_line_type_set_by_user")) gr_setlinetype(GKS_K_LINETYPE_SOLID);
 }
 
 static void processSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -19597,6 +19596,7 @@ void GRM::Render::renderMaskHighlight(std::shared_ptr<GRM::Element> highlighted_
   const auto root = this->firstChildElement();
   global_root = root;
   active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
+  gr_savestate();
   applyRootDefaults(root);
   if (static_cast<int>(global_root->getAttribute("_clear_ws"))) gr_clearws();
   automatic_update = false;
@@ -19610,6 +19610,7 @@ void GRM::Render::renderMaskHighlight(std::shared_ptr<GRM::Element> highlighted_
   automatic_update = old_state;
   if (root->hasAttribute("_update_ws") && static_cast<int>(root->getAttribute("_update_ws"))) gr_updatews();
   redraw_ws = false;
+  gr_restorestate();
 }
 
 void GRM::Render::finalize()

@@ -2095,7 +2095,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     }
   if (linetype == 0) (*p->points)[p->npoints++] = QPointF(x0, y0);
 
-  if (p->npoints > MAX_POINTS_PERFORMANCE_THRESHOLD)
+  auto ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
+  if (p->npoints > MAX_POINTS_PERFORMANCE_THRESHOLD && ln_type == GKS_K_LINETYPE_SOLID)
     {
       /*
        * Qt drawPolyline() is slow on calculating line joins for a large list of points.
