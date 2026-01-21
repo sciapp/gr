@@ -878,7 +878,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("pz"), std::vector<std::string>{"None", "References the pz-values stored in the context. The "
                                                            "pz-values are the modified version of the z-values"}},
       {std::string("r"), std::vector<std::string>{"None", "References the radius-values stored in the context"}},
-      {std::string("r_colormap"), std::vector<std::string>{"None", "The used colormap in r-direction"}},
       {std::string("r_dim"), std::vector<std::string>{"None", "The dimension of the radius-values"}},
       {std::string("r_lim_max"), std::vector<std::string>{"None", "The upper radius-limit"}},
       {std::string("r_lim_min"), std::vector<std::string>{"None", "The lower radius-limit"}},
@@ -949,7 +948,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("text_x0"), std::vector<std::string>{"None", "The left x position of the text"}},
       {std::string("text_y0"), std::vector<std::string>{"None", "The left y position of the text"}},
       {std::string("theta"), std::vector<std::string>{"None", "References the theta-values stored in the context"}},
-      {std::string("theta_colormap"), std::vector<std::string>{"None", "The used colormap in theta-direction"}},
       {std::string("theta_dim"), std::vector<std::string>{"None", "The dimension of the theta-values"}},
       {std::string("theta_data_lim_max"), std::vector<std::string>{"None", "The upper theta limit only for the data"}},
       {std::string("theta_data_lim_min"), std::vector<std::string>{"None", "The lower theta limit only for the data"}},

@@ -175,7 +175,6 @@ public:
   std::shared_ptr<Element> createOverlay(const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createOverlayElement(double x, double y, std::string type,
                                                 const std::shared_ptr<Element> &ext_element = nullptr);
-  void createColormap(int x, int y, int size, std::vector<int> &colormap);
 
   /* ---------------------------------- get functions ----------------------------------------------------------------*/
 

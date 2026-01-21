@@ -5575,12 +5575,11 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
   const double convert = 180.0 / M_PI;
   std::vector<double> f1, f2, arc_2_x, arc_2_y, theta_vec, bin_edges;
   int child_id = 0;
-  int theta_colormap = -2, r_colormap = -2, edge_color = 1, face_color = 989;
+  int edge_color = 1, face_color = 989;
   double count, bin_width = -1.0, r_max;
   int num_bins, num_bin_edges = 0, bin_nr;
   std::string norm = "count", str;
-  bool theta_flip = false, draw_edges = false, keep_radii_axes = false, r_lim = false, is_colormap = false,
-       r_log = false;
+  bool theta_flip = false, draw_edges = false, keep_radii_axes = false, r_lim = false, r_log = false;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   std::shared_ptr<GRM::Element> plot_parent = element;
   getPlotParent(plot_parent);
@@ -5606,17 +5605,6 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
   if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
   if (element->hasAttribute("fill_color_ind")) face_color = static_cast<int>(element->getAttribute("fill_color_ind"));
-
-  if (element->hasAttribute("theta_colormap"))
-    {
-      theta_colormap = static_cast<int>(element->getAttribute("theta_colormap"));
-      is_colormap = true;
-    }
-  if (element->hasAttribute("r_colormap"))
-    {
-      r_colormap = static_cast<int>(element->getAttribute("r_colormap"));
-      is_colormap = true;
-    }
 
   if (element->hasAttribute("bin_edges"))
     {
@@ -5657,127 +5645,6 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
       r_lim_min = 0.0;
       r_lim_max = r_max;
     }
-
-  // creates an image for draw_image
-  if (is_colormap)
-    {
-      if (-1 > theta_colormap || theta_colormap > 47 || r_colormap < -1 || r_colormap > 47)
-        {
-          logger((stderr, "The value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
-        }
-      else
-        {
-          std::shared_ptr<GRM::Element> draw_image;
-          const int colormap_size = 500, image_size = 2000;
-          /* Todo: maybe use dynamic image_size when using interactions or maybe calculate a smaller rectangle in image
-             only one bar per rectangle -> no image_size * image_size iterations or maybe don't iterate through
-             image_size * image_size matrix instead calculate the coordinates and iterate through these coordinates
-             somehow like in python */
-          double radius, angle, max_radius, count_radius;
-          double start_angle, end_angle, r_axis_max;
-          double r_lim_min_radius, r_lim_max_radius;
-          int total = 0;
-          double norm_factor = 1, original_count = count;
-          std::vector<int> linear_data, colormap;
-
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
-          global_root->setAttribute("_id", id + 1);
-          str = std::to_string(id);
-
-          linear_data.resize(image_size * image_size);
-          global_creator->createColormap(theta_colormap, r_colormap, colormap_size, colormap);
-
-          if (num_bin_edges == 0)
-            {
-              start_angle = M_PI * 2 / num_bins * bin_nr;
-              end_angle = M_PI * 2 / num_bins * (bin_nr + 1);
-            }
-          else
-            {
-              start_angle = bin_edges[bin_nr];
-              end_angle = bin_edges[bin_nr + 1];
-            }
-
-          max_radius = image_size / 2.0;
-          total = static_cast<int>(element->getAttribute("_total"));
-
-          if (strEqualsAny(norm, "probability", "cdf"))
-            norm_factor = total;
-          else if (num_bin_edges == 0 && norm == "pdf")
-            norm_factor = total * bin_width;
-          else if (num_bin_edges == 0 && norm == "countdensity")
-            norm_factor = bin_width;
-
-          if (!keep_radii_axes)
-            {
-              r_axis_max = (r_lim_max - r_lim_min);
-              if (count > r_lim_max) count = r_lim_max;
-              count -= r_lim_min;
-            }
-          else
-            {
-              r_axis_max = r_max; // r_max = true y axis maximum
-              r_lim_min_radius = r_lim_min / r_max * max_radius;
-              r_lim_max_radius = grm_min(r_lim_max, r_max) / r_max * max_radius;
-            }
-
-          if (norm == "pdf" && num_bin_edges > 0)
-            norm_factor = total * bin_width;
-          else if (norm == "countdensity" && num_bin_edges > 0)
-            norm_factor = bin_width;
-
-          // calculate the radius of the bar with height count
-          count_radius = (grm_round((count * 1.0 / norm_factor / r_axis_max * max_radius) * 100) / 100);
-
-          // go through every point in the image and check if it's inside a bar
-          for (int y = 0; y < image_size; y++)
-            {
-              for (int x = 0; x < image_size; x++)
-                {
-                  radius = sqrt(pow(x - max_radius, 2) + pow(y - max_radius, 2));
-                  radius = grm_round(radius * 100) / 100;
-                  angle = atan2(y - max_radius, x - max_radius);
-
-                  if (angle < 0) angle += M_PI * 2;
-                  if (!theta_flip) angle = 2 * M_PI - angle;
-
-                  if (angle > start_angle && angle <= end_angle &&
-                      ((keep_radii_axes && radius <= count_radius && radius <= r_lim_max_radius &&
-                        radius > r_lim_min_radius) ||
-                       ((grm_round(radius * 100) / 100) <= count_radius && radius <= max_radius && count > 0.0)))
-                    {
-                      linear_data[y * image_size + x] =
-                          colormap[(int)(radius / (max_radius * sqrt(2)) * (colormap_size - 1)) * colormap_size +
-                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
-                    }
-                }
-            }
-
-          /* save resample method and reset because it isn't restored with gr_restorestate */
-          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-            {
-              draw_image = global_creator->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
-                                                           linear_data, 0);
-              draw_image->setAttribute("_child_id", child_id++);
-              element->append(draw_image);
-            }
-          else
-            {
-              draw_image = element->querySelectors("draw_image[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_image != nullptr)
-                global_creator->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, linear_data,
-                                                0, nullptr, draw_image);
-            }
-          if (draw_image != nullptr)
-            {
-              if (!draw_image->hasAttribute("resample_method"))
-                global_render->setResampleMethod(draw_image, static_cast<int>(0x2020202));
-            }
-          linear_data.clear();
-          colormap.clear();
-          count = original_count;
-        }
-    } // end of colormaps
 
   if (!keep_radii_axes) count = grm_max(grm_min(count, r_lim_max) - r_lim_min, 0.0); // trim count to [0.0, y_lim_max]
 
@@ -5823,7 +5690,7 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
           start_angle = bin_nr * (360.0 / num_bins);
           end_angle = (bin_nr + 1) * (360.0 / num_bins);
         }
-      if (!draw_edges && !is_colormap)
+      if (!draw_edges)
         {
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
@@ -8544,7 +8411,6 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 {
   unsigned int num_bins, num_bin_edges = 0;
   int edge_color = 1, face_color = 989, total_observations = 0;
-  int theta_colormap = -2, r_colormap = -2;
   int child_id = 0, i;
   double transparency = 0.75, bin_width = -1.0;
   double r_min = 0.0, r_max = 1.0;
@@ -8649,17 +8515,6 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       bin_widths = temp2;
     }
 
-  // Special colormap case
-  if (!(element->hasAttribute("theta_colormap") && element->hasAttribute("r_colormap")))
-    {
-      if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
-    }
-  else
-    {
-      theta_colormap = static_cast<int>(element->getAttribute("theta_colormap"));
-      r_colormap = static_cast<int>(element->getAttribute("r_colormap"));
-    }
-
   // Iterate through the counts and create for every bar a polar_bar element
   // main loop used for each bar (and arc in stairs, but not the lines in stairs)
   for (int class_nr = 0; class_nr < counts.size(); class_nr++)
@@ -8712,8 +8567,6 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               if (draw_edges) polar_bar->setAttribute("draw_edges", draw_edges);
               if (edge_color != 1) polar_bar->setAttribute("line_color_ind", edge_color);
               if (face_color != 989) polar_bar->setAttribute("fill_color_ind", face_color);
-              if (theta_colormap != -2) polar_bar->setAttribute("theta_colormap", theta_colormap);
-              if (r_colormap != -2) polar_bar->setAttribute("r_colormap", r_colormap);
               if (!bin_widths.empty()) polar_bar->setAttribute("bin_widths", bin_widths[class_nr]);
               if (!bin_edges.empty())
                 {
@@ -8728,7 +8581,7 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                 }
             }
         }
-      else if (!draw_edges && theta_colormap == -2 && r_colormap == -2) /* stairs without draw_edges (not compatible) */
+      else if (!draw_edges) /* stairs without draw_edges (not compatible) */
         {
           // this is for drawing the arcs in stairs.
           double r, rect;
@@ -8852,7 +8705,7 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
     } /* end of counts for loop */
 
   // this is for drawing the stair lines
-  if (stairs && !draw_edges && (theta_colormap == -2 && r_colormap == -2))
+  if (stairs && !draw_edges)
     {
       std::shared_ptr<GRM::Element> line;
       double line_x[2], line_y[2];

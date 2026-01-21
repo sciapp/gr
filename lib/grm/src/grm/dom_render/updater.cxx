@@ -53,8 +53,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
   };
   std::vector<std::string> polar_bar{
-      "bin_width",      "bin_widths", "bin_edges",      "bin_nr", "count",      "draw_edges",     "fill_color_ind",
-      "fill_int_style", "fill_style", "line_color_ind", "norm",   "theta_flip", "theta_colormap", "r_colormap",
+      "bin_width",      "bin_widths",     "bin_edges",  "bin_nr",         "count", "draw_edges",
+      "fill_color_ind", "fill_int_style", "fill_style", "line_color_ind", "norm",  "theta_flip",
   };
   std::vector<std::string> series_barplot{
       "bar_width",
@@ -121,9 +121,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   };
   std::vector<std::string> series_polar_heatmap = series_nonuniform_polar_heatmap;
   std::vector<std::string> series_polar_histogram{
-      "bin_counts", "bin_edges",      "bin_width",       "bin_widths",      "counts", "draw_edges",  "keep_radii_axes",
-      "num_bins",   "norm",           "r_colormap",      "r_max",           "r_min",  "r_range_max", "r_range_min",
-      "theta",      "theta_colormap", "theta_range_max", "theta_range_min", "stairs", "tick",        "transparency",
+      "bin_counts",      "bin_edges",       "bin_width",   "bin_widths",   "counts",
+      "draw_edges",      "keep_radii_axes", "num_bins",    "norm",         "r_max",
+      "r_min",           "r_range_max",     "r_range_min", "theta",        "theta_range_max",
+      "theta_range_min", "stairs",          "tick",        "transparency",
 
   };
   std::vector<std::string> series_polar_line{
@@ -938,8 +939,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                   if (strEqualsAny(attr, "clip_negative")) element->setAttribute("_delete_children", 0);
                   if (strEqualsAny(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "error_bar_style",
                                    "inner_series", "levels", "line_spec", "marginal_heatmap_kind", "num_bins", "px",
-                                   "py", "pz", "r", "r_colormap", "stairs", "theta", "theta_colormap", "u", "v", "x",
-                                   "y", "z") &&
+                                   "py", "pz", "r", "stairs", "theta", "u", "v", "x", "y", "z") &&
                       element->localName() != "overlay_element")
                     element->setAttribute("_delete_children", 2);
                   if (strEqualsAny(attr, "text") && element->localName() == "bar")

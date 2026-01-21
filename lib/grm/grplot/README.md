@@ -44,7 +44,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `error_type`, `grplot`, `ignore_blank_lines`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `legend`, `legend_line`, `levels`, `line_spec`, `location`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `r_colormap`, `r_flip`, `r_lim`, `r_log`, `resample_method`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `theta_colormap`, `theta_flip`, `theta_data_lim`, `theta_lim`, `tilt`, `title`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_columns` `x_flip`, `x_grid`, `x_label`, `x_lim`, `x_log`, `x_range`, `y_bins`, `y_columns`, `y_label`, `y_flip`, `y_grid`, `y_labels`, `y_lim`, `y_log`, `y_range`, `z_grid`, `z_label`, `z_lim`, `z_log`, `z_range`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `error_type`, `grplot`, `ignore_blank_lines`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `legend`, `legend_line`, `levels`, `line_spec`, `location`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `r_flip`, `r_lim`, `r_log`, `resample_method`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `theta_flip`, `theta_data_lim`, `theta_lim`, `tilt`, `title`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_columns` `x_flip`, `x_grid`, `x_label`, `x_lim`, `x_log`, `x_range`, `y_bins`, `y_columns`, `y_label`, `y_flip`, `y_grid`, `y_labels`, `y_lim`, `y_log`, `y_range`, `z_grid`, `z_label`, `z_lim`, `z_log`, `z_range`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -336,11 +336,9 @@ Possible parameters for the polar histogram are:
 5. `keep_radii_axes`: This parameter only have an impact, if `y_lim` is set. In that case the ranges for the radii axes from `y_lim` get ignored while the polar histogram still gets affected by the `y_lim`.
 6. `num_bins`: This parameter sets the number of classes which are respected during the binning.
 7. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
-8. `r_colormap`: This parameter sets the colormap for the r-direction.
-9. `r_flip`: This parameter defines whether the r-axis is flipped or not.
-10. `theta_colormap`: This parameter sets the colormap for the theta-direction.
-11. `theta_flip`: This parameter decides whether the theta values are flipped or not. The value can be either 0 or 1.
-12. `stairs`: If this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
+8. `r_flip`: This parameter defines whether the r-axis is flipped or not.
+9. `theta_flip`: This parameter decides whether the theta values are flipped or not. The value can be either 0 or 1.
+10. `stairs`: If this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
 
 ### POLAR_LINE
 

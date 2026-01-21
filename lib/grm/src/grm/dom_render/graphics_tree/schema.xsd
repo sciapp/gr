@@ -1104,7 +1104,6 @@
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
-            <xs:attribute name="r_colormap" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="r_range_max" type="xs:double"/>
@@ -1113,7 +1112,6 @@
             <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="theta" type="xs:string"/>
-            <xs:attribute name="theta_colormap" type="xs:integer"/>
             <xs:attribute name="theta_data_lim_max" type="xs:double"/>
             <xs:attribute name="theta_data_lim_min" type="xs:double"/>
             <xs:attribute name="theta_range_max" type="xs:double"/>
@@ -1429,8 +1427,6 @@
             <xs:attribute name="draw_edges" type="xs:integer"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="theta_flip" type="xs:integer"/>
-            <xs:attribute name="theta_colormap" type="xs:integer"/>
-            <xs:attribute name="r_colormap" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 

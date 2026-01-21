@@ -378,13 +378,11 @@ const char *valid_series_keys[] = {"a",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
-                                   "r_colormap",
                                    "r_range",
                                    "s",
                                    "step_where",
                                    "stairs",
                                    "theta",
-                                   "theta_colormap",
                                    "theta_data_lim",
                                    "theta_range",
                                    "transparency",
@@ -465,7 +463,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"orientation", "s"},
                                           {"panzoom", "D"},
                                           {"r", "D|I"},
-                                          {"r_colormap", "i"},
                                           {"r_lim", "D"},
                                           {"r_range", "D"},
                                           {"raw", "s"},
@@ -483,7 +480,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"style", "s"},
                                           {"subplot", "D"},
                                           {"theta", "D|I"},
-                                          {"theta_colormap", "i"},
                                           {"theta_lim", "D"},
                                           {"theta_range", "D"},
                                           {"tilt", "d"},
@@ -3555,7 +3551,6 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
 {
   int stairs;
   int keep_radii_axes;
-  int theta_colormap, r_colormap;
   int draw_edges, theta_flip, edge_color, face_color;
   double transparency;
   double theta_range_min, theta_range_max, r_lim_min, r_lim_max;
@@ -3608,9 +3603,6 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
       series_group->setAttribute("theta_range_max", theta_range_max);
     }
 
-  if (grm_args_values(*series, "theta_colormap", "i", &theta_colormap))
-    series_group->setAttribute("theta_colormap", theta_colormap);
-  if (grm_args_values(*series, "r_colormap", "i", &r_colormap)) series_group->setAttribute("r_colormap", r_colormap);
   global_root->setAttribute("_id", ++id);
 
   return GRM_ERROR_NONE;
