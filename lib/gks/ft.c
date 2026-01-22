@@ -114,6 +114,8 @@ static int fallback_font_reference_list[] = {232};
 static FT_Face fallback_font_faces[] = {NULL};
 static const unsigned int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
 
+static int isSymbolFont = 0;
+
 static const int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
                           23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
@@ -824,6 +826,7 @@ int gks_ft_load_user_font(char *font, int ignore_file_not_found)
       gks_perror("file name too long: %s", font);
       return -1;
     }
+  isSymbolFont = strstr(font, "Symbol") != NULL;
 
   if (!ft_is_absolute_path(_font))
     {
@@ -1616,7 +1619,14 @@ static void process_glyphs(FT_Face face, double x, double y, char *text, double 
   if (!init) gks_ft_init();
 
   WC_to_NDC(x, y, gkss->cntnr, x, y);
-  utf_to_unicode((FT_Bytes)text, unicode_string, &length);
+  if (isSymbolFont)
+    {
+      symbol_to_unicode((FT_Bytes)text, unicode_string, length);
+    }
+  else
+    {
+      utf_to_unicode((FT_Bytes)text, unicode_string, &length);
+    }
 
   pen_x = 0;
   cos_f = cos(phi);
