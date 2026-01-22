@@ -264,132 +264,174 @@ void GRPlotMainWindow::resizeGRPlotWidget(int w, int h)
 
 void GRPlotMainWindow::showEditElementDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  edit_element_dock_widget->show();
-  edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!edit_element_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      edit_element_dock_widget->show();
+      edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showTreeWidgetDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  tree_dock_widget->show();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!tree_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      tree_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showTableWidgetDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  table_dock_widget->show();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!table_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      table_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showTextPreviewDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  text_preview_dock_widget->show();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!text_preview_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      text_preview_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showSelectionListDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  selection_list_dock_widget->show();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!selection_list_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      selection_list_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showIconBarDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  icon_bar_dock_widget->show();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!icon_bar_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      icon_bar_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::showAddElementDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  add_element_dock_widget->show();
-  add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
-  resizeGRPlotWidget(w, h);
-  center();
+  if (!add_element_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      add_element_dock_widget->show();
+      add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideEditElementDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  edit_element_dock_widget->hide();
-  edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
-  resizeGRPlotWidget(w, h);
-  center();
+  if (edit_element_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      edit_element_dock_widget->hide();
+      edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideTreeWidgetDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  tree_dock_widget->hide();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (tree_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      tree_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideTableWidgetDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  table_dock_widget->hide();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (table_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      table_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideTextPreviewDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  text_preview_dock_widget->hide();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (text_preview_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      text_preview_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideSelectionListDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  selection_list_dock_widget->hide();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (selection_list_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      selection_list_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideIconBarDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  icon_bar_dock_widget->hide();
-  resizeGRPlotWidget(w, h);
-  center();
+  if (icon_bar_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      icon_bar_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::hideAddElementDockSlot()
 {
-  auto w = grplot_widget_->width();
-  auto h = grplot_widget_->height();
-  add_element_dock_widget->hide();
-  add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
-  resizeGRPlotWidget(w, h);
-  center();
+  if (add_element_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      add_element_dock_widget->hide();
+      add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
+      resizeGRPlotWidget(w, h);
+      center();
+    }
 }
 
 void GRPlotMainWindow::closeEditElementDockSlot()
