@@ -62,7 +62,8 @@ static void resize_pixmap(int width, int height)
 
       if (p->pixmap)
         {
-          p->painter.release();
+          p->painter.reset();
+          pixmap_painter.reset();
           delete p->pixmap;
 
           p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
