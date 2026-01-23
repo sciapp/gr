@@ -62,7 +62,7 @@ static void resize_pixmap(int width, int height)
 
       if (p->pixmap)
         {
-          p->painter.release();
+          p->painter.reset();
           pixmap_painter.reset();
           delete p->pixmap;
 
