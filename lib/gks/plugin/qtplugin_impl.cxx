@@ -798,8 +798,8 @@ public:
   {
     if (width_ == width && height_ == height) return;
     // A Painter which is assigned to a QPaintDevice must be destroyed before the QPaintDevice is destroyed.
-    mask_painter_.release();
-    mask_image_.release();
+    mask_painter_.reset();
+    mask_image_.reset();
     mask_image_ = std::unique_ptr<QImage>(new QImage(width, height, QImage::Format_RGB32));
     mask_painter_ = std::unique_ptr<QPainter>(new QPainter(mask_image_.get()));
     configureImageAndPainter();
@@ -1921,7 +1921,7 @@ static void resize_window(void)
       if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
           fabs(p->height * p->device_pixel_ratio - p->pixmap->size().height()) > FEPS)
         {
-          p->painter.release();
+          p->painter.reset();
           delete p->pixmap;
 
           p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -2095,7 +2095,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     }
   if (linetype == 0) (*p->points)[p->npoints++] = QPointF(x0, y0);
 
-  if (p->npoints > MAX_POINTS_PERFORMANCE_THRESHOLD)
+  auto ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
+  if (p->npoints > MAX_POINTS_PERFORMANCE_THRESHOLD && ln_type == GKS_K_LINETYPE_SOLID)
     {
       /*
        * Qt drawPolyline() is slow on calculating line joins for a large list of points.
