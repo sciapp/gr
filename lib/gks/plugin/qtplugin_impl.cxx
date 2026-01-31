@@ -913,7 +913,7 @@ public:
   void assign(QPainter &painter, const QPaintDevice &paint_device)
   {
     painter_ = painter;
-    if (group_mask_ != nullptr)
+    if (group_mask_)
       {
         group_mask_->resize(paint_device.width(), paint_device.height());
         mask_painter_ = &group_mask_->painter();
@@ -923,6 +923,7 @@ public:
 
   void assign(QPixmap &pixmap, const QPaintDevice &paint_device)
   {
+    owned_painter_.reset();
     owned_painter_ = std::unique_ptr<QPainter>(new QPainter(&pixmap));
     assign(*owned_painter_, paint_device);
   }
@@ -930,7 +931,7 @@ public:
   void clearBackground()
   {
     background_.reset();
-    group_mask_->clearBackground();
+    if (group_mask_) group_mask_->clearBackground();
   }
 
   void drawBackground()
@@ -940,7 +941,7 @@ public:
         if (gkss->cntnr != 0) set_clip_rect(0);
         painter_.get().drawPixmap(0, 0, *background_);
         if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
-        group_mask_->drawBackground();
+        if (group_mask_) group_mask_->drawBackground();
       }
   }
 
@@ -955,7 +956,7 @@ public:
       QPainter backgroundPainter(background_.get());
       backgroundPainter.fillRect(QRectF(xmin, ymin, xmax - xmin, ymax - ymin), Qt::white);
     }
-    group_mask_->freezeBackground(xmin, xmax, ymin, ymax);
+    if (group_mask_) group_mask_->freezeBackground(xmin, xmax, ymin, ymax);
   }
 
   bool hasBackground() const { return static_cast<bool>(background_); }
@@ -1921,17 +1922,16 @@ static void resize_window(void)
       if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
           fabs(p->height * p->device_pixel_ratio - p->pixmap->size().height()) > FEPS)
         {
-          p->painter.reset();
-          delete p->pixmap;
-
-          p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+          QPixmap *pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
-          p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
+          pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-          p->pixmap->fill(Qt::white);
-          p->painter->clearBackground();
+          pixmap->fill(Qt::white);
+          p->painter->assign(*pixmap, *p->widget);
+          delete p->pixmap;
+          p->pixmap = pixmap;
 
-          p->painter->assign(*p->pixmap, *p->widget);
+          p->painter->clearBackground();
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
