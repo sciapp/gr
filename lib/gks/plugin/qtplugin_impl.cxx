@@ -3555,6 +3555,28 @@ static bool dl_contains_only_background_fctid(const char *s)
   return *fctid == CLEAR_BACKGROUND || *fctid == SET_BACKGROUND;
 }
 
+static bool read_wswindow_from_dl(const char *s, double *wswindow)
+{
+  int sp = 0, *len = NULL, *fctid = NULL;
+  bool found_wswindow = false;
+
+  while (true)
+    {
+      RESOLVE(len, int, sizeof(int));
+      if (*len == 0) break;
+      RESOLVE(fctid, int, sizeof(int));
+      if (*fctid == 54)
+        {
+          double *wswindow_ptr = (double *)(s + sp + sizeof(int)); // `+ sizeof(int)` skips the integer array `ia`
+          memcpy(wswindow, wswindow_ptr, 4 * sizeof(double));
+          found_wswindow = true;
+        }
+      sp += *len - 2 * sizeof(int);
+    }
+
+  return found_wswindow;
+}
+
 static void interp(char *str)
 {
   char *s;
@@ -3885,9 +3907,15 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       return;
 
     case 209: /* inq_ws_state */
-      aspect_ratio =
-          (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
-      ;
+      {
+        double wswindow[4];
+        if (!read_wswindow_from_dl(p->dl.buffer, wswindow))
+          {
+            memcpy(wswindow, p->window, 4 * sizeof(double));
+          }
+        aspect_ratio =
+            (wswindow[1] - wswindow[0]) / (wswindow[3] - wswindow[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
+      }
       get_paint_device();
       if (p->width > p->height * aspect_ratio)
         {
