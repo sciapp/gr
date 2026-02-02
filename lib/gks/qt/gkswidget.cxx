@@ -20,9 +20,7 @@
 #include <QtGui/QPainterPath>
 #include <QtGui/QResizeEvent>
 #include <QtGui/QImage>
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
 #include <QtGui/QPicture>
-#endif
 #include <QIcon>
 #include <QProcessEnvironment>
 
@@ -38,10 +36,6 @@
 
 QSize GKSWidget::frame_decoration_size_ = QSize();
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-static std::unique_ptr<QPainter> pixmap_painter;
-#endif
-
 static void create_pixmap(ws_state_list *p)
 {
   p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -50,12 +44,7 @@ static void create_pixmap(ws_state_list *p)
 #endif
   p->pixmap->fill(Qt::white);
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-  pixmap_painter = std::unique_ptr<QPainter>(new QPainter(p->pixmap));
-  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*pixmap_painter, *p->widget));
-#else
-  p->painter = new QPainter(p->pixmap);
-#endif
+  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->widget));
   p->painter->setClipRect(0, 0, p->width, p->height);
 
   get_paint_device();
@@ -70,12 +59,7 @@ static void resize_pixmap(int width, int height)
 
       if (p->pixmap)
         {
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
           p->painter.reset();
-          pixmap_painter.reset();
-#else
-          delete p->painter;
-#endif
           delete p->pixmap;
 
           p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -84,12 +68,7 @@ static void resize_pixmap(int width, int height)
 #endif
           p->pixmap->fill(Qt::white);
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-          pixmap_painter = std::unique_ptr<QPainter>(new QPainter(p->pixmap));
-          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*pixmap_painter, *p->widget));
-#else
-          p->painter = new QPainter(p->pixmap);
-#endif
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->widget));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
