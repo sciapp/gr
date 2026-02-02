@@ -634,10 +634,12 @@ whether (or why) 'gksqt' could not be started.\n");
           request_type = SOCKET_FUNCTION_SAMPLE_LOCATOR;
           if (send_socket(wss->s, &request_type, 1, 0) <= 0)
             {
+              ia[0] = -1;
               break;
             }
           if (read_socket(wss->s, reply, sizeof(reply), 0) <= 0)
             {
+              ia[0] = -1;
               break;
             }
           if (reply[0] == SOCKET_FUNCTION_SAMPLE_LOCATOR)
@@ -651,7 +653,7 @@ whether (or why) 'gksqt' could not be started.\n");
             {
               r1[0] = 0;
               r2[0] = 0;
-              ia[0] = 0;
+              ia[0] = -1;
             }
         }
       return;
