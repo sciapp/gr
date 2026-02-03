@@ -18,6 +18,7 @@ extern "C" {
 /* clang-format off */
 #include <grm/dom_render/graphics_tree/element.hxx>
 #include <grm/dom_render/render.hxx>
+#include <grm/dom_render/creator.hxx>
 /* clang-format on */
 
 extern "C" {
@@ -55,6 +56,7 @@ GRM_EXPORT int grm_validate(void);
 
 GRM_EXPORT std::shared_ptr<GRM::Element> grm_get_document_root(void);
 GRM_EXPORT std::shared_ptr<GRM::Render> grm_get_render(void);
+GRM_EXPORT std::shared_ptr<GRM::Creator> grm_get_creator(void);
 GRM_EXPORT int grm_iterate_grid(GRM::Grid *grid, const std::shared_ptr<GRM::Element> &parent_dom_element, int plot_id);
 GRM_EXPORT int grm_plot_helper(GRM::GridElement *grid_element, GRM::Slice *slice,
                                const std::shared_ptr<GRM::Element> &parent_dom_element, int plot_id);

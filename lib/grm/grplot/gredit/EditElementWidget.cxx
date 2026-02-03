@@ -1,6 +1,7 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
 #include "PreviewTextWidget.hxx"
+#include <grm/dom_render/casts.hxx>
 
 #include <gks.h>
 #include <cmath>

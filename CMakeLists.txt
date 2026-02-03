@@ -627,9 +627,15 @@ set(GRM_SOURCES
     lib/grm/src/grm/datatype/string_list.c
     lib/grm/src/grm/datatype/string_map.c
     lib/grm/src/grm/datatype/uint_map.c
+    lib/grm/src/grm/dom_render/casts.cxx
     lib/grm/src/grm/dom_render/context.cxx
+    lib/grm/src/grm/dom_render/creator.cxx
     lib/grm/src/grm/dom_render/render.cxx
     lib/grm/src/grm/dom_render/drawable.cxx
+    lib/grm/src/grm/dom_render/process_attributes.cxx
+    lib/grm/src/grm/dom_render/process_elements.cxx
+    lib/grm/src/grm/dom_render/render_util.cxx
+    lib/grm/src/grm/dom_render/updater.cxx
     lib/grm/src/grm/dom_render/graphics_tree/comment.cxx
     lib/grm/src/grm/dom_render/graphics_tree/document.cxx
     lib/grm/src/grm/dom_render/graphics_tree/element.cxx
