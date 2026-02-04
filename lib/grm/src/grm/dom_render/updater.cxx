@@ -1160,6 +1160,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           if (attr == "x_log" || attr == "x_flip" || attr == "x_lim_max" || attr == "x_lim_min")
                             {
                               element->setAttribute("_update_limits", true);
+                              element->setAttribute("_no_x_reset_ranges", true);
 
                               if (auto coordinate_system = element->querySelectors("coordinate_system");
                                   coordinate_system != nullptr)
@@ -1191,6 +1192,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           if (attr == "y_log" || attr == "y_flip" || attr == "y_lim_max" || attr == "y_lim_min")
                             {
                               element->setAttribute("_update_limits", true);
+                              element->setAttribute("_no_y_reset_ranges", true);
 
                               if (auto coordinate_system = element->querySelectors("coordinate_system");
                                   coordinate_system != nullptr)

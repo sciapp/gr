@@ -2885,7 +2885,9 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
               if (attr_name == "location" && current_selection->localName() == "axis")
                 current_selection->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();
-              grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
+              if (!current_selection->hasAttribute(attr_name) ||
+                  value != static_cast<std::string>(current_selection->getAttribute(attr_name)))
+                grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
             }
 
           if (attr_name == "colormap")
@@ -2893,17 +2895,24 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();
               auto colormap = QPixmap((":/preview_images/colormaps/" + value + ".png").c_str());
               colormap = colormap.scaled(20, 20);
-              grplot_widget->getColormapAct()->setIcon(colormap);
+              if (!current_selection->hasAttribute(attr_name) ||
+                  value != static_cast<std::string>(current_selection->getAttribute(attr_name)))
+                grplot_widget->getColormapAct()->setIcon(colormap);
             }
         }
       else if (typeid(field) == typeid(QCheckBox))
         {
-          current_selection->setAttribute(attr_name, static_cast<QCheckBox *>(fields[i])->isChecked());
+          auto value = static_cast<QCheckBox *>(fields[i])->isChecked();
+          if (!current_selection->hasAttribute(attr_name) ||
+              value != static_cast<int>(current_selection->getAttribute(attr_name)))
+            current_selection->setAttribute(attr_name, value);
         }
       else if (typeid(field) == typeid(QDial))
         {
-          auto val = static_cast<QDial *>(fields[i])->value();
-          current_selection->setAttribute(attr_name, val);
+          auto value = static_cast<QDial *>(fields[i])->value();
+          if (!current_selection->hasAttribute(attr_name) ||
+              value != static_cast<int>(current_selection->getAttribute(attr_name)))
+            current_selection->setAttribute(attr_name, value);
         }
     }
   return highlight_location;

@@ -540,6 +540,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
   text_color_ind_act = new QAction(tr(""), this);
   connect(text_color_ind_act, &QAction::triggered, this, &GRPlotWidget::colorIndexSlot);
+  disable_grid_act = new QAction(tr(""), this);
+  connect(disable_grid_act, &QAction::triggered, this, &GRPlotWidget::disableGridSlot);
 
   vertical_orientation_act = new QAction(tr("&Vertical"), this);
   connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
@@ -911,7 +913,17 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                   (layout_grid != nullptr && layout_grid->querySelectors("[_selected_for_menu]") != nullptr)
                       ? layout_grid->querySelectors("[_selected_for_menu]")
                       : global_root->querySelectors("figure[active=1]");
-              const auto plot_elem = figure_elem->querySelectors("plot");
+              const auto plot_elems = figure_elem->querySelectorsAll("plot");
+              std::shared_ptr<GRM::Element> plot_elem;
+
+              if (plot_elems.size() > 1)
+                {
+                  plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+                }
+              else
+                {
+                  plot_elem = plot_elems[0];
+                }
 
               auto colormap = QPixmap((":/preview_images/colormaps/" + elem.toStdString() + ".png").c_str());
               auto colormap_inverted = plot_elem->hasAttribute("colormap_inverted") &&
@@ -1480,173 +1492,175 @@ void GRPlotWidget::draw()
         }
       file_export.clear();
     }
-  bool was_successful;
-  if (!draw_called_at_least_once || in_listen_mode)
-    {
-      /* Call `grm_plot` at least once to initialize the internal argument container structure,
-       * but use `grm_render` afterward, so the graphics tree is not deleted every time. */
-      try
-        {
-          was_successful = grm_plot(nullptr);
-        }
-      catch (std::runtime_error e)
-        {
-          std::cerr << e.what() << std::endl;
-          exit(1);
-        }
-      catch (NotFoundError e)
-        {
-          std::cerr << e.what() << std::endl;
-          exit(1);
-        }
-    }
   else
     {
-      try
-        {
-          if (ignore_resize > 0) grm_get_render()->setEnableEditor(false);
-          was_successful = grm_render();
-          if (ignore_resize > 0) grm_get_render()->setEnableEditor(true);
-        }
-      catch (NotFoundError e)
-        {
-          std::cerr << e.what() << std::endl;
-          exit(1);
-        }
-    }
-  if (!was_successful)
-    {
+      bool was_successful;
       if (!draw_called_at_least_once || in_listen_mode)
         {
-          if (auto error_code = grm_get_error_code(); error_code == 1)
-            fprintf(stderr, "A unspecified GRM error occurred!\n");
-          else if (error_code == 2)
-            fprintf(stderr, "An internal GRM error occurred!\n");
-          else if (error_code == 3)
-            fprintf(stderr, "A GRM error occurred while trying to allocate storage!\n");
-          else if (error_code == 4)
-            fprintf(stderr, "A GRM error caused by an unsupported operation occurred!\n");
-          else if (error_code == 5)
-            fprintf(stderr, "An unsupported datatype GRM error occurred!\n");
-          else if (error_code == 6)
-            fprintf(stderr, "An invalid argument GRM error occurred!\n");
-          else if (error_code == 7)
-            fprintf(stderr, "An args invalid key GRM error occurred!\n");
-          else if (error_code == 8)
-            fprintf(stderr, "An args increasing non array value GRM error occurred!\n");
-          else if (error_code == 9)
-            fprintf(stderr, "An args increasing multi dimensional array GRM error occurred!\n");
-          else if (error_code == 10)
-            fprintf(stderr, "A GRM error occurred while parsing a null value!\n");
-          else if (error_code == 11)
-            fprintf(stderr, "A GRM error occurred while parsing a bool value!\n");
-          else if (error_code == 12)
-            fprintf(stderr, "A GRM error occurred while parsing an int value!\n");
-          else if (error_code == 13)
-            fprintf(stderr, "A GRM error occurred while parsing a double value!\n");
-          else if (error_code == 14)
-            fprintf(stderr, "A GRM error occurred while parsing a string value!\n");
-          else if (error_code == 15)
-            fprintf(stderr, "A GRM error occurred while parsing an array value!\n");
-          else if (error_code == 16)
-            fprintf(stderr, "A GRM error occurred while parsing an object value!\n");
-          else if (error_code == 17)
-            fprintf(stderr, "A GRM error occurred while parsing an unknown datatype!\n");
-          else if (error_code == 18)
-            fprintf(stderr, "A GRM error occurred while parsing an invalid delimiter!\n");
-          else if (error_code == 19)
-            fprintf(stderr, "A GRM error occurred while parsing an incomplete string!\n");
-          else if (error_code == 20)
-            fprintf(stderr, "A GRM error occurred while parsing a missing object container!\n");
-          else if (error_code == 21)
-            fprintf(stderr, "A GRM error occurred while parsing a non existing schema file!\n");
-          else if (error_code == 22)
-            fprintf(stderr, "A GRM error occurred while parsing an invalid schema!\n");
-          else if (error_code == 23)
-            fprintf(stderr, "Validating the xml schema file failed. A GRM parse error occurred!\n");
-          else if (error_code == 24)
-            fprintf(stderr, "A GRM error occurred while parsing the xml schema!\n");
-          else if (error_code == 25)
-            fprintf(stderr, "While initialize a network winsocket a GRM error occurred!\n");
-          else if (error_code == 26)
-            fprintf(stderr, "While creating a network socket a GRM error occurred!\n");
-          else if (error_code == 27)
-            fprintf(stderr, "While binding a network socket a GRM error occurred!\n");
-          else if (error_code == 28)
-            fprintf(stderr, "While listening to the network socket a GRM error occurred!\n");
-          else if (error_code == 29)
-            fprintf(stderr, "A GRM error occurred after a network connection was accepted!\n");
-          else if (error_code == 30)
-            fprintf(stderr, "While resolving the network hostname a GRM error occurred!\n");
-          else if (error_code == 31)
-            fprintf(stderr, "While connecting to the network socket a GRM error occurred!\n");
-          else if (error_code == 32)
-            fprintf(stderr, "While receiving the network a GRM error occurred!\n");
-          else if (error_code == 33)
-            fprintf(stderr, "The received network is unsupported. A GRM error occurred!\n");
-          else if (error_code == 34)
-            fprintf(stderr, "The network received a connection shutdown. A GRM error occurred!\n");
-          else if (error_code == 35)
-            fprintf(stderr, "While sending the network a GRM error occurred!\n");
-          else if (error_code == 36)
-            fprintf(stderr, "A GRM error occurred cause of unsupported network send!\n");
-          else if (error_code == 37)
-            fprintf(stderr, "The network socket is closed. A GRM error occurred!\n");
-          else if (error_code == 38)
-            fprintf(stderr, "While cleaning the network winsocket up a GRM error occurred!\n");
-          else if (error_code == 39)
-            fprintf(stderr, "While receiving a custom command a GRM error occurred!\n");
-          else if (error_code == 40)
-            fprintf(stderr, "While sending a custom command a GRM error occurred!\n");
-          else if (error_code == 41)
-            fprintf(stderr, "A GRM error in combination with the colormap occurred!\n");
-          else if (error_code == 42)
-            fprintf(stderr, "A GRM error in combination with the normalization occurred!\n");
-          else if (error_code == 43)
-            fprintf(stderr, "The key is unknown. A GRM error occurred!\n");
-          else if (error_code == 44)
-            fprintf(stderr, "A GRM error in combination with an unknown algorithm occurred!\n");
-          else if (error_code == 45)
-            fprintf(stderr, "A GRM error in combination with a missing algorithm occurred!\n");
-          else if (error_code == 46)
-            fprintf(stderr, "The kind is unknown. A GRM error occurred!\n");
-          else if (error_code == 47)
-            fprintf(stderr, "A GRM error in combination with missing data occurred!\n");
-          else if (error_code == 48)
-            fprintf(stderr, "A GRM error in combination with a length mismatch in the components occurred!\n");
-          else if (error_code == 49)
-            fprintf(stderr, "A GRM error in combination with missing dimensions occurred!\n");
-          else if (error_code == 50)
-            fprintf(stderr, "A GRM error in combination with missing labels occurred!\n");
-          else if (error_code == 51)
-            fprintf(stderr, "The plot id is invalid. A GRM error occurred!\n");
-          else if (error_code == 52)
-            fprintf(stderr, "A out of range GRM error occurred!\n");
-          else if (error_code == 53)
-            fprintf(stderr, "A GRM error in combination with incompatible arguments occurred!\n");
-          else if (error_code == 54)
-            fprintf(stderr, "A GRM error in combination with an invalid request occurred!\n");
-          else if (error_code == 55)
-            fprintf(stderr, "The base64 block is too short. A GRM error occurred!\n");
-          else if (error_code == 56)
-            fprintf(stderr, "A base64 invalid character encountered. A GRM error occurred!\n");
-          else if (error_code == 57)
-            fprintf(stderr, "A GRM error based on a invalid layout index occurred!\n");
-          else if (error_code == 58)
-            fprintf(stderr, "Layout attributes contradict. A GRM error occurred.\n");
-          else if (error_code == 59)
-            fprintf(stderr, "Encountered a invalid argument range inside the layout. A GRM error occurred!\n");
-          else if (error_code == 60)
-            fprintf(stderr, "Encountered a length mismatch inside the layout components. A GRM error occurred!\n");
-          else if (error_code == 61)
-            fprintf(stderr, "A GRM error occurred while creating a temporary directory!\n");
-          else if (error_code == 62)
-            fprintf(stderr, "A non implemented GRM error occurred!\n");
+          /* Call `grm_plot` at least once to initialize the internal argument container structure,
+           * but use `grm_render` afterward, so the graphics tree is not deleted every time. */
+          try
+            {
+              was_successful = grm_plot(nullptr);
+            }
+          catch (std::runtime_error e)
+            {
+              std::cerr << e.what() << std::endl;
+              exit(1);
+            }
+          catch (NotFoundError e)
+            {
+              std::cerr << e.what() << std::endl;
+              exit(1);
+            }
         }
-      fprintf(
-          stderr,
-          "An error occurred, the application will be closed. Please verify your input is correct and try it again\n");
-      exit(1);
+      else
+        {
+          try
+            {
+              if (ignore_resize > 0) grm_get_render()->setEnableEditor(false);
+              was_successful = grm_render();
+              if (ignore_resize > 0) grm_get_render()->setEnableEditor(true);
+            }
+          catch (NotFoundError e)
+            {
+              std::cerr << e.what() << std::endl;
+              exit(1);
+            }
+        }
+      if (!was_successful)
+        {
+          if (!draw_called_at_least_once || in_listen_mode)
+            {
+              if (auto error_code = grm_get_error_code(); error_code == 1)
+                fprintf(stderr, "A unspecified GRM error occurred!\n");
+              else if (error_code == 2)
+                fprintf(stderr, "An internal GRM error occurred!\n");
+              else if (error_code == 3)
+                fprintf(stderr, "A GRM error occurred while trying to allocate storage!\n");
+              else if (error_code == 4)
+                fprintf(stderr, "A GRM error caused by an unsupported operation occurred!\n");
+              else if (error_code == 5)
+                fprintf(stderr, "An unsupported datatype GRM error occurred!\n");
+              else if (error_code == 6)
+                fprintf(stderr, "An invalid argument GRM error occurred!\n");
+              else if (error_code == 7)
+                fprintf(stderr, "An args invalid key GRM error occurred!\n");
+              else if (error_code == 8)
+                fprintf(stderr, "An args increasing non array value GRM error occurred!\n");
+              else if (error_code == 9)
+                fprintf(stderr, "An args increasing multi dimensional array GRM error occurred!\n");
+              else if (error_code == 10)
+                fprintf(stderr, "A GRM error occurred while parsing a null value!\n");
+              else if (error_code == 11)
+                fprintf(stderr, "A GRM error occurred while parsing a bool value!\n");
+              else if (error_code == 12)
+                fprintf(stderr, "A GRM error occurred while parsing an int value!\n");
+              else if (error_code == 13)
+                fprintf(stderr, "A GRM error occurred while parsing a double value!\n");
+              else if (error_code == 14)
+                fprintf(stderr, "A GRM error occurred while parsing a string value!\n");
+              else if (error_code == 15)
+                fprintf(stderr, "A GRM error occurred while parsing an array value!\n");
+              else if (error_code == 16)
+                fprintf(stderr, "A GRM error occurred while parsing an object value!\n");
+              else if (error_code == 17)
+                fprintf(stderr, "A GRM error occurred while parsing an unknown datatype!\n");
+              else if (error_code == 18)
+                fprintf(stderr, "A GRM error occurred while parsing an invalid delimiter!\n");
+              else if (error_code == 19)
+                fprintf(stderr, "A GRM error occurred while parsing an incomplete string!\n");
+              else if (error_code == 20)
+                fprintf(stderr, "A GRM error occurred while parsing a missing object container!\n");
+              else if (error_code == 21)
+                fprintf(stderr, "A GRM error occurred while parsing a non existing schema file!\n");
+              else if (error_code == 22)
+                fprintf(stderr, "A GRM error occurred while parsing an invalid schema!\n");
+              else if (error_code == 23)
+                fprintf(stderr, "Validating the xml schema file failed. A GRM parse error occurred!\n");
+              else if (error_code == 24)
+                fprintf(stderr, "A GRM error occurred while parsing the xml schema!\n");
+              else if (error_code == 25)
+                fprintf(stderr, "While initialize a network winsocket a GRM error occurred!\n");
+              else if (error_code == 26)
+                fprintf(stderr, "While creating a network socket a GRM error occurred!\n");
+              else if (error_code == 27)
+                fprintf(stderr, "While binding a network socket a GRM error occurred!\n");
+              else if (error_code == 28)
+                fprintf(stderr, "While listening to the network socket a GRM error occurred!\n");
+              else if (error_code == 29)
+                fprintf(stderr, "A GRM error occurred after a network connection was accepted!\n");
+              else if (error_code == 30)
+                fprintf(stderr, "While resolving the network hostname a GRM error occurred!\n");
+              else if (error_code == 31)
+                fprintf(stderr, "While connecting to the network socket a GRM error occurred!\n");
+              else if (error_code == 32)
+                fprintf(stderr, "While receiving the network a GRM error occurred!\n");
+              else if (error_code == 33)
+                fprintf(stderr, "The received network is unsupported. A GRM error occurred!\n");
+              else if (error_code == 34)
+                fprintf(stderr, "The network received a connection shutdown. A GRM error occurred!\n");
+              else if (error_code == 35)
+                fprintf(stderr, "While sending the network a GRM error occurred!\n");
+              else if (error_code == 36)
+                fprintf(stderr, "A GRM error occurred cause of unsupported network send!\n");
+              else if (error_code == 37)
+                fprintf(stderr, "The network socket is closed. A GRM error occurred!\n");
+              else if (error_code == 38)
+                fprintf(stderr, "While cleaning the network winsocket up a GRM error occurred!\n");
+              else if (error_code == 39)
+                fprintf(stderr, "While receiving a custom command a GRM error occurred!\n");
+              else if (error_code == 40)
+                fprintf(stderr, "While sending a custom command a GRM error occurred!\n");
+              else if (error_code == 41)
+                fprintf(stderr, "A GRM error in combination with the colormap occurred!\n");
+              else if (error_code == 42)
+                fprintf(stderr, "A GRM error in combination with the normalization occurred!\n");
+              else if (error_code == 43)
+                fprintf(stderr, "The key is unknown. A GRM error occurred!\n");
+              else if (error_code == 44)
+                fprintf(stderr, "A GRM error in combination with an unknown algorithm occurred!\n");
+              else if (error_code == 45)
+                fprintf(stderr, "A GRM error in combination with a missing algorithm occurred!\n");
+              else if (error_code == 46)
+                fprintf(stderr, "The kind is unknown. A GRM error occurred!\n");
+              else if (error_code == 47)
+                fprintf(stderr, "A GRM error in combination with missing data occurred!\n");
+              else if (error_code == 48)
+                fprintf(stderr, "A GRM error in combination with a length mismatch in the components occurred!\n");
+              else if (error_code == 49)
+                fprintf(stderr, "A GRM error in combination with missing dimensions occurred!\n");
+              else if (error_code == 50)
+                fprintf(stderr, "A GRM error in combination with missing labels occurred!\n");
+              else if (error_code == 51)
+                fprintf(stderr, "The plot id is invalid. A GRM error occurred!\n");
+              else if (error_code == 52)
+                fprintf(stderr, "A out of range GRM error occurred!\n");
+              else if (error_code == 53)
+                fprintf(stderr, "A GRM error in combination with incompatible arguments occurred!\n");
+              else if (error_code == 54)
+                fprintf(stderr, "A GRM error in combination with an invalid request occurred!\n");
+              else if (error_code == 55)
+                fprintf(stderr, "The base64 block is too short. A GRM error occurred!\n");
+              else if (error_code == 56)
+                fprintf(stderr, "A base64 invalid character encountered. A GRM error occurred!\n");
+              else if (error_code == 57)
+                fprintf(stderr, "A GRM error based on a invalid layout index occurred!\n");
+              else if (error_code == 58)
+                fprintf(stderr, "Layout attributes contradict. A GRM error occurred.\n");
+              else if (error_code == 59)
+                fprintf(stderr, "Encountered a invalid argument range inside the layout. A GRM error occurred!\n");
+              else if (error_code == 60)
+                fprintf(stderr, "Encountered a length mismatch inside the layout components. A GRM error occurred!\n");
+              else if (error_code == 61)
+                fprintf(stderr, "A GRM error occurred while creating a temporary directory!\n");
+              else if (error_code == 62)
+                fprintf(stderr, "A non implemented GRM error occurred!\n");
+            }
+          fprintf(stderr, "An error occurred, the application will be closed. Please verify your input is correct and "
+                          "try it again\n");
+          exit(1);
+        }
     }
   draw_called_at_least_once = true;
 }
@@ -1764,7 +1778,16 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
 #endif
   if (redraw_pixmap == RedrawType::PARTIAL || redraw_pixmap == RedrawType::FULL)
     {
-      painter.begin(&pixmap);
+      QPixmap tmp_pixmap;
+      if (file_export.empty())
+        {
+          painter.begin(&pixmap);
+        }
+      else
+        {
+          tmp_pixmap = QPixmap(needed_pixmap_size);
+          painter.begin(&tmp_pixmap);
+        }
       auto global_root = grm_get_document_root();
       auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
       auto is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
@@ -1838,7 +1861,6 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       draw();
 
       active_figure = global_root->querySelectors("figure[active=\"1\"]");
-      is_multiplot = active_figure != nullptr && active_figure->querySelectors("layout_grid") != nullptr;
       if (auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
           is_multiplot && active_plot_through_update != nullptr)
         {
@@ -2342,6 +2364,24 @@ void GRPlotWidget::possibleElementsMenuSlot()
 
   redraw();
   selected_elem_via_menu = true;
+}
+
+void GRPlotWidget::disableGridSlot()
+{
+  auto global_root = grm_get_document_root();
+  const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
+  const auto plot_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
+                                                  : global_root->querySelectors("figure[active=1]");
+  const auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+
+  bool draw_grid =
+      static_cast<int>(coordinate_system->querySelectors("axis[axis_type=\"y\"]")->getAttribute("draw_grid"));
+  for (const auto &axis_elem : coordinate_system->querySelectorsAll("axis"))
+    {
+      axis_elem->setAttribute("draw_grid", !draw_grid);
+    }
+
+  redraw();
 }
 
 void GRPlotWidget::mousePressEvent(QMouseEvent *event)
@@ -3417,7 +3457,17 @@ void GRPlotWidget::xLogSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool x_log = plot_elem->hasAttribute("x_log") && static_cast<int>(plot_elem->getAttribute("x_log"));
@@ -3434,7 +3484,17 @@ void GRPlotWidget::yLogSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool y_log = plot_elem->hasAttribute("y_log") && static_cast<int>(plot_elem->getAttribute("y_log"));
@@ -3451,7 +3511,17 @@ void GRPlotWidget::zLogSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool z_log = plot_elem->hasAttribute("z_log") && static_cast<int>(plot_elem->getAttribute("z_log"));
@@ -3468,7 +3538,17 @@ void GRPlotWidget::rLogSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool r_log = plot_elem->hasAttribute("r_log") && static_cast<int>(plot_elem->getAttribute("r_log"));
@@ -3485,7 +3565,17 @@ void GRPlotWidget::xFlipSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool x_flip = plot_elem->hasAttribute("x_flip") && static_cast<int>(plot_elem->getAttribute("x_flip"));
@@ -3502,7 +3592,17 @@ void GRPlotWidget::yFlipSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool y_flip = plot_elem->hasAttribute("y_flip") && static_cast<int>(plot_elem->getAttribute("y_flip"));
@@ -3519,7 +3619,17 @@ void GRPlotWidget::zFlipSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool z_flip = plot_elem->hasAttribute("z_flip") && static_cast<int>(plot_elem->getAttribute("z_flip"));
@@ -3536,7 +3646,17 @@ void GRPlotWidget::thetaFlipSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool theta_flip = plot_elem->hasAttribute("theta_flip") && static_cast<int>(plot_elem->getAttribute("theta_flip"));
@@ -3571,7 +3691,17 @@ void GRPlotWidget::polarWithPanSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   bool polar_with_pan =
@@ -3605,7 +3735,17 @@ void GRPlotWidget::colormapSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
 
   auto colormap_old = GRM::colormapIntToString(static_cast<int>(plot_elem->getAttribute("colormap")));
   auto colormap_inverted =
@@ -3697,7 +3837,17 @@ void GRPlotWidget::xLimSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   QList<QLineEdit *> fields;
@@ -3758,7 +3908,17 @@ void GRPlotWidget::yLimSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   QList<QLineEdit *> fields;
@@ -3819,7 +3979,17 @@ void GRPlotWidget::zLimSlot()
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
   if (plot_elem == nullptr) return;
 
   QList<QLineEdit *> fields;
@@ -3917,7 +4087,17 @@ void GRPlotWidget::colorIndexPopUp(const std::string &attribute_name, int curren
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
 
   QList<QRadioButton *> radio_buttons;
   QDialog dialog(this);
@@ -4091,7 +4271,17 @@ void GRPlotWidget::keepAspectRatioSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
 
   bool keep_aspect_ratio =
       plot_elem->hasAttribute("keep_aspect_ratio") && static_cast<int>(plot_elem->getAttribute("keep_aspect_ratio"));
@@ -4107,7 +4297,17 @@ void GRPlotWidget::onlySquareAspectRatioSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
-  const auto plot_elem = figure_elem->querySelectors("plot");
+  const auto plot_elems = figure_elem->querySelectorsAll("plot");
+  std::shared_ptr<GRM::Element> plot_elem;
+
+  if (plot_elems.size() > 1)
+    {
+      plot_elem = figure_elem->querySelectors("plot[_selected_for_menu=\"1\"]");
+    }
+  else
+    {
+      plot_elem = plot_elems[0];
+    }
 
   bool only_square_aspect_ratio = plot_elem->hasAttribute("only_square_aspect_ratio") &&
                                   static_cast<int>(plot_elem->getAttribute("only_square_aspect_ratio"));
@@ -4988,8 +5188,19 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
             throw NotFoundError(plot_elem->localName() + " doesn't have a viewport but it should.\n");
           vp_x_min *= width;
           vp_x_max *= width;
-          vp_y_min *= aspect_r * height;
-          vp_y_max *= aspect_r * height;
+          vp_y_min *= height;
+          vp_y_max *= height;
+
+          if (aspect_r > 1)
+            {
+              vp_y_min *= aspect_r;
+              vp_y_max *= aspect_r;
+            }
+          else
+            {
+              vp_x_min /= aspect_r;
+              vp_x_max /= aspect_r;
+            }
 
           painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
                            abs(vp_y_max - vp_y_min));
@@ -6032,7 +6243,6 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
   hide_selection_list_widget_act->trigger();
   hide_preview_text_act->trigger();
   if (highlight_location) hide_edit_element_act->trigger();
-  ignore_resize = 1;
   redraw();
 }
 
@@ -6068,38 +6278,6 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
 {
   auto error = false;
   bool edit_enabled = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
-  hidePlotTypeMenuElements();
-  hide_marginal_sub_menu_act->trigger();
-  hide_algo_menu_act->trigger();
-  use_gr3_act->setVisible(false);
-  polar_with_pan_act->setVisible(false);
-  z_flip_act->setVisible(false);
-  z_log_act->setVisible(false);
-  r_log_act->setVisible(false);
-  theta_flip_act->setVisible(false);
-  legend_act->setVisible(false);
-  colorbar_act->setVisible(false);
-  left_axis_act->setVisible(false);
-  right_axis_act->setVisible(false);
-  bottom_axis_act->setVisible(false);
-  top_axis_act->setVisible(false);
-  twin_x_axis_act->setVisible(false);
-  twin_y_axis_act->setVisible(false);
-  z_lim_act->setVisible(false);
-  x_lim_act->setVisible(true);
-  y_lim_act->setVisible(true);
-  x_log_act->setVisible(true);
-  y_log_act->setVisible(true);
-  x_flip_act->setVisible(true);
-  y_flip_act->setVisible(true);
-  only_square_aspect_ratio_act->setVisible(true);
-  hide_orientation_sub_menu_act->trigger();
-  hide_aspect_ratio_sub_menu_act->trigger();
-  show_log_sub_menu_act->trigger();
-  show_flip_sub_menu_act->trigger();
-  show_lim_sub_menu_act->trigger();
-  show_plot_type_sub_menu_act->trigger();
-  if (edit_enabled) hide_location_sub_menu_act->trigger();
 
   if (plot_parent == nullptr) return;
   const auto central_region = plot_parent->querySelectors("central_region");
@@ -6164,6 +6342,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
       y_log_act->setVisible(true);
       x_flip_act->setVisible(true);
       y_flip_act->setVisible(true);
+      disable_grid_act->setVisible(true);
       only_square_aspect_ratio_act->setVisible(true);
       if (edit_enabled)
         {
@@ -6198,6 +6377,8 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
           if (auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
               plot_type == "2d")
             show_aspect_ratio_sub_menu_act->trigger();
+          else if (plot_type != "2d")
+            disable_grid_act->setVisible(false);
         }
 
       if (coordinate_system && coordinate_system->querySelectors("axis[location=\"twin_x\"]"))
@@ -6240,6 +6421,65 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
               else if (location == "bottom")
                 bottom_axis_act->setVisible(true);
               if (edit_enabled) show_location_sub_menu_act->trigger();
+            }
+        }
+
+      // reset visible checkstate in multiplot case because it could be the state from the previos plot
+      if (plot_parent->parentElement()->localName() != "figure")
+        {
+          if (plot_parent->hasAttribute("x_log"))
+            x_log_act->setChecked(static_cast<int>(plot_parent->getAttribute("x_log")));
+          if (plot_parent->hasAttribute("y_log"))
+            y_log_act->setChecked(static_cast<int>(plot_parent->getAttribute("y_log")));
+          if (plot_parent->hasAttribute("z_log"))
+            z_log_act->setChecked(static_cast<int>(plot_parent->getAttribute("z_log")));
+          if (plot_parent->hasAttribute("r_log"))
+            r_log_act->setChecked(static_cast<int>(plot_parent->getAttribute("r_log")));
+          if (plot_parent->hasAttribute("x_flip"))
+            x_flip_act->setChecked(static_cast<int>(plot_parent->getAttribute("x_flip")));
+          if (plot_parent->hasAttribute("y_flip"))
+            y_flip_act->setChecked(static_cast<int>(plot_parent->getAttribute("y_flip")));
+          if (plot_parent->hasAttribute("z_flip"))
+            z_flip_act->setChecked(static_cast<int>(plot_parent->getAttribute("z_flip")));
+          if (plot_parent->hasAttribute("theta_flip"))
+            theta_flip_act->setChecked(static_cast<int>(plot_parent->getAttribute("theta_flip")));
+          if (plot_parent->hasAttribute("keep_aspect_ratio"))
+            keep_aspect_ratio_act->setChecked(static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio")));
+          if (plot_parent->hasAttribute("only_square_aspect_ratio"))
+            only_square_aspect_ratio_act->setChecked(
+                static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio")));
+
+          if (central_region->hasAttribute("orientation"))
+            {
+              auto orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
+              if (orientation == "vertical")
+                {
+                  vertical_orientation_act->setChecked(true);
+                  horizontal_orientation_act->setChecked(false);
+                }
+              else
+                {
+                  vertical_orientation_act->setChecked(false);
+                  horizontal_orientation_act->setChecked(true);
+                }
+            }
+          if (central_region->hasAttribute("keep_window"))
+            keep_window_act->setChecked(static_cast<int>(central_region->getAttribute("keep_window")));
+
+          auto marginal_heatmap_plot = plot_parent->querySelectors("marginal_heatmap_plot");
+          if (marginal_heatmap_plot != nullptr)
+            {
+              auto algo = static_cast<std::string>(marginal_heatmap_plot->getAttribute("algorithm"));
+              if (algo == "sum")
+                {
+                  sum_act->setChecked(true);
+                  max_act->setChecked(false);
+                }
+              else
+                {
+                  sum_act->setChecked(false);
+                  max_act->setChecked(true);
+                }
             }
         }
 
@@ -6927,6 +7167,11 @@ QAction *GRPlotWidget::getIconBarAct()
 QAction *GRPlotWidget::getTextColorIndAct()
 {
   return text_color_ind_act;
+}
+
+QAction *GRPlotWidget::getDisableGridAct()
+{
+  return disable_grid_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()

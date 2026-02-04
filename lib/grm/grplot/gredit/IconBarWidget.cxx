@@ -208,6 +208,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   use_gr3_tool_button->setMinimumWidth(0);
 
   auto use_gr3_act = grplot_widget->getUseGR3Act();
+  use_gr3_act->setToolTip("GR3 or GR variant");
   use_gr3_tool_button->setDefaultAction(use_gr3_act);
   use_gr3_act->setText("");
   name = (grplot_widget->isDarkMode() ? "use_gr3_dark" : "use_gr3");
@@ -223,6 +224,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   polar_with_pan_tool_button->setMinimumWidth(0);
 
   auto polar_with_pan_act = grplot_widget->getPolarWithPanAct();
+  polar_with_pan_act->setToolTip("Polar With Pan");
   polar_with_pan_tool_button->setDefaultAction(polar_with_pan_act);
   polar_with_pan_act->setText("");
   name = (grplot_widget->isDarkMode() ? "polar_with_pan_dark" : "polar_with_pan");
@@ -238,6 +240,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   colormap_tool_button->setMinimumWidth(0);
 
   auto colormap_act = grplot_widget->getColormapAct();
+  colormap_act->setToolTip("Colormap");
   colormap_tool_button->setDefaultAction(colormap_act);
 
   text_color_ind_button = new QToolButton(this);
@@ -249,6 +252,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   text_color_ind_button->setMinimumWidth(0);
 
   auto text_color_ind_act = grplot_widget->getTextColorIndAct();
+  text_color_ind_act->setToolTip("Text Color Index");
   text_color_ind_button->setDefaultAction(text_color_ind_act);
   name = (grplot_widget->isDarkMode() ? "text_color_ind_dark" : "text_color_ind");
   auto text_color_ind = QPixmap((":/icons/" + name + ".png").c_str());
@@ -260,6 +264,22 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   orientation_sub_menu->menuAction()->setVisible(false);
   orientation_tool_button->setEnabled(false);
   if (!grplot_widget->getColormapAct()->isVisible()) colormap_tool_button->setVisible(false);
+
+  disable_grid_button = new QToolButton(this);
+  disable_grid_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
+  disable_grid_button->setContentsMargins(0, 0, 0, 0);
+  disable_grid_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  disable_grid_button->setStyleSheet("QToolButton {border:none;} :hover {background: lightgray;}");
+  disable_grid_button->setToolTip("Draw Grid");
+  disable_grid_button->setMinimumWidth(0);
+
+  auto disable_grid_act = grplot_widget->getDisableGridAct();
+  disable_grid_button->setDefaultAction(disable_grid_act);
+  disable_grid_act->setText("");
+  disable_grid_act->setToolTip("Draw Grid");
+  name = (grplot_widget->isDarkMode() ? "disable_grid_dark" : "disable_grid");
+  auto disable_grid = QPixmap((":/icons/" + name + ".png").c_str());
+  disable_grid_act->setIcon(disable_grid);
 
   connect(grplot_widget->getHideAlgoMenuAct(), &QAction::triggered, this, &IconBarWidget::hideAlgoMenu);
   connect(grplot_widget->getShowAlgoMenuAct(), &QAction::triggered, this, &IconBarWidget::showAlgoMenu);
@@ -296,6 +316,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   h_box_layout->addWidget(polar_with_pan_tool_button);
   h_box_layout->addWidget(colormap_tool_button);
   h_box_layout->addWidget(text_color_ind_button);
+  h_box_layout->addWidget(disable_grid_button);
 
   h_box_layout->setContentsMargins(0, 0, 0, 0);
   h_box_layout->setAlignment(Qt::AlignLeft);

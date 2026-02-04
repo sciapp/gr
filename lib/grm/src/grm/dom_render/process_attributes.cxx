@@ -2820,14 +2820,20 @@ void GRM::processLimits(const std::shared_ptr<GRM::Element> &element)
           element->hasAttribute("_original_y_min") && element->hasAttribute("_original_y_max") &&
           element->hasAttribute("_original_adjust_x_lim") && element->hasAttribute("_original_adjust_y_lim"))
         {
-          xmin = static_cast<double>(element->getAttribute("_original_x_min"));
-          xmax = static_cast<double>(element->getAttribute("_original_x_max"));
-          ymin = static_cast<double>(element->getAttribute("_original_y_min"));
-          ymax = static_cast<double>(element->getAttribute("_original_y_max"));
-          adjust_x_lim = static_cast<int>(element->getAttribute("_original_adjust_x_lim"));
-          adjust_y_lim = static_cast<int>(element->getAttribute("_original_adjust_y_lim"));
-          element->setAttribute("adjust_x_lim", adjust_x_lim);
-          element->setAttribute("adjust_y_lim", adjust_y_lim);
+          if (!(scale & GR_OPTION_X_LOG) || !element->hasAttribute("_no_x_reset_ranges"))
+            {
+              xmin = static_cast<double>(element->getAttribute("_original_x_min"));
+              xmax = static_cast<double>(element->getAttribute("_original_x_max"));
+              adjust_x_lim = static_cast<int>(element->getAttribute("_original_adjust_x_lim"));
+              element->setAttribute("adjust_x_lim", adjust_x_lim);
+            }
+          if (!(scale & GR_OPTION_Y_LOG) || !element->hasAttribute("_no_y_reset_ranges"))
+            {
+              ymin = static_cast<double>(element->getAttribute("_original_y_min"));
+              ymax = static_cast<double>(element->getAttribute("_original_y_max"));
+              adjust_y_lim = static_cast<int>(element->getAttribute("_original_adjust_y_lim"));
+              element->setAttribute("adjust_y_lim", adjust_y_lim);
+            }
           element->removeAttribute("_original_x_lim");
           element->removeAttribute("_original_x_min");
           element->removeAttribute("_original_x_max");
@@ -2948,6 +2954,10 @@ void GRM::processLimits(const std::shared_ptr<GRM::Element> &element)
           logger((stderr, "_x_lim after \"gr_adjustlimits\": (%lf, %lf)\n", xmin, xmax));
         }
     }
+  else
+    {
+      element->removeAttribute("_no_x_reset_ranges");
+    }
 
   if (!(scale & GR_OPTION_Y_LOG))
     {
@@ -2962,6 +2972,10 @@ void GRM::processLimits(const std::shared_ptr<GRM::Element> &element)
           gr_adjustlimits(&ymin, &ymax);
           logger((stderr, "_y_lim after \"gr_adjustlimits\": (%lf, %lf)\n", ymin, ymax));
         }
+    }
+  else
+    {
+      element->removeAttribute("_no_y_reset_ranges");
     }
 
   if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))

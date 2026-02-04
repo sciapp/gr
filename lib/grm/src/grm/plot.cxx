@@ -6814,9 +6814,19 @@ int grm_process_tree(void)
 
 int grm_export(const char *file_path, int export_xml)
 {
+  auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
+  auto active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
+  auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+
+  if (active_plot != nullptr) active_plot->setAttribute("_active", 0);
+  if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 0);
+
   gr_beginprint(const_cast<char *>(file_path));
   int return_value = grm_plot(nullptr);
   gr_endprint();
+
+  if (active_plot != nullptr) active_plot->setAttribute("_active", 1);
+  if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 1);
 
   if (export_xml)
     {

@@ -471,147 +471,232 @@ void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared
       bool y_log = static_cast<int>(element->getAttribute("y_log")) && child->hasAttribute("_y_org");
       bool z_log = static_cast<int>(element->getAttribute("z_log")) && child->hasAttribute("_z_org");
       bool r_log = static_cast<int>(element->getAttribute("r_log")) && child->hasAttribute("_r_org");
+
       if (x_log)
         {
-          double x_min = INFINITY, x_max = -INFINITY;
-          auto x = static_cast<std::string>(child->getAttribute("_x_org"));
-          auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
-          auto x_len = x_vec.size();
+          auto existing_x = static_cast<std::string>(child->getAttribute("x"));
+          if (!startsWith(existing_x, prefix + "x_log"))
+            {
+              double x_min = INFINITY, x_max = -INFINITY;
+              auto x = static_cast<std::string>(child->getAttribute("_x_org"));
+              auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
+              auto x_len = x_vec.size();
 
-          if (kind == "volume")
-            {
-              fprintf(stderr, "The option x_log is not supported for volume. It will be set to false.\n");
-              element->setAttribute("x_log", 0);
-            }
-          else
-            {
-              auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
-              for (int i = 0; i < x_len; i++)
+              if (kind == "volume")
                 {
-                  if (x_vec[i] <= 0)
-                    {
-                      if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
-                        {
-                          fprintf(stderr,
-                                  "The option x_log is not supported for x-values <= 0. It will be set to false.\n");
-                          element->setAttribute("x_log", 0);
-                        }
-                      else
-                        {
-                          x_vec[i] = NAN;
-                        }
-                    }
-                  if (!grm_isnan(x_vec[i])) x_min = (x_min < x_vec[i]) ? x_min : x_vec[i];
-                  if (!grm_isnan(x_vec[i])) x_max = (x_max > x_vec[i]) ? x_max : x_vec[i];
+                  fprintf(stderr, "The option x_log is not supported for volume. It will be set to false.\n");
+                  element->setAttribute("x_log", 0);
                 }
+              else
+                {
+                  auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
+                  for (int i = 0; i < x_len; i++)
+                    {
+                      if (x_vec[i] <= 0)
+                        {
+                          if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
+                            {
+                              fprintf(
+                                  stderr,
+                                  "The option x_log is not supported for x-values <= 0. It will be set to false.\n");
+                              element->setAttribute("x_log", 0);
+                            }
+                          else
+                            {
+                              x_vec[i] = NAN;
+                            }
+                        }
+                      if (!grm_isnan(x_vec[i])) x_min = (x_min < x_vec[i]) ? x_min : x_vec[i];
+                      if (!grm_isnan(x_vec[i])) x_max = (x_max > x_vec[i]) ? x_max : x_vec[i];
+                    }
+
+                  (*context)[prefix + "x_log" + str] = x_vec;
+                  child->setAttribute("x", prefix + "x_log" + str);
+                  if (child->hasAttribute("x_range_min")) child->setAttribute("x_range_min", x_min);
+                  if (child->hasAttribute("x_range_max")) child->setAttribute("x_range_max", x_max);
+                }
+            }
+        }
+      else
+        {
+          auto existing_x = static_cast<std::string>(child->getAttribute("x"));
+          if (startsWith(existing_x, prefix + "x_log"))
+            {
+              auto x = static_cast<std::string>(child->getAttribute("_x_org"));
+              auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
 
               (*context)[prefix + "x" + str] = x_vec;
               child->setAttribute("x", prefix + "x" + str);
-              if (child->hasAttribute("x_range_min")) child->setAttribute("x_range_min", x_min);
-              if (child->hasAttribute("x_range_max")) child->setAttribute("x_range_max", x_max);
+              if (child->hasAttribute("x_range_min"))
+                child->setAttribute("x_range_min", static_cast<double>(child->getAttribute("_x_range_min_org")));
+              if (child->hasAttribute("x_range_max"))
+                child->setAttribute("x_range_max", static_cast<double>(child->getAttribute("_x_range_max_org")));
             }
         }
       if (y_log)
         {
-          double y_min = INFINITY, y_max = -INFINITY;
-          auto y = static_cast<std::string>(child->getAttribute("_y_org"));
-          auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
-          auto y_len = y_vec.size();
+          auto existing_y = static_cast<std::string>(child->getAttribute("y"));
+          if (!startsWith(existing_y, prefix + "y_log"))
+            {
+              double y_min = INFINITY, y_max = -INFINITY;
+              auto y = static_cast<std::string>(child->getAttribute("_y_org"));
+              auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
+              auto y_len = y_vec.size();
 
-          if (kind == "volume")
-            {
-              fprintf(stderr, "The option y_log is not supported for volume. It will be set to false.\n");
-              element->setAttribute("y_log", 0);
-            }
-          else
-            {
-              auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
-              for (int i = 0; i < y_len; i++)
+              if (kind == "volume")
                 {
-                  if (y_vec[i] <= 0)
-                    {
-                      if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
-                        {
-                          fprintf(stderr,
-                                  "The option y_log is not supported for y-values <= 0. It will be set to false.\n");
-                          element->setAttribute("y_log", 0);
-                        }
-                      else
-                        {
-                          y_vec[i] = NAN;
-                        }
-                    }
-                  if (!grm_isnan(y_vec[i])) y_min = (y_min < y_vec[i]) ? y_min : y_vec[i];
-                  if (!grm_isnan(y_vec[i])) y_max = (y_max > y_vec[i]) ? y_max : y_vec[i];
+                  fprintf(stderr, "The option y_log is not supported for volume. It will be set to false.\n");
+                  element->setAttribute("y_log", 0);
                 }
+              else
+                {
+                  auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
+                  for (int i = 0; i < y_len; i++)
+                    {
+                      if (y_vec[i] <= 0)
+                        {
+                          if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
+                            {
+                              fprintf(
+                                  stderr,
+                                  "The option y_log is not supported for y-values <= 0. It will be set to false.\n");
+                              element->setAttribute("y_log", 0);
+                            }
+                          else
+                            {
+                              y_vec[i] = NAN;
+                            }
+                        }
+                      if (!grm_isnan(y_vec[i])) y_min = (y_min < y_vec[i]) ? y_min : y_vec[i];
+                      if (!grm_isnan(y_vec[i])) y_max = (y_max > y_vec[i]) ? y_max : y_vec[i];
+                    }
+
+                  (*context)[prefix + "y_log" + str] = y_vec;
+                  child->setAttribute("y", prefix + "y_log" + str);
+                  if (kind == "barplot" && y_min <= 0) y_min = 1;
+                  if (child->hasAttribute("y_range_min")) child->setAttribute("y_range_min", y_min);
+                  if (child->hasAttribute("y_range_max")) child->setAttribute("y_range_max", y_max);
+                }
+            }
+        }
+      else
+        {
+          auto existing_y = static_cast<std::string>(child->getAttribute("y"));
+          if (startsWith(existing_y, prefix + "y_log"))
+            {
+              auto y = static_cast<std::string>(child->getAttribute("_y_org"));
+              auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
               (*context)[prefix + "y" + str] = y_vec;
               child->setAttribute("y", prefix + "y" + str);
-              if (kind == "barplot" && y_min <= 0) y_min = 1;
-              if (child->hasAttribute("y_range_min")) child->setAttribute("y_range_min", y_min);
-              if (child->hasAttribute("y_range_max")) child->setAttribute("y_range_max", y_max);
+              if (child->hasAttribute("y_range_min"))
+                child->setAttribute("y_range_min", static_cast<double>(child->getAttribute("_y_range_min_org")));
+              if (child->hasAttribute("y_range_max"))
+                child->setAttribute("y_range_max", static_cast<double>(child->getAttribute("_y_range_max_org")));
             }
         }
       if (z_log)
         {
-          double z_min = INFINITY, z_max = (double)-INFINITY;
-          auto z = static_cast<std::string>(child->getAttribute("_z_org"));
-          auto z_vec = GRM::get<std::vector<double>>((*context)[z]);
-          auto z_len = z_vec.size();
+          auto existing_z = static_cast<std::string>(child->getAttribute("z"));
+          if (!startsWith(existing_z, prefix + "z_log"))
+            {
+              double z_min = INFINITY, z_max = (double)-INFINITY;
+              auto z = static_cast<std::string>(child->getAttribute("_z_org"));
+              auto z_vec = GRM::get<std::vector<double>>((*context)[z]);
+              auto z_len = z_vec.size();
 
-          if (kind == "volume")
-            {
-              fprintf(stderr, "The option z_log is not supported for volume. It will be set to false.\n");
-              element->setAttribute("z_log", 0);
-            }
-          else
-            {
-              auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
-              for (int i = 0; i < z_len; i++)
+              if (kind == "volume")
                 {
-                  if (z_vec[i] <= 0)
-                    {
-                      if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
-                        {
-                          fprintf(stderr,
-                                  "The option z_log is not supported for z-values <= 0. It will be set to false.\n");
-                          element->setAttribute("z_log", 0);
-                        }
-                      else
-                        {
-                          z_vec[i] = NAN;
-                        }
-                    }
-                  if (!grm_isnan(z_vec[i])) z_min = (z_min < z_vec[i]) ? z_min : z_vec[i];
-                  if (!grm_isnan(z_vec[i])) z_max = (z_max > z_vec[i]) ? z_max : z_vec[i];
+                  fprintf(stderr, "The option z_log is not supported for volume. It will be set to false.\n");
+                  element->setAttribute("z_log", 0);
                 }
+              else
+                {
+                  auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
+                  for (int i = 0; i < z_len; i++)
+                    {
+                      if (z_vec[i] <= 0)
+                        {
+                          if (child_kind == "trisurface" || child_kind == "tricontour" || child_kind == "line3")
+                            {
+                              fprintf(
+                                  stderr,
+                                  "The option z_log is not supported for z-values <= 0. It will be set to false.\n");
+                              element->setAttribute("z_log", 0);
+                            }
+                          else
+                            {
+                              z_vec[i] = NAN;
+                            }
+                        }
+                      if (!grm_isnan(z_vec[i])) z_min = (z_min < z_vec[i]) ? z_min : z_vec[i];
+                      if (!grm_isnan(z_vec[i])) z_max = (z_max > z_vec[i]) ? z_max : z_vec[i];
+                    }
+
+                  (*context)[prefix + "z_log" + str] = z_vec;
+                  child->setAttribute("z", prefix + "z_log" + str);
+                  if (child->hasAttribute("z_range_min")) child->setAttribute("z_range_min", z_min);
+                  if (child->hasAttribute("z_range_max")) child->setAttribute("z_range_max", z_max);
+                }
+            }
+        }
+      else
+        {
+          auto existing_z = static_cast<std::string>(child->getAttribute("z"));
+          if (startsWith(existing_z, prefix + "z_log"))
+            {
+              auto z = static_cast<std::string>(child->getAttribute("_z_org"));
+              auto z_vec = GRM::get<std::vector<double>>((*context)[z]);
 
               (*context)[prefix + "z" + str] = z_vec;
               child->setAttribute("z", prefix + "z" + str);
-              if (child->hasAttribute("z_range_min")) child->setAttribute("z_range_min", z_min);
-              if (child->hasAttribute("z_range_max")) child->setAttribute("z_range_max", z_max);
+              if (child->hasAttribute("z_range_min"))
+                child->setAttribute("z_range_min", static_cast<double>(child->getAttribute("_z_range_min_org")));
+              if (child->hasAttribute("z_range_max"))
+                child->setAttribute("z_range_max", static_cast<double>(child->getAttribute("_z_range_max_org")));
             }
         }
       if (r_log)
         {
-          double r_min = INFINITY, r_max = -INFINITY;
-          auto r = static_cast<std::string>(child->getAttribute("_r_org"));
-          auto r_vec = GRM::get<std::vector<double>>((*context)[r]);
-          auto r_len = r_vec.size();
-
-          auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
-          for (int i = 0; i < r_len; i++)
+          auto existing_r = static_cast<std::string>(child->getAttribute("r"));
+          if (!startsWith(existing_r, prefix + "r_log"))
             {
-              if (r_vec[i] <= 0) r_vec[i] = NAN;
-              if (!grm_isnan(r_vec[i])) r_min = (r_min < r_vec[i]) ? r_min : r_vec[i];
-              if (!grm_isnan(r_vec[i])) r_max = (r_max > r_vec[i]) ? r_max : r_vec[i];
-            }
+              double r_min = INFINITY, r_max = -INFINITY;
+              auto r = static_cast<std::string>(child->getAttribute("_r_org"));
+              auto r_vec = GRM::get<std::vector<double>>((*context)[r]);
+              auto r_len = r_vec.size();
 
-          (*context)[prefix + "r" + str] = r_vec;
-          child->setAttribute("r", prefix + "r" + str);
-          if (child->hasAttribute("r_range_min")) child->setAttribute("r_range_min", r_min);
-          if (child->hasAttribute("r_range_max")) child->setAttribute("r_range_max", r_max);
+              auto child_kind = static_cast<std::string>(child->getAttribute("kind"));
+              for (int i = 0; i < r_len; i++)
+                {
+                  if (r_vec[i] <= 0) r_vec[i] = NAN;
+                  if (!grm_isnan(r_vec[i])) r_min = (r_min < r_vec[i]) ? r_min : r_vec[i];
+                  if (!grm_isnan(r_vec[i])) r_max = (r_max > r_vec[i]) ? r_max : r_vec[i];
+                }
+
+              (*context)[prefix + "r_log" + str] = r_vec;
+              child->setAttribute("r", prefix + "r_log" + str);
+              if (child->hasAttribute("r_range_min")) child->setAttribute("r_range_min", r_min);
+              if (child->hasAttribute("r_range_max")) child->setAttribute("r_range_max", r_max);
+            }
         }
+      else
+        {
+          auto existing_r = static_cast<std::string>(child->getAttribute("r"));
+          if (startsWith(existing_r, prefix + "r_log"))
+            {
+              auto r = static_cast<std::string>(child->getAttribute("_r_org"));
+              auto r_vec = GRM::get<std::vector<double>>((*context)[r]);
+
+              (*context)[prefix + "r" + str] = r_vec;
+              child->setAttribute("r", prefix + "r" + str);
+              if (child->hasAttribute("r_range_min"))
+                child->setAttribute("r_range_min", static_cast<double>(child->getAttribute("_r_range_min_org")));
+              if (child->hasAttribute("r_range_max"))
+                child->setAttribute("r_range_max", static_cast<double>(child->getAttribute("_r_range_max_org")));
+            }
+        }
+
       if ((x_log || y_log) && kind == "hexbin")
         fprintf(stderr, "Hexbin plots with logarithmic x- or y-values are currently not supported. If you need this "
                         "feature, please send a feature request to the GR developers at "
@@ -1493,17 +1578,17 @@ void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared
       axis_elem->setAttribute("label_orientation", label_orientation);
     }
   // create tick_group elements
-  if (!element->querySelectors("tick_group") ||
+  if (!axis_elem->querySelectors("tick_group") ||
       (axis_type == "x" && ((!std::isnan(old_window[0]) && old_window[0] != window[0]) ||
                             (!std::isnan(old_window[1]) && old_window[1] != window[1]))) ||
       (axis_type == "y" && ((!std::isnan(old_window[2]) && old_window[2] != window[2]) ||
                             (!std::isnan(old_window[3]) && old_window[3] != window[3]))))
     {
-      for (const auto &child : element->children())
+      for (const auto &child : axis_elem->children())
         {
           if (child->localName() != "polyline" && child->hasAttribute("_child_id")) child->remove();
         }
-      element->setAttribute("scientific_format", scientific_format);
+      axis_elem->setAttribute("scientific_format", scientific_format);
       axisArgumentsConvertedIntoTickGroups(axis.ticks, axis.tick_labels, axis_elem, DelValues::RECREATE_OWN_CHILDREN);
     }
   // polyline for axis-line
@@ -2706,6 +2791,8 @@ void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   std::string x_org_pos = PLOT_DEFAULT_ORG_POS, y_org_pos = PLOT_DEFAULT_ORG_POS, z_org_pos = PLOT_DEFAULT_ORG_POS;
   auto global_render = grm_get_render();
   auto active_figure = global_render->getActiveFigure();
+  auto plot_parent = element;
+  getPlotParent(plot_parent);
 
   /* `processAxis` can be triggered indirectly by `grm_input` but within the interaction processing the default Latin-1
    * encoding is used instead of the configured text encoding. Setting the correct text encoding is important since
@@ -2732,6 +2819,13 @@ void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   applyMoveTransformation(element);
   processWindow(element->parentElement()->parentElement());
   processSpace3d(element->parentElement()->parentElement());
+
+  // since axes_3d doesn't have an own text_color_ind use the color from plot or just black to prevent sideeeffects from
+  // other elements
+  if (plot_parent->hasAttribute("text_color_ind"))
+    gr_settextcolorind(static_cast<int>(element->getAttribute("text_color_ind")));
+  else
+    gr_settextcolorind(1);
 
   if (global_render->getRedrawWs())
     gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
@@ -2864,9 +2958,7 @@ void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
       c_max = static_cast<double>(element->parentElement()->getAttribute("window_y_max"));
     }
   else
-    {
-      global_render->setWindow(element->parentElement(), x_min, x_max, c_min, c_max);
-    }
+    global_render->setWindow(element->parentElement(), x_min, x_max, c_min, c_max);
   processWindow(element->parentElement());
 
   calculateViewport(element);
@@ -5938,6 +6030,8 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
   auto global_render = grm_get_render();
   auto active_figure = global_render->getActiveFigure();
   auto redraw_ws = global_render->getRedrawWs();
+  auto plot_parent = element;
+  getPlotParent(plot_parent);
 
   auto world_coordinates = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("world_coordinates")));
   if (element->hasAttribute("_world_coordinates_set_by_user"))
@@ -5947,7 +6041,9 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
       element->setAttribute("world_coordinates",
                             static_cast<int>(element->getAttribute("_world_coordinates_set_by_user")));
     }
-  gr_inqtextcolorind(&text_color_ind);
+
+  if (plot_parent->hasAttribute("text_color_ind"))
+    text_color_ind = static_cast<int>(plot_parent->getAttribute("text_color_ind"));
   if (element->parentElement()->parentElement()->hasAttribute("text_color_ind"))
     text_color_ind = static_cast<int>(element->parentElement()->parentElement()->getAttribute("text_color_ind"));
   if (element->parentElement()->hasAttribute("text_color_ind"))
@@ -6263,10 +6359,21 @@ void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
   bool hide =
       (coordinate_system->hasAttribute("hide")) ? static_cast<int>(coordinate_system->getAttribute("hide")) : false;
   auto coordinate_system_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+  auto plot_parent = element;
+  getPlotParent(plot_parent);
+
   xlabel = static_cast<std::string>(element->getAttribute("x_label_3d"));
   ylabel = static_cast<std::string>(element->getAttribute("y_label_3d"));
   zlabel = static_cast<std::string>(element->getAttribute("z_label_3d"));
   applyMoveTransformation(element);
+
+  // since titles_3d doesn't have an own text_color_ind use the color from plot or just black to prevent sideeeffects
+  // from other elements
+  if (plot_parent->hasAttribute("text_color_ind"))
+    gr_settextcolorind(static_cast<int>(element->getAttribute("text_color_ind")));
+  else
+    gr_settextcolorind(1);
+
   if (grm_get_render()->getRedrawWs() && !hide && coordinate_system_type == "3d")
     {
       auto scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
