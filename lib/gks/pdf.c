@@ -269,7 +269,11 @@ static int swap_index(uLong index, uLong width, uLong height, uLong dimx, int sw
 {
   int row = index / width;
   int col = index % width;
-  if (swapx) col = width - col - 1;
+  if (swapx)
+    {
+      col = width - col - 1;
+      col = col + (4 - (col % 4)) - (col % 4) - 1;
+    }
   if (swapy) row = height - row - 1;
   return row * dimx + col;
 }
