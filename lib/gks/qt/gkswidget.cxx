@@ -44,7 +44,7 @@ static void create_pixmap(ws_state_list *p)
 #endif
   p->pixmap->fill(Qt::white);
 
-  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->widget));
+  p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->paint_device));
   p->painter->setClipRect(0, 0, p->width, p->height);
 
   get_paint_device();
@@ -68,7 +68,7 @@ static void resize_pixmap(int width, int height)
 #endif
           p->pixmap->fill(Qt::white);
 
-          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->widget));
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*p->pixmap, *p->paint_device));
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
