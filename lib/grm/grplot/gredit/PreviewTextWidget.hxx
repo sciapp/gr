@@ -7,14 +7,15 @@ class PreviewTextWidget : public GRWidget
 {
 public:
   PreviewTextWidget(QWidget *parent = nullptr);
-  void initialize(std::string text, int scientific_format, int text_color, int font_precision, int width, int height);
+  void initialize(std::string text, int scientific_format, int text_color, int font_precision, int font, int width,
+                  int height);
 
 protected:
   virtual void draw();
 
 private:
   std::string text;
-  int scientific_format, text_color, font_precision;
+  int scientific_format, text_color, font_precision, font;
   int width_px, height_px;
 };
 

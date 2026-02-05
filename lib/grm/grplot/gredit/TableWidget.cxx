@@ -122,7 +122,7 @@ void TableWidget::applyTableChanges(int row, int column)
 {
   auto new_value = this->item(row, column)->text().toStdString();
 
-  if (getenv("GRM_DEBUG"))
+  if (util::isEnvVariableEnabled("GRM_DEBUG"))
     fprintf(stderr, "Detected change at (%i/%i) with value '%s'. Old value was '%s'\n", row, column, new_value.c_str(),
             this->context_names[column].c_str());
 
@@ -217,7 +217,7 @@ void TableWidget::applyTableChanges(int row, int column)
           auto attr = interesting_part.substr(start + 1, (max_attr_length - start - 1));
           tree_str = tree_str.substr(pos + token.size(), std::string::npos);
 
-          if (getenv("GRM_DEBUG"))
+          if (util::isEnvVariableEnabled("GRM_DEBUG"))
             fprintf(stderr, "Replace the value of %s with the new user-defined name\n", selector_token.c_str());
 
           if (std::find(this->context_attributes.begin(), this->context_attributes.end(), attr) ==

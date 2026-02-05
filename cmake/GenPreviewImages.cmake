@@ -510,6 +510,7 @@ static void create_fonts(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfonts\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
+  gr_settextcolorind(1);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_HEIGHT / FONT_WIDTH);\n\
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
@@ -545,7 +546,7 @@ static void create_fonts_dark(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfonts\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
-  gr_settextcolorind(0);
+  gr_settextcolorind(0);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_HEIGHT / FONT_WIDTH);\n\
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
@@ -582,6 +583,7 @@ static void create_font_precisions(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfont_precisions\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
+  gr_settextcolorind(1);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_PRECISION_HEIGHT / FONT_PRECISION_WIDTH);\n\
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
@@ -608,7 +610,7 @@ static void create_font_precisions_dark(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfont_precisions\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
-  gr_settextcolorind(0);
+  gr_settextcolorind(0);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * FONT_PRECISION_HEIGHT / FONT_PRECISION_WIDTH);\n\
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);\n\
@@ -636,6 +638,7 @@ static void create_line_types(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cline_types\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
+  gr_setlinecolorind(1);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * LINE_TYPE_HEIGHT / LINE_TYPE_WIDTH);\n\
   gr_setlinewidth(50);\n\
@@ -662,7 +665,7 @@ static void create_line_types_dark(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cline_types\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
-  gr_setlinecolorind(0);
+  gr_setlinecolorind(0);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * LINE_TYPE_HEIGHT / LINE_TYPE_WIDTH);\n\
   gr_setlinewidth(50);\n\
@@ -688,17 +691,19 @@ static void create_marker_types(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cmarker_types\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
+  gr_setcolormap(MARKER_BORDER_COLORMAP);\n\
+  gr_setbordercolorind(MARKER_BORDER_COLOR);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
   gr_setmarkersize(MARKER_SIZE);\n\
   gr_setlinewidth(MARKER_SIZE);\n\
   gr_setborderwidth(0.4 * MARKER_SIZE);\n\
-  gr_setcolormap(MARKER_BORDER_COLORMAP);\n\
   while (marker_type->name != NULL)\n\
     {\n\
       snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cmarker_types%c%s.png\", PATH_SEP, PATH_SEP,\n\
                marker_type->name);\n\
       gr_beginprint(out_pathname);\n\
+      gr_setcolormap(MARKER_BORDER_COLORMAP);\n\
       gr_setbordercolorind(MARKER_BORDER_COLOR);\n\
       gr_setwswindow(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
       gr_setwsviewport(0.0, MARKER_TYPE_WIDTH / 600.0 * 0.0254, 0.0, MARKER_TYPE_HEIGHT / 600.0 * 0.0254);\n\
@@ -718,6 +723,8 @@ static void create_fill_styles(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfill_styles\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
+  gr_setlinecolorind(1);\n\
+  gr_setfillcolorind(1);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
   gr_setfillintstyle(GKS_K_INTSTYLE_PATTERN);\n\
@@ -764,8 +771,8 @@ static void create_fill_styles_dark(void)\n\
 \n\
   snprintf(out_pathname, MAX_FILENAME_LENGTH, \"preview_images%cfill_styles\", PATH_SEP);\n\
   mkdir(out_pathname, 0755);\n\
-  gr_setlinecolorind(0);
-  gr_setfillcolorind(0);
+  gr_setlinecolorind(0);\n\
+  gr_setfillcolorind(0);\n\
   gr_setwindow(0.0, 1.0, 0.0, 1.0);\n\
   gr_setviewport(0.0, 1.0, 0.0, 1.0 * MARKER_TYPE_HEIGHT / MARKER_TYPE_WIDTH);\n\
   gr_setfillintstyle(GKS_K_INTSTYLE_PATTERN);\n\

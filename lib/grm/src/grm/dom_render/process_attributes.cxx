@@ -396,20 +396,21 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
     {
       double w, h;
       int location = PLOT_DEFAULT_LOCATION;
-      if (element->hasAttribute("location"))
+      auto legend = plot_parent->querySelectors("legend");
+      if (legend != nullptr && legend->hasAttribute("location"))
         {
-          if (element->getAttribute("location").isInt())
+          if (legend->getAttribute("location").isInt())
             {
-              location = static_cast<int>(element->getAttribute("location"));
+              location = static_cast<int>(legend->getAttribute("location"));
             }
-          else if (element->getAttribute("location").isString())
+          else if (legend->getAttribute("location").isString())
             {
-              location = GRM::locationStringToInt(static_cast<std::string>(element->getAttribute("location")));
+              location = GRM::locationStringToInt(static_cast<std::string>(legend->getAttribute("location")));
             }
         }
-      else
+      else if (legend != nullptr)
         {
-          element->setAttribute("location", location);
+          legend->setAttribute("location", location);
         }
 
       if (location == 11 || location == 12 || location == 13)
@@ -3008,6 +3009,66 @@ void GRM::processLimits(const std::shared_ptr<GRM::Element> &element)
           xmax = 1.0;
           ymin = 0.0;
           ymax = 1.0;
+        }
+      else if (kind == "imshow")
+        {
+          double metric_width, metric_height;
+          GRM::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
+          auto aspect_ratio = metric_width / metric_height;
+
+          xmin = 0;
+          xmax = 1.0;
+          ymin = 0.0;
+          ymax = 1.0;
+
+          if (element->parentElement()->localName() == "layout_grid_element")
+            {
+              auto figure_vp_element = element->parentElement();
+              xmin = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_x_min_org"));
+              xmax = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_x_max_org"));
+              ymin = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_y_min_org"));
+              ymax = static_cast<double>(figure_vp_element->getAttribute("_viewport_normalized_y_max_org"));
+            }
+
+          // force the window to be quadratic
+          if (aspect_ratio > 1)
+            {
+              ymin /= aspect_ratio;
+              ymax /= aspect_ratio;
+            }
+          else
+            {
+              xmin *= aspect_ratio;
+              xmax *= aspect_ratio;
+            }
+
+          double w, h;
+          auto context = global_render->getContext();
+          auto imshow_series = element->querySelectors("series_imshow");
+          if (!imshow_series->hasAttribute("z_dims"))
+            throw NotFoundError("Imshow series is missing required attribute z_dims-data.\n");
+          auto z_dims_key = static_cast<std::string>(imshow_series->getAttribute("z_dims"));
+          auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
+          double vp[4];
+          std::shared_ptr<GRM::Element> plot_parent = element;
+          getPlotParent(plot_parent);
+
+          if (!GRM::Render::getViewport(plot_parent, &vp[0], &vp[1], &vp[2], &vp[3]))
+            throw NotFoundError(plot_parent->localName() + " doesn't have a viewport but it should.\n");
+
+
+          h = static_cast<double>(z_dims_vec[1]) / static_cast<double>(z_dims_vec[0]) * (vp[1] - vp[0]);
+          w = static_cast<double>(z_dims_vec[0]) / static_cast<double>(z_dims_vec[1]) * (vp[3] - vp[2]);
+
+          // the window needs to be adjusted if the data has more x- or y-values cause it cant be quadratic anymore
+          auto x_min = grm_max(0.5 * (xmin + xmax - w), xmin);
+          auto x_max = grm_min(0.5 * (xmin + xmax + w), xmax);
+          auto y_min = grm_max(0.5 * (ymax + ymin - h), ymin);
+          auto y_max = grm_min(0.5 * (ymax + ymin + h), ymax);
+          xmin = x_min;
+          xmax = x_max;
+          ymin = y_min;
+          ymax = y_max;
         }
       if (!central_region->hasAttribute("_window_set_by_user"))
         global_render->setWindow(central_region, xmin, xmax, ymin, ymax);

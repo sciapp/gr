@@ -942,6 +942,11 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                    "py", "pz", "r", "stairs", "theta", "u", "v", "x", "y", "z") &&
                       element->localName() != "overlay_element")
                     element->setAttribute("_delete_children", 2);
+                  if (attr == "marginal_heatmap_kind")
+                    {
+                      auto side_plot_regions = element->querySelectorsAll("side_plot_region");
+                      for (const auto &side_plot_region : side_plot_regions) side_plot_region->remove();
+                    }
                   if (strEqualsAny(attr, "text") && element->localName() == "bar")
                     element->setAttribute("_delete_children", 2);
                   if (element->localName() == "series_polar_histogram" && (attr == "num_bins" || attr == "bin_widths"))
@@ -1047,13 +1052,14 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                         }
                     }
                 }
-              else if (kind == "marginal_heatmap" && (attr == "x_ind" || attr == "y_ind"))
-                {
-                  auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
-                  auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
-                  if ((attr == "x_ind" && y_ind != -1) || (attr == "y_ind" && x_ind != -1))
-                    element->setAttribute("_update_required", true);
-                }
+            }
+          else if (auto kind = static_cast<std::string>(element->getAttribute("kind"));
+                   kind == "marginal_heatmap" && (attr == "x_ind" || attr == "y_ind"))
+            {
+              auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+              auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
+              if ((attr == "x_ind" && y_ind != -1) || (attr == "y_ind" && x_ind != -1))
+                element->setAttribute("_update_required", true);
             }
           else if ((attr == "size_x" || attr == "size_y") && element->localName() == "figure" &&
                    static_cast<int>(element->getAttribute("active")))

@@ -415,6 +415,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 #ifndef NO_XERCES_C
           auto file = fopen(file_name.c_str(), "rb");
           grm_load_graphics_tree(file);
+          grm_get_render()->setAutoUpdate(true);
           redraw();
 #else
           std::stringstream text_stream;
@@ -713,6 +714,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       hide_selection_list_widget_act = new QAction();
       hide_icon_bar_widget_act = new QAction();
       hide_add_element_act = new QAction();
+      update_edit_element_title_act = new QAction();
 
       connect(selection_list_widget, SIGNAL(itemChanged(QListWidgetItem *)), this,
               SLOT(listItemCheckStatusChanged(QListWidgetItem *)));
@@ -1473,6 +1475,7 @@ void GRPlotWidget::attributeEditEvent(bool highlight_location)
       auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
       edit_element_widget->show();
       edit_element_widget->attributeEditEvent(multiple_selections, highlight_location);
+      update_edit_element_title_act->trigger();
       show_edit_element_act->trigger();
       ignore_resize = 2;
     }
@@ -3419,8 +3422,11 @@ void GRPlotWidget::pdf()
 
 void GRPlotWidget::png()
 {
-  std::string save_file_name =
-      QFileDialog::getSaveFileName(this, "Save PNG", QDir::homePath(), "PNG files (*.png)").toStdString();
+  QFileDialog file_dialog(this, "Save PNG", QDir::homePath(), "PNG files (*.png)");
+  file_dialog.setDefaultSuffix(".png");
+  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
+  if (!file_dialog.exec()) return;
+  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
   if (save_file_name.empty()) return;
   file_export = save_file_name;
   redraw();
@@ -3428,8 +3434,11 @@ void GRPlotWidget::png()
 
 void GRPlotWidget::jpeg()
 {
-  std::string save_file_name =
-      QFileDialog::getSaveFileName(this, "Save JPEG", QDir::homePath(), "JPEG files (*.jpeg)").toStdString();
+  QFileDialog file_dialog(this, "Save JPEG", QDir::homePath(), "JPEG files (*.jpeg)");
+  file_dialog.setDefaultSuffix(".jpeg");
+  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
+  if (!file_dialog.exec()) return;
+  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
   if (save_file_name.empty()) return;
   file_export = save_file_name;
   redraw();
@@ -3437,8 +3446,11 @@ void GRPlotWidget::jpeg()
 
 void GRPlotWidget::svg()
 {
-  std::string save_file_name =
-      QFileDialog::getSaveFileName(this, "Save SVG", QDir::homePath(), "SVG files (*.svg)").toStdString();
+  QFileDialog file_dialog(this, "Save SVG", QDir::homePath(), "SVG files (*.svg)");
+  file_dialog.setDefaultSuffix(".svg");
+  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
+  if (!file_dialog.exec()) return;
+  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
   if (save_file_name.empty()) return;
   file_export = save_file_name;
   redraw();
@@ -4666,7 +4678,7 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {
-              if (getenv("GRM_DEBUG")) qDebug() << "skipping" << cur_child->localName().c_str();
+              if (util::isEnvVariableEnabled("GRM_DEBUG")) qDebug() << "skipping" << cur_child->localName().c_str();
             }
           else
             {
@@ -5267,8 +5279,11 @@ void GRPlotWidget::saveFileSlot()
           QApplication::beep();
           return;
         }
-      std::string save_file_name =
-          QFileDialog::getSaveFileName(this, "Save XML", QDir::homePath(), "XML files (*.xml.png)").toStdString();
+      QFileDialog file_dialog(this, "Save XML-PNG", QDir::homePath(), "XML-PNG files (*.xml.png)");
+      file_dialog.setDefaultSuffix(".xml.png");
+      file_dialog.setAcceptMode(QFileDialog::AcceptSave);
+      if (!file_dialog.exec()) return;
+      auto save_file_name = file_dialog.selectedFiles().front().toStdString();
       if (save_file_name.empty()) return;
 
       file_export = save_file_name.c_str();
@@ -6642,7 +6657,7 @@ void GRPlotWidget::hidePlotTypeMenuElements()
 
 QAction *GRPlotWidget::getPdfAct()
 {
-  return png_act;
+  return pdf_act;
 }
 
 QAction *GRPlotWidget::getPngAct()
@@ -7174,6 +7189,11 @@ QAction *GRPlotWidget::getDisableGridAct()
   return disable_grid_act;
 }
 
+QAction *GRPlotWidget::getUpdateEditElementTitleAct()
+{
+  return update_edit_element_title_act;
+}
+
 QWidget *GRPlotWidget::getEditElementWidget()
 {
   return edit_element_widget;
@@ -7329,11 +7349,11 @@ void GRPlotWidget::overlayElementEdit()
 }
 
 void GRPlotWidget::setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color,
-                                          int font_precision, int width, int height)
+                                          int font_precision, int font, int width, int height)
 {
   // 250 based on the fixed size of the right dock widget area, even if width would be the real size of the text
   // 15 so empty text fields have a decent preview if beeing edited
-  preview_text_widget->initialize(text, scientific_format, text_color, font_precision, std::max(250, width),
+  preview_text_widget->initialize(text, scientific_format, text_color, font_precision, font, std::max(250, width),
                                   std::max(15, height));
   preview_text_widget->show();
   preview_text_widget->update();

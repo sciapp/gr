@@ -587,6 +587,7 @@ static void processParents(const std::shared_ptr<GRM::Element> &element, const s
       processElement(element, context);
       return;
     }
+  if (element->parentElement()->localName() == "radial_axes") element->parentElement()->setAttribute("_mask_run", 1);
   processParents(element->parentElement(), context);
   processElement(element, context);
 }
