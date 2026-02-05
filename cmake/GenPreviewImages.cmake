@@ -932,6 +932,8 @@ add_custom_target(
           ${GR_MARKER_TYPE_IMAGES}
           ${GR_FILL_STYLE_IMAGES}
 )
+# Make sure the cairoplugin is built before generating the preview images, otherwise PNGs cannot be created
+add_dependencies(grplot_preview_images cairoplugin)
 if(NOT CMAKE_CROSSCOMPILING OR GR_HOST_DIRECTORY)
   add_custom_command(
     OUTPUT ${GR_COLORMAP_IMAGES}
