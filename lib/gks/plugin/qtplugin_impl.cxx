@@ -116,7 +116,7 @@ class ProxyPainter;
 typedef struct ws_state_list_t
 {
   gks_display_list_t dl;
-  QWidget *widget;
+  QPaintDevice *paint_device;
   QPixmap *pixmap;
   QPixmap *selection;
   std::unique_ptr<ProxyPainter> painter;
@@ -1929,7 +1929,7 @@ static void resize_window(void)
           pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
           pixmap->fill(Qt::white);
-          p->painter->assign(*pixmap, *p->widget);
+          p->painter->assign(*pixmap, *p->paint_device);
           delete p->pixmap;
           p->pixmap = pixmap;
 
@@ -3393,11 +3393,11 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 #endif
           p->selection->fill(Qt::white);
         }
-      p->painter->assign(*p->selection, *p->widget);
+      p->painter->assign(*p->selection, *p->paint_device);
       break;
 
     case END_SELECTION:
-      p->painter->assign(*p->pixmap, *p->widget);
+      p->painter->assign(*p->pixmap, *p->paint_device);
       break;
 
     case MOVE_SELECTION:
@@ -3676,7 +3676,6 @@ static void update_metrics(const QPaintDevice *device)
 static int get_paint_device(void)
 {
   char *env;
-  QPaintDevice *device;
 
   env = (char *)gks_getenv("GKS_CONID");
   if (!env) env = (char *)gks_getenv("GKSconid");
@@ -3689,25 +3688,25 @@ static int get_paint_device(void)
       p->has_user_defined_device_pixel_ratio = has_hash_mark;
       if (has_exclamation_mark && has_hash_mark)
         {
-          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&painter, &p->device_pixel_ratio);
-          device = p->widget;
+          QWidget *widget; // Use a temporary QWidget pointer since QWidget inherits from multiple base classes
+          sscanf(env, "%p!%p#%lf", (void **)&widget, (void **)&painter, &p->device_pixel_ratio);
+          p->paint_device = static_cast<QPaintDevice *>(widget);
         }
       else if (has_exclamation_mark)
         {
-          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&painter);
-          device = p->widget;
+          QWidget *widget; // Use a temporary QWidget pointer since QWidget inherits from multiple base classes
+          sscanf(env, "%p!%p", (void **)&widget, (void **)&painter);
+          p->paint_device = static_cast<QPaintDevice *>(widget);
         }
       else if (has_hash_mark)
         {
           sscanf(env, "%p#%lf", (void **)&painter, &p->device_pixel_ratio);
-          p->widget = NULL;
-          device = painter->device();
+          p->paint_device = painter->device();
         }
       else
         {
           sscanf(env, "%p", (void **)&painter);
-          p->widget = NULL;
-          device = painter->device();
+          p->paint_device = painter->device();
         }
 #ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       QPixmap *pixmap = dynamic_cast<QPixmap *>(painter->device());
@@ -3718,11 +3717,11 @@ static int get_paint_device(void)
 #endif
       if (!p->painter)
         {
-          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter, *p->widget));
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter, *p->paint_device));
         }
       else
         {
-          p->painter->assign(*painter, *p->widget);
+          p->painter->assign(*painter, *p->paint_device);
         }
     }
   else
@@ -3730,7 +3729,7 @@ static int get_paint_device(void)
       return 1;
     }
 
-  update_metrics(device);
+  update_metrics(p->paint_device);
 
   return 0;
 }
@@ -3829,7 +3828,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       break;
 
     case 205: /* configure ws */
-      if (p->widget != NULL) update_metrics(p->widget);
+      update_metrics(p->paint_device);
       f_arr_1[0] = p->mwidth;
       f_arr_2[0] = p->mheight;
       i_arr[0] = p->width;
