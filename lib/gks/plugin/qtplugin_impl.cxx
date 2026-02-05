@@ -153,7 +153,9 @@ typedef struct ws_state_list_t
   void *memory_plugin_ws_state_list;
   int *memory_plugin_mem_ptr;
   char *memory_plugin_mem_path;
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   std::stack<bounding_struct> bounding_stack;
+#endif
   void (*mask_callback)(unsigned int, unsigned int, unsigned int *);
   void (*partial_drawing_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *);
 } ws_state_list;
@@ -2108,6 +2110,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     {
       p->painter->drawPolyline(p->points->constData(), p->npoints);
     }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       double point_x, point_y;
@@ -2134,6 +2137,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           p->bounding_stack.top().y_max += min_bbox_size / 2;
         }
     }
+#endif
 }
 
 static void polyline(int n, double *px, double *py)
@@ -2301,6 +2305,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           p->painter->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
         }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -2311,6 +2316,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
       pc++;
     }
   while (op != 0);
@@ -2404,6 +2410,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
   else
     p->painter->drawText(xstart, ystart, s);
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       p->bounding_stack.top().x_max = xstart + xrel;
@@ -2411,6 +2418,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
       p->bounding_stack.top().y_max = ystart + yrel;
       p->bounding_stack.top().y_min = ystart;
     }
+#endif
 }
 
 static void set_font(int font)
@@ -2530,6 +2538,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       p->painter->drawPolygon(points->constData(), points->size());
     }
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       double point_x, point_y;
@@ -2543,6 +2552,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
           if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
         }
     }
+#endif
   delete points;
 }
 
@@ -2618,6 +2628,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   swapx = xi1 > xi2;
   swapy = yi1 < yi2;
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       p->bounding_stack.top().x_max = xi2;
@@ -2633,6 +2644,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
           p->bounding_stack.top().y_min = yi2;
         }
     }
+#endif
 
   if (!true_color)
     {
@@ -2881,6 +2893,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
         }
     }
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       if (p->bounding_stack.top().x_max < path.boundingRect().x() + path.boundingRect().width())
@@ -2898,6 +2911,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           p->bounding_stack.top().y_min = tmp;
         }
     }
+#endif
   p->painter->restore();
 }
 
@@ -2995,6 +3009,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -3005,6 +3020,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
     }
 
   triangle = new QPolygonF(3);
@@ -3059,6 +3075,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -3069,6 +3086,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
     }
 
   j = 0;
@@ -3395,6 +3413,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
         }
       break;
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
     case GKS_SET_BBOX_CALLBACK: /* 260 */
       cur_id = ia[0];
 #ifdef _WIN32
@@ -3415,6 +3434,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();
       break;
+#endif
 
     case SET_BACKGROUND:
       if (p->pixmap)
