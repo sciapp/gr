@@ -206,8 +206,7 @@ darwin-self-contained:
       -DCMAKE_INSTALL_PREFIX=/usr/local/gr
       -DGR_USE_BUNDLED_LIBRARIES=ON
   - cmake --build build
-  - DESTDIR="${CI_PROJECT_DIR}/install"
-    cmake --install build
+  - cmake --install build --prefix "${CI_PROJECT_DIR}/install/usr/local/gr"
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-aarch64
   - git clean -fdx --exclude=artifacts-darwin-aarch64
@@ -235,8 +234,7 @@ darwin-self-contained:
       -DCMAKE_TOOLCHAIN_FILE="cmake/x86_64-darwin-clang.cmake"
       -DGR_HOST_DIRECTORY="${CI_PROJECT_DIR}/artifacts-darwin-aarch64"
   - cmake --build build
-  - DESTDIR="${CI_PROJECT_DIR}/install"
-    cmake --install build
+  - cmake --install build --prefix "${CI_PROJECT_DIR}/install/usr/local/gr"
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-x86_64
   - merge_artifacts artifacts-darwin-aarch64 artifacts-darwin-x86_64 artifacts-darwin-universal
