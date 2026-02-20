@@ -79,6 +79,12 @@ public:
 private:
   std::string what_str_;
 };
+
+class RealpathError : public ErrnoError, public GetExecutablePathError
+{
+public:
+  [[nodiscard]] const char *what() const noexcept override;
+};
 #elif defined __unix__
 class PathTooLongError : public GetExecutablePathError
 {
