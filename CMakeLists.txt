@@ -1487,6 +1487,14 @@ if((Qt6Widgets_FOUND
       else()
         target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
       endif()
+    elseif(APPLE)
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/grplot
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ../Applications/grplot.app/Contents/MacOS/grplot
+                ${CMAKE_CURRENT_BINARY_DIR}/grplot
+      )
+      add_custom_target(grplot_symlink DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/grplot)
+      add_dependencies(grplot grplot_symlink)
     endif()
     if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
       if(NOT EMSCRIPTEN)
@@ -2151,6 +2159,9 @@ if(GR_INSTALL)
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
       RENAME grplot.man.md
     )
+    if(APPLE)
+      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grplot DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
@@ -2171,7 +2182,7 @@ if(GR_INSTALL)
   endif()
   install(
     DIRECTORY lib/gks/fonts
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/
+    DESTINATION ./
     USE_SOURCE_PERMISSIONS
   )
 endif()
