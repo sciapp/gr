@@ -5,36 +5,139 @@ darwin-self-contained:
   - utm
   script:
   - |-
+    is_in_array () {
+      local elem array_elem
+
+      elem="$1"
+      shift
+
+      for array_elem in "$@"; do
+          [[ "${elem}" == "${array_elem}" ]] && return 0
+      done
+
+      return 1
+    }
+
+    list_rpaths () {
+      local binary
+
+      binary="$1"
+      otool -l "${binary}" | grep -A 2 "LC_RPATH" | awk '$1 == "path" { print $2 }' | sort -u || true
+    }
+
+    list_dependent_gr_libs () {
+      local binary library
+
+      binary="$1"
+      while read -r library; do
+        [[ -f "$(dirname "${binary}")/../../../../lib/${library}" ]] || continue
+        echo "${library}"
+      done < <(otool -L "${binary}" | awk '$1 ~ /^@rpath\// { print substr($1, 8) }')
+    }
+
+    list_dependent_qt_frameworks () {
+      local binary
+
+      binary="$1"
+      otool -L "$1" | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1 || true
+    }
+
+    list_dependency () {
+      local binary dependency
+
+      binary="$1"
+      dependency="$2"
+      otool -L "${binary}" | grep "${dependency}" | awk 'NR == 1 { print $1 }' || true
+    }
+
     create_artifacts_directory() {
-      local app binary qt_framework
+      local app gr_library needed_qt_frameworks top_level_binaries binaries_to_scan binary rpath qt_framework dependency
+      local altered_dependency
 
       mv ./install/usr/local/gr ./artifacts
       for app in gksqt.app grplot.app; do
         mkdir -p "artifacts/Applications/${app}/Contents/Frameworks"
         mkdir -p "artifacts/Applications/${app}/Contents/plugins/platforms"
         mkdir -p "artifacts/Applications/${app}/Contents/plugins/styles"
+
         cp /usr/local/qt6/plugins/platforms/libqcocoa.dylib "artifacts/Applications/${app}/Contents/plugins/platforms/"
         cp /usr/local/qt6/plugins/styles/libqmacstyle.dylib "artifacts/Applications/${app}/Contents/plugins/styles/"
+
         pushd artifacts/Applications
-        for binary in \
-          "${app}/Contents/plugins/platforms/libqcocoa.dylib" \
-          "${app}/Contents/plugins/styles/libqmacstyle.dylib" \
+
+        binary="${app}/Contents/MacOS/${app%.*}"
+        while read -r gr_library; do
+          dependency="$(list_dependency "${binary}" "${gr_library}")"
+          [[ -n "${dependency}" ]] || continue
+          altered_dependency="@executable_path/../../../../lib/${gr_library}"
+          printf "Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
+            "${binary}" \
+            "${dependency}" \
+            "${altered_dependency}"
+          install_name_tool \
+            -change "${dependency}" \
+            "${altered_dependency}" \
+            "${binary}"
+        done < <(list_dependent_gr_libs "${binary}")
+
+        top_level_binaries=(
+          "${app}/Contents/plugins/platforms/libqcocoa.dylib"
+          "${app}/Contents/plugins/styles/libqmacstyle.dylib"
           "${app}/Contents/MacOS/${app%.*}"
-        do
-          for qt_framework in $(otool -L "${binary}" | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1 | uniq); do
-            rsync -a --exclude Headers --exclude *_debug* "/usr/local/qt6/lib/${qt_framework}.framework" "${app}/Contents/Frameworks/"
-            install_name_tool -change `otool -L "${binary}" | grep "${qt_framework}" | cut -d\( -f1 | head -1` "@executable_path/../Frameworks/${qt_framework}.framework/Versions/Current/${qt_framework}" "${binary}"
+        )
+        for binary in "${top_level_binaries[@]}"; do
+          while read -r rpath; do
+            printf "Deleting rpath \"%s\" from binary \"%s\"\n" "${rpath}" "${binary}"
+            install_name_tool -delete_rpath "${rpath}" "${binary}"
+          done < <(list_rpaths "${binary}")
+        done
+
+        needed_qt_frameworks=()
+        binaries_to_scan=( "${top_level_binaries[@]}" )
+
+        while (( ${#binaries_to_scan[@]} > 0 )); do
+          binary="${binaries_to_scan[0]}"
+          binaries_to_scan=( "${binaries_to_scan[@]:1}" )
+          while read -r qt_framework; do
+            if ! is_in_array "${qt_framework}" "${needed_qt_frameworks[@]}"; then
+              needed_qt_frameworks+=( "${qt_framework}" )
+              binaries_to_scan+=( "/usr/local/qt6/lib/${qt_framework}.framework/${qt_framework}" )
+            fi
+          done < <(list_dependent_qt_frameworks "${binary}")
+        done
+
+        for qt_framework in "${needed_qt_frameworks[@]}"; do
+          rsync \
+            -a \
+            --exclude Headers \
+            --exclude *_debug* \
+            "/usr/local/qt6/lib/${qt_framework}.framework" \
+            "${app}/Contents/Frameworks/"
+          for binary in "${top_level_binaries[@]}"; do
+            dependency="$(list_dependency "${binary}" "${qt_framework}")"
+            [[ -n "${dependency}" ]] || continue
+            altered_dependency="@executable_path/../Frameworks/${qt_framework}.framework/Versions/Current/${qt_framework}"
+            printf "Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
+              "${binary}" \
+              "${dependency}" \
+              "${altered_dependency}"
+            install_name_tool \
+              -change "${dependency}" \
+              "${altered_dependency}" \
+              "${binary}"
           done
         done
+
         codesign -f -s - ${app}
         codesign -f -s - ${app}/Contents/Frameworks/*.framework
         codesign -f -s - ${app}/Contents/Frameworks/Qt*.framework/Qt*
         codesign -f -s - ${app}/Contents/plugins/platforms/libqcocoa.dylib
         codesign -f -s - ${app}/Contents/plugins/styles/libqmacstyle.dylib
+
         popd
       done
     }
-  - |-
+
     merge_artifacts () (
       needs_merge () {
         local filepath file_cmd_output
@@ -103,8 +206,7 @@ darwin-self-contained:
       -DCMAKE_INSTALL_PREFIX=/usr/local/gr
       -DGR_USE_BUNDLED_LIBRARIES=ON
   - cmake --build build
-  - DESTDIR="${CI_PROJECT_DIR}/install"
-    cmake --install build
+  - cmake --install build --prefix "${CI_PROJECT_DIR}/install/usr/local/gr"
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-aarch64
   - git clean -fdx --exclude=artifacts-darwin-aarch64
@@ -132,8 +234,7 @@ darwin-self-contained:
       -DCMAKE_TOOLCHAIN_FILE="cmake/x86_64-darwin-clang.cmake"
       -DGR_HOST_DIRECTORY="${CI_PROJECT_DIR}/artifacts-darwin-aarch64"
   - cmake --build build
-  - DESTDIR="${CI_PROJECT_DIR}/install"
-    cmake --install build
+  - cmake --install build --prefix "${CI_PROJECT_DIR}/install/usr/local/gr"
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-x86_64
   - merge_artifacts artifacts-darwin-aarch64 artifacts-darwin-x86_64 artifacts-darwin-universal
