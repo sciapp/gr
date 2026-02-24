@@ -77,7 +77,7 @@ public:
   static void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
   void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int font_precision,
-                              int width, int height);
+                              int font, int width, int height);
   void addTreeSelection(int id);
 
   inline bool isDarkMode()
@@ -210,6 +210,7 @@ public:
   QAction *getIconBarAct();
   QAction *getTextColorIndAct();
   QAction *getDisableGridAct();
+  QAction *getUpdateEditElementTitleAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -462,7 +463,7 @@ private:
       *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
       *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act,
       *hide_log_sub_menu_act, *show_log_sub_menu_act, *hide_flip_sub_menu_act, *show_flip_sub_menu_act,
-      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act;
+      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act, *update_edit_element_title_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act;

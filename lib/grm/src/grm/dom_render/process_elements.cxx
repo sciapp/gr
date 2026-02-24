@@ -1791,14 +1791,21 @@ void processRadialAxes(const std::shared_ptr<GRM::Element> &element, const std::
 
   r_max = last_tick;
   if (element->hasAttribute("_r_max")) r_max = static_cast<double>(element->getAttribute("_r_max"));
-  if ((central_region->hasAttribute("_zoomed") && static_cast<int>(central_region->getAttribute("_zoomed"))) ||
-      r_max != last_tick)
+  if (!(element->hasAttribute("_mask_run") && static_cast<int>(element->getAttribute("_mask_run"))))
     {
-      for (const auto &child : element->children())
+      if ((central_region->hasAttribute("_zoomed") && static_cast<int>(central_region->getAttribute("_zoomed"))) ||
+          r_max != last_tick)
         {
-          child->remove(); // Todo: Change this
+          for (const auto &child : element->children())
+            {
+              child->remove(); // Todo: Change this
+            }
+          del = DelValues::RECREATE_OWN_CHILDREN;
         }
-      del = DelValues::RECREATE_OWN_CHILDREN;
+    }
+  else if (element->hasAttribute("_mask_run"))
+    {
+      element->removeAttribute("_mask_run");
     }
   new_tick = autoTick(first_tick, r_max);
 
@@ -2642,19 +2649,12 @@ void processArcGridLine(const std::shared_ptr<GRM::Element> &element, const std:
   int child_id = 0;
   bool r_log = false, with_pan = false;
   double theta_lim_min = 0, theta_lim_max = 360;
-  std::shared_ptr<GRM::Element> text, arc, plot_parent = element, central_region;
+  std::shared_ptr<GRM::Element> text, arc, plot_parent = element;
   auto global_render = grm_get_render();
   auto global_creator = grm_get_creator();
 
   getPlotParent(plot_parent);
-  for (const auto &child : plot_parent->children())
-    {
-      if (child->localName() == "central_region")
-        {
-          central_region = child;
-          break;
-        }
-    }
+  auto central_region = plot_parent->querySelectors("central_region");
 
   with_pan =
       plot_parent->hasAttribute("polar_with_pan") && static_cast<int>(plot_parent->getAttribute("polar_with_pan"));
@@ -2820,12 +2820,7 @@ void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   processWindow(element->parentElement()->parentElement());
   processSpace3d(element->parentElement()->parentElement());
 
-  // since axes_3d doesn't have an own text_color_ind use the color from plot or just black to prevent sideeeffects from
-  // other elements
-  if (plot_parent->hasAttribute("text_color_ind"))
-    gr_settextcolorind(static_cast<int>(element->getAttribute("text_color_ind")));
-  else
-    gr_settextcolorind(1);
+  if (!element->hasAttribute("text_color_ind")) element->setAttribute("text_color_ind", 1);
 
   if (global_render->getRedrawWs())
     gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
@@ -2901,6 +2896,11 @@ void processCellArray(const std::shared_ptr<GRM::Element> &element, const std::s
     }
   auto color = static_cast<std::string>(element->getAttribute("color_ind_values"));
 
+  if (element->hasAttribute("clip_region"))
+    {
+      gr_selntran(1); // needed since the clip_region alone doesn' change anything
+      processClipRegion(element);
+    }
   if (element->parentElement()->localName() == "colorbar")
     processColormap(element->parentElement()->parentElement()->parentElement()->parentElement());
   applyMoveTransformation(element);
@@ -5965,6 +5965,7 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   std::shared_ptr<GRM::Element> arc, text_elem;
   double text_pos[2];
   auto global_creator = grm_get_creator();
+  int fill_color_ind = -1, fill_int_style = 0, fill_style = 0;
 
   /* clear old child nodes */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -5973,6 +5974,12 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   auto start_angle = static_cast<double>(element->getAttribute("start_angle"));
   auto end_angle = static_cast<double>(element->getAttribute("end_angle"));
   auto text = static_cast<std::string>(element->getAttribute("text"));
+
+  if (element->hasAttribute("fill_color_ind"))
+    fill_color_ind = static_cast<int>(element->getAttribute("fill_color_ind"));
+  if (element->hasAttribute("fill_int_style"))
+    fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
+  if (element->hasAttribute("fill_style")) fill_style = static_cast<int>(element->getAttribute("fill_style"));
 
   if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
     {
@@ -5983,7 +5990,9 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   else
     {
       arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-      if (arc != nullptr) global_creator->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, 0, 0, -1, arc);
+      if (arc != nullptr)
+        global_creator->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, fill_int_style, fill_style,
+                                      fill_color_ind, arc);
     }
 
   auto middle_angle = (start_angle + end_angle) / 2.0;
@@ -6367,12 +6376,7 @@ void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
   zlabel = static_cast<std::string>(element->getAttribute("z_label_3d"));
   applyMoveTransformation(element);
 
-  // since titles_3d doesn't have an own text_color_ind use the color from plot or just black to prevent sideeeffects
-  // from other elements
-  if (plot_parent->hasAttribute("text_color_ind"))
-    gr_settextcolorind(static_cast<int>(element->getAttribute("text_color_ind")));
-  else
-    gr_settextcolorind(1);
+  if (!element->hasAttribute("text_color_ind")) element->setAttribute("text_color_ind", 1);
 
   if (grm_get_render()->getRedrawWs() && !hide && coordinate_system_type == "3d")
     {
@@ -6928,7 +6932,7 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
       ylabels_left = ylabels_length;
     }
 
-  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
+  if (style == "default" && element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
     {
       x_min = static_cast<double>(element->getAttribute("x_range_min"));
       x_max = static_cast<double>(element->getAttribute("x_range_max"));
@@ -10523,31 +10527,16 @@ void processImshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   (*context)[img_data_key] = img_data;
   element->setAttribute("data", img_data_key);
 
-  if (!element->hasAttribute("select_specific_xform")) global_render->setSelectSpecificXform(element, 0);
+  if (!element->hasAttribute("select_specific_xform")) global_render->setSelectSpecificXform(element, 1);
   if (!element->hasAttribute("scale")) global_render->setScale(element, 0);
   processScale(element);
   processSelectSpecificXform(element);
 
   double x_min, x_max, y_min, y_max;
-  int scale;
 
   if (!GRM::Render::getViewport(central_region, &x_min, &x_max, &y_min, &y_max))
     throw NotFoundError("Central_region doesn't have a viewport but it should.\n");
 
-  gr_inqscale(&scale);
-
-  if (scale & GR_OPTION_FLIP_X)
-    {
-      double tmp = x_max;
-      x_max = x_min;
-      x_min = tmp;
-    }
-  if (scale & GR_OPTION_FLIP_Y)
-    {
-      double tmp = y_max;
-      y_max = y_min;
-      y_min = tmp;
-    }
   if (use_grplot_changes)
     {
       double tmp = y_min;
@@ -10574,7 +10563,11 @@ void processImshow(const std::shared_ptr<GRM::Element> &element, const std::shar
         global_creator->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, img_data_key,
                                         std::nullopt, nullptr, cell_array);
     }
-  if (cell_array != nullptr) cell_array->setAttribute("name", "imshow");
+  if (cell_array != nullptr)
+    {
+      cell_array->setAttribute("name", "imshow");
+      if (!cell_array->hasAttribute("clip_region")) global_render->setClipRegion(cell_array, 0);
+    }
   processColormap(element->parentElement()->parentElement());
 }
 

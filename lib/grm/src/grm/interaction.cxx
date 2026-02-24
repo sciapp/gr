@@ -869,45 +869,6 @@ int inputImpl(const grm_args_t *input_args)
               if (static_cast<std::string>(marginal_heatmap->getAttribute("marginal_heatmap_kind")) == "line" &&
                   ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
                 marginal_heatmap->setAttribute("_update_required", true);
-
-              for (auto &side_region : marginal_heatmap->children())
-                {
-                  if (side_region->localName() == "side_region")
-                    {
-                      for (auto &child : side_region->children())
-                        {
-                          std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (child_kind == "histogram")
-                            {
-                              // reset bar colors
-                              // bar level
-                              for (auto &bars : child->children())
-                                {
-                                  // fill- and draw_rect level
-                                  for (auto &child_series : bars->children())
-                                    {
-                                      auto groups = child_series->children(); // inner and outer fill_group
-                                      std::shared_ptr<GRM::Element> inner_fill_group;
-                                      if (groups.size() == 2)
-                                        {
-                                          inner_fill_group = groups[0];
-                                        }
-                                      else
-                                        {
-                                          // no fill_groups?
-                                          break;
-                                        }
-
-                                      if (xind != -1)
-                                        inner_fill_group->children()[xind]->removeAttribute("fill_color_ind");
-                                      if (yind != -1)
-                                        inner_fill_group->children()[yind]->removeAttribute("fill_color_ind");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
               gr_restorestate();
             }
 
@@ -1073,7 +1034,8 @@ int inputImpl(const grm_args_t *input_args)
                   ndc_xshift = static_cast<double>(-xshift) / max_width_height;
                   ndc_yshift = static_cast<double>(yshift) / max_width_height;
                   // for some reason flip changes the panning for polar plots -> change flip influence back for panning
-                  if (strEqualsAny(kind, "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter"))
+                  if (strEqualsAny(kind, "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "hexbin",
+                                   "shade", "quiver"))
                     {
                       if (subplot_element->hasAttribute("x_flip") &&
                           static_cast<int>(subplot_element->getAttribute("x_flip")))
@@ -1545,10 +1507,17 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
     }
   if (central_region->hasAttribute("window_x_min") && kind != "pie")
     {
-      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
-                   static_cast<double>(central_region->getAttribute("window_x_max")),
-                   static_cast<double>(central_region->getAttribute("window_y_min")),
-                   static_cast<double>(central_region->getAttribute("window_y_max")));
+      if (kind != "imshow")
+        {
+          gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                       static_cast<double>(central_region->getAttribute("window_x_max")),
+                       static_cast<double>(central_region->getAttribute("window_y_min")),
+                       static_cast<double>(central_region->getAttribute("window_y_max")));
+        }
+      else
+        {
+          gr_setwindow(0.0, 1.0, 0.0, 1.0);
+        }
     }
   calculateCharHeight(central_region);
   gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));

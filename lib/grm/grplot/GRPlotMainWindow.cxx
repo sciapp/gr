@@ -1,3 +1,12 @@
+#ifdef _WIN32
+/*
+ * Headers on Windows can define `min` and `max` as macros which causes
+ * problem when using `std::min` and `std::max`
+ * -> Define `NOMINMAX` to prevent the definition of these macros
+ */
+#define NOMINMAX
+#endif
+
 #include <sstream>
 #include <iostream>
 #include <QTimer>
@@ -142,6 +151,8 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
                            SLOT(showEditElementDockSlot()));
           QObject::connect(edit_element_dock_widget, SIGNAL(resizeMainWindow()), this,
                            SLOT(closeEditElementDockSlot()));
+          QObject::connect(grplot_widget_->getUpdateEditElementTitleAct(), SIGNAL(triggered()), this,
+                           SLOT(updateEditElementDockTitleSlot()));
 
           add_element_dock_widget = new GRPlotDockWidget("Add Element:", RIGHT_AREA_WIDTH, height, this);
           add_element_dock_widget->setWidget(grplot_widget_->getAddElementWidget());
@@ -271,7 +282,7 @@ void GRPlotMainWindow::showEditElementDockSlot()
       edit_element_dock_widget->show();
       edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -283,7 +294,7 @@ void GRPlotMainWindow::showTreeWidgetDockSlot()
       auto h = grplot_widget_->height();
       tree_dock_widget->show();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -295,7 +306,7 @@ void GRPlotMainWindow::showTableWidgetDockSlot()
       auto h = grplot_widget_->height();
       table_dock_widget->show();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -307,7 +318,7 @@ void GRPlotMainWindow::showTextPreviewDockSlot()
       auto h = grplot_widget_->height();
       text_preview_dock_widget->show();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -319,7 +330,7 @@ void GRPlotMainWindow::showSelectionListDockSlot()
       auto h = grplot_widget_->height();
       selection_list_dock_widget->show();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -331,7 +342,7 @@ void GRPlotMainWindow::showIconBarDockSlot()
       auto h = grplot_widget_->height();
       icon_bar_dock_widget->show();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -344,7 +355,7 @@ void GRPlotMainWindow::showAddElementDockSlot()
       add_element_dock_widget->show();
       add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -357,7 +368,7 @@ void GRPlotMainWindow::hideEditElementDockSlot()
       edit_element_dock_widget->hide();
       edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -369,7 +380,7 @@ void GRPlotMainWindow::hideTreeWidgetDockSlot()
       auto h = grplot_widget_->height();
       tree_dock_widget->hide();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -381,7 +392,7 @@ void GRPlotMainWindow::hideTableWidgetDockSlot()
       auto h = grplot_widget_->height();
       table_dock_widget->hide();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -393,7 +404,7 @@ void GRPlotMainWindow::hideTextPreviewDockSlot()
       auto h = grplot_widget_->height();
       text_preview_dock_widget->hide();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -405,7 +416,7 @@ void GRPlotMainWindow::hideSelectionListDockSlot()
       auto h = grplot_widget_->height();
       selection_list_dock_widget->hide();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -417,7 +428,7 @@ void GRPlotMainWindow::hideIconBarDockSlot()
       auto h = grplot_widget_->height();
       icon_bar_dock_widget->hide();
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -430,7 +441,7 @@ void GRPlotMainWindow::hideAddElementDockSlot()
       add_element_dock_widget->hide();
       add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
       resizeGRPlotWidget(w, h);
-      center();
+      keepInDisplay();
     }
 }
 
@@ -441,7 +452,7 @@ void GRPlotMainWindow::closeEditElementDockSlot()
 
   edit_element_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeTreeWidgetDockSlot()
@@ -451,7 +462,7 @@ void GRPlotMainWindow::closeTreeWidgetDockSlot()
 
   tree_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeTableWidgetDockSlot()
@@ -461,7 +472,7 @@ void GRPlotMainWindow::closeTableWidgetDockSlot()
 
   table_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeTextPreviewDockSlot()
@@ -471,7 +482,7 @@ void GRPlotMainWindow::closeTextPreviewDockSlot()
 
   text_preview_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeSelectionListDockSlot()
@@ -481,7 +492,7 @@ void GRPlotMainWindow::closeSelectionListDockSlot()
 
   selection_list_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeIconBarDockSlot()
@@ -491,7 +502,7 @@ void GRPlotMainWindow::closeIconBarDockSlot()
 
   icon_bar_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::closeAddElementDockSlot()
@@ -501,7 +512,7 @@ void GRPlotMainWindow::closeAddElementDockSlot()
 
   add_element_dock_widget->hide();
   resizeGRPlotWidget(w, h);
-  center();
+  keepInDisplay();
 }
 
 void GRPlotMainWindow::center()
@@ -514,4 +525,41 @@ void GRPlotMainWindow::center()
   QRect screen_geometry = screen->geometry();
   this->move((screen_geometry.width() - this->width()) / 2, (screen_geometry.height() - this->height()) / 2);
 #endif
+}
+
+void GRPlotMainWindow::updateEditElementDockTitleSlot()
+{
+  if (edit_element_dock_widget->isVisible())
+    edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+}
+
+void GRPlotMainWindow::keepInDisplay()
+{
+  int width, height;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  width = this->screen()->availableSize().width();
+  height = this->screen()->availableSize().height();
+#else
+  QScreen *screen = QGuiApplication::primaryScreen();
+  width = screen->geometry().width();
+  height = screen->geometry().height();
+#endif
+  if (this->x() + this->frameGeometry().width() > width)
+    move(this->x() - std::min((this->x() + this->frameGeometry().width() - width), RIGHT_AREA_WIDTH), this->y());
+
+  if (this->frameGeometry().width() > width || this->frameGeometry().height() > height)
+    {
+      auto new_width = std::min(this->frameGeometry().width(), width);
+      auto new_height = std::min(this->frameGeometry().height(), height);
+
+      // trim the width/height to the display width/height and then apply possible dock widgets to the grplotwidget
+      if (edit_element_dock_widget->isVisible() || text_preview_dock_widget->isVisible() ||
+          add_element_dock_widget->isVisible())
+        new_width -= RIGHT_AREA_WIDTH;
+      if (tree_dock_widget->isVisible() || table_dock_widget->isVisible() || selection_list_dock_widget->isVisible())
+        new_width -= LEFT_AREA_WIDTH;
+      if (icon_bar_dock_widget->isVisible()) new_height -= 28;
+      resizeGRPlotWidget(new_width, new_height);
+      center();
+    }
 }
