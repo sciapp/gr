@@ -1498,7 +1498,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
                   if (strEqualsAny(kind, "barplot") && series_num > 1)
-                    grm_args_push(series[col], "transparency", "d", 0.5);
+                    {
+                      const char *style;
+                      if (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0)
+                        grm_args_push(series[col], "transparency", "d", 0.5);
+                    }
                   if (col < err / down_err_off)
                     {
                       int error_bar_style;
@@ -1535,7 +1539,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
                       if (strEqualsAny(kind, "barplot") && series_num > 1)
-                        grm_args_push(series[y_cnt], "transparency", "d", 0.5);
+                        {
+                          const char *style;
+                          if (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0)
+                            grm_args_push(series[y_cnt], "transparency", "d", 0.5);
+                        }
                       y_cnt += 1;
                     }
                   else if (!equal_up_and_down_error && strEqualsAny(kind, "barplot") && error != nullptr &&

@@ -252,6 +252,15 @@ bool isNumber(const std::string &str)
   return pos == std::string::npos;
 }
 
+int isEnvVariableEnabled(const char *env_variable_name)
+{
+  return getenv(env_variable_name) != NULL &&
+         (strcmp(getenv(env_variable_name), "1") == 0 || strcmp(getenv(env_variable_name), "on") == 0 ||
+          strcmp(getenv(env_variable_name), "ON") == 0 || strcmp(getenv(env_variable_name), "true") == 0 ||
+          strcmp(getenv(env_variable_name), "TRUE") == 0 || strcmp(getenv(env_variable_name), "yes") == 0 ||
+          strcmp(getenv(env_variable_name), "YES") == 0);
+}
+
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value)
 #else

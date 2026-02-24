@@ -5,7 +5,7 @@
 PreviewTextWidget::PreviewTextWidget(QWidget *parent) : GRWidget(parent) {}
 
 void PreviewTextWidget::initialize(std::string text, int scientific_format, int text_color, int font_precision,
-                                   int width, int height)
+                                   int font, int width, int height)
 {
   this->text = text;
   this->scientific_format = scientific_format;
@@ -13,6 +13,7 @@ void PreviewTextWidget::initialize(std::string text, int scientific_format, int 
   this->width_px = width;
   this->height_px = height;
   this->font_precision = font_precision;
+  this->font = font;
 
   this->setFixedWidth(width + (width < 100 ? 20 : 0));
   this->setFixedHeight(height + (height < 100 ? 20 : 0));
@@ -52,7 +53,7 @@ void PreviewTextWidget::draw()
   gr_setviewport(vp[0], vp[1], vp[2], vp[3]);
 
   gr_settextencoding(301);
-  gr_settextfontprec(232, font_precision);
+  gr_settextfontprec(font, font_precision);
   gr_setscientificformat(scientific_format);
   gr_settextcolorind(this->text_color);
 

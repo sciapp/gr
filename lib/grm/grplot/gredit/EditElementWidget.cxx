@@ -712,7 +712,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               text_modification_added = true;
             }
 
-          if (cur_attr_name == "font_precision")
+          if (cur_attr_name == "font_precision" || cur_attr_name == "font")
             connect(static_cast<QComboBox *>(line_edit),
                     static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
                     &EditElementWidget::openTextPreview);
@@ -2199,7 +2199,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                       text_modification_added = true;
                                     }
 
-                                  if (attr_name == "font_precision")
+                                  if (attr_name == "font_precision" || attr_name == "font")
                                     connect(static_cast<QComboBox *>(line_edit),
                                             static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
                                             this, &EditElementWidget::openTextPreview);
@@ -2937,7 +2937,7 @@ void EditElementWidget::accept()
     }
 
   grplot_widget->setTreeUpdate(true);
-  if (getenv("GRM_DEBUG"))
+  if (util::isEnvVariableEnabled("GRM_DEBUG"))
     {
       std::cerr << toXML(grm_get_document_root(),
                          GRM::SerializerOptions{std::string(2, ' '),
@@ -4127,7 +4127,7 @@ void EditElementWidget::openTextPreview()
   if (auto current_selection = grplot_widget->getCurrentSelection(); current_selection != nullptr)
     {
       std::string text;
-      int text_color = 1, scientific_format = 1, font_precision = 3;
+      int text_color = 1, scientific_format = 1, font_precision = 3, font = 232;
 
       for (const auto &attr : {"text", "x_label_3d", "y_label_3d", "z_label_3d", "tick_label"})
         {
@@ -4145,6 +4145,9 @@ void EditElementWidget::openTextPreview()
 
       if ((*current_selection)->getRef()->hasAttribute("font_precision"))
         font_precision = static_cast<int>((*current_selection)->getRef()->getAttribute("font_precision"));
+
+      if ((*current_selection)->getRef()->hasAttribute("font"))
+        font = static_cast<int>((*current_selection)->getRef()->getAttribute("font"));
 
       for (int i = 0; i < labels.count(); i++)
         {
@@ -4177,6 +4180,17 @@ void EditElementWidget::openTextPreview()
                     scientific_format = GRM::scientificFormatStringToInt(
                         static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
                 }
+              else if (attr_name == "font_precision")
+                {
+                  if (!static_cast<QComboBox *>(fields[i])->itemText(index).toStdString().empty())
+                    font_precision = GRM::fontPrecisionStringToInt(
+                        static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
+                }
+              else if (attr_name == "font")
+                {
+                  if (!static_cast<QComboBox *>(fields[i])->itemText(index).toStdString().empty())
+                    font = GRM::fontStringToInt(static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
+                }
             }
         }
 
@@ -4199,6 +4213,6 @@ void EditElementWidget::openTextPreview()
               height = tmp;
             }
         }
-      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, width, height);
+      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, font, width, height);
     }
 }
