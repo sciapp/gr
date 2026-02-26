@@ -2164,7 +2164,10 @@ static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, 
           free(draw->vertices_fp);
         }
       draw->vertices_fp = malloc(draw->n * sizeof(vertex_fp *));
-      assert(draw->vertices_fp);
+      if (!draw->vertices_fp)
+        {
+          RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
+        }
       for (i = 0; i < draw->n; i++)
         {
           draw->vertices_fp[i] = NULL;
@@ -2381,7 +2384,10 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
       vertex_fp tmp_v;
       vector normal_vector;
       draw->vertices_fp[draw_id] = malloc(sizeof(vertex_fp) * context_struct_.mesh_list_[mesh].data.number_of_indices);
-      assert(draw->vertices_fp[draw_id]);
+      if (!draw->vertices_fp[draw_id])
+        {
+          RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
+        }
       vertices_fp = draw->vertices_fp[draw_id];
       for (i = 0; i < num_vertices; i += 1)
         {
