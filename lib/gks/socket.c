@@ -81,7 +81,7 @@ static DWORD WINAPI gksqt_thread(LPVOID parm)
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd.exe /c \"%ls\"", cmd);
+  StringCbPrintfW(w_cmd_line, sizeof(w_cmd_line), L"cmd.exe /c \"%ls\"", cmd);
 
   if (!GetEnvironmentVariableW(L"WSLENV", buffer, BUFFER_LEN))
     {
@@ -305,11 +305,11 @@ static int open_socket(int wstype)
         {
           if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\gksqt.exe", GRDIR);
+              StringCbPrintfW(command, sizeof(command), L"%S\\bin\\gksqt.exe", GRDIR);
             }
           else
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\gksqt.exe", w_env);
+              StringCbPrintfW(command, sizeof(command), L"%ws\\bin\\gksqt.exe", w_env);
             }
         }
 #else

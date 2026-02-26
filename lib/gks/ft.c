@@ -234,7 +234,7 @@ static int ft_join_path(ft_path_char_t *result, size_t size, const ft_path_char_
       return 0;
     }
 
-  StringCbPrintfW(result, size, L"%ws%c%ws", first, delim, second);
+  StringCbPrintfW(result, size * sizeof(wchar_t), L"%ws%c%ws", first, delim, second);
   return 1;
 #else
   const char delim = '/';
@@ -728,7 +728,7 @@ static ft_path_char_t *gks_ft_get_font_path(const char *font_name, const char *f
   StringCbLengthW(prefix, MAXPATHLEN, &len);
   len += 2 * (7 + strlen(font_name) + strlen(font_file_extension) + 1);
   font_path = (ft_path_char_t *)gks_malloc(len * sizeof(ft_path_char_t));
-  StringCbPrintfW(font_path, MAXPATHLEN, L"%lS\\FONTS\\%S%S", prefix, font_name, font_file_extension);
+  StringCbPrintfW(font_path, len * sizeof(ft_path_char_t), L"%lS\\FONTS\\%S%S", prefix, font_name, font_file_extension);
 #else
   const char *prefix;
   char *font_path;

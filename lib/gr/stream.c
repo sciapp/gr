@@ -318,7 +318,7 @@ static DWORD WINAPI grplot_thread(LPVOID parm)
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", cmd);
+  StringCbPrintfW(w_cmd_line, sizeof(w_cmd_line), L"cmd /c \"%ls\"", cmd);
 
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
@@ -520,11 +520,11 @@ int gr_startlistener(void)
     {
       if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\grplot.exe --listen %i", GRDIR, grplot_port);
+          StringCbPrintfW(command, sizeof(command), L"%S\\bin\\grplot.exe --listen %i", GRDIR, grplot_port);
         }
       else
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%s\\bin\\grplot.exe --listen %i", w_env, grplot_port);
+          StringCbPrintfW(command, sizeof(command), L"%s\\bin\\grplot.exe --listen %i", w_env, grplot_port);
         }
     }
 #else
