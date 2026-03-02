@@ -6302,15 +6302,16 @@ public:
 
     if (attribute_name[0] == '_')
       {
+        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
+        // shouldnt be exported
+        if (attribute_name == "_highlighted") return false;
+
         std::optional<std::string_view> original_attribute_name = isBackupAttributeFor(attribute_name);
-        if (original_attribute_name &&
+        if (original_attribute_name && !element.hasAttribute("_" + std::string(*original_attribute_name)) &&
             RESTORE_BACKUP_FORMAT_EXCLUDES.find(*original_attribute_name) == RESTORE_BACKUP_FORMAT_EXCLUDES.end())
           {
             new_attribute_name = *original_attribute_name;
           }
-        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
-        // shouldnt be exported
-        if (attribute_name == "_highlighted") return false;
         return true;
       }
 

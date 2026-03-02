@@ -410,6 +410,13 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
           if (row == 0) skipped = 1;
           continue;
         }
+      if (ignore_blank_lines && line.length() < 2)
+        {
+          std::string token_copy;
+          std::istringstream line_copy(normalizeLine(line));
+          std::getline(line_copy, token_copy, det);
+          if (token_copy.empty()) continue;
+        }
       if (std::find(line.begin(), line.end(), ',') != line.end())
         {
           det = ',';
