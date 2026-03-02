@@ -8,6 +8,7 @@
 
 #define N_SERIES 3
 #define INNER_N_SERIES 3
+#define PLOT_CUSTOM_COLOR_INDEX 979
 
 int main(void)
 {

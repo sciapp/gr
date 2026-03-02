@@ -81,7 +81,7 @@ static DWORD WINAPI gksqt_thread(LPVOID parm)
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd.exe /c \"%ls\"", cmd);
+  StringCbPrintfW(w_cmd_line, sizeof(w_cmd_line), L"cmd.exe /c \"%ls\"", cmd);
 
   if (!GetEnvironmentVariableW(L"WSLENV", buffer, BUFFER_LEN))
     {
@@ -305,11 +305,11 @@ static int open_socket(int wstype)
         {
           if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\gksqt.exe", GRDIR);
+              StringCbPrintfW(command, sizeof(command), L"%S\\bin\\gksqt.exe", GRDIR);
             }
           else
             {
-              StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\gksqt.exe", w_env);
+              StringCbPrintfW(command, sizeof(command), L"%ws\\bin\\gksqt.exe", w_env);
             }
         }
 #else
@@ -634,10 +634,12 @@ whether (or why) 'gksqt' could not be started.\n");
           request_type = SOCKET_FUNCTION_SAMPLE_LOCATOR;
           if (send_socket(wss->s, &request_type, 1, 0) <= 0)
             {
+              ia[0] = -1;
               break;
             }
           if (read_socket(wss->s, reply, sizeof(reply), 0) <= 0)
             {
+              ia[0] = -1;
               break;
             }
           if (reply[0] == SOCKET_FUNCTION_SAMPLE_LOCATOR)
@@ -651,7 +653,7 @@ whether (or why) 'gksqt' could not be started.\n");
             {
               r1[0] = 0;
               r2[0] = 0;
-              ia[0] = 0;
+              ia[0] = -1;
             }
         }
       return;

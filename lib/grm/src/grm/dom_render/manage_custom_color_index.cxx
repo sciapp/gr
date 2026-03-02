@@ -1,6 +1,7 @@
 #include "grm/dom_render/manage_custom_color_index.hxx"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
+#include "grm/dom_render/render_util.hxx"
 
 void ManageCustomColorIndex::saveState()
 {

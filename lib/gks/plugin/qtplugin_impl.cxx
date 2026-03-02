@@ -9,9 +9,7 @@
 #include <math.h>
 #include <float.h>
 #include <map>
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
 #include <memory>
-#endif
 #include <stack>
 
 #include <QtGlobal>
@@ -46,10 +44,8 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #define GKS_UNUSED(x) (void)(x)
 #endif
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
 #if !(defined(__EXCEPTIONS) || defined(__cpp_exceptions) || defined(_CPPUNWIND))
 #define NO_EXCEPTIONS
-#endif
 #endif
 
 #ifndef NO_QT
@@ -115,22 +111,15 @@ struct bounding_struct
   int item_id;
 };
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
 class ProxyPainter;
-#endif
 
 typedef struct ws_state_list_t
 {
   gks_display_list_t dl;
-  QWidget *widget;
+  QPaintDevice *paint_device;
   QPixmap *pixmap;
   QPixmap *selection;
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   std::unique_ptr<ProxyPainter> painter;
-#else
-  QPixmap *bg;
-  QPainter *painter;
-#endif
   int state, wtype;
   int device_dpi_x, device_dpi_y;
   bool has_user_defined_device_pixel_ratio;
@@ -156,9 +145,7 @@ typedef struct ws_state_list_t
   bool prevent_resize_by_dl;
   bool window_stays_on_top;
   bool interp_was_called;
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   bool partial_draw;
-#endif
 
   void (*memory_plugin)(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
   bool memory_plugin_initialised;
@@ -166,11 +153,11 @@ typedef struct ws_state_list_t
   void *memory_plugin_ws_state_list;
   int *memory_plugin_mem_ptr;
   char *memory_plugin_mem_path;
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   std::stack<bounding_struct> bounding_stack;
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
+#endif
   void (*mask_callback)(unsigned int, unsigned int, unsigned int *);
   void (*partial_drawing_callback)(int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *);
-#endif
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -217,8 +204,6 @@ static int predef_ints[] = {0, 1, 3, 3, 3};
 static int predef_styli[] = {1, 1, 1, 2, 3};
 
 static void set_clip_rect(int tnr);
-
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
 
 template <typename Predicate, typename Iterator> class filter_iterator
 {
@@ -930,7 +915,7 @@ public:
   void assign(QPainter &painter, const QPaintDevice &paint_device)
   {
     painter_ = painter;
-    if (group_mask_ != nullptr)
+    if (group_mask_)
       {
         group_mask_->resize(paint_device.width(), paint_device.height());
         mask_painter_ = &group_mask_->painter();
@@ -940,6 +925,7 @@ public:
 
   void assign(QPixmap &pixmap, const QPaintDevice &paint_device)
   {
+    owned_painter_.reset();
     owned_painter_ = std::unique_ptr<QPainter>(new QPainter(&pixmap));
     assign(*owned_painter_, paint_device);
   }
@@ -947,7 +933,7 @@ public:
   void clearBackground()
   {
     background_.reset();
-    group_mask_->clearBackground();
+    if (group_mask_) group_mask_->clearBackground();
   }
 
   void drawBackground()
@@ -957,7 +943,7 @@ public:
         if (gkss->cntnr != 0) set_clip_rect(0);
         painter_.get().drawPixmap(0, 0, *background_);
         if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
-        group_mask_->drawBackground();
+        if (group_mask_) group_mask_->drawBackground();
       }
   }
 
@@ -972,7 +958,7 @@ public:
       QPainter backgroundPainter(background_.get());
       backgroundPainter.fillRect(QRectF(xmin, ymin, xmax - xmin, ymax - ymin), Qt::white);
     }
-    group_mask_->freezeBackground(xmin, xmax, ymin, ymax);
+    if (group_mask_) group_mask_->freezeBackground(xmin, xmax, ymin, ymax);
   }
 
   bool hasBackground() const { return static_cast<bool>(background_); }
@@ -1890,8 +1876,6 @@ private:
   std::unique_ptr<QPixmap> background_;
 };
 
-#endif
-
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   double xp1, yp1, xp2, yp2;
@@ -1940,31 +1924,16 @@ static void resize_window(void)
       if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
           fabs(p->height * p->device_pixel_ratio - p->pixmap->size().height()) > FEPS)
         {
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-          p->painter.reset();
-#else
-          delete p->painter;
-#endif
-          delete p->pixmap;
-
-          p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+          QPixmap *pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
-          p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
+          pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-          p->pixmap->fill(Qt::white);
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
+          pixmap->fill(Qt::white);
+          p->painter->assign(*pixmap, *p->paint_device);
+          delete p->pixmap;
+          p->pixmap = pixmap;
+
           p->painter->clearBackground();
-
-          p->painter->assign(*p->pixmap, *p->widget);
-#else
-          if (p->bg)
-            {
-              delete p->bg;
-              p->bg = new QPixmap(*p->pixmap);
-            }
-
-          p->painter = new QPainter(p->pixmap);
-#endif
           p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
@@ -2141,6 +2110,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     {
       p->painter->drawPolyline(p->points->constData(), p->npoints);
     }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       double point_x, point_y;
@@ -2167,6 +2137,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           p->bounding_stack.top().y_max += min_bbox_size / 2;
         }
     }
+#endif
 }
 
 static void polyline(int n, double *px, double *py)
@@ -2334,6 +2305,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           p->painter->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
         }
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -2344,6 +2316,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
       pc++;
     }
   while (op != 0);
@@ -2437,6 +2410,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
   else
     p->painter->drawText(xstart, ystart, s);
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       p->bounding_stack.top().x_max = xstart + xrel;
@@ -2444,6 +2418,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
       p->bounding_stack.top().y_max = ystart + yrel;
       p->bounding_stack.top().y_min = ystart;
     }
+#endif
 }
 
 static void set_font(int font)
@@ -2563,6 +2538,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       p->painter->drawPolygon(points->constData(), points->size());
     }
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       double point_x, point_y;
@@ -2576,6 +2552,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
           if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
         }
     }
+#endif
   delete points;
 }
 
@@ -2651,6 +2628,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   swapx = xi1 > xi2;
   swapy = yi1 < yi2;
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       p->bounding_stack.top().x_max = xi2;
@@ -2666,6 +2644,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
           p->bounding_stack.top().y_min = yi2;
         }
     }
+#endif
 
   if (!true_color)
     {
@@ -2914,6 +2893,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
         }
     }
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
   if (!p->bounding_stack.empty())
     {
       if (p->bounding_stack.top().x_max < path.boundingRect().x() + path.boundingRect().width())
@@ -2931,6 +2911,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           p->bounding_stack.top().y_min = tmp;
         }
     }
+#endif
   p->painter->restore();
 }
 
@@ -3028,6 +3009,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -3038,6 +3020,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
     }
 
   triangle = new QPolygonF(3);
@@ -3092,6 +3075,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       if (!p->bounding_stack.empty())
         {
           double point_x, point_y;
@@ -3102,6 +3086,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
           if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
+#endif
     }
 
   j = 0;
@@ -3400,9 +3385,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case BEGIN_SELECTION:
-#ifdef QT_PLUGIN_USED_AS_GKSQT_CODE
-      delete p->painter;
-#endif
       if (p->selection == NULL)
         {
           p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -3411,20 +3393,11 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 #endif
           p->selection->fill(Qt::white);
         }
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-      p->painter->assign(*p->selection, *p->widget);
-#else
-      p->painter = new QPainter(p->selection);
-#endif
+      p->painter->assign(*p->selection, *p->paint_device);
       break;
 
     case END_SELECTION:
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
-      p->painter->assign(*p->pixmap, *p->widget);
-#else
-      delete p->painter;
-      p->painter = new QPainter(p->pixmap);
-#endif
+      p->painter->assign(*p->pixmap, *p->paint_device);
       break;
 
     case MOVE_SELECTION:
@@ -3440,6 +3413,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
         }
       break;
 
+#ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
     case GKS_SET_BBOX_CALLBACK: /* 260 */
       cur_id = ia[0];
 #ifdef _WIN32
@@ -3449,47 +3423,30 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
                                                (void (*)(int, double, double, double, double))r1, cur_id});
 #endif
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
       p->mask_callback = (void (*)(unsigned int, unsigned int, unsigned int *))r2;
       if (p->mask_callback != NULL) p->painter->beginGroup(cur_id);
-#endif
       break;
 
     case GKS_CANCEL_BBOX_CALLBACK: /* 261 */
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
       if (p->mask_callback != NULL) p->painter->endGroup();
-#endif
       assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
       top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();
       break;
+#endif
 
     case SET_BACKGROUND:
       if (p->pixmap)
         {
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
           p->painter->freezeBackground(r1[0], r1[1], r2[0], r2[1]);
-#else
-          if (p->bg) delete p->bg;
-          p->bg = new QPixmap(*p->pixmap);
-#endif
         }
       break;
 
     case CLEAR_BACKGROUND:
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
       p->painter->clearBackground();
-#else
-      if (p->bg)
-        {
-          delete p->bg;
-          p->bg = NULL;
-        }
-#endif
       break;
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
     case GKS_BEGIN_PARTIAL:
       cur_id = ia[0];
       p->partial_drawing_callback =
@@ -3501,7 +3458,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       cur_id = ia[0];
       p->painter->endPartial(cur_id);
       break;
-#endif
     }
 }
 
@@ -3555,6 +3511,28 @@ static bool dl_contains_only_background_fctid(const char *s)
   return *fctid == CLEAR_BACKGROUND || *fctid == SET_BACKGROUND;
 }
 
+static bool read_wswindow_from_dl(const char *s, double *wswindow)
+{
+  int sp = 0, *len = NULL, *fctid = NULL;
+  bool found_wswindow = false;
+
+  while (true)
+    {
+      RESOLVE(len, int, sizeof(int));
+      if (*len == 0) break;
+      RESOLVE(fctid, int, sizeof(int));
+      if (*fctid == 54)
+        {
+          double *wswindow_ptr = (double *)(s + sp + sizeof(int)); // `+ sizeof(int)` skips the integer array `ia`
+          memcpy(wswindow, wswindow_ptr, 4 * sizeof(double));
+          found_wswindow = true;
+        }
+      sp += *len - 2 * sizeof(int);
+    }
+
+  return found_wswindow;
+}
+
 static void interp(char *str)
 {
   char *s;
@@ -3562,20 +3540,11 @@ static void interp(char *str)
 
   s = str;
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   p->partial_draw = gks_dl_has_one_of_item(s, 1, GKS_BEGIN_PARTIAL);
   if (!p->partial_draw && p->painter->hasBackground() && !dl_contains_only_background_fctid(s))
     {
       p->painter->drawBackground();
     }
-#else
-  if (p->bg && !dl_contains_only_background_fctid(s))
-    {
-      if (gkss->cntnr != 0) set_clip_rect(0);
-      p->painter->drawPixmap(QPoint(0, 0), *p->bg);
-      if (gkss->cntnr != 0) set_clip_rect(gkss->cntnr);
-    }
-#endif
 
   RESOLVE(len, int, sizeof(int));
   while (*len)
@@ -3589,7 +3558,6 @@ static void interp(char *str)
       gks_memory_plugin_write_page();
     }
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   if (!p->partial_draw && p->mask_callback != NULL)
     {
       const auto &group_mask = *p->painter->groupMask();
@@ -3605,7 +3573,6 @@ static void interp(char *str)
           p->partial_drawing_callback(id, region.x, region.y, region.w, region.h, region.pixels);
         }
     }
-#endif
 
   p->interp_was_called = true;
 }
@@ -3615,9 +3582,6 @@ static void initialize_data()
   int i;
 
   p->pixmap = p->selection = NULL;
-#ifdef QT_PLUGIN_USED_AS_GKSQT_CODE
-  p->bg = NULL;
-#endif
   p->font = new QFont();
 
   p->points = new QPolygonF(MAX_POINTS);
@@ -3639,9 +3603,7 @@ static void initialize_data()
   p->prevent_resize_by_dl = false;
   p->window_stays_on_top = false;
   p->interp_was_called = false;
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   p->partial_draw = false;
-#endif
 
   p->window[0] = 0.0;
   p->window[1] = 1.0;
@@ -3650,10 +3612,8 @@ static void initialize_data()
 
   p->transparency = 255;
 
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
   p->mask_callback = NULL;
   p->partial_drawing_callback = NULL;
-#endif
 }
 
 static void release_data()
@@ -3670,9 +3630,6 @@ static void release_data()
   /* The pixmap is only owned if the code is not compiled as plugin. In plugin mode, the pixmap is only a non-owning
    * pointer to the underlying paint device of the painter object. */
   if (p->pixmap) delete p->pixmap;
-#endif
-#ifdef QT_PLUGIN_USED_AS_GKSQT_CODE
-  if (p->bg) delete p->bg;
 #endif
   delete p;
 }
@@ -3719,7 +3676,6 @@ static void update_metrics(const QPaintDevice *device)
 static int get_paint_device(void)
 {
   char *env;
-  QPaintDevice *device;
 
   env = (char *)gks_getenv("GKS_CONID");
   if (!env) env = (char *)gks_getenv("GKSconid");
@@ -3729,31 +3685,28 @@ static int get_paint_device(void)
       bool has_exclamation_mark = strchr(env, '!');
       bool has_hash_mark = strchr(env, '#');
       QPainter *painter;
-#ifdef QT_PLUGIN_USED_AS_GKSQT_CODE
-      painter = p->painter;
-#endif
       p->has_user_defined_device_pixel_ratio = has_hash_mark;
       if (has_exclamation_mark && has_hash_mark)
         {
-          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&painter, &p->device_pixel_ratio);
-          device = p->widget;
+          QWidget *widget; // Use a temporary QWidget pointer since QWidget inherits from multiple base classes
+          sscanf(env, "%p!%p#%lf", (void **)&widget, (void **)&painter, &p->device_pixel_ratio);
+          p->paint_device = static_cast<QPaintDevice *>(widget);
         }
       else if (has_exclamation_mark)
         {
-          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&painter);
-          device = p->widget;
+          QWidget *widget; // Use a temporary QWidget pointer since QWidget inherits from multiple base classes
+          sscanf(env, "%p!%p", (void **)&widget, (void **)&painter);
+          p->paint_device = static_cast<QPaintDevice *>(widget);
         }
       else if (has_hash_mark)
         {
           sscanf(env, "%p#%lf", (void **)&painter, &p->device_pixel_ratio);
-          p->widget = NULL;
-          device = painter->device();
+          p->paint_device = painter->device();
         }
       else
         {
           sscanf(env, "%p", (void **)&painter);
-          p->widget = NULL;
-          device = painter->device();
+          p->paint_device = painter->device();
         }
 #ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
       QPixmap *pixmap = dynamic_cast<QPixmap *>(painter->device());
@@ -3762,23 +3715,21 @@ static int get_paint_device(void)
           p->pixmap = pixmap;
         }
 #endif
-#ifndef QT_PLUGIN_USED_AS_GKSQT_CODE
       if (!p->painter)
         {
-          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter, *p->widget));
+          p->painter = std::unique_ptr<ProxyPainter>(new ProxyPainter(*painter, *p->paint_device));
         }
       else
         {
-          p->painter->assign(*painter, *p->widget);
+          p->painter->assign(*painter, *p->paint_device);
         }
-#endif
     }
   else
     {
       return 1;
     }
 
-  update_metrics(device);
+  update_metrics(p->paint_device);
 
   return 0;
 }
@@ -3877,7 +3828,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       break;
 
     case 205: /* configure ws */
-      if (p->widget != NULL) update_metrics(p->widget);
+      update_metrics(p->paint_device);
       f_arr_1[0] = p->mwidth;
       f_arr_2[0] = p->mheight;
       i_arr[0] = p->width;
@@ -3885,9 +3836,15 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       return;
 
     case 209: /* inq_ws_state */
-      aspect_ratio =
-          (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
-      ;
+      {
+        double wswindow[4];
+        if (!read_wswindow_from_dl(p->dl.buffer, wswindow))
+          {
+            memcpy(wswindow, p->window, 4 * sizeof(double));
+          }
+        aspect_ratio =
+            (wswindow[1] - wswindow[0]) / (wswindow[3] - wswindow[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
+      }
       get_paint_device();
       if (p->width > p->height * aspect_ratio)
         {

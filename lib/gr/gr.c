@@ -2205,18 +2205,10 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
     }
 
   scale_options = lx.scale_options;
-  if (scale_options & GR_OPTION_FLIP_X)
-    {
-      double tmp = xmin;
-      xmin = xmax;
-      xmax = tmp;
-    }
-  if (scale_options & GR_OPTION_FLIP_Y)
-    {
-      double tmp = ymin;
-      ymin = ymax;
-      ymax = tmp;
-    }
+  xmin = x_lin(xmin);
+  xmax = x_lin(xmax);
+  ymin = y_lin(ymin);
+  ymax = y_lin(ymax);
   lx.scale_options = 0;
   gr_drawimage(xmin, xmax, ymin, ymax, size, size, img_data, 0);
   free(img_data);
