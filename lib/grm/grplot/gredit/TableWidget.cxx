@@ -12,6 +12,7 @@
 #include <QHeaderView>
 #include <QObject>
 #include <grm/dom_render/context.hxx>
+#include <grm/dom_render/casts.hxx>
 
 
 TableWidget::TableWidget(GRPlotWidget *widget, QWidget *parent) : QTableWidget(parent)
@@ -26,10 +27,8 @@ std::map<std::string, std::list<std::string>>
 TableWidget::extractContextNames(const std::shared_ptr<GRM::Context> &context)
 {
   int col_cnt = 0;
-  std::map<std::string, std::list<std::string>> context_data;
+  std::map<std::string, std::list<std::string>> context_data = grm_get_context_data();
   std::vector<std::string> cntxt_names;
-
-  context_data = grm_get_context_data();
 
   for (const auto &entry : context_data)
     {
@@ -75,8 +74,8 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
           auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
           for (const auto &elem : grm_get_document_root()->querySelectorsAll("[" + selector_token + "]"))
             {
-              auto elem_name = elem->localName();
-              if (!advanced_editor &&
+              if (auto elem_name = elem->localName();
+                  !advanced_editor &&
                   (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
                    elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
                    elem_name == "cell_array" || elem_name == "nonuniform_cell_array" ||
@@ -123,19 +122,17 @@ void TableWidget::applyTableChanges(int row, int column)
 {
   auto new_value = this->item(row, column)->text().toStdString();
 
-  if (getenv("GRM_DEBUG"))
+  if (util::isEnvVariableEnabled("GRM_DEBUG"))
     fprintf(stderr, "Detected change at (%i/%i) with value '%s'. Old value was '%s'\n", row, column, new_value.c_str(),
             this->context_names[column].c_str());
 
   if (row != 0)
     {
       // data has been changed -> apply these changes to the context
-      auto context_key = this->item(0, column)->text().toStdString();
 
-      if ((*this->context)[context_key].doubleUsed())
+      if (auto context_key = this->item(0, column)->text().toStdString(); (*this->context)[context_key].doubleUsed())
         {
-          auto vec = GRM::get<std::vector<double>>((*this->context)[context_key]);
-          if (vec.size() >= row)
+          if (auto vec = GRM::get<std::vector<double>>((*this->context)[context_key]); vec.size() >= row)
             {
               vec[row - 1] = atof(new_value.c_str());
               (*this->context)[context_key] = vec;
@@ -148,8 +145,7 @@ void TableWidget::applyTableChanges(int row, int column)
         }
       else if ((*this->context)[context_key].intUsed())
         {
-          auto vec = GRM::get<std::vector<int>>((*this->context)[context_key]);
-          if (vec.size() >= row)
+          if (auto vec = GRM::get<std::vector<int>>((*this->context)[context_key]); vec.size() >= row)
             {
               vec[row - 1] = atoi(new_value.c_str());
               (*this->context)[context_key] = vec;
@@ -162,8 +158,7 @@ void TableWidget::applyTableChanges(int row, int column)
         }
       else
         {
-          auto vec = GRM::get<std::vector<std::string>>((*this->context)[context_key]);
-          if (vec.size() >= row)
+          if (auto vec = GRM::get<std::vector<std::string>>((*this->context)[context_key]); vec.size() >= row)
             {
               vec[row - 1] = new_value;
               (*this->context)[context_key] = vec;
@@ -222,7 +217,7 @@ void TableWidget::applyTableChanges(int row, int column)
           auto attr = interesting_part.substr(start + 1, (max_attr_length - start - 1));
           tree_str = tree_str.substr(pos + token.size(), std::string::npos);
 
-          if (getenv("GRM_DEBUG"))
+          if (util::isEnvVariableEnabled("GRM_DEBUG"))
             fprintf(stderr, "Replace the value of %s with the new user-defined name\n", selector_token.c_str());
 
           if (std::find(this->context_attributes.begin(), this->context_attributes.end(), attr) ==

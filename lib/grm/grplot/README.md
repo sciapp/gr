@@ -9,7 +9,7 @@ This program allows to create plots from the command line while using simple key
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe. Another option are `.xml`- or `.xml.png`-files, which can be used instead of a data file. These files contain the internal representation of a specific plot, which then can be restored during the start of 'grplot'. If using these files all given parameters are ignored.
-- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `line3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
+- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `line3`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
 
@@ -44,7 +44,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `error_type`, `grplot`, `ignore_blank_lines`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `legend`, `legend_line`, `levels`, `line_spec`, `location`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `r_colormap`, `r_flip`, `r_lim`, `r_log`, `resample_method`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `theta_colormap`, `theta_flip`, `theta_data_lim`, `theta_lim`, `tilt`, `title`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_columns` `x_flip`, `x_grid`, `x_label`, `x_lim`, `x_log`, `x_range`, `y_bins`, `y_columns`, `y_label`, `y_flip`, `y_grid`, `y_labels`, `y_lim`, `y_log`, `y_range`, `z_grid`, `z_label`, `z_lim`, `z_log`, `z_range`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `error_type`, `grplot`, `ignore_blank_lines`, `int_limits_high`, `int_limits_low`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `legend_line`, `levels`, `line_spec`, `location`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `r_flip`, `r_lim`, `r_log`, `resample_method`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `theta_flip`, `theta_data_lim`, `theta_lim`, `tilt`, `title`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_columns`, `x_flip`, `x_grid`, `x_label`, `x_lim`, `x_log`, `x_range`, `y_bins`, `y_columns`, `y_label`, `y_flip`, `y_grid`, `y_labels`, `y_lim`, `y_log`, `y_range`, `z_grid`, `z_label`, `z_lim`, `z_log`, `z_range`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -336,11 +336,9 @@ Possible parameters for the polar histogram are:
 5. `keep_radii_axes`: This parameter only have an impact, if `y_lim` is set. In that case the ranges for the radii axes from `y_lim` get ignored while the polar histogram still gets affected by the `y_lim`.
 6. `num_bins`: This parameter sets the number of classes which are respected during the binning.
 7. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
-8. `r_colormap`: This parameter sets the colormap for the r-direction.
-9. `r_flip`: This parameter defines whether the r-axis is flipped or not.
-10. `theta_colormap`: This parameter sets the colormap for the theta-direction.
-11. `theta_flip`: This parameter decides whether the theta values are flipped or not. The value can be either 0 or 1.
-12. `stairs`: If this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
+8. `r_flip`: This parameter defines whether the r-axis is flipped or not.
+9. `theta_flip`: This parameter decides whether the theta values are flipped or not. The value can be either 0 or 1.
+10. `stairs`: If this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
 
 ### POLAR_LINE
 
@@ -350,7 +348,7 @@ The expected data are two columns containing the angles and values.
 
 Possible parameters for the polar line plot are:
 
-1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored.
 
 ### POLAR_SCATTER
 
@@ -360,7 +358,7 @@ The expected data are two columns containing the angles and values.
 
 Possible parameters for the polar scatter plot are:
 
-1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored.
 
 ### PIE
 
@@ -410,7 +408,7 @@ Possible parameters for the shade plot are:
 
 1. `transformation`: This parameter defines the transformation type used for color mapping. The value of this parameter has to be an integer where the default is 1. The effect belonging to the numbers is the same as for [gr_shadepoints](https://gr-framework.org/c-gr.html?highlight=gr_shadepoints#_CPPv414gr_shadepointsiPdPdiii).
 2. `x_bins`: This parameter defines the bins in x-direction. The value of this parameter has to be an integer where the default is 100.
-3. `y_bins` : This parameter defines the bins in y-direction. The value of this parameter has to be an integer where the default is 100.
+3. `y_bins`: This parameter defines the bins in y-direction. The value of this parameter has to be an integer where the default is 100.
 
 ### SURFACE
 

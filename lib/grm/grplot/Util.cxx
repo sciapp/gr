@@ -33,7 +33,11 @@
 
 namespace util
 {
+#ifdef PATH_MAX
+const unsigned int MAXPATHLEN = PATH_MAX;
+#else
 const unsigned int MAXPATHLEN = 1024;
+#endif
 
 
 #if defined __unix__ || defined __APPLE__
@@ -83,7 +87,8 @@ PathTooLongError::PathTooLongError(size_t neededSize)
 {
   std::stringstream what_stream;
 
-  what_stream << MAXPATHLEN << " Bytes are not sufficient for storing the path. " << neededSize << " Bytes are needed.";
+  what_stream << MAXPATHLEN + 1 << " Bytes are not sufficient for storing the path. " << neededSize
+              << " Bytes are needed.";
   what_str_ = what_stream.str();
 }
 
@@ -92,12 +97,17 @@ const char *PathTooLongError::what() const noexcept
   return what_str_.c_str();
 }
 
+const char *RealpathError::what() const noexcept
+{
+  return ErrnoError::what();
+}
+
 #elif defined __unix__
 PathTooLongError::PathTooLongError()
 {
   std::stringstream what_stream;
 
-  what_stream << MAXPATHLEN << " Bytes are not sufficient for storing the path.";
+  what_stream << MAXPATHLEN + 1 << " Bytes are not sufficient for storing the path.";
   what_str_ = what_stream.str();
 }
 
@@ -242,6 +252,15 @@ bool isNumber(const std::string &str)
   return pos == std::string::npos;
 }
 
+int isEnvVariableEnabled(const char *env_variable_name)
+{
+  return getenv(env_variable_name) != NULL &&
+         (strcmp(getenv(env_variable_name), "1") == 0 || strcmp(getenv(env_variable_name), "on") == 0 ||
+          strcmp(getenv(env_variable_name), "ON") == 0 || strcmp(getenv(env_variable_name), "true") == 0 ||
+          strcmp(getenv(env_variable_name), "TRUE") == 0 || strcmp(getenv(env_variable_name), "yes") == 0 ||
+          strcmp(getenv(env_variable_name), "YES") == 0);
+}
+
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value)
 #else
@@ -274,37 +293,42 @@ std::string getExecutablePath()
 #endif
 {
 #ifdef _WIN32
-  std::array<wchar_t, MAXPATHLEN> exe_path{L""};
+  std::array<wchar_t, MAXPATHLEN + 1> exe_path{L""};
 #else
-  std::array<char, MAXPATHLEN> exe_path{""};
+  std::array<char, MAXPATHLEN + 1> exe_path{""};
 #endif
 
 #if defined __APPLE__
-  unsigned int path_len = MAXPATHLEN - 1;
-
-  if (_NSGetExecutablePath(exe_path.data(), &path_len)) throw(PathTooLongError(path_len));
+  unsigned int path_len = MAXPATHLEN;
+  {
+    std::array<char, MAXPATHLEN + 1> any_exe_path{""};
+    if (_NSGetExecutablePath(any_exe_path.data(), &path_len)) throw(PathTooLongError(path_len));
+    if (realpath(any_exe_path.data(), exe_path.data()) == nullptr) throw(RealpathError());
+  }
+  path_len = strlen(exe_path.data());
 #elif defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
   ssize_t path_len = -1;
 
-  path_len = readlink("/proc/curproc/file", exe_path.data(), MAXPATHLEN);
+  path_len = readlink("/proc/curproc/file", exe_path.data(), MAXPATHLEN + 1);
   if (path_len < 0)
     {
       throw(ProcessFileLinkNotReadableError());
     }
-  else if (path_len == MAXPATHLEN)
+  else if (path_len == MAXPATHLEN + 1)
     {
       throw(PathTooLongError());
     }
 #elif defined __linux__
   ssize_t path_len = -1;
 
-  path_len = readlink("/proc/self/exe", exe_path.data(), MAXPATHLEN);
+  path_len = readlink("/proc/self/exe", exe_path.data(), MAXPATHLEN + 1);
   if (path_len < 0) throw(ProcessFileLinkNotReadableError());
-  if (path_len == MAXPATHLEN) throw(PathTooLongError());
+  if (path_len == MAXPATHLEN + 1) throw(PathTooLongError());
 #elif defined _WIN32
   unsigned int path_len = 0;
 
-  path_len = GetModuleFileNameW(nullptr, exe_path.data(), MAXPATHLEN);
+  // FIXME: Convert the returned path into an absolute path (symlinks resolved)
+  path_len = GetModuleFileNameW(nullptr, exe_path.data(), MAXPATHLEN + 1);
   if (GetLastError() != ERROR_SUCCESS) throw(ModulePathError());
 #else
 #error "Unsupported system"
@@ -350,17 +374,17 @@ void setGrdir(bool force)
 
   auto exe_path = getExecutablePath();
 #ifdef _WIN32
-  std::array<wchar_t, MAXPATHLEN> exe_dirname;
+  std::array<wchar_t, MAXPATHLEN + 1> exe_dirname;
   std::wstringstream gr_dir_relative_stream;
-  std::array<wchar_t, MAXPATHLEN> gr_dir_absolute;
+  std::array<wchar_t, MAXPATHLEN + 1> gr_dir_absolute;
   std::wstringstream gr_header_path_stream;
 
-  if (_wsplitpath_s(exe_path.c_str(), nullptr, 0, exe_dirname.data(), MAXPATHLEN, nullptr, 0, nullptr, 0))
+  if (_wsplitpath_s(exe_path.c_str(), nullptr, 0, exe_dirname.data(), MAXPATHLEN + 1, nullptr, 0, nullptr, 0))
     {
       throw(DirnameError(exe_path));
     }
   gr_dir_relative_stream << exe_dirname.data() << L"/..";
-  if (_wfullpath(gr_dir_absolute.data(), gr_dir_relative_stream.str().c_str(), MAXPATHLEN) == nullptr)
+  if (_wfullpath(gr_dir_absolute.data(), gr_dir_relative_stream.str().c_str(), MAXPATHLEN + 1) == nullptr)
     {
       throw(AbsolutePathError(gr_dir_relative_stream.str()));
     }

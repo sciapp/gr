@@ -4,6 +4,8 @@
 #include <grm/dom_render/graphics_tree/comment.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
+#include <grm/dom_render/creator.hxx>
+#include <grm/dom_render/render_util.hxx>
 
 #include <algorithm>
 #include <array>
@@ -177,6 +179,7 @@ static int last_merge_series_id = 0;
 static bool args_changed_since_last_plot = false;
 grm_grid_t *global_grid = nullptr;
 static std::shared_ptr<GRM::Render> global_render;
+static std::shared_ptr<GRM::Creator> global_creator;
 static std::shared_ptr<GRM::Element> global_root;
 static std::shared_ptr<GRM::Element> edit_figure;
 static std::weak_ptr<GRM::Element> current_dom_element;
@@ -186,41 +189,6 @@ static int error_code = GRM_ERROR_NONE;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 EventQueue *event_queue = nullptr;
-
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-static StringMapEntry kind_to_fmt[] = {
-    {"line", "xys"},
-    {"hexbin", "xys"},
-    {"polar_line", "thetars"},
-    {"shade", "xys"},
-    {"stem", "xys"},
-    {"stairs", "xys"},
-    {"contour", "xyzc"},
-    {"contourf", "xyzc"},
-    {"tricontour", "xyzc"},
-    {"trisurface", "xyzc"},
-    {"surface", "xyzc"},
-    {"wireframe", "xyzc"},
-    {"line3", "xyzc"},
-    {"scatter", "xyzc"},
-    {"scatter3", "xyzc"},
-    {"quiver", "xyuv"},
-    {"heatmap", "xyzc"},
-    {"histogram", "x"},
-    {"barplot", "y"},
-    {"isosurface", "c"},
-    {"imshow", "c"},
-    {"nonuniform_heatmap", "xyzc"},
-    {"polar_histogram", "theta"},
-    {"pie", "x"},
-    {"volume", "c"},
-    {"marginal_heatmap", "xyzc"},
-    {"polar_heatmap", "thetarzc"},
-    {"nonuniform_polar_heatmap", "thetarzc"},
-    {"polar_scatter", "thetars"},
-};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -410,13 +378,11 @@ const char *valid_series_keys[] = {"a",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
-                                   "r_colormap",
                                    "r_range",
                                    "s",
                                    "step_where",
                                    "stairs",
                                    "theta",
-                                   "theta_colormap",
                                    "theta_data_lim",
                                    "theta_range",
                                    "transparency",
@@ -497,7 +463,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"orientation", "s"},
                                           {"panzoom", "D"},
                                           {"r", "D|I"},
-                                          {"r_colormap", "i"},
                                           {"r_lim", "D"},
                                           {"r_range", "D"},
                                           {"raw", "s"},
@@ -515,7 +480,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"style", "s"},
                                           {"subplot", "D"},
                                           {"theta", "D|I"},
-                                          {"theta_colormap", "i"},
                                           {"theta_lim", "D"},
                                           {"theta_range", "D"},
                                           {"tilt", "d"},
@@ -585,6 +549,7 @@ grm_error_t plotInitStaticVariables(void)
       active_plot_index = 1;
       /* initialize global_render and its root */
       global_render = GRM::Render::createRender();
+      global_creator = GRM::Creator::createCreator(global_render->getContext());
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("_id", 0);
@@ -1633,7 +1598,7 @@ grm_error_t plotLine(grm_args_t *subplot_args)
       double line_width, border_width, marker_size;
       int line_color_ind, line_type, border_color_ind, marker_color_ind;
       std::string prefix = "";
-      auto sub_group = global_render->createSeries("line");
+      auto sub_group = global_creator->createSeries("line");
       group->append(sub_group);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
@@ -1767,7 +1732,7 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       double line_width;
       int line_color_ind, line_type;
       std::string prefix = "";
-      auto sub_group = global_render->createSeries("stairs");
+      auto sub_group = global_creator->createSeries("stairs");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -1844,7 +1809,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
 
   while (*current_series != nullptr)
     {
-      auto sub_group = global_render->createSeries("scatter");
+      auto sub_group = global_creator->createSeries("scatter");
       group->append(sub_group);
 
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
@@ -1970,7 +1935,7 @@ grm_error_t plotQuiver(grm_args_t *subplot_args)
       int id = (int)global_root->getAttribute("_id");
       std::string str = std::to_string(id);
       auto temp =
-          global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, true);
+          global_creator->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, true);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -2016,7 +1981,7 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       int line_type, line_color_ind;
       std::string prefix;
 
-      auto sub_group = global_render->createSeries("stem");
+      auto sub_group = global_creator->createSeries("stem");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2092,7 +2057,7 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       int fill_style, fill_int_style;
 
-      auto sub_group = global_render->createSeries("histogram");
+      auto sub_group = global_creator->createSeries("histogram");
       group->append(sub_group);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
@@ -2222,7 +2187,7 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       int fill_style, fill_int_style;
 
-      auto sub_group = global_render->createSeries("barplot");
+      auto sub_group = global_creator->createSeries("barplot");
       group->append(sub_group);
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string id_str = std::to_string(id);
@@ -2465,7 +2430,7 @@ grm_error_t plotContour(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      auto sub_group = global_render->createSeries("contour");
+      auto sub_group = global_creator->createSeries("contour");
       group->append(sub_group);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
@@ -2533,7 +2498,7 @@ grm_error_t plotContourf(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
       const char *x_axis_ref, *y_axis_ref;
-      auto sub_group = global_render->createSeries("contourf");
+      auto sub_group = global_creator->createSeries("contourf");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -2610,7 +2575,7 @@ grm_error_t plotHexbin(grm_args_t *subplot_args)
 
       auto x_vec = std::vector<double>(x, x + x_length);
       auto y_vec = std::vector<double>(y, y + y_length);
-      auto sub_group = global_render->createHexbin("x" + str, x_vec, "y" + str, y_vec);
+      auto sub_group = global_creator->createHexbin("x" + str, x_vec, "y" + str, y_vec);
       if (grm_args_values(*current_series, "num_bins", "i", &nbins)) sub_group->setAttribute("num_bins", nbins);
       group->append(sub_group);
 
@@ -2653,7 +2618,7 @@ grm_error_t plotPolarHeatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "z_log", "i", &z_log);
   while (*current_series != nullptr)
     {
-      auto sub_group = global_render->createSeries("polar_heatmap");
+      auto sub_group = global_creator->createSeries("polar_heatmap");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &cols);
@@ -2757,7 +2722,7 @@ grm_error_t plotHeatmap(grm_args_t *subplot_args)
     {
       const char *x_axis_ref, *y_axis_ref;
       x = y = nullptr;
-      auto sub_group = global_render->createSeries("heatmap");
+      auto sub_group = global_creator->createSeries("heatmap");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
@@ -2889,7 +2854,7 @@ grm_error_t plotMarginalHeatmap(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> top_side_region;
   if (!sub_group->querySelectors("side_region[location=\"top\"]"))
     {
-      top_side_region = global_render->createSideRegion("top");
+      top_side_region = global_creator->createSideRegion("top");
       sub_group->append(top_side_region);
     }
   else
@@ -2897,7 +2862,7 @@ grm_error_t plotMarginalHeatmap(grm_args_t *subplot_args)
       top_side_region = sub_group->querySelectors("side_region[location=\"top\"]");
     }
   top_side_region->setAttribute("marginal_heatmap_side_plot", 1);
-  auto right_side_region = global_render->createSideRegion("right");
+  auto right_side_region = global_creator->createSideRegion("right");
   right_side_region->setAttribute("marginal_heatmap_side_plot", 1);
   sub_group->append(right_side_region);
 
@@ -2921,7 +2886,7 @@ grm_error_t plotWireframe(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max;
 
-      auto sub_group = global_render->createSeries("wireframe");
+      auto sub_group = global_creator->createSeries("wireframe");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2980,7 +2945,7 @@ grm_error_t plotSurface(grm_args_t *subplot_args)
       double *x = nullptr, *y = nullptr, *z = nullptr;
       unsigned int x_length, y_length, z_length;
 
-      auto sub_group = global_render->createSeries("surface");
+      auto sub_group = global_creator->createSeries("surface");
       group->append(sub_group);
       if (has_use_gr3) sub_group->setAttribute("use_gr3", use_gr3);
 
@@ -3056,7 +3021,7 @@ grm_error_t plotLine3(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max, z_min, z_max;
       char *label;
       std::string prefix = "";
-      auto sub_group = global_render->createSeries("line3");
+      auto sub_group = global_creator->createSeries("line3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3123,7 +3088,7 @@ grm_error_t plotScatter3(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max, z_min, z_max;
       char *label;
       std::string prefix = "";
-      auto sub_group = global_render->createSeries("scatter3");
+      auto sub_group = global_creator->createSeries("scatter3");
       group->append(sub_group);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3206,7 +3171,7 @@ grm_error_t plotImshow(grm_args_t *subplot_args)
     }
   while (*current_series != nullptr)
     {
-      auto sub_group = global_render->createSeries("imshow");
+      auto sub_group = global_creator->createSeries("imshow");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length);
@@ -3253,7 +3218,7 @@ grm_error_t plotIsosurface(grm_args_t *subplot_args)
 
   while (*current_series != nullptr)
     {
-      auto sub_group = global_render->createSeries("isosurface");
+      auto sub_group = global_creator->createSeries("isosurface");
       group->append(sub_group);
       grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length);
       grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims);
@@ -3299,7 +3264,7 @@ grm_error_t plotVolume(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      auto sub_group = global_render->createSeries("volume");
+      auto sub_group = global_creator->createSeries("volume");
       group->append(sub_group);
       const double *c;
       unsigned int data_length, dims;
@@ -3383,7 +3348,7 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       double theta_min, theta_max, r_min, r_max;
       unsigned int theta_length, r_length;
       char *spec, *label;
-      auto sub_group = global_render->createSeries("polar_line");
+      auto sub_group = global_creator->createSeries("polar_line");
       int clip_negative = 0, marker_type;
       double line_width, border_width, marker_size;
       int line_type, line_color_ind, border_color_ind, marker_color_ind;
@@ -3465,7 +3430,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       double theta_min, theta_max, r_min, r_max;
       unsigned int theta_length, r_length;
       char *label;
-      auto sub_group = global_render->createSeries("polar_scatter");
+      auto sub_group = global_creator->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       std::string prefix = "";
       group->append(sub_group);
@@ -3586,7 +3551,6 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
 {
   int stairs;
   int keep_radii_axes;
-  int theta_colormap, r_colormap;
   int draw_edges, theta_flip, edge_color, face_color;
   double transparency;
   double theta_range_min, theta_range_max, r_lim_min, r_lim_max;
@@ -3595,7 +3559,7 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
-  std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
+  std::shared_ptr<GRM::Element> series_group = global_creator->createSeries("polar_histogram");
   group->append(series_group);
 
   // Call counts -> set attributes and data
@@ -3639,9 +3603,6 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
       series_group->setAttribute("theta_range_max", theta_range_max);
     }
 
-  if (grm_args_values(*series, "theta_colormap", "i", &theta_colormap))
-    series_group->setAttribute("theta_colormap", theta_colormap);
-  if (grm_args_values(*series, "r_colormap", "i", &r_colormap)) series_group->setAttribute("r_colormap", r_colormap);
   global_root->setAttribute("_id", ++id);
 
   return GRM_ERROR_NONE;
@@ -3662,7 +3623,7 @@ grm_error_t plotPie(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
-  auto sub_group = global_render->createSeries("pie");
+  auto sub_group = global_creator->createSeries("pie");
   group->append(sub_group);
 
   int id = static_cast<int>(global_root->getAttribute("_id"));
@@ -3739,7 +3700,7 @@ grm_error_t plotTrisurface(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
 
       std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length);
-      auto temp = global_render->createTriSurface("x" + str, x_vec, "y" + str, y_vec, "z" + str, z_vec);
+      auto temp = global_creator->createTriSurface("x" + str, x_vec, "y" + str, y_vec, "z" + str, z_vec);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -3783,7 +3744,7 @@ grm_error_t plotTricontour(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max;
-      auto sub_group = global_render->createSeries("tricontour");
+      auto sub_group = global_creator->createSeries("tricontour");
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3844,7 +3805,7 @@ grm_error_t plotShade(grm_args_t *subplot_args)
   auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_shader);
-  auto sub_group = global_render->createSeries("shade");
+  auto sub_group = global_creator->createSeries("shade");
   group->append(sub_group);
 
   grm_args_first_value(*current_shader, "x", "D", &x, &x_length);
@@ -3897,7 +3858,7 @@ grm_error_t plotRaw(grm_args_t *plot_args)
 
   global_root->setAttribute("_clear_ws", 1);
   data_vec = std::vector<int>(graphics_data, graphics_data + strlen(graphics_data));
-  edit_figure->append(global_render->createDrawGraphics("graphics", data_vec));
+  edit_figure->append(global_creator->createDrawGraphics("graphics", data_vec));
   global_root->setAttribute("_update_ws", 1);
 
 cleanup:
@@ -4012,7 +3973,7 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
 
   /* axes modifications */
   grm_args_t *axes_mod = nullptr;
-  auto tick_modification_map = global_render->getTickModificationMap();
+  auto tick_modification_map = getTickModificationMap();
 
   if (grm_args_values(args, "axes_mod", "a", &axes_mod))
     {
@@ -4028,9 +3989,9 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
               continue;
             }
           if (strcmp(axis_arg->key, "x") == 0)
-            axis_id = global_render->getAxisId() + 1;
+            axis_id = global_creator->getAxisId() + 1;
           else if (strcmp(axis_arg->key, "y") == 0)
-            axis_id = global_render->getAxisId();
+            axis_id = global_creator->getAxisId();
 
           grm_args_t **axis_mods;
           if (!grm_args_values(axes_mod, axis_arg->key, "A", &axis_mods))
@@ -4427,7 +4388,7 @@ grm_error_t plotDrawLegend(grm_args_t *subplot_args)
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
 
   auto legend = group->querySelectors("legend");
-  legend = global_render->createLegend(legend);
+  legend = global_creator->createLegend(legend);
   if (grm_args_values(subplot_args, "location", "i", &location)) legend->setAttribute("location", location);
   group->append(legend);
 
@@ -4444,7 +4405,7 @@ grm_error_t plotDrawColorbar(grm_args_t *subplot_args, double off, unsigned int 
   group->append(side_region);
   auto side_plot_region = global_render->createElement("side_plot_region");
   side_region->append(side_plot_region);
-  auto colorbar = global_render->createColorbar(colors);
+  auto colorbar = global_creator->createColorbar(colors);
   side_plot_region->append(colorbar);
 
   colorbar->setAttribute("x_flip", 0);
@@ -6341,15 +6302,16 @@ public:
 
     if (attribute_name[0] == '_')
       {
+        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
+        // shouldnt be exported
+        if (attribute_name == "_highlighted") return false;
+
         std::optional<std::string_view> original_attribute_name = isBackupAttributeFor(attribute_name);
-        if (original_attribute_name &&
+        if (original_attribute_name && !element.hasAttribute("_" + std::string(*original_attribute_name)) &&
             RESTORE_BACKUP_FORMAT_EXCLUDES.find(*original_attribute_name) == RESTORE_BACKUP_FORMAT_EXCLUDES.end())
           {
             new_attribute_name = *original_attribute_name;
           }
-        // highlighted is an attribute which is just used for a specific view inside the grplot editor mode which
-        // shouldnt be exported
-        if (attribute_name == "_highlighted") return false;
         return true;
       }
 
@@ -6750,7 +6712,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
           if (!(nrows == 1 && ncols == 1 &&
                 current_grid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
             {
-              auto grid_dom_element = global_render->createLayoutGrid(*current_grid);
+              auto grid_dom_element = global_creator->createLayoutGrid(*current_grid);
               edit_figure->append(grid_dom_element);
 
               if (!grm_iterate_grid(current_grid, grid_dom_element, plot_id)) return 0;
@@ -6764,8 +6726,8 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
                   if (grm_args_values(*current_subplot_args, "series", "A", &series))
                     {
                       const char *kind;
-                      auto plot = global_render->createPlot(plot_id);
-                      auto central_region = global_render->createCentralRegion();
+                      auto plot = global_creator->createPlot(plot_id);
+                      auto central_region = global_creator->createCentralRegion();
                       edit_figure->append(plot);
                       grm_args_values(*current_subplot_args, "kind", "s", &kind);
                       if (strcmp(kind, "marginal_heatmap") == 0)
@@ -6853,9 +6815,19 @@ int grm_process_tree(void)
 
 int grm_export(const char *file_path, int export_xml)
 {
+  auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
+  auto active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
+  auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+
+  if (active_plot != nullptr) active_plot->setAttribute("_active", 0);
+  if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 0);
+
   gr_beginprint(const_cast<char *>(file_path));
   int return_value = grm_plot(nullptr);
   gr_endprint();
+
+  if (active_plot != nullptr) active_plot->setAttribute("_active", 1);
+  if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 1);
 
   if (export_xml)
     {
@@ -7102,15 +7074,15 @@ int grm_plot_helper(GRM::GridElement *grid_element, GRM::Slice *slice,
     {
       const char *kind;
       grm_args_t **current_subplot_args = &grid_element->plot_args;
-      auto layout_grid_element = global_render->createLayoutGridElement(*grid_element, *slice);
+      auto layout_grid_element = global_creator->createLayoutGridElement(*grid_element, *slice);
       parent_dom_element->append(layout_grid_element);
-      auto plot = global_render->createPlot(plot_id);
-      auto central_region = global_render->createCentralRegion();
+      auto plot = global_creator->createPlot(plot_id);
+      auto central_region = global_creator->createCentralRegion();
       layout_grid_element->append(plot);
       grm_args_values(*current_subplot_args, "kind", "s", &kind);
       if (strcmp(kind, "marginal_heatmap") == 0)
         {
-          auto marginal_heatmap = global_render->createElement("marginal_heatmap_plot");
+          auto marginal_heatmap = global_creator->createElement("marginal_heatmap_plot");
           plot->append(marginal_heatmap);
           marginal_heatmap->append(central_region);
         }
@@ -7127,7 +7099,7 @@ int grm_plot_helper(GRM::GridElement *grid_element, GRM::Slice *slice,
     {
       auto *current_grid = reinterpret_cast<GRM::Grid *>(grid_element);
 
-      auto grid_dom_element = global_render->createLayoutGrid(*current_grid);
+      auto grid_dom_element = global_creator->createLayoutGrid(*current_grid);
       grid_dom_element->setAttribute("start_row", slice->row_start);
       grid_dom_element->setAttribute("stop_row", slice->row_stop);
       grid_dom_element->setAttribute("start_col", slice->col_start);
@@ -7147,6 +7119,11 @@ std::shared_ptr<GRM::Element> grm_get_document_root()
 std::shared_ptr<GRM::Render> grm_get_render()
 {
   return global_render;
+}
+
+std::shared_ptr<GRM::Creator> grm_get_creator()
+{
+  return global_creator;
 }
 
 int getFreeIdFromFigureElements()
@@ -7256,7 +7233,7 @@ int grm_get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, 
   double ndc_left, ndc_top, ndc_right, ndc_bottom;
   int width, height, max_width_height;
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
 
   if (x1 <= x2)

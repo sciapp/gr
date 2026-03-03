@@ -33,6 +33,7 @@ private:
   bool help_mode = false;
 
   void center();
+  void keepInDisplay();
 private slots:
   void findButtonClickedSlot();
   void showEditElementDockSlot();
@@ -56,6 +57,7 @@ private slots:
   void closeSelectionListDockSlot();
   void closeIconBarDockSlot();
   void closeAddElementDockSlot();
+  void updateEditElementDockTitleSlot();
 };
 
 #endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */

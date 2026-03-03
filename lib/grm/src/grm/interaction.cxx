@@ -10,8 +10,10 @@
 #include "plot_int.h"
 #include "utilcpp_int.hxx"
 #include "gr.h"
-#include "grm/dom_render/render.hxx"
+#include <grm/dom_render/render.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
+#include <grm/dom_render/process_attributes.hxx>
+#include <grm/dom_render/render_util.hxx>
 
 
 /* ######################### internal implementation ################################################################ */
@@ -371,7 +373,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   };
   auto render = grm_get_render();
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
 
   if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
@@ -484,7 +486,7 @@ static void oneSidedTransformationHelper(const std::shared_ptr<GRM::Element> &el
   };
   auto render = grm_get_render();
 
-  GRM::Render::getFigureSize(&width, &height, &metric_width, &metric_height);
+  GRM::getFigureSize(&width, &height, &metric_width, &metric_height);
   max_width_height = grm_max(width, height);
   auto aspect_ratio = metric_width / metric_height;
 
@@ -625,7 +627,7 @@ int inputImpl(const grm_args_t *input_args)
   int selection_status;
   logger((stderr, "Processing input\n"));
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
@@ -764,8 +766,8 @@ int inputImpl(const grm_args_t *input_args)
                   y_0 = y_min;
                 }
 
-              GRM::Render::processLimits(subplot_element);
-              GRM::Render::processWindow(central_region);
+              processLimits(subplot_element);
+              processWindow(central_region);
               gr_savestate();
 
               for (const auto &elem : subplot_element->parentElement()->children())
@@ -781,7 +783,7 @@ int inputImpl(const grm_args_t *input_args)
                       break;
                     }
                 }
-              GRM::Render::calculateCharHeight(central_region);
+              calculateCharHeight(central_region);
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -867,45 +869,6 @@ int inputImpl(const grm_args_t *input_args)
               if (static_cast<std::string>(marginal_heatmap->getAttribute("marginal_heatmap_kind")) == "line" &&
                   ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
                 marginal_heatmap->setAttribute("_update_required", true);
-
-              for (auto &side_region : marginal_heatmap->children())
-                {
-                  if (side_region->localName() == "side_region")
-                    {
-                      for (auto &child : side_region->children())
-                        {
-                          std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (child_kind == "histogram")
-                            {
-                              // reset bar colors
-                              // bar level
-                              for (auto &bars : child->children())
-                                {
-                                  // fill- and draw_rect level
-                                  for (auto &child_series : bars->children())
-                                    {
-                                      auto groups = child_series->children(); // inner and outer fill_group
-                                      std::shared_ptr<GRM::Element> inner_fill_group;
-                                      if (groups.size() == 2)
-                                        {
-                                          inner_fill_group = groups[0];
-                                        }
-                                      else
-                                        {
-                                          // no fill_groups?
-                                          break;
-                                        }
-
-                                      if (xind != -1)
-                                        inner_fill_group->children()[xind]->removeAttribute("fill_color_ind");
-                                      if (yind != -1)
-                                        inner_fill_group->children()[yind]->removeAttribute("fill_color_ind");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
               gr_restorestate();
             }
 
@@ -933,11 +896,11 @@ int inputImpl(const grm_args_t *input_args)
                   logger(
                       (stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
                   double zoom = 1.0 - INPUT_ANGLE_DELTA_FACTOR * angle_delta;
-                  auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, zoom, zoom);
+                  auto panzoom_element = grm_get_creator()->createPanzoom(focus_x, focus_y, zoom, zoom);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
                   gr_savestate();
-                  GRM::Render::processLimits(subplot_element);
+                  processLimits(subplot_element);
                   gr_restorestate();
                 }
               gr_restorestate();
@@ -965,11 +928,11 @@ int inputImpl(const grm_args_t *input_args)
                         static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
                   logger((stderr, "Zoom to ndc focus point (%lf, %lf), factor %lf\n", focus_x, focus_y, factor));
-                  auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
+                  auto panzoom_element = grm_get_creator()->createPanzoom(focus_x, focus_y, factor, factor);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
                   gr_savestate();
-                  GRM::Render::processLimits(subplot_element);
+                  processLimits(subplot_element);
                   gr_restorestate();
                 }
               gr_restorestate();
@@ -981,8 +944,8 @@ int inputImpl(const grm_args_t *input_args)
               grm_args_values(input_args, "move_selection", "i", &selection_status))
             {
               gr_savestate();
-              GRM::Render::processLimits(subplot_element);
-              GRM::Render::processWindow(central_region);
+              processLimits(subplot_element);
+              processWindow(central_region);
 
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
@@ -997,7 +960,7 @@ int inputImpl(const grm_args_t *input_args)
                       break;
                     }
                 }
-              GRM::Render::calculateCharHeight(central_region);
+              calculateCharHeight(central_region);
 
               for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=1]"))
                 {
@@ -1010,8 +973,8 @@ int inputImpl(const grm_args_t *input_args)
                    grm_args_values(input_args, "scale_selection", "i", &selection_status))
             {
               gr_savestate();
-              GRM::Render::processLimits(subplot_element);
-              GRM::Render::processWindow(central_region);
+              processLimits(subplot_element);
+              processWindow(central_region);
 
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
@@ -1026,7 +989,7 @@ int inputImpl(const grm_args_t *input_args)
                       break;
                     }
                 }
-              GRM::Render::calculateCharHeight(central_region);
+              calculateCharHeight(central_region);
 
               for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=1]"))
                 {
@@ -1071,7 +1034,8 @@ int inputImpl(const grm_args_t *input_args)
                   ndc_xshift = static_cast<double>(-xshift) / max_width_height;
                   ndc_yshift = static_cast<double>(yshift) / max_width_height;
                   // for some reason flip changes the panning for polar plots -> change flip influence back for panning
-                  if (strEqualsAny(kind, "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter"))
+                  if (strEqualsAny(kind, "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "hexbin",
+                                   "shade", "quiver"))
                     {
                       if (subplot_element->hasAttribute("x_flip") &&
                           static_cast<int>(subplot_element->getAttribute("x_flip")))
@@ -1082,11 +1046,11 @@ int inputImpl(const grm_args_t *input_args)
                     }
 
                   logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
-                  auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
+                  auto panzoom_element = grm_get_creator()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
                   gr_savestate();
-                  GRM::Render::processLimits(subplot_element);
+                  processLimits(subplot_element);
                   gr_restorestate();
                 }
               gr_restorestate();
@@ -1129,8 +1093,8 @@ int inputImpl(const grm_args_t *input_args)
                   movable_obj_ref = movable;
 
                   gr_savestate();
-                  GRM::Render::processLimits(subplot_element);
-                  GRM::Render::processWindow(central_region);
+                  processLimits(subplot_element);
+                  processWindow(central_region);
 
                   for (const auto &elem : subplot_element->parentElement()->children())
                     {
@@ -1145,7 +1109,7 @@ int inputImpl(const grm_args_t *input_args)
                           break;
                         }
                     }
-                  GRM::Render::calculateCharHeight(central_region);
+                  calculateCharHeight(central_region);
 
                   moveTransformationHelper(movable, ndc_x, ndc_y, xshift, yshift, true);
                   gr_restorestate();
@@ -1203,11 +1167,11 @@ int inputImpl(const grm_args_t *input_args)
       logger((stderr, "zoom focus: (%lf, %lf)\n", focus_x, focus_y));
       logger((stderr, "zoom factors: (%lf, %lf)\n", factor_x, factor_y));
 
-      auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
+      auto panzoom_element = grm_get_creator()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
       subplot_element->append(panzoom_element);
       subplot_element->setAttribute("panzoom", true);
       gr_savestate();
-      GRM::Render::processLimits(subplot_element);
+      processLimits(subplot_element);
       gr_restorestate();
 
       return 1;
@@ -1260,7 +1224,7 @@ int grm_is3d(const int x, const int y)
   int width, height, max_width_height;
   double ndc_x, ndc_y;
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   ndc_x = static_cast<double>(x) / max_width_height;
   ndc_y = static_cast<double>(y) / max_width_height;
@@ -1283,7 +1247,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   double viewport_mid_x, viewport_mid_y;
   double ws_window[4], viewport[4];
   std::shared_ptr<GRM::Element> subplot_element;
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   if (!grm_get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
                                          subplot_element))
@@ -1512,7 +1476,7 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
   info->y_label = (char *)"y";
   info->label = (char *)"";
 
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   x = static_cast<double>(mouse_x) / max_width_height;
   y = static_cast<double>(height - mouse_y) / max_width_height;
@@ -1529,11 +1493,11 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
     }
 
   gr_savestate();
-  GRM::Render::processLimits(subplot_element);
+  processLimits(subplot_element);
   auto central_region = subplot_element->querySelectors("central_region");
   if (central_region->hasAttribute("orientation"))
     orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
-  GRM::Render::processWindow(central_region);
+  processWindow(central_region);
   if (central_region->hasAttribute("viewport_x_min"))
     {
       double viewport[4];
@@ -1543,12 +1507,19 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
     }
   if (central_region->hasAttribute("window_x_min") && kind != "pie")
     {
-      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
-                   static_cast<double>(central_region->getAttribute("window_x_max")),
-                   static_cast<double>(central_region->getAttribute("window_y_min")),
-                   static_cast<double>(central_region->getAttribute("window_y_max")));
+      if (kind != "imshow")
+        {
+          gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                       static_cast<double>(central_region->getAttribute("window_x_max")),
+                       static_cast<double>(central_region->getAttribute("window_y_min")),
+                       static_cast<double>(central_region->getAttribute("window_y_max")));
+        }
+      else
+        {
+          gr_setwindow(0.0, 1.0, 0.0, 1.0);
+        }
     }
-  GRM::Render::calculateCharHeight(central_region);
+  calculateCharHeight(central_region);
   gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
   gr_ndctowc(&x, &y);
 
@@ -2009,7 +1980,7 @@ grm_error_t getTooltips(int mouse_x, int mouse_y, grm_error_t (*tooltip_callback
 int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
 {
   int width, height, max_width_height;
-  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
 
   auto ndc_x = static_cast<double>(mouse_x) / max_width_height;

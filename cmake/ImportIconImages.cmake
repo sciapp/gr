@@ -10,6 +10,7 @@ set(GRPLOT_ICONS
     kind
     polar_with_pan
     text_color_ind
+    disable_grid
     use_gr3_dark
     algorithm_dark
     aspect_ratio_dark
@@ -21,6 +22,7 @@ set(GRPLOT_ICONS
     kind_dark
     polar_with_pan_dark
     text_color_ind_dark
+    disable_grid_dark
 )
 set(GRPLOT_ICON_QRC "<RCC>\n    <qresource prefix=\"/\">\n")
 foreach(icon IN LISTS GRPLOT_ICONS)

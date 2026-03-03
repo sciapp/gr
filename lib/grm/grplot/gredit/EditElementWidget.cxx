@@ -1,6 +1,7 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
 #include "PreviewTextWidget.hxx"
+#include <grm/dom_render/casts.hxx>
 
 #include <gks.h>
 #include <cmath>
@@ -711,7 +712,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               text_modification_added = true;
             }
 
-          if (cur_attr_name == "font_precision")
+          if (cur_attr_name == "font_precision" || cur_attr_name == "font")
             connect(static_cast<QComboBox *>(line_edit),
                     static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
                     &EditElementWidget::openTextPreview);
@@ -2198,7 +2199,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                       text_modification_added = true;
                                     }
 
-                                  if (attr_name == "font_precision")
+                                  if (attr_name == "font_precision" || attr_name == "font")
                                     connect(static_cast<QComboBox *>(line_edit),
                                             static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
                                             this, &EditElementWidget::openTextPreview);
@@ -2884,7 +2885,9 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
               if (attr_name == "location" && current_selection->localName() == "axis")
                 current_selection->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();
-              grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
+              if (!current_selection->hasAttribute(attr_name) ||
+                  value != static_cast<std::string>(current_selection->getAttribute(attr_name)))
+                grplot_widget->attributeSetForComboBox(attr_type[attr_name], current_selection, value, attr_name);
             }
 
           if (attr_name == "colormap")
@@ -2892,17 +2895,24 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();
               auto colormap = QPixmap((":/preview_images/colormaps/" + value + ".png").c_str());
               colormap = colormap.scaled(20, 20);
-              grplot_widget->getColormapAct()->setIcon(colormap);
+              if (!current_selection->hasAttribute(attr_name) ||
+                  value != static_cast<std::string>(current_selection->getAttribute(attr_name)))
+                grplot_widget->getColormapAct()->setIcon(colormap);
             }
         }
       else if (typeid(field) == typeid(QCheckBox))
         {
-          current_selection->setAttribute(attr_name, static_cast<QCheckBox *>(fields[i])->isChecked());
+          auto value = static_cast<QCheckBox *>(fields[i])->isChecked();
+          if (!current_selection->hasAttribute(attr_name) ||
+              value != static_cast<int>(current_selection->getAttribute(attr_name)))
+            current_selection->setAttribute(attr_name, value);
         }
       else if (typeid(field) == typeid(QDial))
         {
-          auto val = static_cast<QDial *>(fields[i])->value();
-          current_selection->setAttribute(attr_name, val);
+          auto value = static_cast<QDial *>(fields[i])->value();
+          if (!current_selection->hasAttribute(attr_name) ||
+              value != static_cast<int>(current_selection->getAttribute(attr_name)))
+            current_selection->setAttribute(attr_name, value);
         }
     }
   return highlight_location;
@@ -2927,7 +2937,7 @@ void EditElementWidget::accept()
     }
 
   grplot_widget->setTreeUpdate(true);
-  if (getenv("GRM_DEBUG"))
+  if (util::isEnvVariableEnabled("GRM_DEBUG"))
     {
       std::cerr << toXML(grm_get_document_root(),
                          GRM::SerializerOptions{std::string(2, ' '),
@@ -4117,7 +4127,7 @@ void EditElementWidget::openTextPreview()
   if (auto current_selection = grplot_widget->getCurrentSelection(); current_selection != nullptr)
     {
       std::string text;
-      int text_color = 1, scientific_format = 1, font_precision = 3;
+      int text_color = 1, scientific_format = 1, font_precision = 3, font = 232;
 
       for (const auto &attr : {"text", "x_label_3d", "y_label_3d", "z_label_3d", "tick_label"})
         {
@@ -4135,6 +4145,9 @@ void EditElementWidget::openTextPreview()
 
       if ((*current_selection)->getRef()->hasAttribute("font_precision"))
         font_precision = static_cast<int>((*current_selection)->getRef()->getAttribute("font_precision"));
+
+      if ((*current_selection)->getRef()->hasAttribute("font"))
+        font = static_cast<int>((*current_selection)->getRef()->getAttribute("font"));
 
       for (int i = 0; i < labels.count(); i++)
         {
@@ -4167,6 +4180,17 @@ void EditElementWidget::openTextPreview()
                     scientific_format = GRM::scientificFormatStringToInt(
                         static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
                 }
+              else if (attr_name == "font_precision")
+                {
+                  if (!static_cast<QComboBox *>(fields[i])->itemText(index).toStdString().empty())
+                    font_precision = GRM::fontPrecisionStringToInt(
+                        static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
+                }
+              else if (attr_name == "font")
+                {
+                  if (!static_cast<QComboBox *>(fields[i])->itemText(index).toStdString().empty())
+                    font = GRM::fontStringToInt(static_cast<QComboBox *>(fields[i])->itemText(index).toStdString());
+                }
             }
         }
 
@@ -4189,6 +4213,6 @@ void EditElementWidget::openTextPreview()
               height = tmp;
             }
         }
-      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, width, height);
+      grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, font, width, height);
     }
 }

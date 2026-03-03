@@ -49,8 +49,11 @@ static void *load_library(const char *name)
   handle = LoadLibrary(pathname);
   if (handle == NULL)
     {
-      GetEnvironmentVariableW(L"GRDIR", grdir, MAX_PATH);
-      StringCbPrintfW(w_pathname, MAX_PATH, L"%ws\\bin\\%S.%S", grdir, name, EXTENSION);
+      if (!GetEnvironmentVariableW(L"GRDIR", grdir, MAX_PATH))
+        {
+          MultiByteToWideChar(CP_UTF8, 0, GRDIR, -1, grdir, MAX_PATH);
+        }
+      StringCbPrintfW(w_pathname, sizeof(w_pathname), L"%ws\\bin\\%S.%S", grdir, name, EXTENSION);
       handle = LoadLibraryExW(w_pathname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if (handle == NULL)
         {
