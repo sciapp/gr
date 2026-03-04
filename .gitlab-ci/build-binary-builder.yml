@@ -15,4 +15,4 @@ binary-builder:
     artifacts: true
   variables:
     GIT_STRATEGY: none
-    JULIA_VERSION: 1.10.0
+    JULIA_VERSION: 1.12.5
