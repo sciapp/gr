@@ -1173,7 +1173,7 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
   int rowstart, rowstop, colstart, colstop;
   grm_args_t **current_subplot_args;
   grm_grid_t *current_grid;
-  grm_element_t *current_element;
+  grm_grid_element_t *current_element;
 
   double *rel_heights, *rel_widths, *abs_heights, *abs_widths, *aspect_ratios;
   int *fit_parents_heights, *fit_parents_widths;
@@ -1263,51 +1263,51 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
               error = grm_grid_ensure_cells_are_grid(rowstart, rowstop, colstart, colstop, current_grid);
               error_code = error;
               returnIfError;
-              error = grm_grid_get_element(rowstart, colstart, current_grid, (grm_element_t **)&current_grid);
+              error = grm_grid_get_element(rowstart, colstart, current_grid, (grm_grid_element_t **)&current_grid);
               error_code = error;
               returnIfError;
-              current_element = (grm_element_t *)current_grid;
+              current_element = (grm_grid_element_t *)current_grid;
             }
 
           if (rel_heights != nullptr && rel_heights_length > current_nesting_degree &&
               rel_heights[current_nesting_degree] != -1)
             {
-              error = grm_element_set_relative_height(current_element, rel_heights[current_nesting_degree]);
+              error = grm_grid_element_set_relative_height(current_element, rel_heights[current_nesting_degree]);
               error_code = error;
             }
           if (rel_widths != nullptr && rel_widths_length > current_nesting_degree &&
               rel_widths[current_nesting_degree] != -1)
             {
-              error = grm_element_set_relative_width(current_element, rel_widths[current_nesting_degree]);
+              error = grm_grid_element_set_relative_width(current_element, rel_widths[current_nesting_degree]);
               error_code = error;
             }
           if (abs_heights != nullptr && abs_heights_length > current_nesting_degree &&
               abs_heights[current_nesting_degree] != -1)
             {
-              error = grm_element_set_abs_height(current_element, abs_heights[current_nesting_degree]);
+              error = grm_grid_element_set_abs_height(current_element, abs_heights[current_nesting_degree]);
               error_code = error;
             }
           if (abs_widths != nullptr && abs_widths_length > current_nesting_degree &&
               abs_widths[current_nesting_degree] != -1)
             {
-              error = grm_element_set_abs_width(current_element, abs_widths[current_nesting_degree]);
+              error = grm_grid_element_set_abs_width(current_element, abs_widths[current_nesting_degree]);
               error_code = error;
             }
           if (aspect_ratios != nullptr && aspect_ratios_length > current_nesting_degree &&
               aspect_ratios[current_nesting_degree] != -1)
             {
-              error = grm_element_set_aspect_ratio(current_element, aspect_ratios[current_nesting_degree]);
+              error = grm_grid_element_set_aspect_ratio(current_element, aspect_ratios[current_nesting_degree]);
               error_code = error;
             }
           if (fit_parents_heights != nullptr && fit_parents_heights_length > current_nesting_degree &&
               fit_parents_heights[current_nesting_degree] != -1)
             {
-              grm_element_set_fit_parents_height(current_element, fit_parents_heights[current_nesting_degree]);
+              grm_grid_element_set_fit_parents_height(current_element, fit_parents_heights[current_nesting_degree]);
             }
           if (fit_parents_widths != nullptr && fit_parents_widths_length > current_nesting_degree &&
               fit_parents_widths[current_nesting_degree] != -1)
             {
-              grm_element_set_fit_parents_width(current_element, fit_parents_widths[current_nesting_degree]);
+              grm_grid_element_set_fit_parents_width(current_element, fit_parents_widths[current_nesting_degree]);
             }
           returnIfError;
         }
