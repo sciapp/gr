@@ -7,7 +7,7 @@
 
 int STD_COLORS[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990, 991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
 
-void visualize(grm_element_t **elements, int nelems)
+void visualize(grm_grid_element_t **elements, int nelems)
 {
   int i;
   double *subplot;
@@ -18,7 +18,7 @@ void visualize(grm_element_t **elements, int nelems)
 
   for (i = 0; i < nelems; i++)
     {
-      grm_element_get_subplot(elements[i], &subplot);
+      grm_grid_element_get_subplot(elements[i], &subplot);
       gr_setfillcolorind(STD_COLORS[i]);
       gr_fillrect(subplot[0], subplot[1], subplot[2], subplot[3]);
       /*        printf("[%f %f %f %f]\n", subplot[0], subplot[1], subplot[2], subplot[3]); */
@@ -34,11 +34,11 @@ void test_grid(void)
   grm_grid_t *grid1;
   grm_grid_new(1, 1, &grid1);
 
-  grm_element_t *elements[nelems];
+  grm_grid_element_t *elements[nelems];
 
   for (i = 0; i < nelems; i++)
     {
-      grm_element_new(&elements[i]);
+      grm_grid_element_new(&elements[i]);
     }
 
   grm_grid_set_element_slice(0, 1, 0, 1, elements[0], grid1);
@@ -48,16 +48,16 @@ void test_grid(void)
 
   visualize(elements, nelems);
 
-  grm_element_set_abs_width(elements[2], 0.25);
-  grm_element_set_abs_height(elements[2], 0.2);
-  grm_element_set_fit_parents_height(elements[2], 1);
+  grm_grid_element_set_abs_width(elements[2], 0.25);
+  grm_grid_element_set_abs_height(elements[2], 0.2);
+  grm_grid_element_set_fit_parents_height(elements[2], 1);
   grm_grid_set_element_slice(0, 1, 2, 3, elements[2], grid1);
 
   grm_grid_finalize(grid1);
 
   visualize(elements, nelems);
 
-  grm_element_set_fit_parents_width(elements[2], 0);
+  grm_grid_element_set_fit_parents_width(elements[2], 0);
   grm_grid_set_element_slice(1, 2, 0, 2, elements[2], grid1);
 
   grm_grid_finalize(grid1);

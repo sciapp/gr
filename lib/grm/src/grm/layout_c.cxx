@@ -37,7 +37,7 @@ void grm_grid_print(const grm_grid_t *a_grid)
   grid->printGrid();
 }
 
-grm_error_t grm_grid_set_element(int row, int col, grm_element_t *a_element, grm_grid_t *a_grid)
+grm_error_t grm_grid_set_element(int row, int col, grm_grid_element_t *a_element, grm_grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
@@ -67,7 +67,7 @@ grm_error_t grm_grid_set_element_args(int row, int col, grm_args_t *subplot_args
 }
 
 grm_error_t grm_grid_set_element_slice(int row_start, int row_stop, int col_start, int col_stop,
-                                       grm_element_t *a_element, grm_grid_t *a_grid)
+                                       grm_grid_element_t *a_element, grm_grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
@@ -128,13 +128,13 @@ grm_error_t grm_grid_ensure_cells_are_grid(int row_start, int row_stop, int col_
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_grid_get_element(int row, int col, grm_grid_t *a_grid, grm_element_t **a_element)
+grm_error_t grm_grid_get_element(int row, int col, grm_grid_t *a_grid, grm_grid_element_t **a_element)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   try
     {
       GridElement *grid_element = grid->getElement(row, col);
-      *a_element = reinterpret_cast<grm_element_t *>(grid_element);
+      *a_element = reinterpret_cast<grm_grid_element_t *>(grid_element);
     }
   catch (const InvalidArgument &e)
     {
@@ -165,7 +165,7 @@ void grm_trim(grm_grid_t *a_grid)
 
 /* ------------------------- element -------------------------------------------------------------------------------- */
 
-grm_error_t grm_element_new(grm_element_t **a_element)
+grm_error_t grm_grid_element_new(grm_grid_element_t **a_element)
 {
   GridElement *grid_element;
   try
@@ -176,12 +176,12 @@ grm_error_t grm_element_new(grm_element_t **a_element)
     {
       return GRM_ERROR_MALLOC;
     }
-  *a_element = reinterpret_cast<grm_element_t *>(grid_element);
+  *a_element = reinterpret_cast<grm_grid_element_t *>(grid_element);
 
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_abs_height(grm_element_t *a_element, double height)
+grm_error_t grm_grid_element_set_abs_height(grm_grid_element_t *a_element, double height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   try
@@ -195,7 +195,7 @@ grm_error_t grm_element_set_abs_height(grm_element_t *a_element, double height)
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_relative_height(grm_element_t *a_element, double height)
+grm_error_t grm_grid_element_set_relative_height(grm_grid_element_t *a_element, double height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   try
@@ -209,7 +209,7 @@ grm_error_t grm_element_set_relative_height(grm_element_t *a_element, double hei
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_abs_width(grm_element_t *a_element, double width)
+grm_error_t grm_grid_element_set_abs_width(grm_grid_element_t *a_element, double width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   try
@@ -223,7 +223,7 @@ grm_error_t grm_element_set_abs_width(grm_element_t *a_element, double width)
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_relative_width(grm_element_t *a_element, double width)
+grm_error_t grm_grid_element_set_relative_width(grm_grid_element_t *a_element, double width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   try
@@ -237,7 +237,7 @@ grm_error_t grm_element_set_relative_width(grm_element_t *a_element, double widt
   return GRM_ERROR_NONE;
 }
 
-grm_error_t grm_element_set_aspect_ratio(grm_element_t *a_element, double ar)
+grm_error_t grm_grid_element_set_aspect_ratio(grm_grid_element_t *a_element, double ar)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   try
@@ -251,22 +251,53 @@ grm_error_t grm_element_set_aspect_ratio(grm_element_t *a_element, double ar)
   return GRM_ERROR_NONE;
 }
 
-void grm_element_set_fit_parents_height(grm_element_t *a_element, int fit_parents_height)
+void grm_grid_element_set_fit_parents_height(grm_grid_element_t *a_element, int fit_parents_height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
 
   element->setFitParentsHeight(fit_parents_height);
 }
 
-void grm_element_set_fit_parents_width(grm_element_t *a_element, int fit_parents_width)
+void grm_grid_element_set_fit_parents_width(grm_grid_element_t *a_element, int fit_parents_width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
 
   element->setFitParentsWidth(fit_parents_width);
 }
 
-void grm_element_get_subplot(grm_element_t *a_element, double **subplot)
+void grm_grid_element_get_subplot(grm_grid_element_t *a_element, double **subplot)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
   *subplot = element->getPlot();
+}
+
+grm_error_t grm_slice_new(int row_start, int row_stop, int col_start, int col_stop, grm_slice_t **a_slice)
+{
+  Slice *slice;
+  try
+    {
+      slice = new Slice(row_start, row_stop, col_start, col_stop);
+    }
+  catch (std::bad_alloc)
+    {
+      return GRM_ERROR_MALLOC;
+    }
+  *a_slice = reinterpret_cast<grm_slice_t *>(slice);
+
+  return GRM_ERROR_NONE;
+}
+
+grm_slice_t *grm_slice_copy(grm_slice_t *slice)
+{
+  return reinterpret_cast<grm_slice_t *>(reinterpret_cast<Slice *>(slice)->copy());
+}
+
+int grm_slice_is_positive(grm_slice_t *slice)
+{
+  return reinterpret_cast<Slice *>(slice)->isPositive();
+}
+
+int grm_slice_is_forward(grm_slice_t *slice)
+{
+  return reinterpret_cast<Slice *>(slice)->isForward();
 }

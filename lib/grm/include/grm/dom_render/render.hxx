@@ -110,16 +110,6 @@ public:
 
   /* ------------------------------- setter functions ----------------------------------------------------------------*/
 
-  //! next 2 functions -> store color indices vec or color rgb values
-  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
-                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &ext_context = nullptr);
-  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_rgb_values_key,
-                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &ext_context = nullptr);
-  //! only keys -> reusing stored context vectors
-  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
-                    std::optional<std::string> color_rgb_values_key);
-  //! Use Fallback
-  void setNextColor(const std::shared_ptr<Element> &element);
   void setClipRegion(const std::shared_ptr<Element> &element, int region);
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
   void setWSViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
@@ -219,6 +209,19 @@ public:
 private:
   Render();
   std::shared_ptr<Context> context;
+
+  /* ------------------------------- setter functions ----------------------------------------------------------------*/
+
+  //! next 2 functions -> store color indices vec or color rgb values
+  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
+                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &ext_context = nullptr);
+  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_rgb_values_key,
+                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &ext_context = nullptr);
+  //! only keys -> reusing stored context vectors
+  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
+                    std::optional<std::string> color_rgb_values_key);
+  //! Use Fallback
+  void setNextColor(const std::shared_ptr<Element> &element);
 };
 
 } // namespace GRM

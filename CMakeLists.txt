@@ -615,6 +615,7 @@ set(
   lib/grm/src/grm/dom_render/casts.cxx
   lib/grm/src/grm/dom_render/context.cxx
   lib/grm/src/grm/dom_render/creator.cxx
+  lib/grm/src/grm/dom_render/dom_render_c.cxx
   lib/grm/src/grm/dom_render/render.cxx
   lib/grm/src/grm/dom_render/drawable.cxx
   lib/grm/src/grm/dom_render/process_attributes.cxx
@@ -624,6 +625,7 @@ set(
   lib/grm/src/grm/dom_render/graphics_tree/comment.cxx
   lib/grm/src/grm/dom_render/graphics_tree/document.cxx
   lib/grm/src/grm/dom_render/graphics_tree/element.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/graphics_tree_c.cxx
   lib/grm/src/grm/dom_render/graphics_tree/node.cxx
   lib/grm/src/grm/dom_render/graphics_tree/value.cxx
   lib/grm/src/grm/dom_render/graphics_tree/util.cxx
