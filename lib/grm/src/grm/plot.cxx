@@ -6975,8 +6975,12 @@ int grm_process_tree(void)
 int grm_export(const char *file_path, int export_xml)
 {
   auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
-  auto active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
-  auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+  std::shared_ptr<GRM::Element> active_plot, active_plot_through_update;
+  if (active_figure != nullptr)
+    {
+      active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
+      active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+    }
 
   if (active_plot != nullptr) active_plot->setAttribute("_active", 0);
   if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 0);
