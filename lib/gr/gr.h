@@ -266,6 +266,7 @@ typedef struct
 
 typedef struct
 {
+  char *spec;
   double min, max;
   double tick, org;
   double position;
@@ -370,7 +371,7 @@ DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
 DLLEXPORT void gr_axis(const char *, axis_t *);
-DLLEXPORT void gr_drawaxis(char, axis_t *);
+DLLEXPORT void gr_drawaxis(axis_t *);
 DLLEXPORT void gr_drawaxes(axis_t *, axis_t *, int);
 DLLEXPORT void gr_freeaxis(axis_t *);
 DLLEXPORT void gr_grid(double, double, double, double, int, int);

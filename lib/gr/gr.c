@@ -5602,6 +5602,8 @@ void gr_axis(const char *spec, axis_t *axis)
   y_min = wn[2];
   y_max = wn[3];
 
+  axis->spec = strdup(spec);
+
   if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
 
   if (!strcmp(spec, "TIMESTAMP"))
@@ -5804,7 +5806,7 @@ void gr_axis(const char *spec, axis_t *axis)
     }
 }
 
-static void draw_axis(char which, axis_t *axis, int pass)
+static void draw_axis(axis_t *axis, int pass)
 {
   int errind, tnr, halign, valign;
   double chux, chuy;
@@ -5818,6 +5820,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+
+  bool is_time_series = strcmp(axis->spec, "TIMESTAMP") == 0;
+  char which = is_time_series ? 'X' : *axis->spec;
 
   if (which == 'X')
     {
@@ -5882,6 +5887,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
           if (axis->num_tick_labels > 0)
             {
               bool rotate_labels = false;
+              int saved_scientific_format = scientific_format;
+
+              if (is_time_series) scientific_format = SCIENTIFIC_FORMAT_OPTION_E;
 
               if (which == 'X')
                 {
@@ -5939,6 +5947,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
                     text2d(axis->label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
                 }
 
+              if (is_time_series) /* restore scientific format */
+                scientific_format = saved_scientific_format;
+
               if (rotate_labels) /* restore text character-up vector */
                 gks_set_text_upvec(chux, chuy);
 
@@ -5949,7 +5960,7 @@ static void draw_axis(char which, axis_t *axis, int pass)
     }
 }
 
-void gr_drawaxis(char which, axis_t *axis)
+void gr_drawaxis(axis_t *axis)
 {
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
@@ -5972,7 +5983,7 @@ void gr_drawaxis(char which, axis_t *axis)
 
   for (pass = 0; pass <= 3; pass++)
     {
-      draw_axis(which, axis, pass);
+      draw_axis(axis, pass);
     }
 
   /* restore linetype and clipping indicator */
@@ -6073,13 +6084,13 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
               if (lx.scale_options & GR_OPTION_FLIP_X) y_axis->position = wn[0];
               y_axis->tick_size = -y_axis->tick_size;
               y_axis->major_count = -y_axis->major_count;
-              draw_axis('Y', y_axis, pass);
+              draw_axis(y_axis, pass);
               memcpy(y_axis, &axis, sizeof(axis_t));
             }
         }
       if ((options & GR_AXES_SIMPLE_AXES) != 0)
         {
-          if (y_axis != NULL) draw_axis('Y', y_axis, pass);
+          if (y_axis != NULL) draw_axis(y_axis, pass);
         }
 
       if ((options & GR_AXES_TWIN_AXES) != 0)
@@ -6091,13 +6102,13 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
               if (lx.scale_options & GR_OPTION_FLIP_Y) x_axis->position = wn[2];
               x_axis->tick_size = -x_axis->tick_size;
               x_axis->major_count = -x_axis->major_count;
-              draw_axis('X', x_axis, pass);
+              draw_axis(x_axis, pass);
               memcpy(x_axis, &axis, sizeof(axis_t));
             }
         }
       if ((options & GR_AXES_SIMPLE_AXES) != 0)
         {
-          if (x_axis != NULL) draw_axis('X', x_axis, pass);
+          if (x_axis != NULL) draw_axis(x_axis, pass);
         }
     }
 
@@ -6124,6 +6135,7 @@ void gr_freeaxis(axis_t *axis)
         {
           free(axis->ticks);
         }
+      free(axis->spec);
     }
 }
 
