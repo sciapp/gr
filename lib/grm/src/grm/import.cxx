@@ -455,6 +455,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           int series_num;
           int y_cnt = 0, x_cnt = 0, err_cnt = 0;
           double xmin, xmax;
+          double marker_size;
+          int marker_type;
 
           if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
             {
@@ -648,10 +650,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     grm_args_push(series[col], "label", "s", labels[col].c_str());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
+                  if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                    grm_args_push(series[col], "marker_type", "i", marker_type);
+                  if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                    grm_args_push(series[col], "marker_size", "d", marker_size);
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -685,6 +692,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
                       else if (timestamp && strcmp(kind, "line") == 0)
                         grm_args_push(series[y_cnt], "line_spec", "s", "-+");
+                      if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                        grm_args_push(series[y_cnt], "marker_type", "i", marker_type);
+                      if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                        grm_args_push(series[y_cnt], "marker_size", "d", marker_size);
                       y_cnt += 1;
                     }
                   else if (!input_flags.equal_up_and_down_error && error != nullptr &&
@@ -1137,7 +1148,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -1513,7 +1525,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -1601,6 +1614,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
         {
+          int marker_type;
+          double marker_size;
+
           if (cols % 2 == 1)
             {
               fprintf(stderr, "For polar_line and polar_scatter plots x and y must always be given, but in this case "
@@ -1617,6 +1633,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                             col / 2 < kinds_length ? kinds[col / 2] : kinds[kinds_length - 1]);
               if (!labels.empty() && col / 2 < labels.size() && !labels[col / 2].empty())
                 grm_args_push(series[col / 2], "label", "s", labels[col / 2].c_str());
+              if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                grm_args_push(series[col / 2], "marker_type", "i", marker_type);
+              if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                grm_args_push(series[col / 2], "marker_size", "d", marker_size);
             }
           grm_args_push(plot[plot_i], "series", "nA", cols / 2, series.data());
         }

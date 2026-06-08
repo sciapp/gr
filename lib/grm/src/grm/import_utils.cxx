@@ -49,6 +49,7 @@ static std::map<std::string, const char *> key_to_types{
     {"location", "i"},
     {"major_h", "i"},
     {"marginal_heatmap_kind", "s"},
+    {"marker_size", "d"},
     {"marker_type", "i"},
     {"num_bins", "i"},
     {"normalization", "s"},
