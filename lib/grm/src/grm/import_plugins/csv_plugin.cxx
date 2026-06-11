@@ -17,7 +17,7 @@
 #include "grm/utilcpp_int.hxx"
 
 
-char detectDelimiter(const std::string &line)
+static char detectDelimiter(const std::string &line)
 {
   std::vector<char> candidates = {',', ';', '|', '\t', ' '};
   unsigned int max_occurences = 0;
@@ -34,7 +34,6 @@ char detectDelimiter(const std::string &line)
     }
   return best;
 }
-
 
 std::string CsvSource::normalizeLine(const std::string &str)
 {
@@ -290,7 +289,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                       if (strptime(token.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
                         {
 #endif
-                          data[depth][cnt].push_back(mktime(&timestamp_tm));
+                          data[depth][cnt].push_back((int)mktime(&timestamp_tm));
                           timestamps.emplace_back(col);
                           x_columns.emplace_back(col + 1);
                         }
@@ -367,11 +366,11 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   return GRM_ERROR_NONE;
 }
 
-
 DataSource *CsvPlugin::getDataSourceFromFile(const std::string &path) const
 {
   return new CsvSource;
 }
+
 const Plugin::ApiVersion CsvPlugin::apiVersion() const
 {
   return ApiVersion{1, 0};

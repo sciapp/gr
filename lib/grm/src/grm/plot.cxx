@@ -3525,6 +3525,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       auto sub_group = global_creator->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       std::string prefix = "";
+      double marker_size;
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
@@ -3566,6 +3567,8 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
 
       global_root->setAttribute("_id", ++id);
       if (series_args != nullptr) break;

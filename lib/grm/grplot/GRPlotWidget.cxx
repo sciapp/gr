@@ -5094,6 +5094,7 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
 
   if (enable_editor)
     {
+      auto old_pen = painter.pen();
       painter.setPen(QPen(QColor(255, 0, 0, 100)));
 
       for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
@@ -5114,6 +5115,7 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
               bounding_logic->addBoundingObject(b);
             }
         }
+      painter.setPen(old_pen);
     }
 }
 
@@ -5445,6 +5447,47 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                       int x_pos = 5, y_pos = 10;
                       if (elem->localName() == "text") y_pos = 0;
                       painter.drawText(rect.topLeft() + QPointF(x_pos, y_pos), elem->localName().c_str());
+                    }
+                  else if (elem != nullptr)
+                    {
+                      // atleast 1 element is selected to be moved or scaled -> show the viewport bbox so the user can
+                      // actually see the borders amd know where to drag to scale the element
+                      int width, height;
+                      double mwidth, mheight;
+                      GRM::getFigureSize(&width, &height, &mwidth, &mheight);
+                      auto aspect_r = mwidth / mheight;
+
+                      if (elem->hasAttribute("viewport_x_min") && elem->hasAttribute("viewport_x_max") &&
+                          elem->hasAttribute("viewport_y_min") && elem->hasAttribute("viewport_y_max"))
+                        {
+                          auto vp_x_min = static_cast<double>(elem->getAttribute("viewport_x_min"));
+                          auto vp_x_max = static_cast<double>(elem->getAttribute("viewport_x_max"));
+                          auto vp_y_min = static_cast<double>(elem->getAttribute("viewport_y_min"));
+                          auto vp_y_max = static_cast<double>(elem->getAttribute("viewport_y_max"));
+
+                          vp_x_min *= width;
+                          vp_x_max *= width;
+                          vp_y_min *= height;
+                          vp_y_max *= height;
+
+                          if (aspect_r > 1)
+                            {
+                              vp_y_min *= aspect_r;
+                              vp_y_max *= aspect_r;
+                            }
+                          else
+                            {
+                              vp_x_min /= aspect_r;
+                              vp_x_max /= aspect_r;
+                            }
+
+                          auto old_pen = painter.pen();
+                          painter.setPen(QPen(QColor(0, 0, 225, 100), 1.5, Qt::DashLine));
+
+                          painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
+                                           abs(vp_y_max - vp_y_min));
+                          painter.setPen(old_pen);
+                        }
                     }
                 }
               mask_highlights.clear();
@@ -7683,8 +7726,7 @@ void GRPlotWidget::cursorHandler(int x, int y)
                 elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
                 elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
                 elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
-                elem_name == "text_region" || elem_name == "overlay_element")) &&
-              mouse_state.mode == MouseState::Mode::NORMAL)
+                elem_name == "text_region" || elem_name == "overlay_element")))
             {
               if (cursor_state == DEFAULT_HOVER_MODE)
                 {

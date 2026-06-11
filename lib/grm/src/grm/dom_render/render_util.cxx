@@ -3159,6 +3159,9 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
       char text_c[256];
       double viewport[4];
 
+      // timestamps doesn't get displayed correctly with LaTeX cause of the ':' -> do the same as GR
+      scientific_format = 1;
+
       snprintf(text_c, 256, "%s", text.c_str());
       gr_inqtext(x, y, text_c, tbx, tby);
 
