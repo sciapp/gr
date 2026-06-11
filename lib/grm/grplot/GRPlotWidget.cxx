@@ -28,6 +28,7 @@
 
 #include "GRPlotWidget.hxx"
 #include "Threadpool.hxx"
+#include "Util.hxx"
 
 #include "gredit/AddElementWidget.hxx"
 
@@ -4246,25 +4247,9 @@ void GRPlotWidget::xLimSlot()
             {
               if (timestamp)
                 {
-                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                  struct tm timestamp_tm = {0};
-                  int year, month, day, hour, minute, second;
-
-                  if (sscanf(fields[0]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
-                             &minute, &second))
-                    {
-                      timestamp_tm.tm_year = year - 1900;
-                      timestamp_tm.tm_mon = month - 1;
-                      timestamp_tm.tm_mday = day;
-                      timestamp_tm.tm_hour = hour;
-                      timestamp_tm.tm_min = minute;
-                      timestamp_tm.tm_sec = second;
-#else
                   struct tm timestamp_tm;
-                  if (strptime(fields[0]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                  if (util::parseIso8601WithoutTimezone(fields[0]->text().toStdString(), timestamp_tm))
                     {
-#endif
                       plot_elem->setAttribute("x_lim_min", (int)mktime(&timestamp_tm));
                     }
                 }
@@ -4280,25 +4265,9 @@ void GRPlotWidget::xLimSlot()
             {
               if (timestamp)
                 {
-                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                  struct tm timestamp_tm = {0};
-                  int year, month, day, hour, minute, second;
-
-                  if (sscanf(fields[1]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
-                             &minute, &second))
-                    {
-                      timestamp_tm.tm_year = year - 1900;
-                      timestamp_tm.tm_mon = month - 1;
-                      timestamp_tm.tm_mday = day;
-                      timestamp_tm.tm_hour = hour;
-                      timestamp_tm.tm_min = minute;
-                      timestamp_tm.tm_sec = second;
-#else
                   struct tm timestamp_tm;
-                  if (strptime(fields[1]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                  if (util::parseIso8601WithoutTimezone(fields[1]->text().toStdString(), timestamp_tm))
                     {
-#endif
                       plot_elem->setAttribute("x_lim_max", (int)mktime(&timestamp_tm));
                     }
                 }

@@ -1,6 +1,7 @@
 #ifndef UTIL_HXX_INCLUDED
 #define UTIL_HXX_INCLUDED
 
+#include <ctime>
 #include <optional>
 #include <string>
 #include <fstream>
@@ -185,6 +186,7 @@ bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 bool isDigits(const std::string &str);
 bool isNumber(const std::string &str);
+bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm);
 int isEnvVariableEnabled(const char *env_variable_name);
 #ifdef _WIN32
 bool fileExists(const std::string &file_path);

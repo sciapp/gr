@@ -6,6 +6,7 @@
 #endif
 #include <array>
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -250,6 +251,33 @@ bool isNumber(const std::string &str)
   if (startsWith(str, em_dash)) start_pos = em_dash.size();
   auto pos = str.find_first_not_of(".-0123456789", start_pos);
   return pos == std::string::npos;
+}
+
+/*!
+ * \brief Parse an ISO 8601 string without timezone (format `YYYY-MM-DDTHH:MM:SS`).
+ *
+ * \param[in] s The string to parse
+ * \param[out] tm The timestamp struct to fill
+ * \return If the string could be parsed as an IOS 8601 string
+ */
+bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm)
+{
+  /* First set ALL members to default values to generate consistent results */
+  tm = {};
+  /* Then set relevant members to invalid values to check parsing state later on. */
+  tm.tm_sec = -1;
+  tm.tm_min = -1;
+  tm.tm_hour = -1;
+  tm.tm_mday = -1;
+  tm.tm_mon = -1;
+  tm.tm_year = -1;
+  tm.tm_wday = -1;
+  tm.tm_yday = -1;
+  tm.tm_isdst = -1;
+  std::istringstream input(s);
+  input >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  return !input.fail() &&
+         (tm.tm_sec >= 0 && tm.tm_min >= 0 && tm.tm_hour >= 0 && tm.tm_mday >= 0 && tm.tm_mon >= 0 && tm.tm_year >= 0);
 }
 
 int isEnvVariableEnabled(const char *env_variable_name)

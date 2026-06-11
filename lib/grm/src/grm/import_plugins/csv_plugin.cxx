@@ -271,24 +271,9 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                     }
                   else
                     {
-                      // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                      struct tm timestamp_tm = {0};
-                      int year, month, day, hour, minute, second;
-
-                      if (sscanf(token.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
-                        {
-                          timestamp_tm.tm_year = year - 1900;
-                          timestamp_tm.tm_mon = month - 1;
-                          timestamp_tm.tm_mday = day;
-                          timestamp_tm.tm_hour = hour;
-                          timestamp_tm.tm_min = minute;
-                          timestamp_tm.tm_sec = second;
-#else
                       struct tm timestamp_tm;
-                      if (strptime(token.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                      if (parseIso8601WithoutTimezone(token, timestamp_tm))
                         {
-#endif
                           data[depth][cnt].push_back((int)mktime(&timestamp_tm));
                           timestamps.emplace_back(col);
                           x_columns.emplace_back(col + 1);
