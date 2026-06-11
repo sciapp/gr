@@ -6,6 +6,7 @@
 #include <grm/util.h>
 #include <cassert>
 #include <complex>
+#include <ctime>
 #include <iostream>
 #include <list>
 #include <numeric>

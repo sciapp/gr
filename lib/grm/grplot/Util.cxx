@@ -6,6 +6,7 @@
 #endif
 #include <array>
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -261,27 +262,22 @@ bool isNumber(const std::string &str)
  */
 bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm)
 {
-#ifdef _WIN32
-  int year, month, day, hour, minute, second;
-
-  if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6)
-    {
-      // Warning: The tm struct is not fully set on Windows systems (e.g. `tm_wday` is missing and always `0`).
-      memset(&tm, 0, sizeof(tm));
-
-      tm.tm_year = year - 1900;
-      tm.tm_mon = month - 1;
-      tm.tm_mday = day;
-      tm.tm_hour = hour;
-      tm.tm_min = minute;
-      tm.tm_sec = second;
-
-      return true;
-    }
-  return false;
-#else
-  return strptime(s.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) != nullptr;
-#endif
+  /* First set ALL members to default values to generate consistent results */
+  tm = {};
+  /* Then set relevant members to invalid values to check parsing state later on. */
+  tm.tm_sec = -1;
+  tm.tm_min = -1;
+  tm.tm_hour = -1;
+  tm.tm_mday = -1;
+  tm.tm_mon = -1;
+  tm.tm_year = -1;
+  tm.tm_wday = -1;
+  tm.tm_yday = -1;
+  tm.tm_isdst = -1;
+  std::istringstream input(s);
+  input >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  return !input.fail() &&
+         (tm.tm_sec >= 0 && tm.tm_min >= 0 && tm.tm_hour >= 0 && tm.tm_mday >= 0 && tm.tm_mon >= 0 && tm.tm_year >= 0);
 }
 
 int isEnvVariableEnabled(const char *env_variable_name)
