@@ -1441,21 +1441,8 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
       double x_double = ndc_x, y_double = ndc_y;
       gr_ndctowc(&x_double, &y_double);
       struct tm timestamp_x_tm;
-#ifdef _WIN32
-      int year, month, day, hour, minute, second;
-
-      if (sscanf(accumulated_tooltip->x_time, "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+      if (parseIso8601WithoutTimezone(accumulated_tooltip->x_time, timestamp_x_tm))
         {
-          timestamp_x_tm.tm_year = year - 1900;
-          timestamp_x_tm.tm_mon = month - 1;
-          timestamp_x_tm.tm_mday = day;
-          timestamp_x_tm.tm_hour = hour;
-          timestamp_x_tm.tm_min = minute;
-          timestamp_x_tm.tm_sec = second;
-#else
-      if (strptime(accumulated_tooltip->x_time, "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
-        {
-#endif
           coordinate_system->setAttribute("x_ind", (int)mktime(&timestamp_x_tm));
         }
       else

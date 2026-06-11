@@ -252,6 +252,38 @@ bool isNumber(const std::string &str)
   return pos == std::string::npos;
 }
 
+/*!
+ * \brief Parse an ISO 8601 string without timezone (format `YYYY-MM-DDTHH:MM:SS`).
+ *
+ * \param[in] s The string to parse
+ * \param[out] tm The timestamp struct to fill
+ * \return If the string could be parsed as an IOS 8601 string
+ */
+bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm)
+{
+#ifdef _WIN32
+  int year, month, day, hour, minute, second;
+
+  if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6)
+    {
+      // Warning: The tm struct is not fully set on Windows systems (e.g. `tm_wday` is missing and always `0`).
+      memset(&tm, 0, sizeof(tm));
+
+      tm.tm_year = year - 1900;
+      tm.tm_mon = month - 1;
+      tm.tm_mday = day;
+      tm.tm_hour = hour;
+      tm.tm_min = minute;
+      tm.tm_sec = second;
+
+      return true;
+    }
+  return false;
+#else
+  return strptime(s.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) != nullptr;
+#endif
+}
+
 int isEnvVariableEnabled(const char *env_variable_name)
 {
   return getenv(env_variable_name) != NULL &&

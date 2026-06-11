@@ -133,6 +133,8 @@ double round(double val, int digits);
 double ceil(double val, int digits);
 double floor(double val, int digits);
 
+bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm);
+
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value = L"");
 #else

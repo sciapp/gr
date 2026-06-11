@@ -1,6 +1,7 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
 #include "PreviewTextWidget.hxx"
+#include "../Util.hxx"
 
 #include <grm/dom_render/render_util.hxx>
 #include <grm/dom_render/casts.hxx>
@@ -2894,25 +2895,9 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                               if (coordinate_system->hasAttribute("_time_axis") &&
                                   static_cast<int>(coordinate_system->getAttribute("_time_axis")))
                                 {
-                                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                                  struct tm timestamp_tm = {0};
-                                  int year, month, day, hour, minute, second;
-
-                                  if (sscanf(value.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute,
-                                             &second))
-                                    {
-                                      timestamp_tm.tm_year = year - 1900;
-                                      timestamp_tm.tm_mon = month - 1;
-                                      timestamp_tm.tm_mday = day;
-                                      timestamp_tm.tm_hour = hour;
-                                      timestamp_tm.tm_min = minute;
-                                      timestamp_tm.tm_sec = second;
-#else
                                   struct tm timestamp_tm;
-                                  if (strptime(value.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                                  if (util::parseIso8601WithoutTimezone(value, timestamp_tm))
                                     {
-#endif
                                       current_selection->setAttribute(attr_name, (int)mktime(&timestamp_tm));
                                     }
                                   else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
