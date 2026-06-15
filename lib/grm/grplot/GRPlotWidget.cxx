@@ -158,6 +158,7 @@ static std::list<HighlightMask> mask_highlights_cache;
 static uint32_t color = 0xFF0202F0;
 static bool move_to_plot = false;
 static std::string plot_id = "";
+static std::string input_data_name = "";
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -439,6 +440,32 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       else
         {
           if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
+
+          std::string token;
+          int j = 1;
+          for (int i = 1; i < argc; i++)
+            {
+              token = argv[i];
+              if (token == "--plot") continue;
+              if (util::startsWith(token, "file:"))
+                {
+                  input_data_name = token.substr(5, token.length() - 1);
+                  break;
+                }
+              else if (j == 1 && (token.find(":") == std::string::npos ||
+                                  // Check if is an absolute Windows path, like `C:\Users\...`
+                                  (token.length() > 2 && isalpha(token[0]) && token[1] == ':' &&
+                                   (token[2] == '/' || token[2] == '\\'))))
+                {
+                  optional_file = token; /* it's only used, if no "file:" keyword was found */
+                  break;
+                }
+              j += 1;
+            }
+          if (input_data_name.empty() && !optional_file.empty()) input_data_name = optional_file;
+          auto dir_sep_pos = input_data_name.find_last_of("/\\");
+          dir_sep_pos = dir_sep_pos != std::string::npos ? dir_sep_pos + 1 : 0;
+          input_data_name = input_data_name.substr(dir_sep_pos, input_data_name.find_last_of(".") + 1 - dir_sep_pos);
         }
       if (test_mode)
         {
@@ -2354,6 +2381,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 }
             }
           auto parent = current_selection->getRef()->parentElement();
+          current_selection->getRef()->remove();
           while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
             {
               auto tmp_parent = parent->parentElement();
@@ -2363,7 +2391,6 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               parent->remove();
               parent = tmp_parent;
             }
-          current_selection->getRef()->remove();
           // to prevent recreation of the tree a new flag is introduced
           if (parent->localName() == "root" && !parent->hasChildNodes())
             parent->setAttribute("_removed_children", true);
@@ -3736,7 +3763,8 @@ void GRPlotWidget::polarScatter()
 
 void GRPlotWidget::exportGraphics(const QString &file_type, const QString &file_ext)
 {
-  QFileDialog file_dialog(this, "Save " + file_type, QDir::homePath(), file_type + " files (*." + file_ext + ")");
+  QFileDialog file_dialog(this, "Save " + file_type, QDir::currentPath(), file_type + " files (*." + file_ext + ")");
+  file_dialog.selectFile((input_data_name + file_ext.toStdString()).c_str());
   file_dialog.setDefaultSuffix("." + file_ext);
   file_dialog.setAcceptMode(QFileDialog::AcceptSave);
   if (!file_dialog.exec()) return;
@@ -5526,7 +5554,7 @@ void GRPlotWidget::loadFileSlot()
     {
 #ifndef NO_XERCES_C
       std::string path =
-          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml.png)").toStdString();
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::currentPath(), "XML files (*.xml.png)").toStdString();
       if (path.empty()) return;
 
       auto file = fopen(path.c_str(), "r");
@@ -5560,7 +5588,8 @@ void GRPlotWidget::saveFileSlot()
           QApplication::beep();
           return;
         }
-      QFileDialog file_dialog(this, "Save XML-PNG", QDir::homePath(), "XML-PNG files (*.xml.png)");
+      QFileDialog file_dialog(this, "Save XML-PNG", QDir::currentPath(), "XML-PNG files (*.xml.png)");
+      file_dialog.selectFile((input_data_name + ".xml.png").c_str());
       file_dialog.setDefaultSuffix(".xml.png");
       file_dialog.setAcceptMode(QFileDialog::AcceptSave);
       if (!file_dialog.exec()) return;
@@ -5776,7 +5805,7 @@ void GRPlotWidget::showContextSlot()
 void GRPlotWidget::addContextSlot()
 {
   std::string path =
-      QFileDialog::getOpenFileName(this, "Open column data file", QDir::homePath(), "(*.dat *.csv *.xyz)")
+      QFileDialog::getOpenFileName(this, "Open column data file", QDir::currentPath(), "(*.dat *.csv *.xyz)")
           .toStdString();
   if (path.empty()) return;
 
@@ -5792,9 +5821,9 @@ void GRPlotWidget::addContextSlot()
 
 void GRPlotWidget::addGRPlotDataContextSlot()
 {
-  std::string path =
-      QFileDialog::getOpenFileName(this, "Interpret matrix as 1 column data", QDir::homePath(), "(*.dat *.csv *.xyz)")
-          .toStdString();
+  std::string path = QFileDialog::getOpenFileName(this, "Interpret matrix as 1 column data", QDir::currentPath(),
+                                                  "(*.dat *.csv *.xyz)")
+                         .toStdString();
   if (path.empty()) return;
 
   // convert the data
@@ -6058,7 +6087,8 @@ void GRPlotWidget::addImageSlot()
       figure_elem->appendChild(overlay);
     }
 
-  QString filename = QFileDialog::getOpenFileName(this, tr("Load Image"), QDir::homePath(), tr("Images (*.png *.jpg)"));
+  QString filename =
+      QFileDialog::getOpenFileName(this, tr("Load Image"), QDir::currentPath(), tr("Images (*.png *.jpg)"));
   if (filename.isEmpty()) return;
   QPixmap p(filename);
   auto image = p.toImage();
