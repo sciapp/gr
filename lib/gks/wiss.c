@@ -82,6 +82,16 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
 
   switch (fctid)
     {
+    case 11: /* escape */
+      len = (3 + i_arr[1]) * sizeof(int);
+      if (p->nbytes + len > p->size) reallocate(len);
+
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, i_arr[1] * sizeof(int));
+      break;
+
     case 12: /* polyline */
     case 13: /* polymarker */
     case 15: /* fill area */
@@ -364,6 +374,7 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
 
       break;
 
+    case 11:
     case 12:
     case 13:
     case 14:
@@ -453,6 +464,7 @@ static void interp(char *str, int segn)
   char *s;
   gks_state_list_t *gkss = NULL;
   int sp = 0, *len, *sgnum, *fctid, sx = 1, sy = 1;
+  int *funid = NULL, *dimidr = NULL;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
   int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
@@ -476,6 +488,12 @@ static void interp(char *str, int segn)
 
           RESOLVE(gkss, gks_state_list_t, sizeof(gks_state_list_t));
           unused_variable = gkss->ltype;
+          break;
+
+        case 11: /* escape */
+          RESOLVE(funid, int, sizeof(int));
+          RESOLVE(dimidr, int, sizeof(int));
+          RESOLVE(i_arr, int, *dimidr * sizeof(int));
           break;
 
         case 12: /* polyline */
@@ -605,6 +623,9 @@ static void interp(char *str, int segn)
         {
           switch (*fctid)
             {
+            case 11:
+              gks_escape(*funid, *dimidr, i_arr, 0, NULL, NULL);
+              break;
             case 12:
               gks_polyline(i_arr[0], f_arr_1, f_arr_2);
               break;

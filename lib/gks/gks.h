@@ -252,6 +252,8 @@ extern "C" {
 #define GKS_K_GDP_DRAW_TRIANGLES 4
 #define GKS_K_GDP_FILL_POLYGONS 5
 
+#define GKS_K_ESCAPE_XML_TEXTBLOCK 1
+
 /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0

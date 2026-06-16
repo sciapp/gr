@@ -1148,12 +1148,35 @@ void gks_set_deferral_state(int wkid, int defmo, int regmo)
 
 void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *odr)
 {
-  GKS_UNUSED(dimidr);
-  GKS_UNUSED(idr);
+  int *dr, len;
+
   GKS_UNUSED(maxodr);
   GKS_UNUSED(lenodr);
   GKS_UNUSED(odr);
-  gks_perror("escape function %d not implemented", funid);
+
+  if (state >= GKS_K_WSAC)
+    {
+      if (funid == GKS_K_ESCAPE_XML_TEXTBLOCK)
+        {
+          len = dimidr + 2;
+          dr = (int *)gks_malloc(len * sizeof(int));
+          dr[0] = funid;
+          dr[1] = dimidr;
+          memmove(dr + 2, idr, dimidr * sizeof(int));
+
+          /* call the device driver link routine */
+          gks_ddlk(ESCAPE, len, 1, len, dr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+
+          free(dr);
+        }
+      else
+        /* Invalid function id */
+        gks_report_error(ESCAPE, 1001);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(ESCAPE, 5);
 }
 
 void gks_message(int wkid, char *message)
