@@ -256,6 +256,7 @@ static void seg_xform_rel(double *x, double *y) {}
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
+  int *funid = NULL, *dimidr = NULL;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
   int *n, *primid, *ldr;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
@@ -275,6 +276,12 @@ static void seg_xform_rel(double *x, double *y) {}
         case 2:
           RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
           sp += 3 * sizeof(int); /* ignore workstation type */
+          break;
+
+        case 11: /* escape */
+          RESOLVE(funid, int, sizeof(int));
+          RESOLVE(dimidr, int, sizeof(int));
+          RESOLVE(i_arr, int, *dimidr * sizeof(int));
           break;
 
         case 12: /* polyline */
@@ -418,6 +425,9 @@ static void seg_xform_rel(double *x, double *y) {}
           gks_init_core(gkss);
 
           [self set_clip_rect:gkss->cntnr];
+          break;
+
+        case 11:
           break;
 
         case 12:

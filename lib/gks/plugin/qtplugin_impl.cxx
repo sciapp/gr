@@ -3301,6 +3301,9 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       gks_init_core(gkss);
       break;
 
+    case 11:
+      break;
+
     case 12:
       polyline(ia[0], r1, r2);
       break;
@@ -3830,6 +3833,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
         }
       break;
 
+    case 11:  /* escape */
     case 12:  /* polyline */
     case 13:  /* polymarker */
     case 14:  /* text */
