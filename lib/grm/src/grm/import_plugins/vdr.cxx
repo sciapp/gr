@@ -5,7 +5,8 @@
 #include "plugin_int.hxx"
 #include "plugin_loader_int.hxx"
 
-std::unordered_map<std::string, std::string> Vdr::plugin_names{{"csv", "csv_plugin"}, {"dat", "csv_plugin"}};
+std::unordered_map<std::string, std::string> Vdr::plugin_names{
+    {"csv", "csv_plugin"}, {"dat", "csv_plugin"}, {"xsf", "xsf_plugin"}};
 
 std::string getFileExtension(const std::string &file_name)
 {

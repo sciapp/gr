@@ -75,13 +75,14 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
           for (const auto &elem : grm_get_document_root()->querySelectorsAll("[" + selector_token + "]"))
             {
               if (auto elem_name = elem->localName();
-                  !advanced_editor &&
-                  (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
-                   elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
-                   elem_name == "cell_array" || elem_name == "nonuniform_cell_array" ||
-                   elem_name == "polar_cell_array" || elem_name == "nonuniform_polar_cell_array" ||
-                   elem_name == "draw_image" || elem_name == "draw_arc" || elem_name == "fill_arc" ||
-                   elem_name == "fill_area"))
+                  (!advanced_editor &&
+                   (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
+                    elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
+                    elem_name == "cell_array" || elem_name == "nonuniform_cell_array" ||
+                    elem_name == "polar_cell_array" || elem_name == "nonuniform_polar_cell_array" ||
+                    elem_name == "draw_image" || elem_name == "draw_arc" || elem_name == "fill_arc" ||
+                    elem_name == "fill_area")) ||
+                  elem_name == "gr3_draw_image")
                 {
                   skip_elem = true;
                 }

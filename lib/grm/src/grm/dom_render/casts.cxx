@@ -2,6 +2,8 @@
 #include "grm/logging_int.h"
 #include "grm/util_int.h"
 #include "grm/dom_render/not_found_error.hxx"
+#include "grm/dom_render/render_util.hxx"
+
 #include <grm/dom_render/render.hxx>
 
 /* ------------------------------- string to int ---------------------------------------------------------------------*/
@@ -201,6 +203,34 @@ int GRM::worldCoordinatesStringToInt(const std::string &world_coordinates_str)
   throw std::logic_error("Given world coordinates is unknown.\n");
 }
 
+int GRM::colorSchemeStringToInt(const std::string &color_scheme_str)
+{
+  if (color_scheme_str == "jmol")
+    return JMOL_COLOR_SCHEME;
+  else if (color_scheme_str == "cpk")
+    return CPK_COLOR_SCHEME;
+  else if (color_scheme_str == "natural")
+    return NATURAL_COLOR_SCHEME;
+  logger((stderr, "Got unknown color scheme \"%s\"\n", color_scheme_str.c_str()));
+  throw std::logic_error("Given color scheme is unknown.\n");
+}
+
+int GRM::radiusKindStringToInt(const std::string &radius_kind_str)
+{
+  if (radius_kind_str == "van_der_waal")
+    return VAN_DER_WAAL_RADIUS;
+  else if (radius_kind_str == "atomic")
+    return ATOMIC_RADIUS;
+  else if (radius_kind_str == "ionic")
+    return IONIC_RADIUS;
+  else if (radius_kind_str == "covalent")
+    return COVALENT_RADIUS;
+  else if (radius_kind_str == "crystal")
+    return CRYSTAL_RADIUS;
+  logger((stderr, "Got unknown radius kind \"%s\"\n", radius_kind_str.c_str()));
+  throw std::logic_error("Given radius kind is unknown.\n");
+}
+
 std::string GRM::worldCoordinatesIntToString(int world_coordinates)
 {
   if (world_coordinates == 1)
@@ -209,6 +239,36 @@ std::string GRM::worldCoordinatesIntToString(int world_coordinates)
     return "wc";
   logger((stderr, "Got unknown world coordinates \"%i\"\n", world_coordinates));
   throw std::logic_error("Given world coordinates is unknown.\n");
+}
+
+std::string GRM::colorSchemeIntToString(int color_scheme)
+{
+  if (color_scheme == NO_COLOR_SCHEME)
+    return "none";
+  else if (color_scheme == JMOL_COLOR_SCHEME)
+    return "jmol";
+  else if (color_scheme == CPK_COLOR_SCHEME)
+    return "cpk";
+  else if (color_scheme == NATURAL_COLOR_SCHEME)
+    return "natural";
+  logger((stderr, "Got unknown color scheme \"%i\"\n", color_scheme));
+  throw std::logic_error("Given color scheme is unknown.\n");
+}
+
+std::string GRM::radiusKindIntToString(int radius_kind)
+{
+  if (radius_kind == VAN_DER_WAAL_RADIUS)
+    return "van_der_waal";
+  else if (radius_kind == ATOMIC_RADIUS)
+    return "atomic";
+  else if (radius_kind == IONIC_RADIUS)
+    return "ionic";
+  else if (radius_kind == COVALENT_RADIUS)
+    return "covalent";
+  else if (radius_kind == CRYSTAL_RADIUS)
+    return "crystal";
+  logger((stderr, "Got unknown radius kind \"%i\"\n", radius_kind));
+  throw std::logic_error("Given radius kind is unknown.\n");
 }
 
 int GRM::colormapStringToInt(const std::string &colormap_str)
@@ -577,4 +637,18 @@ std::vector<std::string> GRM::getTransformation()
   transformations.reserve(transformation_string_to_int.size());
   for (auto const &imap : transformation_string_to_int) transformations.push_back(imap.first);
   return transformations;
+}
+
+std::vector<std::string> GRM::getColorScheme()
+{
+  std::vector<std::string> color_scheme = {"jmol", "cpk", "natural"};
+
+  return color_scheme;
+}
+
+std::vector<std::string> GRM::getRadiusKind()
+{
+  std::vector<std::string> radius_kind = {"van_der_waal", "atomic", "ionic", "covalent", "crystal"};
+
+  return radius_kind;
 }

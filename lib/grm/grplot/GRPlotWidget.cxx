@@ -226,6 +226,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "axis_type",
       "clip_region",
       "color_model",
+      "color_scheme",
       "colormap",
       "element_type",
       "error_bar_style",
@@ -243,6 +244,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "norm",
       "orientation",
       "plot_type",
+      "radius_kind",
       "ref_x_axis_location",
       "ref_y_axis_location",
       "resample_method",
@@ -293,11 +295,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "polar_with_pan",
       "r_log",
       "set_text_color_for_background",
+      "show_mesh",
+      "show_unit_cell",
+      "spin_style",
       "stairs",
       "text_is_title",
       "theta_flip",
       "trim_col",
       "trim_row",
+      "unified_connection_radius",
       "use_gr3",
       "use_grplot_changes",
       "x_flip",
@@ -1044,7 +1050,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
       x_axis_location_list, y_axis_location_list, marker_type_list, move_to_plot_list, text_align_horizontal_list,
       text_align_vertical_list, algorithm_volume_list, color_model_list, context_attr_list, fill_style_list,
-      fill_int_style_list, transformation_list;
+      fill_int_style_list, transformation_list, color_scheme_list, radius_kind_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve(static_cast<int>(size_unit_vec.size()));
   for (auto &i : size_unit_vec) size_unit_list.push_back(i.c_str());
@@ -1097,6 +1103,12 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve(static_cast<int>(context_attr_vec.size()));
   for (auto &i : context_attr_vec) context_attr_list.push_back(i.c_str());
+  auto color_scheme_vec = GRM::getColorScheme();
+  color_scheme_list.reserve(static_cast<int>(color_scheme_vec.size()));
+  for (auto &i : color_scheme_vec) color_scheme_list.push_back(i.c_str());
+  auto radius_kind_vec = GRM::getRadiusKind();
+  radius_kind_list.reserve(static_cast<int>(radius_kind_vec.size()));
+  for (auto &i : radius_kind_vec) radius_kind_list.push_back(i.c_str());
   std::vector<std::string> move_to_plot_vec;
   for (const auto &elem : grm_get_document_root()->querySelectorsAll("plot"))
     {
@@ -1144,6 +1156,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"z_origin_pos", org_pos_list},
       {"tick_orientation", tick_orientation_list},
       {"transformation", transformation_list},
+      {"color_scheme", color_scheme_list},
+      {"radius_kind", radius_kind_list},
   };
   // add for all context attributes all possible values
   for (const auto &attr : GRM::getContextAttributes())
@@ -1285,7 +1299,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList barplot_group = {"barplot", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList polar_line_group = {"polar_line", "polar_scatter"};
-      QStringList other_kinds = {"histogram", "pie", "polar_heatmap", "polar_histogram", "quiver"};
+      QStringList other_kinds = {"histogram", "pie", "polar_heatmap", "polar_histogram", "quiver", "molecule"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -1505,6 +1519,16 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::worldCoordinatesIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "color_scheme" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::colorSchemeIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "radius_kind" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::radiusKindIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
 
   int index = static_cast<QComboBox *>(*line_edit)->findText(current_text.c_str());
   if (index == -1) index += static_cast<QComboBox *>(*line_edit)->count();
@@ -1718,6 +1742,14 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, const s
           else if (label == "world_coordinates")
             {
               element->setAttribute(label, GRM::worldCoordinatesStringToInt(value));
+            }
+          else if (label == "color_scheme")
+            {
+              element->setAttribute(label, GRM::colorSchemeStringToInt(value));
+            }
+          else if (label == "radius_kind")
+            {
+              element->setAttribute(label, GRM::radiusKindStringToInt(value));
             }
         }
       catch (std::logic_error &e)
@@ -2825,6 +2857,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 {
                   auto global_root = grm_get_document_root();
                   auto elem = global_root->querySelectors("[_bbox_id=\"" + std::to_string((int)(set_elem)) + "\"]");
+                  if (elem == nullptr || !elem->hasAttribute("_bbox_x_min")) continue;
                   auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
                   auto bbox_x_max = static_cast<double>(elem->getAttribute("_bbox_x_max"));
                   auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
@@ -2993,6 +3026,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
   grm_args_t *args = grm_args_new();
   int x, y;
+  bool was_pan = false;
   getMousePos(event, &x, &y);
 
   if (mouse_state.mode == MouseState::Mode::BOXZOOM)
@@ -3009,6 +3043,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
     }
   else if (mouse_state.mode == MouseState::Mode::PAN)
     {
+      was_pan = true;
       mouse_state.mode = MouseState::Mode::NORMAL;
     }
   else if (mouse_state.mode == MouseState::Mode::MOVABLE_XFORM)
@@ -3051,7 +3086,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   grm_input(args);
   grm_args_delete(args);
 
-  redraw();
+  if (!was_pan) redraw();
 }
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
@@ -6740,6 +6775,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
           "series_imshow",
           "series_isosurface",
           "series_line",
+          "series_molecule",
           "series_nonuniform_heatmap",
           "series_nonuniform_polar_heatmap",
           "series_pie",

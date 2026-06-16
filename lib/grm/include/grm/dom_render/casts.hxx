@@ -244,6 +244,8 @@ GRM_EXPORT int fillIntStyleStringToInt(const std::string &fill_int_style_str);
 GRM_EXPORT int transformationStringToInt(const std::string &transformation_str);
 GRM_EXPORT int labelOrientationStringToInt(const std::string &label_orientation_str);
 GRM_EXPORT int worldCoordinatesStringToInt(const std::string &world_coordinates_str);
+GRM_EXPORT int colorSchemeStringToInt(const std::string &color_scheme_str);
+GRM_EXPORT int radiusKindStringToInt(const std::string &radius_kind_str);
 
 /* ------------------------------- int to string ---------------------------------------------------------------------*/
 
@@ -271,6 +273,8 @@ GRM_EXPORT std::string fillIntStyleIntToString(int fill_int_style);
 GRM_EXPORT std::string transformationIntToString(int transformation);
 GRM_EXPORT std::string labelOrientationIntToString(int label_orientation);
 GRM_EXPORT std::string worldCoordinatesIntToString(int world_coordinates);
+GRM_EXPORT std::string colorSchemeIntToString(int color_scheme);
+GRM_EXPORT std::string radiusKindIntToString(int radius_kind);
 
 /* ------------------------------- get functions ---------------------------------------------------------------------*/
 
@@ -291,5 +295,7 @@ GRM_EXPORT std::vector<std::string> getContextAttributes();
 GRM_EXPORT std::vector<std::string> getFillStyles();
 GRM_EXPORT std::vector<std::string> getFillIntStyles();
 GRM_EXPORT std::vector<std::string> getTransformation();
+GRM_EXPORT std::vector<std::string> getColorScheme();
+GRM_EXPORT std::vector<std::string> getRadiusKind();
 } // namespace GRM
 #endif // GR_CASTS_HXX

@@ -8,6 +8,8 @@
 #include <grm/event_int.h>
 #include <grm/plot_int.h>
 
+#include "gr3.h"
+
 void processAttributes(const std::shared_ptr<GRM::Element> &element)
 {
   /*!
@@ -398,7 +400,7 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
       element->setAttribute("_top_axis_border", CENTRAL_REGION_Y_MAX_VP_AXIS_MARGIN * (vp3 - vp2));
     }
 
-  if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "line3", "scatter3"))
+  if (strEqualsAny(kind, "line", "stairs", "scatter", "stem", "line3", "scatter3", "molecule"))
     {
       double w, h;
       int location = PLOT_DEFAULT_LOCATION;
@@ -2146,6 +2148,29 @@ void processSpace3d(const std::shared_ptr<GRM::Element> &element)
   auto camera_distance = static_cast<double>(element->getAttribute("space_3d_camera_distance"));
 
   gr_setspace3d(-phi, theta, fov, camera_distance);
+
+  if (element->querySelectors("series_molecule"))
+    {
+      double cam_x, cam_y, cam_z, up_x, up_y, up_z, focus_x, focus_y, focus_z;
+      double near_plane, far_plane, left, right, bottom, top;
+
+      gr_inqtransformationparameters(&cam_x, &cam_y, &cam_z, &up_x, &up_y, &up_z, &focus_x, &focus_y, &focus_z);
+
+      gr3_cameralookat(cam_x, cam_y, cam_z, focus_x, focus_y, focus_z, up_x, up_y, up_z);
+
+      if (fov == 0 || std::isnan(fov))
+        {
+          gr_inqorthographicprojection(&left, &right, &bottom, &top, &near_plane, &far_plane);
+          gr3_setprojectiontype(GR3_PROJECTION_ORTHOGRAPHIC);
+          gr3_setorthographicprojection(left, right, bottom, top, near_plane, far_plane);
+        }
+      else
+        {
+          gr_inqperspectiveprojection(&near_plane, &far_plane, &fov);
+          gr3_setprojectiontype(GR3_PROJECTION_PERSPECTIVE);
+          gr3_setcameraprojectionparameters(fov, near_plane, far_plane);
+        }
+    }
 }
 
 void processTextAlign(const std::shared_ptr<GRM::Element> &element)
@@ -2234,7 +2259,9 @@ void processTransparency(const std::shared_ptr<GRM::Element> &element)
   auto global_root = grm_get_document_root();
   double transparency = 1.0;
   if (global_root->querySelectors("[_highlighted=\"1\"]")) gr_inqtransparency(&transparency);
-  gr_settransparency(transparency * static_cast<double>(element->getAttribute("transparency")));
+  auto set_transparency = static_cast<double>(element->getAttribute("transparency"));
+  if (element->localName() == "unit_cell") set_transparency = 1.0;
+  gr_settransparency(transparency * set_transparency);
 }
 
 void processWSViewport(const std::shared_ptr<GRM::Element> &element)
@@ -3013,7 +3040,7 @@ void GRM::processLimits(const std::shared_ptr<GRM::Element> &element)
       element->removeAttribute("_no_y_reset_ranges");
     }
 
-  if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "molecule"))
     {
       auto zmin = static_cast<double>(element->getAttribute("_z_lim_min"));
       auto zmax = static_cast<double>(element->getAttribute("_z_lim_max"));
@@ -3128,7 +3155,8 @@ void GRM::processWindow(const std::shared_ptr<GRM::Element> &element)
 
       if (kind != "pie" && xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
       if (kind == "pie") gr_setwindow(0, 1, 0, 1);
-      if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+      if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                       "molecule"))
         {
           auto zmin = static_cast<double>(element->getAttribute("window_z_min"));
           auto zmax = static_cast<double>(element->getAttribute("window_z_max"));
