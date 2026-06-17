@@ -4710,3 +4710,69 @@ void gks_inq_nominal_size(double *factor)
 {
   *factor = s->nominal_size;
 }
+
+static char *find_object(char *pdf, long objnum)
+{
+  static char marker[64];
+
+  snprintf(marker, sizeof(marker), "%ld 0 obj", objnum);
+  return strstr(pdf, marker);
+}
+
+char *gks_get_textblock_from_pdf(char *path)
+{
+  FILE *fp;
+  char *pdf = NULL;
+  char *result = NULL;
+  size_t size;
+
+  fp = fopen(path, "rb");
+  if (fp == NULL) return NULL;
+
+  if (fseek(fp, 0, SEEK_END) != 0) goto done;
+
+  size = (size_t)ftell(fp);
+  rewind(fp);
+
+  pdf = malloc(size + 1);
+  if (pdf == NULL) goto done;
+
+  if (fread(pdf, 1, size, fp) != size) goto done;
+
+  pdf[size] = '\0';
+
+  char *filespec = strstr(pdf, "/F (gks-textblock.xml)");
+  if (filespec == NULL) goto done;
+
+  char *ef = strstr(filespec, "/EF");
+  long objnum;
+  if (ef == NULL || sscanf(ef, "/EF << /F %ld 0 R", &objnum) != 1) goto done;
+
+  char *obj = find_object(pdf, objnum);
+  if (obj == NULL) goto done;
+
+  char *lenptr = strstr(obj, "/Length");
+  long length;
+  if (lenptr == NULL || sscanf(lenptr, "/Length %ld", &length) != 1 || length < 0) goto done;
+
+  char *stream = strstr(obj, "stream");
+  if (stream == NULL) goto done;
+
+  stream += 6;
+  if (*stream == '\r') stream++;
+  if (*stream == '\n') stream++;
+
+  if ((size_t)(stream - pdf) + (size_t)length > size) goto done;
+
+  result = malloc((size_t)length + 1);
+  if (result != NULL)
+    {
+      memcpy(result, stream, (size_t)length);
+      result[length] = '\0';
+    }
+
+done:
+  free(pdf);
+  fclose(fp);
+  return result;
+}

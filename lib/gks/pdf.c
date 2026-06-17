@@ -2319,7 +2319,8 @@ void gks_drv_pdf(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *
       /* escape */
       if (p->state == GKS_K_WS_ACTIVE)
         {
-          if (ia[0] == GKS_K_ESCAPE_XML_TEXTBLOCK) pdf_set_xml_textblock(p, (const char *)(ia + 2), (size_t)ia[1]);
+          if (ia[0] == GKS_K_ESCAPE_XML_TEXTBLOCK)
+            pdf_set_xml_textblock(p, (const char *)(ia + 2), (size_t)(ia[1] * sizeof(int)));
         }
       break;
 
