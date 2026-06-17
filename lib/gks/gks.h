@@ -252,7 +252,7 @@ extern "C" {
 #define GKS_K_GDP_DRAW_TRIANGLES 4
 #define GKS_K_GDP_FILL_POLYGONS 5
 
-#define GKS_K_ESCAPE_XML_TEXTBLOCK 1
+#define GKS_K_ESCAPE_SET_METADATA 1
 
 /* GKS error codes */
 
@@ -717,7 +717,7 @@ DLLEXPORT void gks_inq_clip_region(int *errind, int *region);
 DLLEXPORT void gks_set_clip_sector(double start_angle, double end_angle);
 DLLEXPORT void gks_inq_clip_sector(int *errind, double *start_angle, double *end_angle);
 
-DLLEXPORT char *gks_get_textblock_from_pdf(char *path);
+DLLEXPORT char *gks_get_metadata(char *path);
 
 /* Entry point definitions */
 

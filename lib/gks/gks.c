@@ -1156,7 +1156,7 @@ void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *o
 
   if (state >= GKS_K_WSAC)
     {
-      if (funid == GKS_K_ESCAPE_XML_TEXTBLOCK)
+      if (funid == GKS_K_ESCAPE_SET_METADATA)
         {
           len = dimidr + 2;
           dr = (int *)gks_malloc(len * sizeof(int));
@@ -4719,7 +4719,7 @@ static char *find_object(char *pdf, long objnum)
   return strstr(pdf, marker);
 }
 
-char *gks_get_textblock_from_pdf(char *path)
+char *gks_get_metadata(char *path)
 {
   FILE *fp;
   char *pdf = NULL;
@@ -4741,7 +4741,7 @@ char *gks_get_textblock_from_pdf(char *path)
 
   pdf[size] = '\0';
 
-  char *filespec = strstr(pdf, "/F (gks-textblock.xml)");
+  char *filespec = strstr(pdf, "/F (gks-metadata)");
   if (filespec == NULL) goto done;
 
   char *ef = strstr(filespec, "/EF");
