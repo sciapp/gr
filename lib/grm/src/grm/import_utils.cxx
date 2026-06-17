@@ -703,7 +703,7 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                                 ranges->xmin = (int)mktime(&timestamp_x_tm);
                               else
                                 ranges->xmin = std::stod(x);
-                              if (parseIso8601WithoutTimezone(y, timestamp_x_tm))
+                              if (parseIso8601WithoutTimezone(y, timestamp_y_tm))
                                 ranges->xmax = (int)mktime(&timestamp_y_tm);
                               else
                                 ranges->xmax = std::stod(y);

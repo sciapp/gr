@@ -2851,7 +2851,7 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                         {
                           const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
                           if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                              !util::isDigits(value))
+                              (!util::isDigits(value) || value == ""))
                             {
                               if (current_selection->parentElement()->localName() == "text_region")
                                 {
