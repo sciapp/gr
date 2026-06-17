@@ -169,10 +169,10 @@ typedef struct ws_state_list_t
   PDF_image **image;
   int images, max_images;
   int preview_fix;
-  char *xml_textblock;
-  size_t xml_textblock_length;
-  long xml_stream;
-  long xml_filespec;
+  char *metadata;
+  size_t metadata_length;
+  long metadata_stream;
+  long metadata_filespec;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -472,16 +472,16 @@ static long pdf_alloc_id(PDF *p)
   return ++(p->object_number);
 }
 
-static void pdf_set_xml_textblock(PDF *p, const char *text, size_t length)
+static void pdf_set_metadata(PDF *p, const char *text, size_t length)
 {
   while (length > 0 && text[length - 1] == '\0') length--;
 
-  if (p->xml_textblock != NULL) free(p->xml_textblock);
+  if (p->metadata != NULL) free(p->metadata);
 
-  p->xml_textblock = (char *)pdf_calloc(length + 1, 1);
-  memcpy(p->xml_textblock, text, length);
-  p->xml_textblock[length] = '\0';
-  p->xml_textblock_length = length;
+  p->metadata = (char *)pdf_calloc(length + 1, 1);
+  memcpy(p->metadata, text, length);
+  p->metadata[length] = '\0';
+  p->metadata_length = length;
 }
 
 static void pdf_open(int fd)
@@ -508,7 +508,7 @@ static void pdf_open(int fd)
 
   p->preview_fix = (char *)gks_getenv("GKS_PDF_PREVIEW_FIX") != NULL ? 1 : 0;
 
-  p->xml_textblock = NULL;
+  p->metadata = NULL;
 }
 
 static PDF_image *pdf_image(PDF *p, int width, int height, int dimx, int swapx, int swapy, int *image_rgba)
@@ -629,10 +629,10 @@ static void pdf_close(PDF *p)
   pdf_printf(p->stream, "%%PDF-1.4\n");
   pdf_printf(p->stream, "%%\344\343\317\322\n");
 
-  if (p->xml_textblock != NULL)
+  if (p->metadata != NULL)
     {
-      p->xml_stream = pdf_alloc_id(p);
-      p->xml_filespec = pdf_alloc_id(p);
+      p->metadata_stream = pdf_alloc_id(p);
+      p->metadata_filespec = pdf_alloc_id(p);
     }
 
   pdf_obj(p, p->info);
@@ -649,9 +649,9 @@ static void pdf_close(PDF *p)
   pdf_printf(p->stream, "/Type /Catalog\n");
   pdf_printf(p->stream, "/Pages %ld 0 R\n", p->pages);
   pdf_printf(p->stream, "/Outlines %ld 0 R\n", p->outlines);
-  if (p->xml_textblock != NULL)
+  if (p->metadata != NULL)
     {
-      pdf_printf(p->stream, "/AF [%ld 0 R]\n", p->xml_filespec);
+      pdf_printf(p->stream, "/AF [%ld 0 R]\n", p->metadata_filespec);
     }
   pdf_enddict(p);
   pdf_endobj(p);
@@ -663,29 +663,29 @@ static void pdf_close(PDF *p)
   pdf_enddict(p);
   pdf_endobj(p);
 
-  if (p->xml_textblock != NULL)
+  if (p->metadata != NULL)
     {
-      pdf_obj(p, p->xml_stream);
+      pdf_obj(p, p->metadata_stream);
       pdf_dict(p);
       pdf_printf(p->stream, "/Type /EmbeddedFile\n");
       pdf_printf(p->stream, "/Subtype /text#2Fxml\n");
-      pdf_printf(p->stream, "/Params << /Size %ld >>\n", (long)p->xml_textblock_length);
-      pdf_printf(p->stream, "/Length %ld\n", (long)p->xml_textblock_length);
+      pdf_printf(p->stream, "/Params << /Size %ld >>\n", (long)p->metadata_length);
+      pdf_printf(p->stream, "/Length %ld\n", (long)p->metadata_length);
       pdf_enddict(p);
       pdf_stream(p);
-      pdf_memcpy(p->stream, p->xml_textblock, p->xml_textblock_length);
+      pdf_memcpy(p->stream, p->metadata, p->metadata_length);
       pdf_printf(p->stream, "\n");
       pdf_endstream(p);
       pdf_endobj(p);
 
-      pdf_obj(p, p->xml_filespec);
+      pdf_obj(p, p->metadata_filespec);
       pdf_dict(p);
       pdf_printf(p->stream, "/Type /Filespec\n");
-      pdf_printf(p->stream, "/F (gks-textblock.xml)\n");
-      pdf_printf(p->stream, "/UF (gks-textblock.xml)\n");
+      pdf_printf(p->stream, "/F (gks-metadata)\n");
+      pdf_printf(p->stream, "/UF (gks-metadata)\n");
       pdf_printf(p->stream, "/AFRelationship /Data\n");
-      pdf_printf(p->stream, "/Desc (GKS XML text block)\n");
-      pdf_printf(p->stream, "/EF << /F %ld 0 R >>\n", p->xml_stream);
+      pdf_printf(p->stream, "/Desc (GKS metadata)\n");
+      pdf_printf(p->stream, "/EF << /F %ld 0 R >>\n", p->metadata_stream);
       pdf_enddict(p);
       pdf_endobj(p);
     }
@@ -1222,7 +1222,7 @@ static void close_ws(void)
 {
   pdf_close(p);
 
-  if (p->xml_textblock != NULL) free(p->xml_textblock);
+  if (p->metadata != NULL) free(p->metadata);
   free(p);
 }
 
@@ -2319,8 +2319,8 @@ void gks_drv_pdf(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *
       /* escape */
       if (p->state == GKS_K_WS_ACTIVE)
         {
-          if (ia[0] == GKS_K_ESCAPE_XML_TEXTBLOCK)
-            pdf_set_xml_textblock(p, (const char *)(ia + 2), (size_t)(ia[1] * sizeof(int)));
+          if (ia[0] == GKS_K_ESCAPE_SET_METADATA)
+            pdf_set_metadata(p, (const char *)(ia + 2), (size_t)(ia[1] * sizeof(int)));
         }
       break;
 
