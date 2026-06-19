@@ -17339,3 +17339,14 @@ void gr_inqcolorlimits(double *min, double *max)
   *min = color_lim_min;
   *max = color_lim_max;
 }
+
+void gr_setmetadata(const char *metadata)
+{
+  int len = (strlen(metadata) + 1) / 4; /* length of string (including '\0' character) must be a multiple of 4 */
+  gks_escape(GKS_K_ESCAPE_SET_METADATA, len, (int *)metadata, 0, NULL, NULL);
+}
+
+char *gr_getmetadata(const char *path)
+{
+  return gks_get_metadata(path);
+}
