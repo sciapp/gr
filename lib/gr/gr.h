@@ -536,6 +536,8 @@ DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double mi
                             int major);
 DLLEXPORT void gr_setcolorlimits(double, double);
 DLLEXPORT void gr_inqcolorlimits(double *, double *);
+DLLEXPORT void gr_setmetadata(const char *);
+DLLEXPORT char *gr_getmetadata(const char *);
 
 #ifdef __cplusplus
 }
