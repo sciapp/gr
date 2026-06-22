@@ -1431,7 +1431,8 @@ grm_get_tooltip = function(x, y) {
         'ypx': Module.HEAP32.subarray(info / 4 + 5, info / 4 + 6)[0],
         'xlabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 6, info / 4 + 7)[0]),
         'ylabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 7, info / 4 + 8)[0]),
-        'label': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 8, info / 4 + 9)[0])
+        'label': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 8, info / 4 + 9)[0]),
+        'xtime': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 9, info / 4 + 10)[0])
     };
     freearray(info);
     return data;
