@@ -65,6 +65,12 @@ JSTerm = function(ispluto=false) {
       <span class="jsterm-tooltip-label">{$ylabel}</span>
       <span class="jsterm-tooltip-value">{$y}</span>`;
     TOOLTIP_MISSING_VALUE_REPLACEMENT = '[n.d.]';
+    TOOLTIP_DEFAULT_HTML_TIME_LABEL_SET =
+      `<span class="jsterm-tooltip-label">{$label}</span><br>
+      <span class="jsterm-tooltip-label">{$xlabel}: </span>
+      <span class="jsterm-tooltip-value">{$xtime}</span><br>
+      <span class="jsterm-tooltip-label">{$ylabel}</span>
+      <span class="jsterm-tooltip-value">{$y}</span>`;
 
     var is_ready = false;
     var ready_callbacks = [];
@@ -796,7 +802,9 @@ JSTerm = function(ispluto=false) {
             tooltipInfo.x = Math.round((tooltipInfo.x + Number.EPSILON) * 100) / 100;
             tooltipInfo.y = Math.round((tooltipInfo.y + Number.EPSILON) * 100) / 100;
             if (typeof this.tooltip === 'undefined' || this.tooltip.html == "") {
-              if (tooltipInfo.label != "") {
+              if (tooltipInfo.xtime != "" && tooltipInfo.xtime != " ") {
+                text = TOOLTIP_DEFAULT_HTML_TIME_LABEL_SET;
+              } else if (tooltipInfo.label != "") {
                 text = TOOLTIP_DEFAULT_HTML_LABEL_SET;
               } else {
                 text = TOOLTIP_DEFAULT_HTML_LABEL_NOT_SET;
