@@ -5347,9 +5347,11 @@ public:
   explicit FileBinInputStream(FILE *file)
   {
     unsigned char sig[8];
-    fread(sig, 1, 8, file);
+    fread(sig, 1, sizeof(sig), file);
+
     if (png_sig_cmp(sig, 0, 8) == 0)
       {
+        // TODO: Add support for PNG in `gr_getmetadatafromstream`
         std::string save_file_name;
 
         rewind(file); // reset the file pointer so that png_read_png doesn't crash
@@ -5394,7 +5396,37 @@ public:
             file_ = fopen(save_file_name.c_str(), "rb");
           }
       }
-    else
+    else if (startsWith((char *)sig, "%PDF-"))
+      {
+        rewind(file);
+        auto save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+        if (save_file_name.empty()) return;
+        std::ofstream save_file_stream(save_file_name);
+
+        save_file_stream << gr_getmetadatafromstream(file) << std::endl;
+        save_file_stream.close();
+        file_ = fopen(save_file_name.c_str(), "rb");
+      }
+    else if (startsWith((char *)sig, "<?xml"))
+      {
+        char line_buf[512];
+        // Read and discard the xml header line
+        fgets(line_buf, sizeof(line_buf), file);
+        fread(sig, 1, 4, file);
+        if (startsWith((char *)sig, "<svg"))
+          {
+            rewind(file);
+            auto save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+            if (save_file_name.empty()) return;
+            std::ofstream save_file_stream(save_file_name);
+
+            save_file_stream << gr_getmetadatafromstream(file) << std::endl;
+            save_file_stream.close();
+            file_ = fopen(save_file_name.c_str(), "rb");
+          }
+      }
+
+    if (!file_)
       {
         rewind(file);
         file_ = file;
@@ -5612,7 +5644,7 @@ private:
   const std::string look_ahead_prefix_ = "internal=" + std::string(1, attribute_delimiter);
   std::vector<char> buffer_;
   XMLFilePos cur_pos_ = 0;
-  FILE *file_;
+  FILE *file_ = nullptr;
 };
 
 /*!
@@ -6989,13 +7021,19 @@ int grm_export(const char *file_path, int export_xml)
   if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 0);
 
   gr_beginprint(const_cast<char *>(file_path));
+  if (export_xml && (endsWith(file_path, ".pdf") || endsWith(file_path, ".svg")))
+    {
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      // TODO: Add support for PNG in `gr_setmetadata`
+      gr_setmetadata(graphics_tree_str.get());
+    }
   int return_value = grm_plot(nullptr);
   gr_endprint();
 
   if (active_plot != nullptr) active_plot->setAttribute("_active", 1);
   if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 1);
 
-  if (export_xml)
+  if (export_xml && endsWith(file_path, ".png"))
     {
       png_inforp info_ptr;
       auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);

@@ -418,7 +418,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
         }
       if (file_name.empty()) file_name = optional_file;
 
-      if (util::endsWith(file_name, ".xml.png") || util::endsWith(file_name, ".xml"))
+      if (util::endsWith(file_name, ".xml.png") || util::endsWith(file_name, ".xml.pdf") ||
+          util::endsWith(file_name, ".xml.svg") || util::endsWith(file_name, ".xml"))
         {
 #ifndef NO_XERCES_C
           auto file = fopen(file_name.c_str(), "rb");
@@ -656,14 +657,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       editor_action = new QAction(tr("&Enable Editorview"));
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enableEditorFunctions()));
-
-      save_file_action = new QAction("&Save");
-      save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-      save_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave));
-      save_file_action->setIconVisibleInMenu(true);
-#endif
-      QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(saveFileSlot()));
 
       load_file_action = new QAction("&Load");
       load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
@@ -1744,14 +1737,9 @@ void GRPlotWidget::draw()
 {
   if (!file_export.empty())
     {
-      if (util::endsWith(file_export, ".xml.png"))
-        {
-          grm_export(file_export.c_str(), true);
-        }
-      else
-        {
-          grm_export(file_export.c_str(), false);
-        }
+      grm_export(file_export.c_str(),
+                 (util::endsWith(file_export, ".xml.png") || util::endsWith(file_export, ".xml.pdf") ||
+                  util::endsWith(file_export, ".xml.svg")));
       file_export.clear();
     }
   else
@@ -3776,12 +3764,12 @@ void GRPlotWidget::exportGraphics(const QString &file_type, const QString &file_
 
 void GRPlotWidget::pdf()
 {
-  exportGraphics("PDF", "pdf");
+  exportGraphics("PDF", "xml.pdf");
 }
 
 void GRPlotWidget::png()
 {
-  exportGraphics("PNG", "png");
+  exportGraphics("PNG", "xml.png");
 }
 
 void GRPlotWidget::jpeg()
@@ -3791,7 +3779,7 @@ void GRPlotWidget::jpeg()
 
 void GRPlotWidget::svg()
 {
-  exportGraphics("SVG", "svg");
+  exportGraphics("SVG", "xml.svg");
 }
 
 void GRPlotWidget::moveableMode()
@@ -5554,7 +5542,9 @@ void GRPlotWidget::loadFileSlot()
     {
 #ifndef NO_XERCES_C
       std::string path =
-          QFileDialog::getOpenFileName(this, "Open XML", QDir::currentPath(), "XML files (*.xml.png)").toStdString();
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::currentPath(),
+                                       "XML (*.xml*);;XML-PNG (*.xml.png);;XML-PDF (*.xml.pdf);;XML-SVG (*.xml.svg)")
+              .toStdString();
       if (path.empty()) return;
 
       auto file = fopen(path.c_str(), "r");
@@ -5576,28 +5566,6 @@ void GRPlotWidget::loadFileSlot()
       QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
       return;
 #endif
-    }
-}
-
-void GRPlotWidget::saveFileSlot()
-{
-  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
-    {
-      if (grm_get_render() == nullptr)
-        {
-          QApplication::beep();
-          return;
-        }
-      QFileDialog file_dialog(this, "Save XML-PNG", QDir::currentPath(), "XML-PNG files (*.xml.png)");
-      file_dialog.selectFile((input_data_name + ".xml.png").c_str());
-      file_dialog.setDefaultSuffix(".xml.png");
-      file_dialog.setAcceptMode(QFileDialog::AcceptSave);
-      if (!file_dialog.exec()) return;
-      auto save_file_name = file_dialog.selectedFiles().front().toStdString();
-      if (save_file_name.empty()) return;
-
-      file_export = save_file_name.c_str();
-      redraw();
     }
 }
 
@@ -7247,11 +7215,6 @@ QAction *GRPlotWidget::getMovableModeAct()
 QAction *GRPlotWidget::getEditorAct()
 {
   return editor_action;
-}
-
-QAction *GRPlotWidget::getSaveFileAct()
-{
-  return save_file_action;
 }
 
 QAction *GRPlotWidget::getLoadFileAct()
