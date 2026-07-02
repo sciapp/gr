@@ -136,6 +136,8 @@ typedef struct ws_state_list_t
   SVG_clip_rect *cr;
   int clip_index, rect_index, max_clip_rects;
   double transparency;
+  char *metadata;
+  size_t metadata_length;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -1589,6 +1591,14 @@ static void write_page(void)
       gks_write_file(fd, p->stream->buffer, p->stream->length);
       snprintf(buf, 256, "</svg>\n");
       gks_write_file(fd, buf, strlen(buf));
+      if (p->metadata != NULL)
+        {
+          snprintf(buf, 256, "<!-- gks-metadata\n");
+          gks_write_file(fd, buf, strlen(buf));
+          gks_write_file(fd, p->metadata, p->metadata_length);
+          snprintf(buf, 256, "\n-->\n");
+          gks_write_file(fd, buf, strlen(buf));
+        }
       if (fd != p->conid) gks_close_file(fd);
 
       p->stream->length = 0;
@@ -1598,6 +1608,18 @@ static void write_page(void)
       gks_perror("can't open SVG file");
       perror("open");
     }
+}
+
+static void set_metadata(const char *text, size_t length)
+{
+  while (length > 0 && text[length - 1] == '\0') length--;
+
+  if (p->metadata != NULL) gks_free(p->metadata);
+
+  p->metadata = (char *)gks_malloc(length + 1);
+  memcpy(p->metadata, text, length);
+  p->metadata[length] = '\0';
+  p->metadata_length = length;
 }
 
 #ifndef __EMSCRIPTEN__
@@ -1650,6 +1672,8 @@ void gks_drv_js(
       p->linewidth = p->nominal_size;
       p->transparency = 1.0;
 
+      p->metadata = NULL;
+
       set_xform();
       init_norm_xform();
       init_colors();
@@ -1668,6 +1692,8 @@ void gks_drv_js(
       /* close workstation */
     case 3:
       if (!p->empty) write_page();
+
+      if (p->metadata != NULL) gks_free(p->metadata);
 
       gks_free(p->cr);
       gks_free(p->stream->buffer);
@@ -1704,6 +1730,14 @@ void gks_drv_js(
 
               init_clip_rects();
             }
+        }
+      break;
+
+      /* escape */
+    case 11:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (ia[0] == GKS_K_ESCAPE_SET_METADATA) set_metadata((const char *)(ia + 2), (size_t)(ia[1] * sizeof(int)));
         }
       break;
 
