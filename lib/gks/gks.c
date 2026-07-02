@@ -4722,9 +4722,13 @@ static char *find_object(char *pdf, long objnum)
 char *gks_get_metadata(char *path)
 {
   FILE *fp;
-  char *pdf = NULL;
+  char *buffer = NULL;
   char *result = NULL;
   size_t size;
+  const char *ext;
+
+  ext = strrchr(path, '.');
+  if (ext == NULL) return NULL;
 
   fp = fopen(path, "rb");
   if (fp == NULL) return NULL;
@@ -4734,45 +4738,71 @@ char *gks_get_metadata(char *path)
   size = (size_t)ftell(fp);
   rewind(fp);
 
-  pdf = malloc(size + 1);
-  if (pdf == NULL) goto done;
+  buffer = malloc(size + 1);
+  if (buffer == NULL) goto done;
 
-  if (fread(pdf, 1, size, fp) != size) goto done;
+  if (fread(buffer, 1, size, fp) != size) goto done;
 
-  pdf[size] = '\0';
+  buffer[size] = '\0';
 
-  char *filespec = strstr(pdf, "/F (gks-metadata)");
-  if (filespec == NULL) goto done;
-
-  char *ef = strstr(filespec, "/EF");
-  long objnum;
-  if (ef == NULL || sscanf(ef, "/EF << /F %ld 0 R", &objnum) != 1) goto done;
-
-  char *obj = find_object(pdf, objnum);
-  if (obj == NULL) goto done;
-
-  char *lenptr = strstr(obj, "/Length");
-  long length;
-  if (lenptr == NULL || sscanf(lenptr, "/Length %ld", &length) != 1 || length < 0) goto done;
-
-  char *stream = strstr(obj, "stream");
-  if (stream == NULL) goto done;
-
-  stream += 6;
-  if (*stream == '\r') stream++;
-  if (*stream == '\n') stream++;
-
-  if ((size_t)(stream - pdf) + (size_t)length > size) goto done;
-
-  result = malloc((size_t)length + 1);
-  if (result != NULL)
+  if (strcmp(ext, ".svg") == 0)
     {
-      memcpy(result, stream, (size_t)length);
-      result[length] = '\0';
+      char *start, *end;
+      const char *tag = "<!-- gks-metadata";
+
+      start = strstr(buffer, tag);
+      if (start == NULL) goto done;
+
+      start += strlen(tag);
+      while (*start == '\r' || *start == '\n') start++;
+
+      end = strstr(start, "\n-->");
+      if (end == NULL) goto done;
+
+      size_t length = (size_t)(end - start);
+
+      result = malloc(length + 1);
+      if (result != NULL)
+        {
+          memcpy(result, start, length);
+          result[length] = '\0';
+        }
+    }
+  else if (strcmp(ext, ".pdf") == 0)
+    {
+      char *filespec = strstr(buffer, "/F (gks-metadata)");
+      if (filespec == NULL) goto done;
+
+      char *ef = strstr(filespec, "/EF");
+      long objnum;
+      if (ef == NULL || sscanf(ef, "/EF << /F %ld 0 R", &objnum) != 1) goto done;
+
+      char *obj = find_object(buffer, objnum);
+      if (obj == NULL) goto done;
+
+      char *lenptr = strstr(obj, "/Length");
+      long length;
+      if (lenptr == NULL || sscanf(lenptr, "/Length %ld", &length) != 1 || length < 0) goto done;
+
+      char *stream = strstr(obj, "stream");
+      if (stream == NULL) goto done;
+
+      stream += 6;
+      if (*stream == '\r') stream++;
+      if (*stream == '\n') stream++;
+
+      if ((size_t)(stream - buffer) + (size_t)length > size) goto done;
+
+      result = malloc((size_t)length + 1);
+      if (result != NULL)
+        {
+          memcpy(result, stream, (size_t)length);
+          result[length] = '\0';
+        }
     }
 
 done:
-  free(pdf);
+  free(buffer);
   fclose(fp);
   return result;
 }
