@@ -4756,7 +4756,7 @@ char *gks_get_metadata(char *path)
       start += strlen(tag);
       while (*start == '\r' || *start == '\n') start++;
 
-      end = strstr(start, "\n-->");
+      end = strstr(start, "\ngks-metadata -->");
       if (end == NULL) goto done;
 
       size_t length = (size_t)(end - start);
@@ -4765,6 +4765,12 @@ char *gks_get_metadata(char *path)
       if (result != NULL)
         {
           memcpy(result, start, length);
+          result[length] = '\0';
+
+          char *metadata = gks_escape_or_unescape(result, '\\', '-', true);
+          length = strlen(metadata);
+          memcpy(result, metadata, length);
+          gks_free(metadata);
           result[length] = '\0';
         }
     }

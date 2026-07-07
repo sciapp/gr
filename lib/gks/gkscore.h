@@ -2,6 +2,7 @@
 #define _GKSCORE_H_
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
 
@@ -437,6 +438,8 @@ DLLEXPORT void gks_set_encoding(int encoding);
 DLLEXPORT void gks_inq_encoding(int *encoding);
 
 DLLEXPORT void gks_set_callback(char *(*callback)(const char *));
+
+DLLEXPORT char *gks_escape_or_unescape(const char *input, char escape_char, char to_escape_char, bool unescape);
 
 #ifdef __cplusplus
 }
