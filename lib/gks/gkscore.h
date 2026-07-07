@@ -2,6 +2,7 @@
 #define _GKSCORE_H_
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 #ifdef _WIN32
@@ -136,6 +137,11 @@ extern "C" {
 
 #define ENCODING_LATIN1 300
 #define ENCODING_UTF8 301
+
+#define FILETYPE_UNKNOWN 0
+#define FILETYPE_PDF 1
+#define FILETYPE_PNG 2
+#define FILETYPE_SVG 3
 
 #define MAX_ATTRIBUTE_FCTID SET_WS_VIEWPORT /* maximum function ID for setting an attribute */
 
@@ -440,6 +446,8 @@ DLLEXPORT void gks_inq_encoding(int *encoding);
 DLLEXPORT void gks_set_callback(char *(*callback)(const char *));
 
 DLLEXPORT char *gks_escape_or_unescape(const char *input, char escape_char, char to_escape_char, bool unescape);
+
+DLLEXPORT int gks_detect_stream_type(FILE *fp);
 
 #ifdef __cplusplus
 }

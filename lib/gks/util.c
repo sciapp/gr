@@ -2390,3 +2390,51 @@ char *gks_escape_or_unescape(const char *input, char escape_char, char to_escape
 
   return output;
 }
+
+int gks_detect_stream_type(FILE *fp)
+{
+  unsigned char buf[512];
+  size_t n;
+  long pos;
+
+  if (fp == NULL) return FILETYPE_UNKNOWN;
+
+  /* Save current position if possible */
+  pos = ftell(fp);
+
+  n = fread(buf, 1, sizeof(buf), fp);
+
+  /* Restore position if possible */
+  if (pos != -1L) fseek(fp, pos, SEEK_SET);
+
+  if (n >= 5 && memcmp(buf, "%PDF-", 5) == 0) return FILETYPE_PDF;
+
+  static const unsigned char png_sig[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+
+  if (n >= 8 && memcmp(buf, png_sig, 8) == 0) return FILETYPE_PNG;
+
+  /* SVG detection */
+  const char *p = (const char *)buf;
+  const char *end = (const char *)buf + n;
+
+  /* Skip UTF-8 BOM */
+  if (n >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB && (unsigned char)p[2] == 0xBF) p += 3;
+
+  /* Skip leading whitespace */
+  while (p < end && isspace((unsigned char)*p)) p++;
+
+  /* Direct <svg> */
+  if (end - p >= 4 && memcmp(p, "<svg", 4) == 0) return FILETYPE_SVG;
+
+  /* XML declaration followed by <svg> */
+  if (end - p >= 5 && memcmp(p, "<?xml", 5) == 0)
+    {
+      const char *q;
+      for (q = p; q + 4 <= end; ++q)
+        {
+          if (memcmp(q, "<svg", 4) == 0) return FILETYPE_SVG;
+        }
+    }
+
+  return FILETYPE_UNKNOWN;
+}

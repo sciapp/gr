@@ -15,6 +15,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 typedef enum
 {
   GR_PROJECTION_DEFAULT,
@@ -538,6 +540,7 @@ DLLEXPORT void gr_setcolorlimits(double, double);
 DLLEXPORT void gr_inqcolorlimits(double *, double *);
 DLLEXPORT void gr_setmetadata(const char *);
 DLLEXPORT char *gr_getmetadata(const char *);
+DLLEXPORT char *gr_getmetadatafromstream(FILE *fp);
 
 #ifdef __cplusplus
 }
