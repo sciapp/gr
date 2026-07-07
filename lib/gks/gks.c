@@ -4719,19 +4719,14 @@ static char *find_object(char *pdf, long objnum)
   return strstr(pdf, marker);
 }
 
-char *gks_get_metadata(char *path)
+char *gks_get_metadata_from_stream(FILE *fp)
 {
-  FILE *fp;
   char *buffer = NULL;
   char *result = NULL;
   size_t size;
-  const char *ext;
+  int filetype;
 
-  ext = strrchr(path, '.');
-  if (ext == NULL) return NULL;
-
-  fp = fopen(path, "rb");
-  if (fp == NULL) return NULL;
+  filetype = gks_detect_stream_type(fp);
 
   if (fseek(fp, 0, SEEK_END) != 0) goto done;
 
@@ -4745,7 +4740,7 @@ char *gks_get_metadata(char *path)
 
   buffer[size] = '\0';
 
-  if (strcmp(ext, ".svg") == 0)
+  if (filetype == FILETYPE_SVG)
     {
       char *start, *end;
       const char *tag = "<!-- gks-metadata";
@@ -4774,7 +4769,7 @@ char *gks_get_metadata(char *path)
           result[length] = '\0';
         }
     }
-  else if (strcmp(ext, ".pdf") == 0)
+  else if (filetype == FILETYPE_PDF)
     {
       char *filespec = strstr(buffer, "/F (gks-metadata)");
       if (filespec == NULL) goto done;
@@ -4810,5 +4805,19 @@ char *gks_get_metadata(char *path)
 done:
   free(buffer);
   fclose(fp);
+  return result;
+}
+
+char *gks_get_metadata(char *path)
+{
+  FILE *fp;
+  char *result;
+
+  fp = fopen(path, "rb");
+  if (fp == NULL) return NULL;
+
+  result = gks_get_metadata_from_stream(fp);
+  fclose(fp);
+
   return result;
 }
