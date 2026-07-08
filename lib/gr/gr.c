@@ -17342,10 +17342,12 @@ void gr_inqcolorlimits(double *min, double *max)
 
 void gr_setmetadata(const char *metadata)
 {
-  int len = strlen(metadata) / 4 + 1; /* length of string (including '\0' character) must be a multiple of 4 */
-  char *s = calloc(len, 4);
-  strcpy(s, metadata);
-  gks_escape(GKS_K_ESCAPE_SET_METADATA, len, (int *)s, 0, NULL, NULL);
+  int dimidr = strlen(metadata) / sizeof(int) +
+               1; /* length of string (including '\0' character) must be a multiple of sizeof(int) */
+  int *idr = (int *)xcalloc(dimidr, sizeof(int));
+  strcpy((char *)idr, metadata);
+  gks_escape(GKS_K_ESCAPE_SET_METADATA, dimidr, idr, 0, NULL, NULL);
+  free(idr);
 }
 
 char *gr_getmetadata(const char *path)
