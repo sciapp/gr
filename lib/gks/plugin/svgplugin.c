@@ -1597,7 +1597,6 @@ static void write_page(void)
           gks_write_file(fd, buf, strlen(buf));
           char *metadata = gks_escape_or_unescape(p->metadata, '\\', '-', false);
           gks_write_file(fd, metadata, strlen(metadata));
-          printf("%d => %d\n", p->metadata_length, strlen(metadata));
           gks_free(metadata);
           snprintf(buf, 256, "\ngks-metadata -->\n");
           gks_write_file(fd, buf, strlen(buf));
