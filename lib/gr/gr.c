@@ -16,6 +16,7 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
+#include <stdint.h>
 #ifdef _MSC_VER
 #include <BaseTsd.h>
 typedef __int64 int64_t;
@@ -11011,48 +11012,71 @@ void gr_inqcolor(int color, int *rgb)
 
 int gr_inqcolorfromrgb(double red, double green, double blue)
 {
-  int wkid = 1, color, errind, ind = 0;
-  unsigned int rgbmask;
-  double r, g, b, dmin = FLT_MAX, d, dr, dg, db;
+  int wkid = 1, color, errind;
+  int rr, gg, bb;
+  int best_color = 80;
+  double best_distance = DBL_MAX;
 
   check_autoinit;
 
-  rgbmask = ((nint(red * 255) & 0xff)) | ((nint(green * 255) & 0xff) << 8) | ((nint(blue * 255) & 0xff) << 16);
+  rr = nint(red * 255.0);
+  gg = nint(green * 255.0);
+  bb = nint(blue * 255.0);
 
+  if (rr < 0)
+    rr = 0;
+  else if (rr > 255)
+    rr = 255;
+
+  if (gg < 0)
+    gg = 0;
+  else if (gg > 255)
+    gg = 255;
+
+  if (bb < 0)
+    bb = 0;
+  else if (bb > 255)
+    bb = 255;
+
+  uint32_t rgbmask = (uint32_t)rr | ((uint32_t)gg << 8) | ((uint32_t)bb << 16);
+
+  /* Exact match */
   for (color = 80; color < 980; color++)
-    if (rgb[color] == rgbmask)
-      {
-        setcolorrep(color, red, green, blue);
-        used[color] = 1;
-        return color;
-      }
+    {
+      if (used[color] && rgb[color] == rgbmask) return color;
+    }
 
+  /* Allocate an unused entry */
   for (color = 80; color < 980; color++)
     {
       if (!used[color])
         {
           setcolorrep(color, red, green, blue);
+          rgb[color] = rgbmask;
           used[color] = 1;
           return color;
         }
     }
 
+  /* Find nearest color */
   for (color = 80; color < 980; color++)
     {
-      gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-      dr = 0.30 * (r - red);
-      dg = 0.59 * (g - green);
-      db = 0.11 * (b - blue);
-      d = dr * dr + dg * dg + db * db;
-      if (d < dmin)
+      uint32_t value = rgb[color];
+
+      double dr = (int)(value & 0xff) - rr;
+      double dg = (int)((value >> 8) & 0xff) - gg;
+      double db = (int)((value >> 16) & 0xff) - bb;
+      double distance = 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
+
+      if (distance < best_distance)
         {
-          ind = color;
-          dmin = d;
-          if (d < FEPS) break;
+          best_color = color;
+          best_distance = distance;
+          if (distance < FEPS) break;
         }
     }
 
-  return ind;
+  return best_color;
 }
 
 void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b)
