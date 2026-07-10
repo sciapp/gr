@@ -11043,7 +11043,12 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
   /* Exact match */
   for (color = 80; color < 980; color++)
     {
-      if (used[color] && rgb[color] == rgbmask) return color;
+      if (rgb[color] == rgbmask)
+        {
+          setcolorrep(color, red, green, blue);
+          used[color] = 1;
+          return color;
+        }
     }
 
   /* Allocate an unused entry */
@@ -11052,7 +11057,6 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
       if (!used[color])
         {
           setcolorrep(color, red, green, blue);
-          rgb[color] = rgbmask;
           used[color] = 1;
           return color;
         }
