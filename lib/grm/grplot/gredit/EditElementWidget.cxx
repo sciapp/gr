@@ -110,8 +110,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
   auto combo_box_attr = grplot_widget->getComboBoxAttributes();
   auto check_box_attr = grplot_widget->getCheckBoxAttributes();
-  auto color_ind_attr = grplot_widget->getColorIndAttributes();
-  auto color_rgb_attr = grplot_widget->getColorRGBAttributes();
+  auto color_attr = grplot_widget->getColorAttributes();
   auto slider_attr = grplot_widget->getSliderAttributes();
   schema_tree = grplot_widget->getSchemaTree();
   auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
@@ -521,23 +520,53 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             static_cast<QCheckBox *>(line_edit)->setChecked(
                 static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name)) == 1);
         }
-      else if (color_ind_attr.contains(cur_attr_name.c_str()))
+      else if (color_attr.contains(cur_attr_name.c_str()))
         {
-          auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-          if (multiple_selections.empty())
-            line_edit = new QPushButton(std::to_string(index).c_str(), this);
+          int index = -1;
+          std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+          if ((*current_selection)->getRef()->getAttribute(cur_attr_name).isInt())
+            {
+              index = static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+              if (multiple_selections.empty())
+                line_edit = new QPushButton(std::to_string(index).c_str(), this);
+              else
+                line_edit = new QPushButton("", this);
+            }
           else
-            line_edit = new QPushButton("", this);
+            {
+              line_edit = new QPushButton(this);
+            }
           line_edit->setToolTip(tooltip_string);
           line_edit->setObjectName(cur_attr_name.c_str());
 
           QImage image(1, 1, QImage::Format_RGB32);
           QRgb value;
-          int errind;
-          double r, g, b;
 
-          gks_inq_color_rep(-1, index, -1, &errind, &r, &g, &b);
-          value = qRgb(255 * r, 255 * g, 255 * b);
+          if (index != -1)
+            {
+              int errind;
+              double r, g, b;
+
+              gks_inq_color_rep(-1, index, -1, &errind, &r, &g, &b);
+              value = qRgb(255 * r, 255 * g, 255 * b);
+            }
+          else
+            {
+              double ref_r = 0, ref_g = 0, ref_b = 0;
+              if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+                {
+                  auto context_ref =
+                      static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                  auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+                  ref_r = rgb_vec.at(0);
+                  ref_g = rgb_vec.at(1);
+                  ref_b = rgb_vec.at(2);
+                }
+
+              value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
+            }
+
           image.setPixel(0, 0, value);
 
           auto color_pic = QPixmap::fromImage(image);
@@ -545,69 +574,38 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           if (multiple_selections.empty()) static_cast<QPushButton *>(line_edit)->setIcon(QIcon(color_pic));
 
           std::weak_ptr<GRM::Element> ref = (*current_selection)->getRef();
-          QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
+          QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorMixedSlot()));
           QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
             QImage new_image(1, 1, QImage::Format_RGB32);
             QRgb new_value;
-            int err;
-            double new_r, new_g, new_b;
 
-            auto new_index = static_cast<int>(ref.lock()->getAttribute(cur_attr_name));
-            static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
-
-            gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
-            new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
-            new_image.setPixel(0, 0, new_value);
-
-            auto new_color_pic = QPixmap::fromImage(new_image);
-            new_color_pic = new_color_pic.scaled(20, 20);
-            static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
-          });
-        }
-      else if (color_rgb_attr.contains(cur_attr_name.c_str()))
-        {
-          line_edit = new QPushButton(this);
-          line_edit->setToolTip(tooltip_string);
-          line_edit->setObjectName(cur_attr_name.c_str());
-
-          double ref_r = 0, ref_g = 0, ref_b = 0;
-          std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
-          if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
-            {
-              auto context_ref = static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-              auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
-              ref_r = rgb_vec.at(0);
-              ref_g = rgb_vec.at(1);
-              ref_b = rgb_vec.at(2);
-            }
-
-          QImage image(1, 1, QImage::Format_RGB32);
-          QRgb value;
-
-          value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
-          image.setPixel(0, 0, value);
-
-          auto color_pic = QPixmap::fromImage(image);
-          color_pic = color_pic.scaled(20, 20);
-          if (multiple_selections.empty()) static_cast<QPushButton *>(line_edit)->setIcon(QIcon(color_pic));
-
-          QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorRGBSlot()));
-          QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
-            QImage new_image(1, 1, QImage::Format_RGB32);
-            QRgb new_value;
-            double ref_r_new = 0, ref_g_new = 0, ref_b_new = 0;
-            if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+            if (ref.lock()->getAttribute(cur_attr_name).isInt())
               {
-                auto context_ref =
-                    static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
-                auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
-                ref_r_new = rgb_vec.at(0);
-                ref_g_new = rgb_vec.at(1);
-                ref_b_new = rgb_vec.at(2);
-                static_cast<QPushButton *>(line_edit)->setText(context_ref.c_str());
-              }
+                int err;
+                double new_r, new_g, new_b;
 
-            new_value = qRgb(255 * ref_r_new, 255 * ref_g_new, 255 * ref_b_new);
+                auto new_index = static_cast<int>(ref.lock()->getAttribute(cur_attr_name));
+                static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
+
+                gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
+                new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+              }
+            else
+              {
+                double ref_r_new = 0, ref_g_new = 0, ref_b_new = 0;
+                if ((*current_selection)->getRef()->hasAttribute(cur_attr_name))
+                  {
+                    auto context_ref =
+                        static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name));
+                    auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+                    ref_r_new = rgb_vec.at(0);
+                    ref_g_new = rgb_vec.at(1);
+                    ref_b_new = rgb_vec.at(2);
+                    static_cast<QPushButton *>(line_edit)->setText(context_ref.c_str());
+                  }
+
+                new_value = qRgb(255 * ref_r_new, 255 * ref_g_new, 255 * ref_b_new);
+              }
             new_image.setPixel(0, 0, new_value);
 
             auto new_color_pic = QPixmap::fromImage(new_image);
@@ -728,8 +726,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           });
           form->addRow(text_label, widget);
         }
-      else if (cur_attr_name == "line_color_ind" || cur_attr_name == "line_color_rgb" || cur_attr_name == "line_spec" ||
-               cur_attr_name == "line_type" || cur_attr_name == "line_width")
+      else if (cur_attr_name == "line_color" || cur_attr_name == "line_spec" || cur_attr_name == "line_type" ||
+               cur_attr_name == "line_width")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
@@ -744,9 +742,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
           if (line_modification_added) line_modification_form->addRow(label, line_edit);
         }
-      else if (cur_attr_name == "marker_color_ind" || cur_attr_name == "marker_color_indices" ||
+      else if (cur_attr_name == "marker_color" || cur_attr_name == "marker_color_indices" ||
                cur_attr_name == "marker_size" || cur_attr_name == "marker_sizes" || cur_attr_name == "marker_type" ||
-               cur_attr_name == "border_color_ind" || cur_attr_name == "border_width")
+               cur_attr_name == "border_color" || cur_attr_name == "border_width")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
@@ -762,7 +760,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
           if (marker_modification_added) marker_modification_form->addRow(label, line_edit);
         }
       else if (cur_attr_name == "text_align_horizontal" || cur_attr_name == "text_align_vertical" ||
-               cur_attr_name == "text_color_ind" || cur_attr_name == "font" || cur_attr_name == "font_precision")
+               cur_attr_name == "text_color" || cur_attr_name == "font" || cur_attr_name == "font_precision")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
@@ -782,8 +780,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
 
           if (text_modification_added) text_modification_form->addRow(label, line_edit);
         }
-      else if (cur_attr_name == "fill_color_ind" || cur_attr_name == "fill_color_rgb" ||
-               cur_attr_name == "fill_int_style" || cur_attr_name == "fill_style")
+      else if (cur_attr_name == "fill_color" || cur_attr_name == "fill_int_style" || cur_attr_name == "fill_style")
         {
           text_label = QString(attrNameToLabel(cur_attr_name).c_str());
           label = new QLabel(text_label, this);
@@ -1354,7 +1351,7 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               if (std::find(context_attributes.begin(), context_attributes.end(), cur_attr_name) !=
                       context_attributes.end() &&
                   static_cast<int>((*current_selection)->getRef()->getAttribute(cur_attr_name).type()) == 3 &&
-                  cur_attr_name != "color_rgb") // string
+                  (cur_attr_name != "fill_color" || cur_attr_name != "line_color")) // string
                 {
                   auto widget = new QWidget(this);
                   auto grid_layout = new QGridLayout();
@@ -1542,56 +1539,59 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                       static_cast<QCheckBox *>(line_edit)->setChecked(
                           static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name)) == 1);
                     }
-                  else if (color_ind_attr.contains(attr_name.c_str()))
+                  else if (color_attr.contains(attr_name.c_str()))
                     {
-                      line_edit = new QPushButton("", this);
+                      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+                      if ((*current_selection)->getRef()->getAttribute(attr_name).isInt())
+                        {
+                          line_edit = new QPushButton("", this);
+                        }
+                      else
+                        {
+                          line_edit = new QPushButton(this);
+                        }
                       line_edit->setToolTip(tooltip_string);
                       line_edit->setObjectName(attr_name.c_str());
-                      QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
+
+                      std::weak_ptr<GRM::Element> ref = (*current_selection)->getRef();
+                      QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorMixedSlot()));
                       QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
-                        auto new_index = static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
-                        static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
                         QImage new_image(1, 1, QImage::Format_RGB32);
                         QRgb new_value;
-                        int err;
-                        double new_r, new_g, new_b;
 
-                        gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
-                        new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+                        if (ref.lock()->getAttribute(attr_name).isInt())
+                          {
+                            int err;
+                            double new_r, new_g, new_b;
+
+                            auto new_index = static_cast<int>(ref.lock()->getAttribute(attr_name));
+                            static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
+
+                            gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
+                            new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
+                          }
+                        else
+                          {
+                            double ref_r_new = 0, ref_g_new = 0, ref_b_new = 0;
+                            if ((*current_selection)->getRef()->hasAttribute(attr_name))
+                              {
+                                auto context_ref =
+                                    static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
+                                auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
+                                ref_r_new = rgb_vec.at(0);
+                                ref_g_new = rgb_vec.at(1);
+                                ref_b_new = rgb_vec.at(2);
+                                static_cast<QPushButton *>(line_edit)->setText(context_ref.c_str());
+                              }
+
+                            new_value = qRgb(255 * ref_r_new, 255 * ref_g_new, 255 * ref_b_new);
+                          }
                         new_image.setPixel(0, 0, new_value);
 
                         auto new_color_pic = QPixmap::fromImage(new_image);
                         new_color_pic = new_color_pic.scaled(20, 20);
                         static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
-                      });
-                    }
-                  else if (color_rgb_attr.contains(attr_name.c_str()))
-                    {
-                      line_edit = new QPushButton(this);
-                      line_edit->setToolTip(tooltip_string);
-                      line_edit->setObjectName(attr_name.c_str());
-                      QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorRGBSlot()));
-                      QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
-                        QImage new_image(1, 1, QImage::Format_RGB32);
-                        QRgb new_value;
-                        if ((*current_selection)->getRef()->hasAttribute(attr_name))
-                          {
-                            double ref_r = 0, ref_g = 0, ref_b = 0;
-                            std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
-                            auto context_ref =
-                                static_cast<std::string>((*current_selection)->getRef()->getAttribute(attr_name));
-                            auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
-                            ref_r = rgb_vec.at(0);
-                            ref_g = rgb_vec.at(1);
-                            ref_b = rgb_vec.at(2);
-                            new_value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
-                            new_image.setPixel(0, 0, new_value);
-
-                            static_cast<QPushButton *>(line_edit)->setText(context_ref.c_str());
-                            auto new_color_pic = QPixmap::fromImage(new_image);
-                            new_color_pic = new_color_pic.scaled(20, 20);
-                            static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
-                          }
                       });
                     }
                   else if (attr_name == "char_up_x")
@@ -2082,439 +2082,407 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               std::shared_ptr<GRM::Element> group;
               auto group_name = static_cast<std::string>(child->getAttribute("ref"));
 
-              if (group_name != "colorrep")
+              auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
+              for (const auto &selection : attr_group_selections)
                 {
-                  auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
-                  for (const auto &selection : attr_group_selections)
-                    {
-                      if (selection->localName() == "xs:attributeGroup") group = selection;
-                    }
+                  if (selection->localName() == "xs:attributeGroup") group = selection;
+                }
 
-                  /* iterate through attribute elements */
-                  for (const auto &childchild : group->children())
+              /* iterate through attribute elements */
+              for (const auto &childchild : group->children())
+                {
+                  bool was_added = true, not_in = false;
+                  if (childchild->localName() == "xs:attribute")
                     {
-                      bool was_added = true, not_in = false;
-                      if (childchild->localName() == "xs:attribute")
+                      auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
+                      for (const auto &selection : multiple_selections)
                         {
-                          auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
-                          for (const auto &selection : multiple_selections)
+                          std::shared_ptr<GRM::Element> tmp;
+                          auto selection_name = selection->localName();
+                          auto selections2 = schema_tree->querySelectorsAll("[name=" + selection_name + "]");
+                          for (const auto &s : selections2)
                             {
-                              std::shared_ptr<GRM::Element> tmp;
-                              auto selection_name = selection->localName();
-                              auto selections2 = schema_tree->querySelectorsAll("[name=" + selection_name + "]");
-                              for (const auto &s : selections2)
-                                {
-                                  if (s->localName() == "xs:element") tmp = s->children()[0];
-                                }
-                              if (tmp->querySelectors("[" + attr_name + "]") == nullptr) not_in = true;
+                              if (s->localName() == "xs:element") tmp = s->children()[0];
                             }
+                          if (tmp->querySelectors("[" + attr_name + "]") == nullptr) not_in = true;
+                        }
 
-                          if ((*current_selection)->getRef()->localName() == "coordinate_system" ||
-                              ((*current_selection)->getRef()->localName() == "layout_grid" &&
-                               (*current_selection)->getRef()->parentElement()->localName() != "layout_grid"))
+                      if ((*current_selection)->getRef()->localName() == "coordinate_system" ||
+                          ((*current_selection)->getRef()->localName() == "layout_grid" &&
+                           (*current_selection)->getRef()->parentElement()->localName() != "layout_grid"))
+                        {
+                          // special case for coordinate_system cause the ndc movements results in a nonsense
+                          // plot
+                          if (attr_name == "x_max_shift_ndc" || attr_name == "x_min_shift_ndc" ||
+                              attr_name == "y_max_shift_ndc" || attr_name == "y_min_shift_ndc" ||
+                              attr_name == "x_shift_ndc" || attr_name == "y_shift_ndc")
+                            continue;
+                        }
+                      if (!multiple_selections.empty() && not_in) continue;
+                      if (!(*current_selection)->getRef()->hasAttribute(attr_name))
+                        {
+                          /* attributes of an element which aren't already in the tree getting added with
+                           * red text color */
+                          auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
+                          attr_type.emplace(attr_name, type_name);
+                          QString tooltip_string =
+                              GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[1].c_str();
+                          tooltip_string.append(".  Default: ");
+                          tooltip_string.append(
+                              GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[0].c_str());
+
+                          if (combo_box_attr.contains(attr_name.c_str()) &&
+                              ((attr_name != "x" && attr_name != "y") || type_name == "xs:string"))
                             {
-                              // special case for coordinate_system cause the ndc movements results in a nonsense
-                              // plot
-                              if (attr_name == "x_max_shift_ndc" || attr_name == "x_min_shift_ndc" ||
-                                  attr_name == "y_max_shift_ndc" || attr_name == "y_min_shift_ndc" ||
-                                  attr_name == "x_shift_ndc" || attr_name == "y_shift_ndc")
-                                continue;
+                              line_edit = new QComboBox(this);
+                              grplot_widget->advancedAttributeComboBoxHandler(
+                                  attr_name, (*current_selection)->getRef()->localName(), &line_edit);
+                              line_edit->setToolTip(tooltip_string);
+
+                              if (attr_name == "scientific_format")
+                                {
+                                  line_edit->setFixedWidth(120);
+                                  connect(static_cast<QComboBox *>(line_edit),
+                                          static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                                          &EditElementWidget::openTextPreview);
+                                }
                             }
-                          if (!multiple_selections.empty() && not_in) continue;
-                          if (!(*current_selection)->getRef()->hasAttribute(attr_name))
+                          else if (check_box_attr.contains(attr_name.c_str()))
                             {
-                              /* attributes of an element which aren't already in the tree getting added with
-                               * red text color */
-                              auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
-                              attr_type.emplace(attr_name, type_name);
-                              QString tooltip_string =
-                                  GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[1]
-                                      .c_str();
-                              tooltip_string.append(".  Default: ");
-                              tooltip_string.append(
-                                  GRM::Render::getDefaultAndTooltip((*current_selection)->getRef(), attr_name)[0]
-                                      .c_str());
+                              line_edit = new QCheckBox(this);
+                              line_edit->setToolTip(tooltip_string);
+                              static_cast<QCheckBox *>(line_edit)->setChecked(
+                                  static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name)) == 1);
+                            }
+                          else if (color_attr.contains(attr_name.c_str()))
+                            {
+                              std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
-                              if (combo_box_attr.contains(attr_name.c_str()) &&
-                                  ((attr_name != "x" && attr_name != "y") || type_name == "xs:string"))
-                                {
-                                  line_edit = new QComboBox(this);
-                                  grplot_widget->advancedAttributeComboBoxHandler(
-                                      attr_name, (*current_selection)->getRef()->localName(), &line_edit);
-                                  line_edit->setToolTip(tooltip_string);
-
-                                  if (attr_name == "scientific_format")
-                                    {
-                                      line_edit->setFixedWidth(120);
-                                      connect(static_cast<QComboBox *>(line_edit),
-                                              static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-                                              this, &EditElementWidget::openTextPreview);
-                                    }
-                                }
-                              else if (check_box_attr.contains(attr_name.c_str()))
-                                {
-                                  line_edit = new QCheckBox(this);
-                                  line_edit->setToolTip(tooltip_string);
-                                  static_cast<QCheckBox *>(line_edit)->setChecked(
-                                      static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name)) == 1);
-                                }
-                              else if (color_ind_attr.contains(attr_name.c_str()))
+                              if ((*current_selection)->getRef()->getAttribute(attr_name).isInt())
                                 {
                                   line_edit = new QPushButton("", this);
-                                  line_edit->setToolTip(tooltip_string);
-                                  line_edit->setObjectName(attr_name.c_str());
-                                  QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorIndexSlot()));
-                                  QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
-                                    auto new_index =
-                                        static_cast<int>((*current_selection)->getRef()->getAttribute(attr_name));
-                                    static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
-                                    QImage new_image(1, 1, QImage::Format_RGB32);
-                                    QRgb new_value;
+                                }
+                              else
+                                {
+                                  line_edit = new QPushButton(this);
+                                }
+                              line_edit->setToolTip(tooltip_string);
+                              line_edit->setObjectName(attr_name.c_str());
+
+                              std::weak_ptr<GRM::Element> ref = (*current_selection)->getRef();
+                              QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorMixedSlot()));
+                              QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
+                                QImage new_image(1, 1, QImage::Format_RGB32);
+                                QRgb new_value;
+
+                                if (ref.lock()->getAttribute(attr_name).isInt())
+                                  {
                                     int err;
                                     double new_r, new_g, new_b;
 
+                                    auto new_index = static_cast<int>(ref.lock()->getAttribute(attr_name));
+                                    static_cast<QPushButton *>(line_edit)->setText(std::to_string(new_index).c_str());
+
                                     gks_inq_color_rep(-1, new_index, -1, &err, &new_r, &new_g, &new_b);
                                     new_value = qRgb(255 * new_r, 255 * new_g, 255 * new_b);
-                                    new_image.setPixel(0, 0, new_value);
-
-                                    auto new_color_pic = QPixmap::fromImage(new_image);
-                                    new_color_pic = new_color_pic.scaled(20, 20);
-                                    static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
-                                  });
-                                }
-                              else if (color_rgb_attr.contains(attr_name.c_str()))
-                                {
-                                  line_edit = new QPushButton(this);
-                                  line_edit->setToolTip(tooltip_string);
-                                  line_edit->setObjectName(attr_name.c_str());
-                                  QObject::connect(line_edit, SIGNAL(clicked()), this, SLOT(colorRGBSlot()));
-                                  QObject::connect(static_cast<QPushButton *>(line_edit), &QPushButton::clicked, [=]() {
-                                    QImage new_image(1, 1, QImage::Format_RGB32);
-                                    QRgb new_value;
+                                  }
+                                else
+                                  {
+                                    double ref_r_new = 0, ref_g_new = 0, ref_b_new = 0;
                                     if ((*current_selection)->getRef()->hasAttribute(attr_name))
                                       {
-                                        double ref_r = 0, ref_g = 0, ref_b = 0;
-                                        std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
                                         auto context_ref = static_cast<std::string>(
                                             (*current_selection)->getRef()->getAttribute(attr_name));
                                         auto rgb_vec = GRM::get<std::vector<double>>((*context)[context_ref]);
-                                        ref_r = rgb_vec.at(0);
-                                        ref_g = rgb_vec.at(1);
-                                        ref_b = rgb_vec.at(2);
-                                        new_value = qRgb(255 * ref_r, 255 * ref_g, 255 * ref_b);
-                                        new_image.setPixel(0, 0, new_value);
-
+                                        ref_r_new = rgb_vec.at(0);
+                                        ref_g_new = rgb_vec.at(1);
+                                        ref_b_new = rgb_vec.at(2);
                                         static_cast<QPushButton *>(line_edit)->setText(context_ref.c_str());
-                                        auto new_color_pic = QPixmap::fromImage(new_image);
-                                        new_color_pic = new_color_pic.scaled(20, 20);
-                                        static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
                                       }
-                                  });
-                                }
-                              else
-                                {
-                                  line_edit = new QLineEdit(this);
-                                  line_edit->setToolTip(tooltip_string);
-                                  static_cast<QLineEdit *>(line_edit)->setText("");
-                                }
-                              text_label = QString("<span style='color:#ff0000;'>%1</span>")
-                                               .arg(attrNameToLabel(attr_name).c_str());
-                              auto label = new QLabel(text_label, this);
-                              label->setFixedWidth(LABEL_WIDTH);
-                              label->setWordWrap(true);
-                              label->setToolTip(tooltip_string);
-                              if (attr_name == "line_color_ind" || attr_name == "line_color_rgb" ||
-                                  attr_name == "line_spec" || attr_name == "line_type" || attr_name == "line_width")
-                                {
-                                  if (!line_modification_added)
-                                    {
-                                      form->addRow(line_modification);
-                                      line_modification_added = true;
-                                    }
-                                  if (line_modification_added) line_modification_form->addRow(label, line_edit);
-                                }
-                              else if (attr_name == "marker_color_ind" || attr_name == "marker_color_indices" ||
-                                       attr_name == "marker_size" || attr_name == "marker_sizes" ||
-                                       attr_name == "marker_type" || attr_name == "border_color_ind" ||
-                                       attr_name == "border_width")
-                                {
-                                  if (!marker_modification_added)
-                                    {
-                                      form->addRow(marker_modification);
-                                      marker_modification_added = true;
-                                    }
 
-                                  if (marker_modification_added) marker_modification_form->addRow(label, line_edit);
-                                }
-                              else if (attr_name == "text_align_horizontal" || attr_name == "text_align_vertical" ||
-                                       attr_name == "text_color_ind" || attr_name == "font" ||
-                                       attr_name == "font_precision")
+                                    new_value = qRgb(255 * ref_r_new, 255 * ref_g_new, 255 * ref_b_new);
+                                  }
+                                new_image.setPixel(0, 0, new_value);
+
+                                auto new_color_pic = QPixmap::fromImage(new_image);
+                                new_color_pic = new_color_pic.scaled(20, 20);
+                                static_cast<QPushButton *>(line_edit)->setIcon(QIcon(new_color_pic));
+                              });
+                            }
+                          else
+                            {
+                              line_edit = new QLineEdit(this);
+                              line_edit->setToolTip(tooltip_string);
+                              static_cast<QLineEdit *>(line_edit)->setText("");
+                            }
+                          text_label =
+                              QString("<span style='color:#ff0000;'>%1</span>").arg(attrNameToLabel(attr_name).c_str());
+                          auto label = new QLabel(text_label, this);
+                          label->setFixedWidth(LABEL_WIDTH);
+                          label->setWordWrap(true);
+                          label->setToolTip(tooltip_string);
+                          if (attr_name == "line_color" || attr_name == "line_spec" || attr_name == "line_type" ||
+                              attr_name == "line_width")
+                            {
+                              if (!line_modification_added)
                                 {
-                                  if (!text_modification_added)
-                                    {
-                                      form->addRow(text_modification);
-                                      text_modification_added = true;
-                                    }
-
-                                  if (attr_name == "font_precision" || attr_name == "font")
-                                    connect(static_cast<QComboBox *>(line_edit),
-                                            static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-                                            this, &EditElementWidget::openTextPreview);
-
-                                  if (text_modification_added) text_modification_form->addRow(label, line_edit);
+                                  form->addRow(line_modification);
+                                  line_modification_added = true;
                                 }
-                              else if (attr_name == "fill_color_ind" || attr_name == "fill_color_rgb" ||
-                                       attr_name == "fill_int_style" || attr_name == "fill_style")
+                              if (line_modification_added) line_modification_form->addRow(label, line_edit);
+                            }
+                          else if (attr_name == "marker_color" || attr_name == "marker_color_indices" ||
+                                   attr_name == "marker_size" || attr_name == "marker_sizes" ||
+                                   attr_name == "marker_type" || attr_name == "border_color" ||
+                                   attr_name == "border_width")
+                            {
+                              if (!marker_modification_added)
                                 {
-                                  if (!fill_modification_added)
-                                    {
-                                      form->addRow(fill_modification);
-                                      fill_modification_added = true;
-                                    }
-
-                                  if (fill_modification_added) fill_modification_form->addRow(label, line_edit);
+                                  form->addRow(marker_modification);
+                                  marker_modification_added = true;
                                 }
-                              else if (attr_name == "viewport_x_min" || attr_name == "viewport_x_max" ||
-                                       attr_name == "viewport_y_min" || attr_name == "viewport_y_max")
+
+                              if (marker_modification_added) marker_modification_form->addRow(label, line_edit);
+                            }
+                          else if (attr_name == "text_align_horizontal" || attr_name == "text_align_vertical" ||
+                                   attr_name == "text_color" || attr_name == "font" || attr_name == "font_precision")
+                            {
+                              if (!text_modification_added)
                                 {
-                                  if (!viewport_added && advanced_editor)
-                                    {
-                                      form->addRow(viewport);
-                                      viewport_added = true;
-                                    }
-                                  if (viewport_added) viewport_form->addRow(label, line_edit);
-                                  if (advanced_editor) was_added = false;
+                                  form->addRow(text_modification);
+                                  text_modification_added = true;
                                 }
-                              else if (attr_name == "viewport_normalized_x_min" ||
-                                       attr_name == "viewport_normalized_x_max" ||
-                                       attr_name == "viewport_normalized_y_min" ||
-                                       attr_name == "viewport_normalized_y_max")
+
+                              if (attr_name == "font_precision" || attr_name == "font")
+                                connect(static_cast<QComboBox *>(line_edit),
+                                        static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                                        &EditElementWidget::openTextPreview);
+
+                              if (text_modification_added) text_modification_form->addRow(label, line_edit);
+                            }
+                          else if (attr_name == "fill_color" || attr_name == "fill_int_style" ||
+                                   attr_name == "fill_style")
+                            {
+                              if (!fill_modification_added)
                                 {
-                                  if (!viewport_normalized_added && advanced_editor)
-                                    {
-                                      form->addRow(viewport_normalized);
-                                      viewport_normalized_added = true;
-                                    }
-
-                                  auto widget = new QWidget(this);
-                                  auto grid_layout = new QGridLayout();
-                                  auto slider = new QSlider(this);
-                                  slider->setOrientation(Qt::Horizontal);
-                                  slider->setRange(0, 100);
-                                  slider->setFixedWidth(80);
-                                  line_edit->setMaximumWidth(40);
-                                  grid_layout->addWidget(line_edit, 0, 0);
-                                  grid_layout->addWidget(slider, 0, 1);
-                                  grid_layout->setContentsMargins(0, 0, 0, 0);
-                                  grid_layout->setSpacing(10);
-                                  widget->setLayout(grid_layout);
-                                  widget->setContentsMargins(0, 0, 0, 0);
-                                  widget->setFixedHeight(30);
-
-                                  connect(slider, &QSlider::sliderMoved, this, [=] {
-                                    double val = slider->value();
-                                    static_cast<QLineEdit *>(line_edit)->setText(QString::number(val / 100.0, 'f', 2));
-                                    static_cast<QLineEdit *>(line_edit)->setModified(true);
-                                  });
-                                  connect(slider, &QSlider::sliderPressed, this, [=] {
-                                    double val = slider->value();
-                                    static_cast<QLineEdit *>(line_edit)->setText(QString::number(val / 100.0, 'f', 2));
-                                    static_cast<QLineEdit *>(line_edit)->setModified(true);
-                                  });
-                                  connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=] {
-                                    double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
-                                    slider->setValue(val * 100.0);
-                                  });
-                                  if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
-                                  if (advanced_editor) was_added = false;
+                                  form->addRow(fill_modification);
+                                  fill_modification_added = true;
                                 }
-                              else if (attr_name == "x_range_min" || attr_name == "x_range_max" ||
-                                       attr_name == "y_range_min" || attr_name == "y_range_max" ||
-                                       attr_name == "z_range_min" || attr_name == "z_range_max" ||
-                                       attr_name == "c_range_min" || attr_name == "c_range_max" ||
-                                       attr_name == "r_range_min" || attr_name == "r_range_max" ||
-                                       attr_name == "theta_range_min" || attr_name == "theta_range_max")
+
+                              if (fill_modification_added) fill_modification_form->addRow(label, line_edit);
+                            }
+                          else if (attr_name == "viewport_x_min" || attr_name == "viewport_x_max" ||
+                                   attr_name == "viewport_y_min" || attr_name == "viewport_y_max")
+                            {
+                              if (!viewport_added && advanced_editor)
                                 {
-                                  if (advanced_editor && !range_modification_added)
-                                    {
-                                      form->addRow(range_modification);
-                                      range_modification_added = true;
-                                    }
-
-                                  if (range_modification_added)
-                                    {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-                                      range_modification_form->addRow(label, line_edit);
-                                      if (!advanced_editor)
-                                        range_modification_form->setRowVisible(range_modification_form->rowCount() - 1,
-                                                                               false);
-#else
-                                      if (advanced_editor) range_modification_form->addRow(label, line_edit);
-#endif
-                                    }
-                                  if (!advanced_editor) was_added = false;
+                                  form->addRow(viewport);
+                                  viewport_added = true;
                                 }
-                              else if (attr_name == "x_max_shift_ndc" || attr_name == "x_min_shift_ndc" ||
-                                       attr_name == "x_shift_ndc" || attr_name == "x_max_shift_wc" ||
-                                       attr_name == "x_min_shift_wc" || attr_name == "x_shift_wc" ||
-                                       attr_name == "y_max_shift_ndc" || attr_name == "y_min_shift_ndc" ||
-                                       attr_name == "y_shift_ndc" || attr_name == "y_max_shift_wc" ||
-                                       attr_name == "y_min_shift_wc" || attr_name == "y_shift_wc")
+                              if (viewport_added) viewport_form->addRow(label, line_edit);
+                              if (advanced_editor) was_added = false;
+                            }
+                          else if (attr_name == "viewport_normalized_x_min" ||
+                                   attr_name == "viewport_normalized_x_max" ||
+                                   attr_name == "viewport_normalized_y_min" || attr_name == "viewport_normalized_y_max")
+                            {
+                              if (!viewport_normalized_added && advanced_editor)
                                 {
-                                  bool is_non_advanced_element =
-                                      advanced_editor ||
-                                      (attr_name != "x_max_shift_wc" && attr_name != "x_min_shift_wc" &&
-                                       attr_name != "x_shift_wc" && attr_name != "y_max_shift_wc" &&
-                                       attr_name != "y_min_shift_wc" && attr_name != "y_shift_wc") &&
-                                          ((*current_selection)->getRef()->hasAttribute("viewport_x_min") ||
-                                           (*current_selection)->getRef()->localName() == "text");
-                                  if (!element_movement_modification_added &&
-                                      (advanced_editor ||
-                                       !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
-                                    {
-                                      if (is_non_advanced_element)
-                                        {
-                                          form->addRow(element_movement_modification);
-                                          element_movement_modification_added = true;
-                                        }
-                                    }
-
-                                  if (element_movement_modification_added)
-                                    {
-                                      if (is_non_advanced_element)
-                                        {
-                                          if (slider_attr.contains(attr_name.c_str()))
-                                            {
-                                              auto widget = new QWidget(this);
-                                              auto grid_layout = new QGridLayout();
-                                              auto slider = new QSlider(this);
-                                              slider->setOrientation(Qt::Horizontal);
-                                              slider->setRange(0, 100);
-                                              slider->setFixedWidth(80);
-                                              line_edit->setMaximumWidth(40);
-                                              grid_layout->addWidget(line_edit, 0, 0);
-                                              grid_layout->addWidget(slider, 0, 1);
-                                              grid_layout->setContentsMargins(0, 0, 0, 0);
-                                              grid_layout->setSpacing(10);
-                                              widget->setLayout(grid_layout);
-                                              widget->setContentsMargins(0, 0, 0, 0);
-                                              widget->setFixedHeight(30);
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-                                              connect(slider, &QSlider::sliderMoved, this, [=] {
-                                                double val = slider->value();
-                                                static_cast<QLineEdit *>(line_edit)->setText(
-                                                    QString::number(val / 100.0, 'f', 2));
-                                                static_cast<QLineEdit *>(line_edit)->setModified(true);
-                                              });
-                                              connect(slider, &QSlider::sliderPressed, this, [=] {
-                                                double val = slider->value();
-                                                static_cast<QLineEdit *>(line_edit)->setText(
-                                                    QString::number(val / 100.0, 'f', 2));
-                                                static_cast<QLineEdit *>(line_edit)->setModified(true);
-                                              });
-                                              connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged,
-                                                      this, [=] {
-                                                        double val =
-                                                            static_cast<QLineEdit *>(line_edit)->text().toDouble();
-                                                        slider->setValue(val * 100.0);
-                                                      });
-#else
-                                              connect(slider, &QSlider::sliderMoved, this, [=] {
-                                                double val = slider->value();
-                                                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
-                                                ((QLineEdit *)line_edit)->setModified(true);
-                                              });
-                                              connect(slider, &QSlider::sliderPressed, this, [=] {
-                                                double val = slider->value();
-                                                ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
-                                                ((QLineEdit *)line_edit)->setModified(true);
-                                              });
-                                              connect(((QLineEdit *)line_edit), &QLineEdit::textChanged, this, [=] {
-                                                double val = ((QLineEdit *)line_edit)->text().toDouble();
-                                                slider->setValue(val * 100.0);
-                                              });
-#endif
-                                              element_movement_modification_form->addRow(label, widget);
-                                            }
-                                          else
-                                            {
-                                              element_movement_modification_form->addRow(label, line_edit);
-                                            }
-                                        }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-                                      if (!advanced_editor && is_non_advanced_element)
-                                        element_movement_modification_form->setRowVisible(
-                                            element_movement_modification_form->rowCount() - 1,
-                                            !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
-#endif
-                                      if ((!advanced_editor &&
-                                           isAdvancedAttribute((*current_selection)->getRef(), attr_name)) ||
-                                          !is_non_advanced_element)
-                                        was_added = false;
-                                    }
-                                  else
-                                    {
-                                      was_added = false;
-                                    }
+                                  form->addRow(viewport_normalized);
+                                  viewport_normalized_added = true;
                                 }
-                              else
+
+                              auto widget = new QWidget(this);
+                              auto grid_layout = new QGridLayout();
+                              auto slider = new QSlider(this);
+                              slider->setOrientation(Qt::Horizontal);
+                              slider->setRange(0, 100);
+                              slider->setFixedWidth(80);
+                              line_edit->setMaximumWidth(40);
+                              grid_layout->addWidget(line_edit, 0, 0);
+                              grid_layout->addWidget(slider, 0, 1);
+                              grid_layout->setContentsMargins(0, 0, 0, 0);
+                              grid_layout->setSpacing(10);
+                              widget->setLayout(grid_layout);
+                              widget->setContentsMargins(0, 0, 0, 0);
+                              widget->setFixedHeight(30);
+
+                              connect(slider, &QSlider::sliderMoved, this, [=] {
+                                double val = slider->value();
+                                static_cast<QLineEdit *>(line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                static_cast<QLineEdit *>(line_edit)->setModified(true);
+                              });
+                              connect(slider, &QSlider::sliderPressed, this, [=] {
+                                double val = slider->value();
+                                static_cast<QLineEdit *>(line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                static_cast<QLineEdit *>(line_edit)->setModified(true);
+                              });
+                              connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this, [=] {
+                                double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
+                                slider->setValue(val * 100.0);
+                              });
+                              if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
+                              if (advanced_editor) was_added = false;
+                            }
+                          else if (attr_name == "x_range_min" || attr_name == "x_range_max" ||
+                                   attr_name == "y_range_min" || attr_name == "y_range_max" ||
+                                   attr_name == "z_range_min" || attr_name == "z_range_max" ||
+                                   attr_name == "c_range_min" || attr_name == "c_range_max" ||
+                                   attr_name == "r_range_min" || attr_name == "r_range_max" ||
+                                   attr_name == "theta_range_min" || attr_name == "theta_range_max")
+                            {
+                              if (advanced_editor && !range_modification_added)
+                                {
+                                  form->addRow(range_modification);
+                                  range_modification_added = true;
+                                }
+
+                              if (range_modification_added)
                                 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-                                  form->addRow(label, line_edit);
+                                  range_modification_form->addRow(label, line_edit);
                                   if (!advanced_editor)
-                                    form->setRowVisible(
-                                        form->rowCount() - 1,
-                                        !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
+                                    range_modification_form->setRowVisible(range_modification_form->rowCount() - 1,
+                                                                           false);
 #else
-                                  if (advanced_editor ||
-                                      !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
-                                    form->addRow(label, line_edit);
+                                  if (advanced_editor) range_modification_form->addRow(label, line_edit);
 #endif
-                                  if (!advanced_editor &&
-                                      isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                                }
+                              if (!advanced_editor) was_added = false;
+                            }
+                          else if (attr_name == "x_max_shift_ndc" || attr_name == "x_min_shift_ndc" ||
+                                   attr_name == "x_shift_ndc" || attr_name == "x_max_shift_wc" ||
+                                   attr_name == "x_min_shift_wc" || attr_name == "x_shift_wc" ||
+                                   attr_name == "y_max_shift_ndc" || attr_name == "y_min_shift_ndc" ||
+                                   attr_name == "y_shift_ndc" || attr_name == "y_max_shift_wc" ||
+                                   attr_name == "y_min_shift_wc" || attr_name == "y_shift_wc")
+                            {
+                              bool is_non_advanced_element =
+                                  advanced_editor ||
+                                  (attr_name != "x_max_shift_wc" && attr_name != "x_min_shift_wc" &&
+                                   attr_name != "x_shift_wc" && attr_name != "y_max_shift_wc" &&
+                                   attr_name != "y_min_shift_wc" && attr_name != "y_shift_wc") &&
+                                      ((*current_selection)->getRef()->hasAttribute("viewport_x_min") ||
+                                       (*current_selection)->getRef()->localName() == "text");
+                              if (!element_movement_modification_added &&
+                                  (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name)))
+                                {
+                                  if (is_non_advanced_element)
+                                    {
+                                      form->addRow(element_movement_modification);
+                                      element_movement_modification_added = true;
+                                    }
+                                }
+
+                              if (element_movement_modification_added)
+                                {
+                                  if (is_non_advanced_element)
+                                    {
+                                      if (slider_attr.contains(attr_name.c_str()))
+                                        {
+                                          auto widget = new QWidget(this);
+                                          auto grid_layout = new QGridLayout();
+                                          auto slider = new QSlider(this);
+                                          slider->setOrientation(Qt::Horizontal);
+                                          slider->setRange(0, 100);
+                                          slider->setFixedWidth(80);
+                                          line_edit->setMaximumWidth(40);
+                                          grid_layout->addWidget(line_edit, 0, 0);
+                                          grid_layout->addWidget(slider, 0, 1);
+                                          grid_layout->setContentsMargins(0, 0, 0, 0);
+                                          grid_layout->setSpacing(10);
+                                          widget->setLayout(grid_layout);
+                                          widget->setContentsMargins(0, 0, 0, 0);
+                                          widget->setFixedHeight(30);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                                          connect(slider, &QSlider::sliderMoved, this, [=] {
+                                            double val = slider->value();
+                                            static_cast<QLineEdit *>(line_edit)->setText(
+                                                QString::number(val / 100.0, 'f', 2));
+                                            static_cast<QLineEdit *>(line_edit)->setModified(true);
+                                          });
+                                          connect(slider, &QSlider::sliderPressed, this, [=] {
+                                            double val = slider->value();
+                                            static_cast<QLineEdit *>(line_edit)->setText(
+                                                QString::number(val / 100.0, 'f', 2));
+                                            static_cast<QLineEdit *>(line_edit)->setModified(true);
+                                          });
+                                          connect(static_cast<QLineEdit *>(line_edit), &QLineEdit::textChanged, this,
+                                                  [=] {
+                                                    double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
+                                                    slider->setValue(val * 100.0);
+                                                  });
+#else
+                                          connect(slider, &QSlider::sliderMoved, this, [=] {
+                                            double val = slider->value();
+                                            ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                            ((QLineEdit *)line_edit)->setModified(true);
+                                          });
+                                          connect(slider, &QSlider::sliderPressed, this, [=] {
+                                            double val = slider->value();
+                                            ((QLineEdit *)line_edit)->setText(QString::number(val / 100.0, 'f', 2));
+                                            ((QLineEdit *)line_edit)->setModified(true);
+                                          });
+                                          connect(((QLineEdit *)line_edit), &QLineEdit::textChanged, this, [=] {
+                                            double val = ((QLineEdit *)line_edit)->text().toDouble();
+                                            slider->setValue(val * 100.0);
+                                          });
+#endif
+                                          element_movement_modification_form->addRow(label, widget);
+                                        }
+                                      else
+                                        {
+                                          element_movement_modification_form->addRow(label, line_edit);
+                                        }
+                                    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                                  if (!advanced_editor && is_non_advanced_element)
+                                    element_movement_modification_form->setRowVisible(
+                                        element_movement_modification_form->rowCount() - 1,
+                                        !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
+#endif
+                                  if ((!advanced_editor &&
+                                       isAdvancedAttribute((*current_selection)->getRef(), attr_name)) ||
+                                      !is_non_advanced_element)
                                     was_added = false;
                                 }
-
-                              if (was_added)
-                                {
-                                  labels << text_label;
-                                  fields << line_edit;
-                                }
                               else
                                 {
-                                  if (!advanced_editor)
-                                    {
-                                      text_label.clear();
-                                      label->clear();
-                                    }
-                                  line_edit->close();
+                                  was_added = false;
                                 }
+                            }
+                          else
+                            {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+                              form->addRow(label, line_edit);
+                              if (!advanced_editor)
+                                form->setRowVisible(form->rowCount() - 1,
+                                                    !isAdvancedAttribute((*current_selection)->getRef(), attr_name));
+#else
+                              if (advanced_editor || !isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                                form->addRow(label, line_edit);
+#endif
+                              if (!advanced_editor && isAdvancedAttribute((*current_selection)->getRef(), attr_name))
+                                was_added = false;
+                            }
+
+                          if (was_added)
+                            {
+                              labels << text_label;
+                              fields << line_edit;
+                            }
+                          else
+                            {
+                              if (!advanced_editor)
+                                {
+                                  text_label.clear();
+                                  label->clear();
+                                }
+                              line_edit->close();
                             }
                         }
                     }
-                }
-              else if (advanced_editor)
-                {
-                  /* special case for colorrep cause there are way to many attributes inside the attributegroup
-                   */
-                  line_edit = new QLineEdit(this);
-                  static_cast<QLineEdit *>(line_edit)->setText("");
-                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
-                  form->addRow(text_label, line_edit);
-
-                  attr_type.emplace("Colorrep-index", "xs:string");
-                  labels << text_label;
-                  fields << line_edit;
-
-                  line_edit = new QLineEdit(this);
-                  static_cast<QLineEdit *>(line_edit)->setText("");
-                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
-                  form->addRow(text_label, line_edit);
-
-                  attr_type.emplace("Colorrep-value", "xs:string");
-                  labels << text_label;
-                  fields << line_edit;
                 }
             }
         }
@@ -2879,67 +2847,58 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                               current_selection->parentElement()->setAttribute(attr_name, std::stoi(value));
                             }
                         }
-                      if (attr_name == "Colorrep-index")
+
+                      const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
+                      if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "x_range_min" ||
+                          attr_name == "x_range_max")
                         {
-                          /* special case for colorrep attribute */
-                          current_selection->setAttribute(
-                              "colorrep." + static_cast<QLineEdit *>(fields[i])->text().toStdString(),
-                              static_cast<QLineEdit *>(fields[i + 1])->text().toStdString());
-                        }
-                      else if (attr_name != "Colorrep-value")
-                        {
-                          const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
-                          if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "x_range_min" ||
-                              attr_name == "x_range_max")
+                          auto plot_elem = current_selection;
+                          GRM::getPlotParent(plot_elem);
+                          auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+                          if (coordinate_system->hasAttribute("_time_axis") &&
+                              static_cast<int>(coordinate_system->getAttribute("_time_axis")))
                             {
-                              auto plot_elem = current_selection;
-                              GRM::getPlotParent(plot_elem);
-                              auto coordinate_system = plot_elem->querySelectors("coordinate_system");
-                              if (coordinate_system->hasAttribute("_time_axis") &&
-                                  static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+                              struct tm timestamp_tm;
+                              if (util::parseIso8601WithoutTimezone(value, timestamp_tm))
                                 {
-                                  struct tm timestamp_tm;
-                                  if (util::parseIso8601WithoutTimezone(value, timestamp_tm))
-                                    {
-                                      current_selection->setAttribute(attr_name, (int)mktime(&timestamp_tm));
-                                    }
-                                  else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
-                                    {
-                                      current_selection->setAttribute(attr_name, std::stod(value));
-                                    }
+                                  current_selection->setAttribute(attr_name, (int)mktime(&timestamp_tm));
                                 }
                               else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
                                 {
                                   current_selection->setAttribute(attr_name, std::stod(value));
                                 }
                             }
-                          else if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                                   !util::isDigits(value))
-                            {
-                              current_selection->setAttribute(attr_name, value);
-                            }
-                          else if (attr_type[attr_name] == "xs:string" &&
-                                   (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
-                                    attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
-                                    attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
-                                    attr_name == "z_label_3d"))
-                            {
-                              current_selection->setAttribute(attr_name, value);
-                            }
                           else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
                             {
                               current_selection->setAttribute(attr_name, std::stod(value));
                             }
-                          else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
-                                   util::isDigits(value))
-                            {
-                              current_selection->setAttribute(attr_name, std::stoi(value));
-                            }
-                          else
-                            {
-                              fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
-                                      attr_name.c_str(), attr_type[attr_name].c_str());
-                            }
+                        }
+                      else if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                               !util::isDigits(value))
+                        {
+                          current_selection->setAttribute(attr_name, value);
+                        }
+                      else if (attr_type[attr_name] == "xs:string" &&
+                               (attr_name == "arc_label" || attr_name == "angle_label" || attr_name == "x_label" ||
+                                attr_name == "y_label" || attr_name == "z_label" || attr_name == "tick_label" ||
+                                attr_name == "text" || attr_name == "x_label_3d" || attr_name == "y_label_3d" ||
+                                attr_name == "z_label_3d"))
+                        {
+                          current_selection->setAttribute(attr_name, value);
+                        }
+                      else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                        {
+                          current_selection->setAttribute(attr_name, std::stod(value));
+                        }
+                      else if ((attr_type[attr_name] == "xs:integer" || attr_type[attr_name] == "strint") &&
+                               util::isDigits(value))
+                        {
+                          current_selection->setAttribute(attr_name, std::stoi(value));
+                        }
+                      else
+                        {
+                          fprintf(stderr, "Invalid value %s for attribute %s with type %s\n", value.c_str(),
+                                  attr_name.c_str(), attr_type[attr_name].c_str());
                         }
                     }
                 }
@@ -3039,16 +2998,18 @@ void EditElementWidget::colorIndexSlot()
   std::string attribute_name = sender_ref->objectName().toStdString();
   auto current_selection = grplot_widget->getCurrentSelection();
   auto index = static_cast<int>((*current_selection)->getRef()->getAttribute(attribute_name));
-  grplot_widget->colorIndexPopUp(attribute_name, index, (*current_selection)->getRef());
-  if (attribute_name == "text_color_ind") openTextPreview();
 }
 
-void EditElementWidget::colorRGBSlot()
+void EditElementWidget::colorMixedSlot()
 {
+  int index = -1;
   auto sender_ref = sender();
   std::string attribute_name = sender_ref->objectName().toStdString();
   auto current_selection = grplot_widget->getCurrentSelection();
-  grplot_widget->colorRGBPopUp(attribute_name, (*current_selection)->getRef());
+  if ((*current_selection)->getRef()->getAttribute(attribute_name).isInt())
+    index = static_cast<int>((*current_selection)->getRef()->getAttribute(attribute_name));
+  grplot_widget->colorMixedPopUp((*current_selection)->getRef(), attribute_name, index);
+  if (attribute_name == "text_color") openTextPreview();
 }
 
 bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> &element, std::string attr_name,
@@ -4224,6 +4185,7 @@ void EditElementWidget::openTextPreview()
     {
       std::string text;
       int text_color = 1, scientific_format = 1, font_precision = 3, font = 232;
+      std::string text_color_rgb;
 
       for (const auto &attr : {"text", "x_label_3d", "y_label_3d", "z_label_3d", "tick_label"})
         {
@@ -4233,8 +4195,13 @@ void EditElementWidget::openTextPreview()
               break;
             }
         }
-      if ((*current_selection)->getRef()->hasAttribute("text_color_ind"))
-        text_color = static_cast<int>((*current_selection)->getRef()->getAttribute("text_color_ind"));
+      if ((*current_selection)->getRef()->hasAttribute("text_color"))
+        {
+          if ((*current_selection)->getRef()->getAttribute("text_color").isInt())
+            text_color = static_cast<int>((*current_selection)->getRef()->getAttribute("text_color"));
+          else if ((*current_selection)->getRef()->getAttribute("text_color").isString())
+            text_color_rgb = static_cast<std::string>((*current_selection)->getRef()->getAttribute("text_color"));
+        }
 
       if ((*current_selection)->getRef()->hasAttribute("scientific_format"))
         scientific_format = static_cast<int>((*current_selection)->getRef()->getAttribute("scientific_format"));
@@ -4262,8 +4229,13 @@ void EditElementWidget::openTextPreview()
             {
               if (attr_name == "tick_label" || attr_name == "text")
                 text = static_cast<QLineEdit *>(fields[i])->text().toStdString();
-              else if (attr_name == "text_color_ind")
-                text_color = static_cast<QLineEdit *>(fields[i])->text().toInt();
+              else if (attr_name == "text_color")
+                {
+                  if (util::isNumber(static_cast<QLineEdit *>(fields[i])->text().toStdString()))
+                    text_color = static_cast<QLineEdit *>(fields[i])->text().toInt();
+                  else
+                    text_color_rgb = static_cast<QLineEdit *>(fields[i])->text().toStdString();
+                }
             }
           else if (typeid(field) == typeid(QComboBox))
             {
@@ -4308,6 +4280,13 @@ void EditElementWidget::openTextPreview()
               width = height;
               height = tmp;
             }
+        }
+      if (!text_color_rgb.empty())
+        {
+          auto context = grm_get_render()->getContext();
+          auto rgb_color = GRM::get<std::vector<double>>((*context)[text_color_rgb]);
+          text_color =
+              grm_get_render()->setColorRep((*current_selection)->getRef(), rgb_color[0], rgb_color[1], rgb_color[2]);
         }
       grplot_widget->setUpPreviewTextWidget(text, scientific_format, text_color, font_precision, font, width, height);
     }

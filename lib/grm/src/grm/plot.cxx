@@ -1685,15 +1685,15 @@ grm_error_t plotLine(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color_ind", line_color_ind);
+        sub_group->setAttribute("line_color", line_color_ind);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
       if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+        sub_group->setAttribute("marker_color", marker_color_ind);
       if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color_ind", border_color_ind);
+        sub_group->setAttribute("border_color", border_color_ind);
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -1822,7 +1822,7 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color_ind", line_color_ind);
+        sub_group->setAttribute("line_color", line_color_ind);
       if (grm_args_values(*current_series, "step_where", "s", &where)) sub_group->setAttribute("step_where", where);
 
       global_root->setAttribute("_id", ++id);
@@ -1899,9 +1899,9 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
       if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+        sub_group->setAttribute("marker_color", marker_color_ind);
       if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color_ind", border_color_ind);
+        sub_group->setAttribute("border_color", border_color_ind);
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -1914,7 +1914,7 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
-          sub_group->setAttribute("marker_color_ind", c_index);
+          sub_group->setAttribute("marker_color", c_index);
         }
 
       if (z != nullptr || c != nullptr)
@@ -2078,7 +2078,7 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color_ind", line_color_ind);
+        sub_group->setAttribute("line_color", line_color_ind);
 
       global_root->setAttribute("_id", ++id);
       if (series_args != nullptr) break;
@@ -2124,10 +2124,10 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         {
           std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
           (*context)["fill_color_rgb" + str] = bar_color_rgb_vec;
-          sub_group->setAttribute("fill_color_rgb", "fill_color_rgb" + str);
+          sub_group->setAttribute("fill_color", "fill_color_rgb" + str);
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color_index))
-        sub_group->setAttribute("fill_color_ind", bar_color_index);
+        sub_group->setAttribute("fill_color", bar_color_index);
       if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
         sub_group->setAttribute("fill_style", fill_style);
       if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
@@ -2138,10 +2138,10 @@ grm_error_t plotHistogram(grm_args_t *subplot_args)
         {
           std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
           (*context)["line_color_rgb" + str] = edge_color_rgb_vec;
-          sub_group->setAttribute("line_color_rgb", "line_color_rgb" + str);
+          sub_group->setAttribute("line_color", "line_color_rgb" + str);
         }
       if (grm_args_values(*current_series, "edge_color", "i", &edge_color_index))
-        sub_group->setAttribute("line_color_ind", edge_color_index);
+        sub_group->setAttribute("line_color", edge_color_index);
 
       if (grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins))
         {
@@ -2256,10 +2256,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
         {
           std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
           (*context)["fill_color_rgb" + id_str] = bar_color_rgb_vec;
-          sub_group->setAttribute("fill_color_rgb", "fill_color_rgb" + id_str);
+          sub_group->setAttribute("fill_color", "fill_color_rgb" + id_str);
         }
-      if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
-        sub_group->setAttribute("fill_color_ind", bar_color);
+      if (grm_args_values(subplot_args, "bar_color", "i", &bar_color)) sub_group->setAttribute("fill_color", bar_color);
       if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
         sub_group->setAttribute("fill_style", fill_style);
       if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
@@ -2275,10 +2274,10 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
         {
           std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
           (*context)["line_color_rgb" + id_str] = edge_color_rgb_vec;
-          sub_group->setAttribute("line_color_rgb", "line_color_rgb" + id_str);
+          sub_group->setAttribute("line_color", "line_color_rgb" + id_str);
         }
       if (grm_args_values(*current_series, "edge_color", "i", &edge_color))
-        sub_group->setAttribute("line_color_ind", edge_color);
+        sub_group->setAttribute("line_color", edge_color);
       if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
         sub_group->setAttribute("edge_width", edge_width);
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
@@ -2352,7 +2351,6 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
           int cumulative_y_index = 0;
           double *inner_y = nullptr;
           unsigned int inner_y_length = 0;
-          int color_save_spot = 1000;
 
           for (inner_series_index = 0; inner_series_index < inner_series_length; inner_series_index++)
             {
@@ -2391,10 +2389,9 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
                     }
                   else if (inner_c_rgb != nullptr)
                     {
-                      global_render->setColorRep(sub_group, color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1],
-                                                 inner_c_rgb[i * 3 + 2]);
-                      c_vec.push_back(color_save_spot);
-                      ++color_save_spot;
+                      c_rgb_vec.push_back(inner_c_rgb[i * 3]);
+                      c_rgb_vec.push_back(inner_c_rgb[i * 3 + 1]);
+                      c_rgb_vec.push_back(inner_c_rgb[i * 3 + 2]);
                       inner_c_exists = true;
                     }
                   else
@@ -2405,19 +2402,15 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
                         }
                       else if (c_rgb != nullptr)
                         {
-                          global_render->setColorRep(sub_group, color_save_spot, c_rgb[inner_series_index * 3],
-                                                     c_rgb[inner_series_index * 3 + 1],
-                                                     c_rgb[inner_series_index * 3 + 2]);
-                          c_vec.push_back(color_save_spot);
-                          ++color_save_spot;
+                          c_rgb_vec.push_back(c_rgb[inner_series_index * 3]);
+                          c_rgb_vec.push_back(c_rgb[inner_series_index * 3 + 1]);
+                          c_rgb_vec.push_back(c_rgb[inner_series_index * 3 + 2]);
                         }
                       else
                         {
                           c_vec.push_back(-1);
                         }
                     }
-
-                  cleanupAndSetErrorIf(color_save_spot > 1256, GRM_ERROR_INTERNAL);
 
                   if (cumulative_y_index + i < y_labels_length)
                     {
@@ -2440,9 +2433,16 @@ grm_error_t plotBarplot(grm_args_t *subplot_args)
            * data exists */
           if (inner_c_exists)
             {
-              (*context)["c_ind" + id_str] = c_vec;
-              sub_group->setAttribute("color_ind_values", "c_ind" + id_str);
-              sub_group->removeAttribute("color_rgb_values");
+              if (!c_vec.empty())
+                {
+                  (*context)["c_ind" + id_str] = c_vec;
+                  sub_group->setAttribute("color_ind_values", "c_ind" + id_str);
+                }
+              else
+                {
+                  (*context)["c_rgb" + id_str] = c_rgb_vec;
+                  sub_group->setAttribute("color_rgb_values", "c_rgb" + id_str);
+                }
             }
         }
       else
@@ -3605,15 +3605,15 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
       if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color_ind", line_color_ind);
+        sub_group->setAttribute("line_color", line_color_ind);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
       if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color_ind", marker_color_ind);
+        sub_group->setAttribute("marker_color", marker_color_ind);
       if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color_ind", border_color_ind);
+        sub_group->setAttribute("border_color", border_color_ind);
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -3788,11 +3788,9 @@ grm_error_t plotPolarHistogram(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &series);
 
   /* edge_color */
-  if (grm_args_values(*series, "edge_color", "i", &edge_color))
-    series_group->setAttribute("line_color_ind", edge_color);
+  if (grm_args_values(*series, "edge_color", "i", &edge_color)) series_group->setAttribute("line_color", edge_color);
   /* face_color */
-  if (grm_args_values(*series, "face_color", "i", &face_color))
-    series_group->setAttribute("fill_color_ind", face_color);
+  if (grm_args_values(*series, "face_color", "i", &face_color)) series_group->setAttribute("fill_color", face_color);
   if (grm_args_values(subplot_args, "fill_style", "i", &fill_style))
     series_group->setAttribute("fill_style", fill_style);
   if (grm_args_values(subplot_args, "fill_int_style", "i", &fill_int_style))
@@ -4263,10 +4261,10 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
                       int tick_color;
                       tick_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      if ((*tick_modification_map)[axis_id][tick_value].count("line_color_ind") > 0)
-                        (*tick_modification_map)[axis_id][tick_value]["line_color_ind"] = GRM::Value(tick_color);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("line_color") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["line_color"] = GRM::Value(tick_color);
                       else
-                        (*tick_modification_map)[axis_id][tick_value].emplace("line_color_ind", tick_color);
+                        (*tick_modification_map)[axis_id][tick_value].emplace("line_color", tick_color);
                       logger((stderr, "Got tick_color \"%i\"\n", tick_color));
                     }
                   else if (strcmp(tick_arg->key, "line_spec") == 0)
@@ -4456,10 +4454,10 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
                       int tick_label_color;
                       tick_label_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      if ((*tick_modification_map)[axis_id][tick_value].count("text_color_ind") > 0)
-                        (*tick_modification_map)[axis_id][tick_value]["text_color_ind"] = GRM::Value(tick_label_color);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("text_color") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["text_color"] = GRM::Value(tick_label_color);
                       else
-                        (*tick_modification_map)[axis_id][tick_value].emplace("text_color_ind", tick_label_color);
+                        (*tick_modification_map)[axis_id][tick_value].emplace("text_color", tick_label_color);
                       logger((stderr, "Got tick_label_color \"%i\"\n", tick_label_color));
                     }
                   else if (strcmp(tick_arg->key, "font") == 0)

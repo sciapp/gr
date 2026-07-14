@@ -41,7 +41,6 @@
 #include "grm/dom_render/manage_z_index.hxx"
 #include "grm/dom_render/drawable.hxx"
 #include "grm/dom_render/manage_gr_context_ids.hxx"
-#include "grm/dom_render/manage_custom_color_index.hxx"
 
 
 std::shared_ptr<GRM::Element> global_root;
@@ -53,7 +52,6 @@ bool z_queue_is_being_rendered = false;
 std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds gr_context_id_manager;
 ManageZIndex z_index_manager;
-ManageCustomColorIndex custom_color_index_manager;
 GRM::GroupMask group_mask;
 
 static std::set<std::string> valid_context_keys = valid_context_attributes;
@@ -76,6 +74,8 @@ static bool highlighted_attr_exist = false;
 static const char *grm_tmp_dir = nullptr;
 static bool enable_editor = false;
 static int plot_id = 0;
+static std::vector<int>
+    used_colors[CUSTOM_COLOR_END - CUSTOM_COLOR_START]; // maybe id based so they can be cleared faster?
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -104,7 +104,6 @@ void GRM::PushDrawableToZQueue::operator()(const std::shared_ptr<GRM::Element> &
     }
   auto drawable = std::make_shared<Drawable>(element, context, context_id, z_index_manager.getZIndex(), draw_function);
   drawable->insertion_index = (int)z_queue.size();
-  custom_color_index_manager.saveContext(context_id);
   z_queue.push(drawable);
 }
 
@@ -149,7 +148,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
    */
   gr_savestate();
   z_index_manager.saveState();
-  custom_color_index_manager.saveState();
 
   processElement(element, context);
   // needed for 3d cases to make sure gr_inqvpsize returns the correct width and height
@@ -176,7 +174,6 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
         }
     }
 
-  custom_color_index_manager.restoreState();
   z_index_manager.restoreState();
   gr_restorestate();
 }
@@ -289,8 +286,8 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       if (!element->parentElement()) continue;
       if (strEqualsAny(element->localName(), "tick", "text", "grid_line"))
         {
-          auto coordinate_system = element->parentElement()->parentElement()->parentElement();
-          if (coordinate_system != nullptr && coordinate_system->localName() == "coordinate_system" &&
+          if (auto coordinate_system = element->parentElement()->parentElement()->parentElement();
+              coordinate_system != nullptr && coordinate_system->localName() == "coordinate_system" &&
               coordinate_system->hasAttribute("hide") && static_cast<int>(coordinate_system->getAttribute("hide")))
             continue;
         }
@@ -310,7 +307,6 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
           boundingMap()[bbox_id] = element;
         }
 
-      custom_color_index_manager.selectContext(drawable->getGrContextId());
       drawable->draw();
 
       if (bounding_boxes) gr_cancelbboxcallback();
@@ -569,7 +565,6 @@ static void highlightHelper(const std::shared_ptr<GRM::Element> &element, const 
    */
   gr_savestate();
   z_index_manager.saveState();
-  custom_color_index_manager.saveState();
 
   processElement(element, context);
   if (element->hasChildNodes() && parent_types.count(element->localName()))
@@ -581,7 +576,6 @@ static void highlightHelper(const std::shared_ptr<GRM::Element> &element, const 
         }
     }
 
-  custom_color_index_manager.restoreState();
   z_index_manager.restoreState();
   gr_restorestate();
 }
@@ -694,8 +688,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("bin_width"), std::vector<std::string>{"None", "The width all bins have"}},
       {std::string("bin_widths"), std::vector<std::string>{"None", "References the bin widths stored in the context"}},
       {std::string("bins"), std::vector<std::string>{"None", "References the bin-values stored in the context"}},
-      {std::string("border_color_ind"),
-       std::vector<std::string>{"0", "Sets the color of the markers border according to the current colormap"}},
+      {std::string("border_color"),
+       std::vector<std::string>{"0", "Sets the color of the markers border to the set index or context ref"}},
       {std::string("border_width"), std::vector<std::string>{"None", "Sets the width of the markers border"}},
       {std::string("c"), std::vector<std::string>{"None", "References the color-values stored in the context"}},
       {std::string("c_lim_max"), std::vector<std::string>{"NAN", "The upper color-limit"}},
@@ -776,8 +770,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("error_bar_x"), std::vector<std::string>{"None", "The x-value for the error"}},
       {std::string("error_bar_y_max"), std::vector<std::string>{"None", "The upper y-value for the error"}},
       {std::string("error_bar_y_min"), std::vector<std::string>{"None", "The lower y-value for the error"}},
-      {std::string("fill_color_ind"), std::vector<std::string>{"None", "Sets the current fill color in index format"}},
-      {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Sets the current fill color in RGB format"}},
+      {std::string("fill_color"),
+       std::vector<std::string>{"None", "Sets the current fill color in index or referenz format"}},
       {std::string("fill_int_style"),
        std::vector<std::string>{"None", "Sets the index of the current fill interior style"}},
       {std::string("fill_style"),
@@ -829,8 +823,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("length"),
        std::vector<std::string>{"None", "The length of the 3d spin. It also gets used for the radius"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
-      {std::string("line_color_ind"), std::vector<std::string>{"1", "Color for the lines in index format"}},
-      {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the lines in rgb format"}},
+      {std::string("line_color"),
+       std::vector<std::string>{"1", "Color for the lines in index format or as context referenz"}},
       {std::string("line_spec"), std::vector<std::string>{"", "Sets the string specifier for line styles"}},
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
       {std::string("line_width"), std::vector<std::string>{"None", "The width of the line"}},
@@ -845,7 +839,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None",
                                 "Used in marginal heatmap children to specify that the viewport and window from "
                                 "the marginal heatmap is used to calculate the ones of the current element"}},
-      {std::string("marker_color_ind"),
+      {std::string("marker_color"),
        std::vector<std::string>{"989", "Sets the color of the marker according to the current colormap"}},
       {std::string("marker_size"), std::vector<std::string>{"None", "Sets the size of the displayed markers"}},
       {std::string("marker_sizes"),
@@ -983,7 +977,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("text_align_vertical"),
        std::vector<std::string>{
            "None", "The vertical text alignment. Defines where the vertical anker point of the test is placed"}},
-      {std::string("text_color_ind"), std::vector<std::string>{"None", "The index of the text color"}},
+      {std::string("text_color"), std::vector<std::string>{"None", "The index or context referenz of the text color"}},
       {std::string("text_encoding"), std::vector<std::string>{"utf8", "The internal text encoding"}},
       {std::string("text_scale"), std::vector<std::string>{"1.0", "A scaling factor that gets applied to each text"}},
       {std::string("text_x0"), std::vector<std::string>{"None", "The left x position of the text"}},
@@ -1360,7 +1354,7 @@ void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, const s
   element->setAttribute("marker_sizes", sizes_key);
 }
 
-void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
+void GRM::Render::setMarkerColor(const std::shared_ptr<Element> &element, int color)
 {
   /*!
    * This function can be used to set a MarkerColorInd of a GRM::Element
@@ -1368,7 +1362,22 @@ void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int
    * \param[in] element A GRM::Element
    * \param[in] color An Integer setting the MarkerColorInd
    */
-  element->setAttribute("marker_color_ind", color);
+  if ((color < CUSTOM_COLOR_START || color > CUSTOM_COLOR_END) && color < MAX_COLOR)
+    element->setAttribute("marker_color", color);
+  else
+    fprintf(stderr, "Couldn't set color %i. It must be in [0,%i[ or ]%i,%i[", color, CUSTOM_COLOR_START,
+            CUSTOM_COLOR_END, MAX_COLOR);
+}
+
+void GRM::Render::setMarkerColor(const std::shared_ptr<Element> &element, std::string color)
+{
+  /*!
+   * This function can be used to set a MarkerColorInd of a GRM::Element
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] color An Integer setting the MarkerColorInd
+   */
+  element->setAttribute("marker_color", color);
 }
 
 void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
@@ -1464,7 +1473,7 @@ void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, const
   element->setAttribute("line_color_indices", colorinds_key);
 }
 
-void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, int color)
+void GRM::Render::setLineColor(const std::shared_ptr<Element> &element, int color)
 {
   /*!
    * This function can be used to set LineColorInd of a GRM::Element
@@ -1472,7 +1481,22 @@ void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, int c
    * \param[in] element A GRM::Element
    * \param[in] color An Integer value setting the LineColorInd
    */
-  element->setAttribute("line_color_ind", color);
+  if ((color < CUSTOM_COLOR_START || color > CUSTOM_COLOR_END) && color < MAX_COLOR)
+    element->setAttribute("line_color", color);
+  else
+    fprintf(stderr, "Couldn't set color %i. It must be in [0,%i[ or ]%i,%i[", color, CUSTOM_COLOR_START,
+            CUSTOM_COLOR_END, MAX_COLOR);
+}
+
+void GRM::Render::setLineColor(const std::shared_ptr<Element> &element, std::string color)
+{
+  /*!
+   * This function can be used to set LineColorInd of a GRM::Element
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] color An Integer value setting the LineColorInd
+   */
+  element->setAttribute("line_color", color);
 }
 
 void GRM::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, double uy)
@@ -1525,26 +1549,41 @@ void GRM::Render::setLineSpec(const std::shared_ptr<Element> &element, const std
   element->setAttribute("line_spec", spec);
 }
 
-void GRM::Render::setColorRep(const std::shared_ptr<Element> &element, int index, double red, double green, double blue)
+int GRM::Render::setColorRep(const std::shared_ptr<Element> &element, double red, double green, double blue)
 {
   /*!
    * This function can be used to set the colorrep of a GRM::Element
    *
    * \param[in] element A GRM::Element
-   * \param[in] index Color index in the range 0 to 1256
    * \param[in] red Red intensity in the range 0.0 to 1.0
    * \param[in] green Green intensity in the range 0.0 to 1.0
    * \param[in] blue Blue intensity in the range 0.0 to 1.0
    */
-  std::stringstream stream;
-  std::string hex;
-  int precision = 255;
-  auto red_int = static_cast<int>(red * precision + 0.5), green_int = static_cast<int>(green * precision + 0.5),
-       blue_int = static_cast<int>(blue * precision + 0.5);
+  auto ind = gr_rgbcolorexists(red, green, blue, CUSTOM_COLOR_START, CUSTOM_COLOR_END, 1);
 
-  stream << std::hex << (red_int << 16 | green_int << 8 | blue_int); // Convert RGB to hex
-  auto name = "colorrep." + std::to_string(index);
-  element->setAttribute(name, stream.str());
+  if (ind != -1) // the set rgb color is the same as the color at index ind
+    {
+      return ind;
+    }
+
+  for (int color = CUSTOM_COLOR_START; color <= CUSTOM_COLOR_END; color++)
+    {
+      if (std::find(used_colors->begin(), used_colors->end(), color - CUSTOM_COLOR_START) == used_colors->end())
+        {
+          gr_setcolorrep(color, red, green, blue);
+          used_colors->emplace_back(color);
+          return color;
+        }
+    }
+
+  fprintf(stderr, "Too many custom color indices used. Can`t use another one without deleting an existing so the "
+                  "closest existing color gets used\n");
+  return gr_inqnearestcolorfromrgb(red, green, blue);
+}
+
+void GRM::Render::clearUsedColors()
+{
+  used_colors->clear();
 }
 
 void GRM::Render::setFillIntStyle(const std::shared_ptr<GRM::Element> &element, int index)
@@ -1558,7 +1597,7 @@ void GRM::Render::setFillIntStyle(const std::shared_ptr<GRM::Element> &element, 
   element->setAttribute("fill_int_style", index);
 }
 
-void GRM::Render::setFillColorInd(const std::shared_ptr<GRM::Element> &element, int color)
+void GRM::Render::setFillColor(const std::shared_ptr<GRM::Element> &element, int color)
 {
   /*!
    * This function can be used to set the fillcolorind of a GRM::Element
@@ -1566,7 +1605,22 @@ void GRM::Render::setFillColorInd(const std::shared_ptr<GRM::Element> &element, 
    * \param[in] element A GRM::Element
    * \param[in] color The fill area color index (COLOR < 1256)
    */
-  element->setAttribute("fill_color_ind", color);
+  if ((color < CUSTOM_COLOR_START || color > CUSTOM_COLOR_END) && color < MAX_COLOR)
+    element->setAttribute("fill_color", color);
+  else
+    fprintf(stderr, "Couldn't set color %i. It must be in [0,%i[ or ]%i,%i[", color, CUSTOM_COLOR_START,
+            CUSTOM_COLOR_END, MAX_COLOR);
+}
+
+void GRM::Render::setFillColor(const std::shared_ptr<GRM::Element> &element, std::string color)
+{
+  /*!
+   * This function can be used to set the fillcolorind of a GRM::Element
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] color The fill area color index (COLOR < 1256)
+   */
+  element->setAttribute("fill_color", color);
 }
 
 void GRM::Render::setFillStyle(const std::shared_ptr<GRM::Element> &element, int index)
@@ -1655,7 +1709,7 @@ void GRM::Render::setSelectSpecificXform(const std::shared_ptr<Element> &element
   element->setAttribute("select_specific_xform", transform);
 }
 
-void GRM::Render::setTextColorInd(const std::shared_ptr<GRM::Element> &element, int index)
+void GRM::Render::setTextColor(const std::shared_ptr<GRM::Element> &element, int color)
 {
   /*!
    * This function can be used to set the textcolorind of a GRM::Element
@@ -1663,18 +1717,32 @@ void GRM::Render::setTextColorInd(const std::shared_ptr<GRM::Element> &element, 
    * \param[in] element A GRM::Element
    * \param[in] index The color index
    */
-  element->setAttribute("text_color_ind", index);
+  if ((color < CUSTOM_COLOR_START || color > CUSTOM_COLOR_END) && color < MAX_COLOR)
+    element->setAttribute("text_color", color);
+  else
+    fprintf(stderr, "Couldn't set color %i. It must be in [0,%i[ or ]%i,%i[", color, CUSTOM_COLOR_START,
+            CUSTOM_COLOR_END, MAX_COLOR);
 }
 
-void GRM::Render::setBorderColorInd(const std::shared_ptr<GRM::Element> &element, int index)
+void GRM::Render::setTextColor(const std::shared_ptr<GRM::Element> &element, std::string color)
 {
   /*!
-   * This function can be used to set the bordercolorind of a GRM::Element
+   * This function can be used to set the textcolorind of a GRM::Element
    *
    * \param[in] element A GRM::Element
    * \param[in] index The color index
    */
-  element->setAttribute("border_color_ind", index);
+  element->setAttribute("text_color", color);
+}
+
+void GRM::Render::setBorderColor(const std::shared_ptr<GRM::Element> &element, int index)
+{
+  element->setAttribute("border_color", index);
+}
+
+void GRM::Render::setBorderColor(const std::shared_ptr<GRM::Element> &element, std::string str)
+{
+  element->setAttribute("border_color", str);
 }
 
 void GRM::Render::setBorderWidth(const std::shared_ptr<GRM::Element> &element, double width)
@@ -1739,57 +1807,6 @@ void GRM::Render::setViewportNormalized(const std::shared_ptr<GRM::Element> &ele
   element->setAttribute("_viewport_normalized_x_max_org", xmax);
   element->setAttribute("_viewport_normalized_y_min_org", ymin);
   element->setAttribute("_viewport_normalized_y_max_org", ymax);
-}
-
-void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_indices_key,
-                               const std::vector<int> &color_indices, const std::shared_ptr<GRM::Context> &ext_context)
-{
-  auto use_context = (ext_context == nullptr) ? context : ext_context;
-  element->setAttribute("set_next_color", true);
-  if (!color_indices.empty())
-    {
-      (*use_context)[color_indices_key] = color_indices;
-      element->setAttribute("color_ind_values", color_indices_key);
-    }
-  else
-    {
-      throw NotFoundError("Color indices are missing in vector\n");
-    }
-}
-
-void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_rgb_values_key,
-                               const std::vector<double> &color_rgb_values,
-                               const std::shared_ptr<GRM::Context> &ext_context)
-{
-  auto use_context = (ext_context == nullptr) ? context : ext_context;
-  element->setAttribute("set_next_color", true);
-  if (!color_rgb_values.empty())
-    {
-      (*use_context)[color_rgb_values_key] = color_rgb_values;
-      element->setAttribute("color_rgb_values", color_rgb_values_key);
-    }
-}
-
-void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element,
-                               std::optional<std::string> color_indices_key,
-                               std::optional<std::string> color_rgb_values_key)
-{
-  if (color_indices_key != std::nullopt)
-    {
-      element->setAttribute("color_ind_values", (*color_indices_key));
-      element->setAttribute("set_next_color", true);
-    }
-  else if (color_rgb_values_key != std::nullopt)
-    {
-      element->setAttribute("set_next_color", true);
-      element->setAttribute("color_rgb_values", (*color_rgb_values_key));
-    }
-}
-
-void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element)
-{
-  element->setAttribute("set_next_color", true);
-  element->setAttribute("snc_fallback", true);
 }
 
 void GRM::Render::setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
