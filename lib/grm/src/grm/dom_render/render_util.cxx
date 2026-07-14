@@ -234,6 +234,15 @@ double getLightness(int color)
   return 116 * pow(y / 100, 1.0 / 3) - 16;
 }
 
+double getLightness(std::string color)
+{
+  auto context = grm_get_render()->getContext();
+
+  auto rgb = GRM::get<std::vector<double>>((*context)[color]);
+  double y = (0.2126729 * rgb[0] + 0.7151522 * rgb[1] + 0.0721750 * rgb[2]);
+  return 116 * pow(y / 100, 1.0 / 3) - 16;
+}
+
 void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
   if (!bounding_boxes) return;
@@ -980,112 +989,6 @@ std::shared_ptr<GRM::Element> getPlotElement(const std::shared_ptr<GRM::Element>
       ancestor = ancestor->parentElement();
     }
   return nullptr;
-}
-
-/*!
- * \brief Set colors from color index or rgb arrays. The render version
- *
- * Call the function first with an argument container and a key. Afterwards, call the `set_next_color` with `nullptr`
- * pointers to iterate through the color arrays. If `key` does not exist in `args`, the function falls back to default
- * colors.
- *
- * \param key The key of the colors in the argument container. The key may reference integer or double arrays. Integer
- * arrays describe colors of the GKS color table (0 - 1255). Double arrays contain RGB tuples in the range [0.0, 1.0].
- * If key does not exist, the routine falls back to default colors (taken from `gr_uselinespec`). \param color_type
- * The color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`, `GR_COLOR_TEXT`,
- * `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value `GR_COLOR_RESET` resets all
- * color modifications.
- */
-int setNextColor(const std::string &key, GRColorType color_type, const std::shared_ptr<GRM::Element> &element,
-                 const std::shared_ptr<GRM::Context> &context)
-{
-  std::vector<int> fallback_color_indices = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                                             991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  static double saved_color[3];
-  static int last_array_index = -1;
-  static std::vector<int> color_indices;
-  static std::vector<double> color_rgb_values;
-  static unsigned int color_array_length = -1;
-  int current_array_index = last_array_index + 1;
-  int color_index = 0;
-  int reset = (color_type == GR_COLOR_RESET);
-  int gks_err_ind = GKS_K_NO_ERROR;
-  auto global_render = grm_get_render();
-
-  if (reset || !key.empty())
-    {
-      if (last_array_index >= 0 && !color_rgb_values.empty())
-        {
-          gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
-        }
-      last_array_index = -1;
-      if (!reset && !key.empty())
-        {
-          if (!element->hasAttribute("color_ind_values") && !element->hasAttribute("color_rgb_values"))
-            {
-              /* use fallback colors if `key` cannot be read from `args` */
-              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key.c_str()));
-              color_indices = fallback_color_indices;
-              color_array_length = size(fallback_color_indices);
-            }
-          else
-            {
-              if (element->hasAttribute("color_ind_values"))
-                {
-                  auto c = static_cast<std::string>(element->getAttribute("color_ind_values"));
-                  color_indices = GRM::get<std::vector<int>>((*context)[c]);
-                  color_array_length = color_indices.size();
-                }
-              else if (element->hasAttribute("color_rgb_values"))
-                {
-                  auto c = static_cast<std::string>(element->getAttribute("color_rgb_values"));
-                  color_rgb_values = GRM::get<std::vector<double>>((*context)[c]);
-                  color_array_length = color_rgb_values.size();
-                }
-            }
-        }
-      else
-        {
-          color_array_length = -1;
-        }
-
-      if (reset)
-        {
-          color_indices.clear();
-          color_rgb_values.clear();
-          return 0;
-        }
-      return 0;
-    }
-
-  if (last_array_index < 0 && !color_rgb_values.empty())
-    {
-      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_err_ind, &saved_color[0], &saved_color[1],
-                        &saved_color[2]);
-    }
-
-  current_array_index %= static_cast<int>(color_array_length);
-
-  if (!color_indices.empty())
-    {
-      color_index = color_indices[current_array_index];
-      last_array_index = current_array_index;
-    }
-  else if (!color_rgb_values.empty())
-    {
-      color_index = PLOT_CUSTOM_COLOR_INDEX;
-      last_array_index = current_array_index + 2;
-      global_render->setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
-    }
-
-  if (color_type & GR_COLOR_LINE) global_render->setLineColorInd(element, color_index);
-  if (color_type & GR_COLOR_MARKER) global_render->setMarkerColorInd(element, color_index);
-  if (color_type & GR_COLOR_FILL) global_render->setFillColorInd(element, color_index);
-  if (color_type & GR_COLOR_TEXT) global_render->setTextColorInd(element, color_index);
-  if (color_type & GR_COLOR_BORDER) global_render->setBorderColorInd(element, color_index);
-
-  return color_index;
 }
 
 void calculateWindowTransformationParameter(const std::shared_ptr<GRM::Element> &plot_parent, double w1_min,
@@ -3222,7 +3125,7 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
                     }
                   if (text_elem != nullptr)
                     {
-                      if (!text_elem->hasAttribute("text_color_ind")) text_elem->setAttribute("text_color_ind", 1);
+                      if (!text_elem->hasAttribute("text_color")) text_elem->setAttribute("text_color", 1);
                       int label_orientation = 0;
                       if (tick_group->parentElement()->hasAttribute("label_orientation"))
                         label_orientation =
@@ -3344,7 +3247,7 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
                         }
                       if (text_elem != nullptr)
                         {
-                          if (!text_elem->hasAttribute("text_color_ind")) text_elem->setAttribute("text_color_ind", 1);
+                          if (!text_elem->hasAttribute("text_color")) text_elem->setAttribute("text_color", 1);
                           if (axis_type == "x")
                             {
                               int label_orientation = 0;
@@ -3437,7 +3340,7 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
   if ((text_elem != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT) || !text_is_empty_or_number ||
       (text_elem != nullptr && tick_group->parentElement()->parentElement()->localName() == "colorbar"))
     {
-      if (!text_elem->hasAttribute("text_color_ind")) text_elem->setAttribute("text_color_ind", 1);
+      if (!text_elem->hasAttribute("text_color")) text_elem->setAttribute("text_color", 1);
       // set text align if not set by user
       if (!tick_group->hasAttribute("_text_align_vertical_set_by_user") &&
           !tick_group->hasAttribute("_text_align_horizontal_set_by_user"))
@@ -3548,8 +3451,8 @@ void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_group,
             {
               for (auto const &[attr, val] : key_value_map)
                 {
-                  if (strEqualsAny(attr, "is_major", "line_color_ind", "line_spec", "line_width",
-                                   "text_align_horizontal", "text_align_vertical", "tick_label", "tick_size", "value"))
+                  if (strEqualsAny(attr, "is_major", "line_color", "line_spec", "line_width", "text_align_horizontal",
+                                   "text_align_vertical", "tick_label", "tick_size", "value"))
                     {
                       tick_group->setAttribute(attr, val);
                       if (attr == "tick_label")
@@ -3567,7 +3470,7 @@ void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_group,
                         }
                       tick_group_attr_changed = true;
                     }
-                  else if (strEqualsAny(attr, "font", "font_precision", "scientific_format", "text", "text_color_ind",
+                  else if (strEqualsAny(attr, "font", "font_precision", "scientific_format", "text", "text_color",
                                         "text_align_horizontal", "text_align_vertical", "x", "y"))
                     {
                       if (text_elem != nullptr) text_elem->setAttribute(attr, val);
