@@ -135,7 +135,6 @@ public:
   QAction *getMarginalHeatmapLineAct();
   QAction *getMovableModeAct();
   QAction *getEditorAct();
-  QAction *getSaveFileAct();
   QAction *getLoadFileAct();
   QAction *getShowContainerAct();
   QAction *getAddElementAct();
@@ -279,7 +278,6 @@ private slots:
   void svg();
   void moveableMode();
   void showContainerSlot();
-  void saveFileSlot();
   void loadFileSlot();
   void enableEditorFunctions();
   void addElementSlot();
@@ -472,7 +470,7 @@ private:
   QAction *shade_act, *hexbin_act;
   QAction *polar_line_act, *polar_scatter_act;
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
-  QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
+  QAction *show_container_action, *load_file_action, *editor_action, *add_element_action;
   QAction *moveable_mode_act, *selectable_grid_act;
   QAction *consecutive_colorbars_act, *flip_layout_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;

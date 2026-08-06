@@ -165,7 +165,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   labels.push_back(token);
                 }
             }
-          else
+          else if (args != nullptr)
             {
               /* use key + ":" + value to create a token which is similar to a commandline key:value pair */
               singleTokenConverter(key + ":" + value, args, ranges, special_axis_series, input_flags, linecount);

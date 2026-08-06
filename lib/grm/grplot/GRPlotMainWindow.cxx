@@ -124,7 +124,6 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 #endif
 
           editor_menu->addAction(grplot_widget_->getEditorAct());
-          file_menu->addAction(grplot_widget_->getSaveFileAct());
           file_menu->addAction(grplot_widget_->getLoadFileAct());
           editor_menu->addAction(grplot_widget_->getShowContainerAct());
           editor_menu->addAction(grplot_widget_->getAdvancedEditorAct());
