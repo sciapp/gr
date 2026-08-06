@@ -98,7 +98,7 @@ void TableWidget::updateData(const std::shared_ptr<GRM::Context> context)
         {
           int row = 1;
           this->setItem(0, col, new QTableWidgetItem(entry.first.c_str()));
-          max_rows = std::max(max_rows, (int)entry.second.size() + 1);
+          max_rows = std::max(max_rows, static_cast<int>(entry.second.size()) + 1);
           this->setRowCount(max_rows);
           for (const auto &str : entry.second)
             {
@@ -130,7 +130,6 @@ void TableWidget::applyTableChanges(int row, int column)
   if (row != 0)
     {
       // data has been changed -> apply these changes to the context
-
       if (auto context_key = this->item(0, column)->text().toStdString(); (*this->context)[context_key].doubleUsed())
         {
           if (auto vec = GRM::get<std::vector<double>>((*this->context)[context_key]); vec.size() >= row)
