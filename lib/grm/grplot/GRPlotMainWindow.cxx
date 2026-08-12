@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iostream>
 #include <QTimer>
+#include <QDesktopServices>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #include <QIcon>
 #else
@@ -18,6 +19,7 @@
 #endif
 #include "GRPlotMainWindow.hxx"
 #include "GRPlotDockWidget.hxx"
+#include "GRPlotHelpDialog.hxx"
 
 const int LEFT_AREA_WIDTH = 300;
 const int RIGHT_AREA_WIDTH = 250;
@@ -32,40 +34,8 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
   if (help_mode)
     {
-      auto *w = new QWidget(this);
-      std::string kind;
-      auto path = util::getEnvVar(W("GRDIR"), W(GRDIR)) + W("/lib");
-
-      this->help_mode = help_mode;
-      find_line_edit = new QLineEdit(w);
-      find_line_edit->setPlaceholderText("Search in document");
-      auto button = new QPushButton("Find", w);
-      QObject::connect(button, SIGNAL(clicked()), this, SLOT(findButtonClickedSlot()));
-      auto form = new QGridLayout;
-      form->addWidget(find_line_edit, 0, 0);
-      form->addWidget(button, 0, 1);
-
-      message = new QTextBrowser(w);
-#ifdef _WIN32
-      message->setSearchPaths(QStringList(QString::fromStdWString(path)));
-#else
-      message->setSearchPaths(QStringList(QString::fromStdString(path)));
-#endif
-      message->setSource(QUrl("../share/doc/grplot/grplot.man.md"));
-      message->setReadOnly(true);
-      message->setOpenExternalLinks(true);
-      message->setAlignment(Qt::AlignTop);
-      if (argc >= 3)
-        {
-          kind = argv[2];
-          std::transform(kind.begin(), kind.end(), kind.begin(), ::toupper);
-          if (!message->find(QString(kind.c_str()), QTextDocument::FindCaseSensitively))
-            fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
-        }
-      form->addWidget(message, 1, 0, 1, 2);
-      w->setLayout(form);
-      setCentralWidget(w);
-      resize(width, height);
+      showHelpDialogSlot(argc < 3 ? nullptr : argv[2]);
+      exit(0);
     }
   else
     {
@@ -92,7 +62,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       QTimer::singleShot(100, grplot_widget_, &GRPlotWidget::processTestCommandsFile);
     }
 
-  if (grplot_widget_ && !test_mode && !grplot_widget_->getTestCommandsStream() && !help_mode)
+  if (grplot_widget_ && !test_mode && !grplot_widget_->getTestCommandsStream())
     {
       menu = menuBar();
       file_menu = new QMenu("&File");
@@ -102,6 +72,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       export_menu->menuAction()->setIconVisibleInMenu(true);
 #endif
       modi_menu = new QMenu("&Modi");
+      help_menu = new QMenu("&Help");
 
       export_menu->addAction(grplot_widget_->getPdfAct());
       export_menu->addAction(grplot_widget_->getPngAct());
@@ -109,6 +80,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       export_menu->addAction(grplot_widget_->getSvgAct());
       modi_menu->addAction(grplot_widget_->getMovableModeAct());
       if (hide_colormap) grplot_widget_->getColormapAct()->setVisible(false);
+      help_menu->addAction(grplot_widget_->getShowHelpAct());
 
       menu->addMenu(file_menu);
       menu->addMenu(modi_menu);
@@ -136,6 +108,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           add_context_data->addAction(grplot_widget_->getGenerateLinearContextAct());
           modi_menu->addAction(grplot_widget_->getSelectableGridAct());
           modi_menu->addAction(grplot_widget_->getIconBarAct());
+          modi_menu->addAction(grplot_widget_->getAnimateAct());
 
           menu->addMenu(editor_menu);
           menu->addMenu(context_menu);
@@ -225,6 +198,22 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
           QObject::connect(grplot_widget_->getShowIconBarAct(), SIGNAL(triggered()), this, SLOT(showIconBarDockSlot()));
           QObject::connect(icon_bar_dock_widget, SIGNAL(resizeMainWindow()), this, SLOT(closeIconBarDockSlot()));
 
+          progress_bar_dock_widget = new GRPlotDockWidget("", grplot_widget_->width(), 28, this);
+          progress_bar_dock_widget->setWidget(grplot_widget_->getProgressBarWidget());
+          progress_bar_dock_widget->setAllowedAreas(Qt::BottomDockWidgetArea);
+          progress_bar_dock_widget->setFixedHeight(28);
+          progress_bar_dock_widget->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+          progress_bar_dock_widget->setMinimumWidth(0);
+          progress_bar_dock_widget->setFeatures(QDockWidget::NoDockWidgetFeatures);
+          progress_bar_dock_widget->hide();
+          addDockWidget(Qt::BottomDockWidgetArea, progress_bar_dock_widget);
+          QObject::connect(grplot_widget_->getHideProgressBarAct(), SIGNAL(triggered()), this,
+                           SLOT(hideProgressBarDockSlot()));
+          QObject::connect(grplot_widget_->getShowProgressBarAct(), SIGNAL(triggered()), this,
+                           SLOT(showProgressBarDockSlot()));
+          QObject::connect(progress_bar_dock_widget, SIGNAL(resizeMainWindow()), this,
+                           SLOT(closeProgressBarDockSlot()));
+
           this->tabifyDockWidget(tree_dock_widget, table_dock_widget);
           this->tabifyDockWidget(edit_element_dock_widget, add_element_dock_widget);
 
@@ -241,29 +230,17 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
           resizeGRPlotWidget(width, height);
         }
+
+      menu->addMenu(help_menu);
     }
   center();
 }
 
 GRPlotMainWindow::~GRPlotMainWindow() = default;
 
-void GRPlotMainWindow::findButtonClickedSlot()
-{
-  QString search_string = find_line_edit->text();
-  message->find(search_string, QTextDocument::FindWholeWords);
-}
-
 void GRPlotMainWindow::closeEvent(QCloseEvent *event)
 {
   grm_finalize();
-}
-
-void GRPlotMainWindow::keyPressEvent(QKeyEvent *event)
-{
-  if (this->help_mode)
-    {
-      if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) findButtonClickedSlot();
-    }
 }
 
 void GRPlotMainWindow::resizeGRPlotWidget(int w, int h)
@@ -365,6 +342,20 @@ void GRPlotMainWindow::showAddElementDockSlot()
     }
 }
 
+void GRPlotMainWindow::showProgressBarDockSlot()
+{
+  if (!progress_bar_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      progress_bar_dock_widget->show();
+      resizeGRPlotWidget(w, h);
+      keepInDisplay();
+      topLevelWidget()->setFixedSize(topLevelWidget()->size());
+      centralWidget()->setFixedSize(centralWidget()->size());
+    }
+}
+
 void GRPlotMainWindow::hideEditElementDockSlot()
 {
   if (edit_element_dock_widget->isVisible())
@@ -451,6 +442,25 @@ void GRPlotMainWindow::hideAddElementDockSlot()
     }
 }
 
+void GRPlotMainWindow::hideProgressBarDockSlot()
+{
+  if (progress_bar_dock_widget->isVisible())
+    {
+      auto window = topLevelWidget();
+      window->setMinimumSize(0, 0);
+      window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+      window = centralWidget();
+      window->setMinimumSize(0, 0);
+      window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      progress_bar_dock_widget->hide();
+      resizeGRPlotWidget(w, h);
+      keepInDisplay();
+    }
+}
+
 void GRPlotMainWindow::closeEditElementDockSlot()
 {
   auto w = grplot_widget_->width();
@@ -521,6 +531,16 @@ void GRPlotMainWindow::closeAddElementDockSlot()
   keepInDisplay();
 }
 
+void GRPlotMainWindow::closeProgressBarDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  progress_bar_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  keepInDisplay();
+}
+
 void GRPlotMainWindow::center()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
@@ -537,6 +557,24 @@ void GRPlotMainWindow::updateEditElementDockTitleSlot()
 {
   if (edit_element_dock_widget->isVisible())
     edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+}
+
+void GRPlotMainWindow::showHelpDialogSlot(std::optional<std::string> kind)
+{
+  QUrl url;
+  if (kind)
+    {
+      url = QUrl(QString("https://gr-framework.org/grplot/plot_types.html#") + QString::fromStdString(*kind).toLower(),
+                 QUrl::TolerantMode);
+    }
+  else
+    {
+      url = QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode);
+    }
+  if (QDesktopServices::openUrl(url)) return;
+
+  auto help_dialog = new GRPlotHelpDialog(this, kind);
+  help_dialog->exec();
 }
 
 void GRPlotMainWindow::keepInDisplay()
@@ -565,6 +603,7 @@ void GRPlotMainWindow::keepInDisplay()
       if (tree_dock_widget->isVisible() || table_dock_widget->isVisible() || selection_list_dock_widget->isVisible())
         new_width -= LEFT_AREA_WIDTH;
       if (icon_bar_dock_widget->isVisible()) new_height -= 28;
+      if (progress_bar_dock_widget->isVisible()) new_height -= 28; // TODO: Does this work on all platforms?
       resizeGRPlotWidget(new_width, new_height);
       center();
     }

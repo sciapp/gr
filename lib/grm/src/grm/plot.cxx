@@ -275,6 +275,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "adjust_z_lim",
                                     "alpha",
                                     "angle_ticks",
+                                    "annotations",
                                     "aspect_ratio",
                                     "axes_mod",
                                     "background_color",
@@ -287,7 +288,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "fit_parents_width",
                                     "font",
                                     "font_precision",
-                                    "grid_element",
                                     "marginal_heatmap_kind",
                                     "keep_aspect_ratio",
                                     "keep_radii_axes",
@@ -298,13 +298,11 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "normalization",
                                     "only_square_aspect_ratio",
                                     "orientation",
-                                    "panzoom",
                                     "r_lim",
                                     "r_log",
                                     "rel_height",
                                     "rel_width",
                                     "resample_method",
-                                    "reset_ranges",
                                     "rotation",
                                     "row",
                                     "row_span",
@@ -341,8 +339,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "z_lim",
                                     "z_log",
                                     nullptr};
-const char *valid_series_keys[] = {"a",
-                                   "algorithm",
+const char *valid_series_keys[] = {"algorithm",
                                    "bin_width",
                                    "bin_edges",
                                    "bin_counts",
@@ -419,14 +416,14 @@ const char *valid_series_keys[] = {"a",
 /* If multiple formats are supported use `|` as separator
  * Example: "i|s" for supporting both integer and strings */
 /* TODO: type for format "s"? */
-static StringMapEntry key_to_formats[] = {{"a", "A"},
-                                          {"abs_height", "d"},
+static StringMapEntry key_to_formats[] = {{"abs_height", "d"},
                                           {"abs_width", "d"},
                                           {"algorithm", "i|s"},
                                           {"adjust_x_lim", "i"},
                                           {"adjust_y_lim", "i"},
                                           {"adjust_z_lim", "i"},
                                           {"alpha", "d"},
+                                          {"annotations", "a"},
                                           {"aspect_ratio", "d"},
                                           {"append_plots", "i"},
                                           {"axes_mod", "a"},
@@ -456,7 +453,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"font", "i"},
                                           {"font_precision", "i"},
                                           {"foreground_color", "D"},
-                                          {"grid_element", "s"},
                                           {"hold_plots", "i"},
                                           {"int_limits_high", "D"},
                                           {"int_limits_low", "D"},
@@ -479,7 +475,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"num_bins", "i"},
                                           {"only_square_aspect_ratio", "i"},
                                           {"orientation", "s"},
-                                          {"panzoom", "D"},
                                           {"r", "D|I"},
                                           {"r_lim", "D"},
                                           {"r_range", "D"},
@@ -490,7 +485,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"rel_height", "d"},
                                           {"rel_width", "d"},
                                           {"resample_method", "s|i"},
-                                          {"reset_ranges", "i"},
                                           {"rotation", "d"},
                                           {"row", "i|I"},
                                           {"row_span", "i|I"},
@@ -498,7 +492,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"spin_style", "i"},
                                           {"spin_x", "D"},
                                           {"spin_y", "D"},
-                                          {"spin_y", "D"},
+                                          {"spin_z", "D"},
                                           {"step_where", "s"},
                                           {"style", "s"},
                                           {"subplot", "D"},
@@ -527,7 +521,6 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"y", "D"},
                                           {"y_bins", "i"},
                                           {"y_flip", "i"},
-                                          {"y_form", "i"},
                                           {"y_grid", "i"},
                                           {"y_label", "s"},
                                           {"y_lim", "D"},
@@ -1519,6 +1512,8 @@ void plotPostSubplot(grm_args_t *subplot_args)
     {
       plotDrawPolarAxes(subplot_args);
     }
+
+  plotDrawAnnotations(subplot_args);
 }
 
 grm_error_t plotGetArgsInHierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
@@ -4848,6 +4843,97 @@ grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length)
     }
   sub_group->setAttribute("z_index", 3);
 
+  return GRM_ERROR_NONE;
+}
+
+grm_error_t plotDrawAnnotations(grm_args_t *args)
+{
+  grm_args_t *annotations = nullptr;
+
+  if (grm_args_values(args, "annotations", "a", &annotations))
+    {
+      grm_args_iterator_t *label_it = grm_args_iter(annotations);
+      grm_arg_t *label_arg;
+      while ((label_arg = label_it->next(label_it)) != nullptr)
+        {
+          logger((stderr, "Got label value \"%s\" in \"annotations\"\n", label_arg->key));
+
+          grm_args_t **label_mods;
+          if (!grm_args_values(annotations, label_arg->key, "A", &label_mods))
+            {
+              logger((stderr, "Expected an array of sub containers for label \"%s\" in \"annotations\"\n",
+                      label_arg->key));
+              continue;
+            }
+          grm_args_t **current_label_mod = label_mods;
+
+          while (*current_label_mod != nullptr)
+            {
+              double x, y, char_height = 0;
+              const char *label_value;
+              int world_coordinates = 0; // wc
+
+              if (!grm_args_values(*current_label_mod, "text", "s", &label_value))
+                {
+                  logger((stderr, "Expected a string for \"text\".\n"));
+                  ++current_label_mod;
+                  continue;
+                }
+
+              if (!grm_args_values(*current_label_mod, "x", "d", &x))
+                {
+                  logger((stderr, "Expected a number (integer or double) for \"x\".\n"));
+                  ++current_label_mod;
+                  continue;
+                }
+
+              if (!grm_args_values(*current_label_mod, "y", "d", &y))
+                {
+                  logger((stderr, "Expected a number (integer or double) for \"y\".\n"));
+                  ++current_label_mod;
+                  continue;
+                }
+
+              if (!grm_args_values(*current_label_mod, "world_coordinates", "i", &world_coordinates))
+                logger((stderr, "Expected an integer (0 or 1) for \"world_coordinates\".\n"));
+
+              if (!grm_args_values(*current_label_mod, "char_height", "d", &char_height))
+                logger((stderr, "Expected a double number for \"char_height\".\n"));
+
+              auto overlay = edit_figure->querySelectors("overlay");
+              if (overlay == nullptr)
+                {
+                  overlay = global_creator->createOverlay();
+                  edit_figure->appendChild(overlay);
+                }
+
+              auto text =
+                  global_creator->createText(x, y, label_value, static_cast<CoordinateSpace>(world_coordinates));
+              text->setAttribute("text_align_vertical", 4);
+              text->setAttribute("text_align_horizontal", 1);
+              if (char_height != 0) text->setAttribute("char_height", char_height);
+
+              if (world_coordinates == 0)
+                {
+                  auto current_central_region_element_locked = current_central_region_element.lock();
+                  current_central_region_element_locked->appendChild(text);
+                }
+              else if (world_coordinates == 1)
+                {
+                  auto overlay_element = global_creator->createOverlayElement(x, y, "text");
+                  overlay_element->setAttribute("z_index", 10);
+                  overlay_element->setAttribute("world_coordinates", world_coordinates);
+                  overlay->appendChild(overlay_element);
+
+                  overlay_element->setAttribute("text_align_vertical", 5);
+                  overlay_element->setAttribute("text_align_horizontal", 1);
+                  overlay_element->appendChild(text);
+                }
+
+              ++current_label_mod;
+            }
+        }
+    }
   return GRM_ERROR_NONE;
 }
 

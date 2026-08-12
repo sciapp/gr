@@ -1140,6 +1140,7 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESS
     lib/grm/grplot/gredit/TableWidget.cxx
     lib/grm/grplot/gredit/TreeWidget.cxx
     lib/grm/grplot/GRPlotWidget.cxx
+    lib/grm/grplot/GRPlotHelpDialog.cxx
     lib/grm/grplot/qtterm/ArgsWrapper.cxx
     lib/grm/grplot/qtterm/Receiver.cxx
     lib/grm/grplot/Threadpool.cxx
@@ -1395,6 +1396,7 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
       lib/grm/grplot/GRPlotGUI.cxx
       lib/grm/grplot/GRPlotMainWindow.cxx
       lib/grm/grplot/GRPlotWidget.cxx
+      lib/grm/grplot/GRPlotHelpDialog.cxx
       lib/grm/grplot/qtterm/ArgsWrapper.cxx
       lib/grm/grplot/qtterm/Receiver.cxx
       lib/grm/grplot/Threadpool.cxx
@@ -1454,6 +1456,14 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx -o
           ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotWidget.cxx
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotHelpDialog.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotHelpDialog.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotHelpDialog.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotHelpDialog.hxx
       )
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotMainWindow.cxx
@@ -1619,6 +1629,7 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
           ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotDockWidget.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotMainWindow.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotHelpDialog.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingObject.cxx
@@ -1646,6 +1657,7 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotDockWidget.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotMainWindow.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotHelpDialog.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingObject.hxx

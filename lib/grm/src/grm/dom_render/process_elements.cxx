@@ -11054,6 +11054,7 @@ void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::sh
   int color_scheme = JMOL_COLOR_SCHEME, radius_kind = VAN_DER_WAAL_RADIUS;
   std::vector<double> color_rgb_vec, spin_x_vec, spin_y_vec, spin_z_vec;
   double max_value = 0, connection_threshold = NAN;
+  double x_min = INFINITY, x_max = -INFINITY, y_min = INFINITY, y_max = -INFINITY, z_min = INFINITY, z_max = -INFINITY;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   int child_id = 0;
   auto global_render = grm_get_render();
@@ -11161,6 +11162,12 @@ void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::sh
       max_value =
           grm_max(max_value, sqrt(pow(abs(x_vec[i]) + radii_data[i], 2) + pow(abs(y_vec[i]) + radii_data[i], 2) +
                                   pow(abs(z_vec[i]) + radii_data[i], 2)));
+      x_min = grm_min(x_min, x_vec[i]);
+      x_max = grm_max(x_max, x_vec[i]);
+      y_min = grm_min(y_min, y_vec[i]);
+      y_max = grm_max(y_max, y_vec[i]);
+      z_min = grm_min(z_min, z_vec[i]);
+      z_max = grm_max(z_max, z_vec[i]);
     }
 
   /* clear old heatmaps */
@@ -11186,16 +11193,20 @@ void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::sh
           unit_cell->setAttribute("_max_value", max_value);
         }
     }
+  auto new_x_max = grm_max(abs(x_max), abs(x_min));
+  auto new_y_max = grm_max(abs(y_max), abs(y_min));
+  auto new_z_max = grm_max(abs(z_max), abs(z_min));
 
   for (int i = 0; i < x_length; i++)
     {
       std::shared_ptr<GRM::Element> sphere, spin;
-      std::vector<double> conv_data, radius_data, color_data;
+      std::vector<double> conv_data, color_data;
       auto current_symbol = molecule_symbols_vec[i];
 
-      conv_data.push_back(x_vec[i] / max_value);
-      conv_data.push_back(y_vec[i] / max_value);
-      conv_data.push_back(z_vec[i] / max_value);
+      // transform data into new interval which is centered around 0
+      conv_data.push_back(((x_vec[i] - x_min) / (x_max - x_min) * (2 * new_x_max) - new_x_max) / max_value);
+      conv_data.push_back(((y_vec[i] - y_min) / (y_max - y_min) * (2 * new_y_max) - new_y_max) / max_value);
+      conv_data.push_back(((z_vec[i] - z_min) / (z_max - z_min) * (2 * new_z_max) - new_z_max) / max_value);
 
       if (color_scheme != NO_COLOR_SCHEME)
         {

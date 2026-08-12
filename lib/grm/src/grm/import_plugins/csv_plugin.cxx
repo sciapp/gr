@@ -81,6 +81,11 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   /* read the lines from the file */
   while (getline(file, line))
     {
+      if (input_flags.skip_lines > 0)
+        {
+          input_flags.skip_lines--;
+          continue;
+        }
       std::istringstream iss(line, std::istringstream::in);
       linecount += 1;
       /* the line defines a grm container parameter */
@@ -227,6 +232,11 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   for (size_t row = 0; skip_first_getline ? true : static_cast<bool>(std::getline(file, line)); row++)
     {
       skip_first_getline = false;
+      if (input_flags.skip_lines > 0)
+        {
+          input_flags.skip_lines--;
+          continue;
+        }
       auto normalized_line = normalizeLine(line);
       std::istringstream line_ss(normalized_line);
       int cnt = 0, start_with_nan = 0;

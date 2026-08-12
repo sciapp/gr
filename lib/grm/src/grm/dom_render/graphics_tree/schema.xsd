@@ -256,6 +256,7 @@
                 <xs:element ref="series_trisurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_volume" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_wireframe" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="clip_region" type="xs:integer"/>
