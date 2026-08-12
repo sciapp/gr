@@ -1922,6 +1922,850 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
   return 1;
 }
 
+int grm_create_animation_step(int argc, char **argv, const std::shared_ptr<GRM::Context> &context,
+                              const std::string &path, const std::shared_ptr<GRM::Element> &element)
+{
+  std::string s;
+  size_t row, col, rows, cols, depth;
+  std::vector<std::vector<std::vector<double>>> file_data;
+  std::vector<int> x_data, y_data, error_data;
+  std::list<int> bottom_series, left_series, right_series, top_series, twin_x_series, twin_y_series;
+  grm_file_args_t *file_args = grm_file_args_new();
+  grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
+  InputFlags input_flags;
+  std::vector<int> timestamps;
+  grm_args_t *plot = grm_args_new();
+  double *special_data_grid = nullptr;
+
+  std::vector<std::string> labels;
+  std::vector<const char *> labels_c;
+  PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
+  file_args = grm_file_args_new();
+  input_flags.default_kind_used = false;
+  if (!convertInputstreamIntoArgs(plot, file_args, argc, argv, &ranges, special_axis_series, input_flags)) return 0;
+  file_args->file_path = path;
+
+  if (file_args->file_path != "-" && !fileExists(file_args->file_path))
+    {
+      fprintf(stderr, "File not found or missing (%s)\n", file_args->file_path.c_str());
+      return 0;
+    }
+  auto kind = static_cast<std::string>(element->querySelectors("plot")->getAttribute("_kind"));
+  if (!strEqualsAny(kind, "barplot", "histogram", "line", "scatter", "stairs", "stem"))
+    {
+      file_args->file_x_columns.clear();
+      file_args->file_y_columns.clear();
+      file_args->file_error_columns.clear();
+      input_flags.xye_file = 0;
+    }
+  if (input_flags.xye_file)
+    {
+      file_args->file_x_columns.clear();
+      file_args->file_x_columns = "1";
+      file_args->file_y_columns.clear();
+      file_args->file_y_columns = "2";
+      file_args->file_error_columns.clear();
+      file_args->file_error_columns = input_flags.equal_up_and_down_error ? "3" : "3,4";
+    }
+  if (readDataFile(file_args->file_path, file_data, x_data, y_data, error_data, labels, plot,
+                   file_args->file_columns.c_str(), file_args->file_x_columns.c_str(),
+                   file_args->file_y_columns.c_str(), file_args->file_error_columns.c_str(), &ranges,
+                   special_axis_series, input_flags, timestamps, &special_data_grid))
+    {
+      return 0;
+    }
+
+  // convert grm_special_axis_series_t entries into int vector
+  if (parseColumns(&bottom_series, special_axis_series->bottom.c_str()) != GRM_ERROR_NONE) return 0;
+  if (parseColumns(&left_series, special_axis_series->left.c_str()) != GRM_ERROR_NONE) return 0;
+  if (parseColumns(&right_series, special_axis_series->right.c_str()) != GRM_ERROR_NONE) return 0;
+  if (parseColumns(&top_series, special_axis_series->top.c_str()) != GRM_ERROR_NONE) return 0;
+  if (parseColumns(&twin_x_series, special_axis_series->twin_x.c_str()) != GRM_ERROR_NONE) return 0;
+  if (parseColumns(&twin_y_series, special_axis_series->twin_y.c_str()) != GRM_ERROR_NONE) return 0;
+
+  if (!file_data.empty())
+    {
+      depth = file_data.size();
+      cols = file_data[0].size();
+      if (strEqualsAny(kind, "barplot", "histogram", "line", "scatter", "stairs", "stem"))
+        {
+          cols -= x_data.size() + error_data.size(); // less y columns if x or error data given
+        }
+      else if (strEqualsAny(kind, "histogram"))
+        {
+          cols -= y_data.size() + error_data.size(); // less x columns if y or error data given
+        }
+      rows = file_data[0][0].size();
+      depth = (depth == 1) ? 0 : depth;
+    }
+  else
+    {
+      fprintf(stderr, "File is empty\n");
+      return 0;
+    }
+  if (cols + x_data.size() + error_data.size() != labels.size())
+    {
+      fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n",
+              cols + x_data.size() + error_data.size(), labels.size());
+    }
+
+  if ((kind == "line" || (kind == "scatter" && !input_flags.scatter_with_z)) &&
+      ((rows >= 50 && cols >= 50) || (input_flags.use_bins && rows >= 49 && cols >= 49)))
+    {
+      fprintf(stderr, "Too much data for %s plot - animation cant be created\n", kind.c_str());
+      return 0;
+    }
+  if (!strEqualsAny(kind, "isosurface", "quiver", "volume") && depth >= 1)
+    {
+      fprintf(stderr, "Too much data for %s plot - animation cant be created\n", kind.c_str());
+      return 0;
+    }
+
+  if (!strEqualsAny(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
+    {
+      // these parameters are only for surface and similar types
+      input_flags.use_bins = 0;
+      input_flags.xyz_file = 0;
+    }
+
+  if (strEqualsAny(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
+    {
+      int x_dim = cols, y_dim = rows, z_dim = rows * cols;
+      double xmin, xmax, ymin, ymax;
+      if (cols <= 1 || (input_flags.xyz_file && cols < 3))
+        {
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind.c_str());
+          return 0;
+        }
+      if (input_flags.xyz_file)
+        {
+          x_dim = 1, z_dim = rows;
+          for (int i = 1; i < rows; i++)
+            {
+              if (file_data[depth][1][i] == file_data[depth][1][i - 1])
+                {
+                  x_dim += 1;
+                }
+              else
+                {
+                  y_dim = rows / x_dim;
+                  break;
+                }
+            }
+          ranges.xmin = file_data[depth][0][0];
+          ranges.xmax = file_data[depth][0][x_dim - 1];
+          ranges.ymin = file_data[depth][1][0];
+          ranges.ymax = file_data[depth][1][rows - 1];
+        }
+
+      std::vector<double> xi(x_dim), yi(y_dim), zi(z_dim);
+      xmin = 0.0;
+      xmax = x_dim - 1.0;
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      ymin = 0.0;
+      ymax = y_dim - 1.0;
+      if (!input_flags.use_bins)
+        {
+          adjustRanges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+        }
+
+      if (input_flags.use_bins)
+        {
+          try
+            {
+              ranges.xmin = std::stod(labels[0]);
+              ranges.xmax = std::stod(labels[cols - 1]);
+            }
+          catch (std::invalid_argument &e)
+            {
+              fprintf(stderr, "Invalid argument for x_range parameter (%s, %s) while using option use_bins\n",
+                      labels[0].c_str(), labels[cols - 1].c_str());
+            }
+        }
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      if (input_flags.xyz_file)
+        {
+          for (row = 0; row < rows; ++row)
+            {
+              if (row < x_dim)
+                {
+                  xi[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)x_dim - 1));
+                }
+              if (row % x_dim == 0)
+                {
+                  yi[row / x_dim] =
+                      ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)(row / x_dim) / ((double)y_dim - 1));
+                }
+              zi[row] = file_data[depth][2][row];
+            }
+        }
+      else
+        {
+          for (col = 0; col < cols; ++col)
+            {
+              xi[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)x_dim - 1));
+              for (row = 0; row < rows; ++row)
+                {
+                  if (col == 0)
+                    {
+                      yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)y_dim - 1));
+                    }
+                  zi[row * cols + col] = file_data[depth][col][row];
+                }
+            }
+        }
+
+      if (ranges.zmax != INFINITY)
+        {
+          int elem;
+          double min_val = *std::min_element(std::begin(zi), std::end(zi));
+          double max_val = *std::max_element(std::begin(zi), std::end(zi));
+
+          for (elem = 0; elem < z_dim; ++elem)
+            {
+              zi[elem] = ranges.zmin + (ranges.zmax - ranges.zmin) * (zi[elem] - min_val) / (max_val - min_val);
+            }
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      if (kind == "imshow")
+        {
+          auto imshow = element->querySelectors("series_imshow");
+          (*context)["z" + str] = zi;
+          imshow->setAttribute("z", "z" + str);
+          (*context)["z_dims" + str] = std::vector<int>(x_dim, y_dim);
+          imshow->setAttribute("z_dims", "z_dims" + str);
+        }
+      else
+        {
+          auto series_elem = element->querySelectors("series_" + kind);
+          (*context)["x" + str] = xi;
+          series_elem->setAttribute("x", "x" + str);
+          (*context)["y" + str] = yi;
+          series_elem->setAttribute("y", "y" + str);
+          (*context)["z" + str] = zi;
+          series_elem->setAttribute("z", "z" + str);
+        }
+    }
+  else if (kind == "line" || (kind == "scatter" && !input_flags.scatter_with_z))
+    {
+      std::vector<double> x(rows);
+      std::vector<int> filtered_error_columns;
+      int err = 0;
+      int series_num;
+      int y_cnt = 0, x_cnt = 0, err_cnt = 0;
+      double xmin = 0.0, xmax = rows - 1;
+
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      cols += x_data.size() + error_data.size();
+
+      // calculate x-data if x_data is empty which means no x given
+      if (x_data.empty())
+        {
+          for (row = 0; row < rows; row++)
+            {
+              x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
+            }
+        }
+      // find min and max value of all y-data and make sure the all data points are inside that range
+      if (ranges.ymax != INFINITY && ranges.ymin != INFINITY)
+        {
+          double min_val = INFINITY, max_val = -INFINITY;
+          for (col = 0; col < cols; col++)
+            {
+              if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+              min_val = std::min<double>(
+                  min_val, *std::min_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
+              max_val = std::max<double>(
+                  max_val, *std::max_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
+            }
+
+          for (col = 0; col < cols; ++col)
+            {
+              if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
+              if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
+              for (row = 0; row < rows; row++)
+                {
+                  file_data[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                                 (file_data[depth][col][row] - min_val) /
+                                                                 (max_val - min_val);
+                }
+            }
+        }
+      auto series = element->querySelectorsAll("series_" + kind);
+      for (col = 0; col < cols - err; col++)
+        {
+          auto id = static_cast<int>(element->getAttribute("_id"));
+          element->setAttribute("_id", ++id);
+          auto str = std::to_string(id);
+          if (x_data.empty() && y_data.empty() && error_data.empty())
+            {
+              (*context)["x" + str] = x;
+              series[col]->setAttribute("x", "x" + str);
+              (*context)["y" + str] = file_data[depth][col];
+              series[col]->setAttribute("y", "y" + str);
+            }
+          else
+            {
+              if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
+                {
+                  (*context)["x" + str] = file_data[depth][col];
+                  series[x_cnt]->setAttribute("x", "x" + str);
+                  if (x_data.size() == 1)
+                    {
+                      // special case: if only one x-column is given use it for all y-columns
+                      for (int k = 1; k < y_data.size(); k++)
+                        {
+                          id = static_cast<int>(element->getAttribute("_id"));
+                          element->setAttribute("_id", ++id);
+                          str = std::to_string(id);
+                          (*context)["x" + str] = file_data[depth][col];
+                          series[k]->setAttribute("x", "x" + str);
+                        }
+                    }
+                  x_cnt += 1;
+                }
+              else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
+                {
+                  (*context)["y" + str] = file_data[depth][col];
+                  series[y_cnt]->setAttribute("y", "y" + str);
+                  y_cnt += 1;
+                }
+            }
+        }
+      cols -= x_data.size() + error_data.size();
+    }
+  else if (strEqualsAny(kind, "isosurface", "volume"))
+    {
+      int i, j, k;
+      std::vector<double> data(rows * cols * depth);
+      int n = (int)rows * (int)cols * (int)depth;
+      std::vector<int> dims = {(int)cols, (int)rows, (int)depth};
+      for (i = 0; i < rows; ++i)
+        {
+          for (j = 0; j < cols; ++j)
+            {
+              for (k = 0; k < depth; ++k)
+                {
+                  data[k * cols * rows + j * rows + i] = file_data[k][j][i];
+                }
+            }
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto series = element->querySelectors("series_" + kind);
+      (*context)["z" + str] = data;
+      series->setAttribute("z", "z" + str);
+      (*context)["z_dims" + str] = dims;
+      series->setAttribute("z_dims", "z_dims" + str);
+    }
+  else if (strEqualsAny(kind, "line3", "scatter3", "tricontour", "trisurface") ||
+           (kind == "scatter" && input_flags.scatter_with_z))
+    {
+      double xmin, xmax, ymin, ymax, zmin, zmax;
+      if (cols < 3)
+        {
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind.c_str());
+          return 0;
+        }
+      if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed\n");
+
+      /* apply the ranges to the data */
+      if (ranges.xmax != INFINITY)
+        {
+          xmin = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+          xmax = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+          adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+        }
+      if (ranges.ymax != INFINITY)
+        {
+          ymin = *std::min_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+          ymax = *std::max_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+          adjustRanges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+          ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+        }
+      if (ranges.zmax != INFINITY)
+        {
+          zmin = *std::min_element(std::begin(file_data[depth][2]), std::end(file_data[depth][2]));
+          zmax = *std::max_element(std::begin(file_data[depth][2]), std::end(file_data[depth][2]));
+          adjustRanges(&ranges.zmin, &ranges.zmax, zmin, zmax);
+          ranges.zmax = (ranges.zmax <= ranges.zmin) ? ranges.zmax + ranges.zmin : ranges.zmax;
+        }
+      for (row = 0; row < rows; ++row)
+        {
+          if (ranges.xmax != INFINITY)
+            file_data[depth][0][row] =
+                ranges.xmin + (ranges.xmax - ranges.xmin) * (((double)file_data[depth][0][row]) - xmin) / (xmax - xmin);
+          if (ranges.ymax != INFINITY)
+            file_data[depth][1][row] =
+                ranges.ymin + (ranges.ymax - ranges.ymin) * (((double)file_data[depth][1][row]) - ymin) / (ymax - ymin);
+          if (ranges.zmax != INFINITY)
+            file_data[depth][2][row] =
+                ranges.zmin + (ranges.zmax - ranges.zmin) * (((double)file_data[depth][2][row]) - zmin) / (zmax - zmin);
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto series = element->querySelectors("series_" + kind);
+      (*context)["x" + str] = file_data[depth][0];
+      series->setAttribute("x", "x" + str);
+      (*context)["y" + str] = file_data[depth][1];
+      series->setAttribute("y", "y" + str);
+      (*context)["z" + str] = file_data[depth][2];
+      series->setAttribute("z", "z" + str);
+    }
+  else if (strEqualsAny(kind, "barplot", "stem", "stairs"))
+    {
+      std::vector<double> x(rows);
+      double xmin, xmax, ymin, ymax;
+      int y_cnt = 0, x_cnt = 0;
+      if (kind == "barplot")
+        {
+          xmin = 1;
+          xmax = rows;
+        }
+      else
+        {
+          xmin = 0.0;
+          xmax = rows - 1.0;
+        }
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      cols += x_data.size() + error_data.size();
+
+      // find min and max value of all x-data and make sure the all data points are inside that range
+      if (x_data.empty())
+        {
+          for (row = 0; row < rows; row++)
+            {
+              x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
+            }
+        }
+      else
+        {
+          if (kind != "barplot" ||
+              static_cast<std::string>(element->querySelectors("series_barplot")->getAttribute("style")) == "default")
+            {
+              double x_min = INFINITY, x_max = -INFINITY;
+              for (col = 0; col < x_data.size(); col++)
+                {
+                  xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                           std::end(file_data[depth][x_data[col] - 1]));
+                  xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                           std::end(file_data[depth][x_data[col] - 1]));
+                  x_min = grm_min(x_min, xmin);
+                  x_max = grm_max(x_max, xmax);
+                }
+              adjustRanges(&ranges.xmin, &ranges.xmax, x_min, x_max);
+            }
+          else
+            {
+              xmin = INFINITY;
+              xmax = -INFINITY;
+              for (col = 0; col < x_data.size(); ++col)
+                {
+                  xmin = grm_min(xmin, *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                         std::end(file_data[depth][x_data[col] - 1])));
+                  xmax = grm_max(xmax, *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                                         std::end(file_data[depth][x_data[col] - 1])));
+                }
+              for (col = 0; col < x_data.size(); ++col)
+                {
+                  for (row = 0; row < rows; row++)
+                    {
+                      file_data[depth][x_data[col] - 1][row] =
+                          ranges.xmin + (ranges.xmax - ranges.xmin) / (xmax - xmin) *
+                                            ((double)file_data[depth][x_data[col] - 1][row] - xmin);
+                    }
+                }
+            }
+        }
+
+      // find min and max value of all y-data and make sure the all data points are inside that range
+      double y_min = INFINITY, y_max = -INFINITY;
+      int tmp_cnt = 0;
+      for (col = 0; col < cols; col++)
+        {
+          if (kind == "stairs")
+            {
+              ymin = *std::min_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col]));
+            }
+          else
+            {
+              ymin = grm_min(0, *std::min_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
+            }
+          ymax = *std::max_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col]));
+          y_min = grm_min(y_min, ymin);
+          y_max = grm_max(y_max, ymax);
+        }
+      adjustRanges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, y_min), y_max);
+
+      auto series = element->querySelectorsAll("series_" + kind);
+      // push the data into the container structure
+      for (col = 0; col < cols; col++)
+        {
+          auto id = static_cast<int>(element->getAttribute("_id"));
+          element->setAttribute("_id", ++id);
+          auto str = std::to_string(id);
+          if (x_data.empty() && y_data.empty() && error_data.empty())
+            {
+              (*context)["x" + str] = x;
+              series[col]->setAttribute("x", "x" + str);
+              (*context)["y" + str] = file_data[depth][col];
+              series[col]->setAttribute("y", "y" + str);
+            }
+          else
+            {
+              if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
+                {
+                  (*context)["x" + str] = file_data[depth][col];
+                  series[x_cnt]->setAttribute("x", "x" + str);
+                  if (x_data.size() == 1)
+                    {
+                      // special case: if only one x-column is given use it for all y-columns
+                      for (int k = 1; k < y_data.size(); k++)
+                        {
+                          id = static_cast<int>(element->getAttribute("_id"));
+                          element->setAttribute("_id", ++id);
+                          str = std::to_string(id);
+                          (*context)["x" + str] = file_data[depth][col];
+                          series[k]->setAttribute("x", "x" + str);
+                        }
+                    }
+                  x_cnt += 1;
+                }
+              else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
+                {
+                  (*context)["y" + str] = file_data[depth][col];
+                  series[y_cnt]->setAttribute("y", "y" + str);
+                  y_cnt += 1;
+                }
+            }
+        }
+      cols -= x_data.size() + error_data.size();
+    }
+  else if (strEqualsAny(kind, "histogram"))
+    {
+      double xmin = 0.0, xmax = rows - 1, ymin, ymax;
+      int y_cnt = 0, x_cnt = 0;
+
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      cols += y_data.size() + error_data.size();
+
+      // find min and max value of all x-data and make sure the all data points are inside that range
+      double x_min = INFINITY, x_max = -INFINITY;
+      int tmp_cnt = 0;
+      if (!x_data.empty())
+        {
+          for (col = 0; col < x_data.size(); col++)
+            {
+              xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                       std::end(file_data[depth][x_data[col] - 1]));
+              xmax = *std::max_element(std::begin(file_data[depth][x_data[col] - 1]),
+                                       std::end(file_data[depth][x_data[col] - 1]));
+              x_min = grm_min(x_min, xmin);
+              x_max = grm_max(x_max, xmax);
+            }
+        }
+      else
+        {
+          for (col = 0; col < cols; col++)
+            {
+              xmin = grm_min(0, *std::min_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
+              xmax = *std::max_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col]));
+              x_min = grm_min(x_min, xmin);
+              x_max = grm_max(x_max, xmax);
+            }
+        }
+      adjustRanges(&ranges.xmin, &ranges.xmax, std::min<double>(0.0, x_min), x_max);
+
+      // find min and max value of all y-data and make sure the all data points are inside that range
+      double y_min = INFINITY, y_max = -INFINITY;
+      for (col = 0; col < y_data.size(); col++)
+        {
+          ymin = *std::min_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                   std::end(file_data[depth][y_data[col] - 1]));
+          ymax = *std::max_element(std::begin(file_data[depth][y_data[col] - 1]),
+                                   std::end(file_data[depth][y_data[col] - 1]));
+          y_min = grm_min(y_min, ymin);
+          y_max = grm_max(y_max, ymax);
+        }
+      adjustRanges(&ranges.ymin, &ranges.ymax, y_min, y_max);
+
+      auto series = element->querySelectorsAll("series_histogram");
+      // push the data into the container structure
+      for (col = 0; col < cols; col++)
+        {
+          auto id = static_cast<int>(element->getAttribute("_id"));
+          element->setAttribute("_id", ++id);
+          auto str = std::to_string(id);
+          if (x_data.empty() && y_data.empty() && error_data.empty())
+            {
+              (*context)["x" + str] = file_data[depth][col];
+              series[col]->setAttribute("x", "x" + str);
+            }
+          else
+            {
+              if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
+                {
+                  (*context)["x" + str] = file_data[depth][col];
+                  series[x_cnt]->setAttribute("x", "x" + str);
+                  if (x_data.size() == 1)
+                    {
+                      // special case: if only one x-column is given use it for all y-columns
+                      for (int k = 1; k < y_data.size(); k++)
+                        {
+                          id = static_cast<int>(element->getAttribute("_id"));
+                          element->setAttribute("_id", ++id);
+                          str = std::to_string(id);
+                          (*context)["x" + str] = file_data[depth][col];
+                          series[k]->setAttribute("x", "x" + str);
+                        }
+                    }
+                  x_cnt += 1;
+                }
+              else if (std::find(y_data.begin(), y_data.end(), col + 1) != y_data.end())
+                {
+                  (*context)["weights" + str] = file_data[depth][col];
+                  series[y_cnt]->setAttribute("weights", "weights" + str);
+                  y_cnt += 1;
+                }
+            }
+        }
+      cols -= x_data.size() + error_data.size();
+    }
+  else if (kind == "pie")
+    {
+      std::vector<double> x(cols);
+      std::vector<double> c(cols * 3);
+      for (col = 0; col < cols; col++)
+        {
+          x[col] = file_data[depth][col][0];
+          if (!labels.empty() && !labels[col].empty()) labels_c.push_back(labels[col].c_str());
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto pie = element->querySelectors("series_pie");
+      (*context)["x" + str] = x;
+      pie->setAttribute("x", "x" + str);
+      if (rows >= 4)
+        {
+          for (col = 0; col < cols; col++)
+            {
+              for (row = 1; row < 4; row++)
+                {
+                  c[(row - 1) * cols + col] = (double)file_data[depth][col][row];
+                }
+            }
+          (*context)["c_rgb" + str] = c;
+          pie->setAttribute("color_rgb_values", "c_rgb" + str);
+        }
+      else if (rows > 1)
+        {
+          fprintf(stderr, "Insufficient data for custom colors\n");
+        }
+    }
+  else if (kind == "polar_histogram")
+    {
+      if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto polar_histogram = element->querySelectors("polar_histogram");
+      (*context)["theta" + str] = file_data[depth][0];
+      polar_histogram->setAttribute("theta", "theta" + str);
+    }
+  else if (kind == "polar_line" || kind == "polar_scatter")
+    {
+      if (cols % 2 == 1)
+        {
+          fprintf(stderr, "For polar_line and polar_scatter plots x and y must always be given, but in this case "
+                          "the number of columns is odd -> 1 column is missing.\n");
+          cols -= 1;
+        }
+
+      auto series = element->querySelectorsAll("series_" + kind);
+      for (col = 0; col <= cols / 2; col += 2)
+        {
+          auto id = static_cast<int>(element->getAttribute("_id"));
+          element->setAttribute("_id", ++id);
+          auto str = std::to_string(id);
+          (*context)["theta" + str] = file_data[depth][col];
+          series[col / 2]->setAttribute("theta", "theta" + str);
+          (*context)["r" + str] = file_data[depth][col + 1];
+          series[col / 2]->setAttribute("r", "r" + str);
+        }
+    }
+  else if (kind == "polar_heatmap")
+    {
+      std::vector<double> xi(cols), yi(rows), zi(rows * cols);
+      double theta_min = 0, theta_max = 360, r_min = 0, r_max = 3;
+
+      if (cols <= 1)
+        {
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind.c_str());
+          return 0;
+        }
+      adjustRanges(&ranges.xmin, &ranges.xmax, theta_min, theta_max);
+      adjustRanges(&ranges.ymin, &ranges.ymax, r_min, r_max);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (col = 0; col < cols; ++col)
+        {
+          xi[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+          for (row = 0; row < rows; ++row)
+            {
+              if (col == 0)
+                {
+                  yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
+                }
+              zi[row * cols + col] = file_data[depth][col][row];
+            }
+        }
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto polar_heatmap = element->querySelectors("polar_heatmap");
+      (*context)["theta" + str] = xi;
+      polar_heatmap->setAttribute("theta", "theta" + str);
+      (*context)["r" + str] = yi;
+      polar_heatmap->setAttribute("r", "r" + str);
+      (*context)["z" + str] = zi;
+      polar_heatmap->setAttribute("z", "z" + str);
+    }
+  else if (kind == "quiver")
+    {
+      std::vector<double> x(cols);
+      std::vector<double> y(rows);
+      std::vector<double> u(cols * rows);
+      std::vector<double> v(cols * rows);
+      double xmin = 0, xmax = cols - 1, ymin = 0, ymax = rows - 1;
+
+      if (depth < 2)
+        {
+          fprintf(stderr, "Not enough data for quiver plot\n");
+          return 0;
+        }
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      adjustRanges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (col = 0; col < cols; ++col)
+        {
+          x[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+
+          for (row = 0; row < rows; ++row)
+            {
+              if (col == 0) y[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
+              u[row * cols + col] = file_data[0][col][row];
+              v[row * cols + col] = file_data[1][col][row];
+            }
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto quiver = element->querySelectors("quiver");
+
+      (*context)["x" + str] = x;
+      quiver->setAttribute("x", "x" + str);
+      (*context)["y" + str] = y;
+      quiver->setAttribute("y", "y" + str);
+      (*context)["u" + str] = u;
+      quiver->setAttribute("u", "u" + str);
+      (*context)["v" + str] = v;
+      quiver->setAttribute("v", "v" + str);
+    }
+  else if (strEqualsAny(kind, "hexbin", "shade"))
+    {
+      double xmin, xmax, ymin, ymax;
+      if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed\n");
+
+      xmin = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+      xmax = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+      ymin = *std::min_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+      ymax = *std::max_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+      adjustRanges(&ranges.xmin, &ranges.xmax, xmin, xmax);
+      adjustRanges(&ranges.ymin, &ranges.ymax, ymin, ymax);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (row = 0; row < rows; row++)
+        {
+          file_data[depth][0][row] =
+              ranges.xmin + (ranges.xmax - ranges.xmin) * (file_data[depth][0][row] - xmin) / (xmax - xmin);
+          file_data[depth][1][row] =
+              ranges.ymin + (ranges.ymax - ranges.ymin) * (file_data[depth][1][row] - ymin) / (ymax - ymin);
+        }
+
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto series = element->querySelectors("series_" + kind);
+
+      (*context)["x" + str] = file_data[depth][0];
+      series->setAttribute("x", "x" + str);
+      (*context)["y" + str] = file_data[depth][1];
+      series->setAttribute("y", "y" + str);
+    }
+  else if (kind == "molecule")
+    {
+      auto id = static_cast<int>(element->getAttribute("_id"));
+      element->setAttribute("_id", ++id);
+      auto str = std::to_string(id);
+      auto molecule = element->querySelectors("series_molecule");
+
+      for (row = 0; row < rows; row++)
+        {
+          if (!labels.empty() && !labels[row].empty())
+            {
+              if (isIntNumber(labels[row])) labels[row] = elem_number_to_symbol[std::stoi(labels[row])];
+            }
+        }
+
+      (*context)["molecule_symbols" + str] = labels;
+      molecule->setAttribute("molecule_symbols", "molecule_symbols" + str);
+      (*context)["x" + str] = file_data[depth][0];
+      molecule->setAttribute("x", "x" + str);
+      (*context)["y" + str] = file_data[depth][1];
+      molecule->setAttribute("y", "y" + str);
+      (*context)["z" + str] = file_data[depth][2];
+      molecule->setAttribute("z", "z" + str);
+
+      if (cols >= 6) // spin is given aswell
+        {
+          (*context)["spin_x" + str] = file_data[depth][3];
+          molecule->setAttribute("spin_x", "spin_x" + str);
+          (*context)["spin_y" + str] = file_data[depth][4];
+          molecule->setAttribute("spin_y", "spin_y" + str);
+          (*context)["spin_z" + str] = file_data[depth][5];
+          molecule->setAttribute("spin_z", "spin_z" + str);
+        }
+      if (cols >= 9) // a rgb color is given by the user
+        {
+          std::vector<double> rgb(rows * 3);
+          for (row = 0; row < rows; row++)
+            {
+              for (col = 6; col < 9; col++)
+                {
+                  rgb[row * 3 + (col - 6)] = file_data[depth][col][row];
+                }
+            }
+          (*context)["color_rgb_values" + str] = rgb;
+          molecule->setAttribute("color_rgb_values", "color_rgb_values" + str);
+        }
+    }
+
+  delete file_args;
+  return 1;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ input stream parser ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv, PlotRange *ranges,
