@@ -1140,6 +1140,7 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESS
     lib/grm/grplot/gredit/TableWidget.cxx
     lib/grm/grplot/gredit/TreeWidget.cxx
     lib/grm/grplot/GRPlotWidget.cxx
+    lib/grm/grplot/GRPlotHelpDialog.cxx
     lib/grm/grplot/qtterm/ArgsWrapper.cxx
     lib/grm/grplot/qtterm/Receiver.cxx
     lib/grm/grplot/Threadpool.cxx

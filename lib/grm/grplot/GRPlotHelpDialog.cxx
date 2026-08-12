@@ -35,7 +35,8 @@ GRPlotHelpDialog::GRPlotHelpDialog(QWidget *parent, std::optional<std::string> k
         fprintf(stderr, "No plot type with the name %s was found.\n", kind->c_str());
     }
   form->addWidget(message, 1, 0, 1, 2);
-  this->setLayout(form);
+  setLayout(form);
+  resize(600, 800);
 }
 
 GRPlotHelpDialog::~GRPlotHelpDialog() = default;

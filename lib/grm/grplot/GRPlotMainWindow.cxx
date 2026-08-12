@@ -34,7 +34,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
   if (help_mode)
     {
-      showHelpDialogSlot();
+      showHelpDialogSlot(argc < 3 ? nullptr : argv[2]);
       exit(0);
     }
   else
@@ -230,6 +230,8 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
           resizeGRPlotWidget(width, height);
         }
+
+      menu->addMenu(help_menu);
     }
   center();
 }
@@ -335,6 +337,18 @@ void GRPlotMainWindow::showAddElementDockSlot()
       auto h = grplot_widget_->height();
       add_element_dock_widget->show();
       add_element_dock_widget->setWindowTitle(grplot_widget_->getAddElementWidget()->windowTitle());
+      resizeGRPlotWidget(w, h);
+      keepInDisplay();
+    }
+}
+
+void GRPlotMainWindow::showProgressBarDockSlot()
+{
+  if (!progress_bar_dock_widget->isVisible())
+    {
+      auto w = grplot_widget_->width();
+      auto h = grplot_widget_->height();
+      progress_bar_dock_widget->show();
       resizeGRPlotWidget(w, h);
       keepInDisplay();
     }
@@ -530,6 +544,16 @@ void GRPlotMainWindow::closeProgressBarDockSlot()
   keepInDisplay();
 }
 
+void GRPlotMainWindow::closeProgressBarDockSlot()
+{
+  auto w = grplot_widget_->width();
+  auto h = grplot_widget_->height();
+
+  progress_bar_dock_widget->hide();
+  resizeGRPlotWidget(w, h);
+  keepInDisplay();
+}
+
 void GRPlotMainWindow::center()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
@@ -550,10 +574,19 @@ void GRPlotMainWindow::updateEditElementDockTitleSlot()
 
 void GRPlotMainWindow::showHelpDialogSlot(std::optional<std::string> kind)
 {
-  // TODO: Call Slot in GRPlotWidget?
-  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode))) return;
+  QUrl url;
+  if (kind)
+    {
+      url = QUrl(QString("https://gr-framework.org/grplot/plot_types.html#") + QString::fromStdString(*kind).toLower(),
+                 QUrl::TolerantMode);
+    }
+  else
+    {
+      url = QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode);
+    }
+  if (QDesktopServices::openUrl(url)) return;
 
-  auto help_dialog = new GRPlotHelpDialog(this);
+  auto help_dialog = new GRPlotHelpDialog(this, kind);
   help_dialog->exec();
 }
 

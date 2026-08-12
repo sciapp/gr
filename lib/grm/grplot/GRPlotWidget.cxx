@@ -795,7 +795,12 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       animation_act = new QAction(tr("&Animation"));
       QObject::connect(animation_act, SIGNAL(triggered()), this, SLOT(animationSlot()));
 
-      show_help_act = new QAction(tr("&Help"));
+      show_help_act = new QAction(tr("&Open Documentation"));
+      show_help_act->setShortcut(QKeySequence("F1"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+      show_help_act->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::HelpFaq));
+      show_help_act->setIconVisibleInMenu(true);
+#endif
       QObject::connect(show_help_act, SIGNAL(triggered()), this, SLOT(showHelpDialogSlot()));
     }
 }
@@ -6351,7 +6356,7 @@ void GRPlotWidget::animationSlot()
 
 void GRPlotWidget::showHelpDialogSlot()
 {
-  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode))) return;
+  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/editor.html", QUrl::TolerantMode))) return;
 
   auto help_dialog = new GRPlotHelpDialog(this);
   help_dialog->exec();
