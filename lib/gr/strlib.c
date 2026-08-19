@@ -347,7 +347,7 @@ char *str_ftoa(char *result, double value, str_format_reference_t *reference, in
 }
 
 
-int str_casecmp(char *s1, char *s2)
+int str_casecmp(const char *s1, const char *s2)
 {
   while ((*s1 != '\0') && (tolower(*(unsigned char *)s1) == tolower(*(unsigned char *)s2)))
     {

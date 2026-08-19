@@ -600,9 +600,9 @@ static void gr(int id)
     }
 }
 
-int gr_drawgraphics(char *string)
+int gr_drawgraphics(const char *string)
 {
-  char *s = string, *el, *fmt;
+  char *s = (char *)string, *el, *fmt;
   int i, id, clear_flag = 0;
 
   for (i = 0; i < 2; i++)
@@ -662,7 +662,7 @@ int gr_drawgraphics(char *string)
   return 0;
 }
 
-int gr_importgraphics(char *path)
+int gr_importgraphics(const char *path)
 {
   FILE *stream;
   char *buff;
