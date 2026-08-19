@@ -3301,33 +3301,59 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       gks_init_core(gkss);
       break;
 
+    case 4:
+      p->state = GKS_K_WS_ACTIVE;
+      break;
+
+    case 5:
+      p->state = GKS_K_WS_INACTIVE;
+      break;
+
     case 11:
       break;
 
     case 12:
-      polyline(ia[0], r1, r2);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          polyline(ia[0], r1, r2);
+        }
       break;
 
     case 13:
-      polymarker(ia[0], r1, r2);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          polymarker(ia[0], r1, r2);
+        }
       break;
 
     case 14:
-      text(r1[0], r2[0], strlen(chars), chars);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          text(r1[0], r2[0], strlen(chars), chars);
+        }
       break;
 
     case 15:
-      fillarea(ia[0], r1, r2);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          fillarea(ia[0], r1, r2);
+        }
       break;
 
     case 16:
     case 201:
-      true_color = fctid == DRAW_IMAGE;
-      cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          true_color = fctid == DRAW_IMAGE;
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+        }
       break;
 
     case 17:
-      gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+        }
       break;
 
     case 48:
@@ -3343,15 +3369,24 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       gks_set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
 
-      if (*ia == gkss->cntnr) set_clip_rect(*ia);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (*ia == gkss->cntnr) set_clip_rect(*ia);
+        }
       break;
 
     case 52:
-      set_clip_rect(gkss->cntnr);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          set_clip_rect(gkss->cntnr);
+        }
       break;
 
     case 53:
-      set_clip_rect(gkss->cntnr);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          set_clip_rect(gkss->cntnr);
+        }
       break;
 
     case 54:
@@ -3384,7 +3419,10 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
           p->viewport[3] = r2[1];
         }
 
-      resize_window();
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          resize_window();
+        }
       set_xform();
       init_norm_xform();
       break;
@@ -3399,78 +3437,105 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case BEGIN_SELECTION:
-      if (p->selection == NULL)
+      if (p->state == GKS_K_WS_ACTIVE)
         {
-          p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+          if (p->selection == NULL)
+            {
+              p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
-          p->selection->setDevicePixelRatio(p->device_pixel_ratio);
+              p->selection->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-          p->selection->fill(Qt::white);
+              p->selection->fill(Qt::white);
+            }
+          p->painter->assign(*p->selection, *p->paint_device);
         }
-      p->painter->assign(*p->selection, *p->paint_device);
       break;
 
     case END_SELECTION:
-      p->painter->assign(*p->pixmap, *p->paint_device);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          p->painter->assign(*p->pixmap, *p->paint_device);
+        }
       break;
 
     case MOVE_SELECTION:
-      if (p->selection != NULL)
+      if (p->state == GKS_K_WS_ACTIVE)
         {
-          int x_offset = (int)(p->a * r1[0] + 0.5);
-          int y_offset = (int)(p->c * r2[0] + 0.5);
-          QPainter::CompositionMode lastMode = p->painter->compositionMode();
-          p->painter->drawPixmap(QPoint(0, 0), *p->pixmap);
-          p->painter->setCompositionMode(QPainter::RasterOp_NotSourceXorDestination);
-          p->painter->drawPixmap(QPoint(x_offset, y_offset), *p->selection);
-          p->painter->setCompositionMode(lastMode);
+          if (p->selection != NULL)
+            {
+              int x_offset = (int)(p->a * r1[0] + 0.5);
+              int y_offset = (int)(p->c * r2[0] + 0.5);
+              QPainter::CompositionMode lastMode = p->painter->compositionMode();
+              p->painter->drawPixmap(QPoint(0, 0), *p->pixmap);
+              p->painter->setCompositionMode(QPainter::RasterOp_NotSourceXorDestination);
+              p->painter->drawPixmap(QPoint(x_offset, y_offset), *p->selection);
+              p->painter->setCompositionMode(lastMode);
+            }
         }
       break;
 
 #ifdef QT_PLUGIN_USED_AS_PLUGIN_CODE
     case GKS_SET_BBOX_CALLBACK: /* 260 */
-      cur_id = ia[0];
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          cur_id = ia[0];
 #ifdef _WIN32
-      p->bounding_stack.push(
-          {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id});
+          p->bounding_stack.push(
+              {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id});
 #else
-      p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
-                                               (void (*)(int, double, double, double, double))r1, cur_id});
+          p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
+                                                   (void (*)(int, double, double, double, double))r1, cur_id});
 #endif
-      p->mask_callback = (void (*)(unsigned int, unsigned int, unsigned int *))r2;
-      if (p->mask_callback != NULL) p->painter->beginGroup(cur_id);
+          p->mask_callback = (void (*)(unsigned int, unsigned int, unsigned int *))r2;
+          if (p->mask_callback != NULL) p->painter->beginGroup(cur_id);
+        }
       break;
 
     case GKS_CANCEL_BBOX_CALLBACK: /* 261 */
-      if (p->mask_callback != NULL) p->painter->endGroup();
-      assert(!p->bounding_stack.empty());
-      top = &p->bounding_stack.top();
-      top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
-      p->bounding_stack.pop();
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (p->mask_callback != NULL) p->painter->endGroup();
+          assert(!p->bounding_stack.empty());
+          top = &p->bounding_stack.top();
+          top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
+          p->bounding_stack.pop();
+        }
       break;
 #endif
 
     case SET_BACKGROUND:
-      if (p->pixmap)
+      if (p->state == GKS_K_WS_ACTIVE)
         {
-          p->painter->freezeBackground(r1[0], r1[1], r2[0], r2[1]);
+          if (p->pixmap)
+            {
+              p->painter->freezeBackground(r1[0], r1[1], r2[0], r2[1]);
+            }
         }
       break;
 
     case CLEAR_BACKGROUND:
-      p->painter->clearBackground();
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          p->painter->clearBackground();
+        }
       break;
 
     case GKS_BEGIN_PARTIAL:
-      cur_id = ia[0];
-      p->partial_drawing_callback =
-          (void (*)(int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *))r1;
-      p->painter->beginPartial(cur_id);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          cur_id = ia[0];
+          p->partial_drawing_callback =
+              (void (*)(int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *))r1;
+          p->painter->beginPartial(cur_id);
+        }
       break;
 
     case GKS_END_PARTIAL:
-      cur_id = ia[0];
-      p->painter->endPartial(cur_id);
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          cur_id = ia[0];
+          p->painter->endPartial(cur_id);
+        }
       break;
     }
 }
@@ -3823,13 +3888,24 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       p = NULL;
       break;
 
+    case 4:
+      p->state = GKS_K_WS_ACTIVE;
+      break;
+
+    case 5:
+      p->state = GKS_K_WS_INACTIVE;
+      break;
+
     case 8:
-      if (i_arr[1] & GKS_K_PERFORM_FLAG)
+      if (p->state == GKS_K_WS_ACTIVE)
         {
-          if (get_paint_device() == 0)
-            interp(p->dl.buffer);
-          else if (!p->empty)
-            gks_perror("can't obtain Qt drawable");
+          if (i_arr[1] & GKS_K_PERFORM_FLAG)
+            {
+              if (get_paint_device() == 0)
+                interp(p->dl.buffer);
+              else if (!p->empty)
+                gks_perror("can't obtain Qt drawable");
+            }
         }
       break;
 
