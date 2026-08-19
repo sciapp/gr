@@ -1421,7 +1421,7 @@ static void initialize(int state)
   double xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
   int asf[13] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   double size = 2, height = 0.027;
-  char *env;
+  const char *env;
 
   if (state == GKS_K_GKCL)
     {
@@ -1672,13 +1672,13 @@ void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
  *
  * \endverbatim
  */
-void gr_openws(int workstation_id, char *connection, int type)
+void gr_openws(int workstation_id, const char *connection, int type)
 {
   if (connection)
     {
       if (!*connection) connection = NULL;
     }
-  gks_open_ws(workstation_id, connection, type);
+  gks_open_ws(workstation_id, (char *)connection, type);
 }
 
 /*!
@@ -3374,7 +3374,7 @@ void gr_settextfontprec(int font, int precision)
   if (flag_stream) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
 }
 
-static int loadfont(char *name)
+static int loadfont(const char *name)
 {
   int i, j, font;
 
@@ -3419,7 +3419,7 @@ static int loadfont(char *name)
  * in and FreeType has to support the given file type. On error the font index is set to -1.
  *
  */
-void gr_loadfont(char *filename, int *font)
+void gr_loadfont(const char *filename, int *font)
 {
   check_autoinit;
 
@@ -3430,7 +3430,7 @@ void gr_loadfont(char *filename, int *font)
     }
   else
     {
-      *font = gks_ft_load_user_font(filename, 0);
+      *font = gks_ft_load_user_font((char *)filename, 0);
     }
   if (*font > 0)
     {
@@ -4753,7 +4753,7 @@ static void start_pline3d(double x, double y, double z)
  *
  * Note: 'v' is a replacement for 'nu' which would conflict with '\n' (newline)
  */
-int gr_textext(double x, double y, char *string)
+int gr_textext(double x, double y, const char *string)
 {
   int errind, tnr, result;
   double tx, ty;
@@ -4775,7 +4775,7 @@ int gr_textext(double x, double y, char *string)
   return result;
 }
 
-void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
+void gr_inqtextext(double x, double y, const char *string, double *tbx, double *tby)
 {
   int errind, tnr;
   int i;
@@ -4840,7 +4840,8 @@ void gr_setscientificformat(int format_option)
   if (flag_stream) gr_writestream("<setscientificformat option=>\n", format_option);
 }
 
-static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(double, double, const char *, double))
+static void text2dlbl(double x, double y, const char *chars, double value,
+                      void (*fp)(double, double, const char *, double))
 {
   int errind, tnr;
 
@@ -4875,7 +4876,7 @@ static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(
   if (tnr != NDC) gks_select_xform(tnr);
 }
 
-static void text2d(double x, double y, char *chars)
+static void text2d(double x, double y, const char *chars)
 {
   /* 42. dummy value will not be interpreted until last argument fp != NULL */
   text2dlbl(x, y, chars, 42., NULL);
@@ -7241,7 +7242,7 @@ static double text3d_get_height(void)
          (min((vxmax - vxmin), (vymax - vymin)));
 }
 
-static void text3d(double x, double y, double z, char *chars, int axis)
+static void text3d(double x, double y, double z, const char *chars, int axis)
 {
   double p_x, p_y, p_z;
   int errind, tnr;
@@ -7288,13 +7289,14 @@ static void text3d(double x, double y, double z, char *chars, int axis)
       scaleFactors[0] = tx.x_axis_scale;
       scaleFactors[1] = tx.y_axis_scale;
       scaleFactors[2] = tx.z_axis_scale;
-      gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+      gks_ft_text3d(p_x, p_y, p_z, (char *)chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp,
+                    gr_wc3towc);
 
       gks_select_xform(tnr);
     }
 }
 
-void gr_text3d(double x, double y, double z, char *chars, int axis)
+void gr_text3d(double x, double y, double z, const char *chars, int axis)
 {
   int errind, tnr;
   double scaleFactors[3];
@@ -7311,7 +7313,7 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
-  gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+  gks_ft_text3d(x, y, z, (char *)chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
 
   gks_select_xform(tnr);
 
@@ -7334,7 +7336,7 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
  * The first 4 coordinates each are the corners of the bounding box, including ascender and descender space, while the
  * last 4 coordinates are without ascenders and descenders.
  */
-void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
+void gr_inqtext3d(double x, double y, double z, const char *chars, int axis, double *tbx, double *tby)
 {
   int errind, tnr;
   double scaleFactors[3];
@@ -7351,8 +7353,8 @@ void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *t
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
-  gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc,
-                           tbx, tby);
+  gks_ft_inq_text3d_extent(x, y, z, (char *)chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp,
+                           gr_wc3towc, tbx, tby);
 
   gks_select_xform(tnr);
 }
@@ -8346,7 +8348,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
  * \param[in] y_title The text to be displayed on the Y axis
  * \param[in] z_title The text to be displayed on the Z axis
  */
-void gr_titles3d(char *x_title, char *y_title, char *z_title)
+void gr_titles3d(const char *x_title, const char *y_title, const char *z_title)
 {
   int errind, tnr;
   double clrt[4], wn[4], vp[4];
@@ -8722,7 +8724,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
  * \param[in] y_title The text to be displayed on the Y axis
  * \param[in] z_title The text to be displayed on the Z axis
  */
-void gr_settitles3d(char *x_title, char *y_title, char *z_title)
+void gr_settitles3d(const char *x_title, const char *y_title, const char *z_title)
 {
   int errind;
 
@@ -11229,7 +11231,7 @@ void gr_adjustrange(double *amin, double *amax)
   if (fract(*amax / tick) != 0) *amax = tick * (gauss(*amax / tick) + 1);
 }
 
-static int gks_wstype(char *type)
+static int gks_wstype(const char *type)
 {
   int wstype;
 
@@ -11327,7 +11329,7 @@ bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff, wmf or ppm\n"
  *
  * \endverbatim
  */
-void gr_beginprint(char *pathname)
+void gr_beginprint(const char *pathname)
 {
   int wkid = 6, wstype = 62;
   char *type;
@@ -11340,7 +11342,7 @@ void gr_beginprint(char *pathname)
 
       if (wstype >= 0)
         {
-          gks_open_ws(wkid, pathname, wstype);
+          gks_open_ws(wkid, (char *)pathname, wstype);
           gks_activate_ws(wkid);
           flag_printing = 1;
         }
@@ -11425,7 +11427,7 @@ void gr_beginprint(char *pathname)
  *
  * \endverbatim
  */
-void gr_beginprintext(char *pathname, char *mode, char *format, char *orientation)
+void gr_beginprintext(const char *pathname, const char *mode, const char *format, const char *orientation)
 {
   int wkid = 6, wstype = 62;
   char *type;
@@ -11469,7 +11471,7 @@ void gr_beginprintext(char *pathname, char *mode, char *format, char *orientatio
               if (landscape) wstype += 2;
             }
 
-          gks_open_ws(wkid, pathname, wstype);
+          gks_open_ws(wkid, (char *)pathname, wstype);
           gks_activate_ws(wkid);
 
           if (!landscape)
@@ -12361,7 +12363,7 @@ void gr_setcoordxform(double mat[3][2])
  * file until the gr_endgraphics functions is called. The resulting file may
  * later be imported with the gr_importgraphics function.
  */
-void gr_begingraphics(char *path)
+void gr_begingraphics(const char *path)
 {
   if (!flag_graphics)
     {
@@ -12387,7 +12389,7 @@ void gr_endgraphics(void)
     }
 }
 
-static void latex2image(char *string, int pointSize, double *rgb, int *width, int *height, int **data)
+static void latex2image(const char *string, int pointSize, double *rgb, int *width, int *height, int **data)
 {
   static char *temp = NULL;
   int color;
@@ -12541,7 +12543,7 @@ static int *rotr90(int m, int n, int *mat)
   return trans;
 }
 
-static void mathtex(double x, double y, char *string, int inquire, double *tbx, double *tby)
+static void mathtex(double x, double y, const char *string, int inquire, double *tbx, double *tby)
 {
   int wkid = 1, errind, conid, wtype, dcunit;
   int pointSize, pixels, color;
@@ -12705,7 +12707,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
  * \param[in] y The Y coordinate of the starting position of the text string
  * \param[in] string The text string to be drawn
  */
-void gr_mathtex(double x, double y, char *string)
+void gr_mathtex(double x, double y, const char *string)
 {
   char *s, *start;
   int len;
@@ -12741,7 +12743,7 @@ void gr_mathtex(double x, double y, char *string)
   free(s);
 }
 
-void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
+void gr_inqmathtex(double x, double y, const char *string, double *tbx, double *tby)
 {
   char *s, *start;
   int len;
@@ -12788,7 +12790,7 @@ void mathtex2_3d(double x, double y, double z, const char *formula, int axis, do
  * \param[in] string The text string to be drawn
  * \param[in] axis The plane to draw on (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane), negative flips direction
  */
-void gr_mathtex3d(double x, double y, double z, char *string, int axis)
+void gr_mathtex3d(double x, double y, double z, const char *string, int axis)
 {
   char *s, *start;
   int len;
@@ -12825,7 +12827,7 @@ void gr_mathtex3d(double x, double y, double z, char *string, int axis)
  * \param[in] tbz A 4-element double array to write the z-coordinates of the corners
  * \param[in] baseline A 3-element (x, y, z) array to write the baseline point coordinates to
  */
-void gr_inqmathtex3d(double x, double y, double z, char *string, int axis, double *tbx, double *tby, double *tbz,
+void gr_inqmathtex3d(double x, double y, double z, const char *string, int axis, double *tbx, double *tby, double *tbz,
                      double *baseline)
 {
   char *s, *start;
@@ -12903,7 +12905,7 @@ static void append(double x, double y, char *string, int line_number, int math)
   text->height = tby[2] - tby[1];
 }
 
-static text_node_t *parse(double x, double y, char *string, int inline_math)
+static text_node_t *parse(double x, double y, const char *string, int inline_math)
 {
   char *s, *start, *end;
   int line_number, math;
@@ -12958,7 +12960,7 @@ static text_node_t *parse(double x, double y, char *string, int inline_math)
   return head;
 }
 
-static void text_impl(double x, double y, char *string, int inline_math, int inquire, double *tbx, double *tby)
+static void text_impl(double x, double y, const char *string, int inline_math, int inquire, double *tbx, double *tby)
 {
   int errInd, hAlign, vAlign;
   double chuX, chuY, angle, charHeight, xOff, yOff, lineWidth, lineHeight;
@@ -13159,7 +13161,7 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
   gks_set_text_align(hAlign, vAlign);
 }
 
-static int is_math_text(char *s)
+static int is_math_text(const char *s)
 {
   if (strchr(s, '$') != NULL)
     {
@@ -13195,7 +13197,7 @@ static int is_math_text(char *s)
  * precision, character expansion factor, character spacing, text color index,
  * character height, character up vector, text path and text alignment.
  */
-void gr_text(double x, double y, char *string)
+void gr_text(double x, double y, const char *string)
 {
   int errind, tnr;
   double tx, ty;
@@ -13237,7 +13239,7 @@ void gr_text(double x, double y, char *string)
  * precision, character expansion factor, character spacing, text color index,
  * character height, character up vector, text path and text alignment.
  */
-void gr_textx(double x, double y, char *string, int opts)
+void gr_textx(double x, double y, const char *string, int opts)
 {
   int errind, tnr;
   double xn = x, yn = y;
@@ -13262,7 +13264,7 @@ void gr_textx(double x, double y, char *string, int opts)
   if (flag_stream) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
 }
 
-void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
+void gr_inqtext(double x, double y, const char *string, double *tbx, double *tby)
 {
   int errind, tnr, n, wkid;
   double tx, ty;
@@ -13287,7 +13289,7 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   if (tnr != NDC) gks_select_xform(tnr);
 }
 
-void gr_inqtextx(double x, double y, char *string, int opts, double *tbx, double *tby)
+void gr_inqtextx(double x, double y, const char *string, int opts, double *tbx, double *tby)
 {
   int errind, tnr, n, wkid, i;
   double xn = x, yn = y, cpx, cpy;
@@ -13920,9 +13922,10 @@ void gr_unselectcontext(void)
     }
 }
 
-int gr_uselinespec(char *linespec)
+int gr_uselinespec(const char *linespec)
 {
-  char *spec = linespec, lastspec = ' ';
+  const char *spec = linespec;
+  char lastspec = ' ';
   int result, linetype = 0, markertype = 0, color = -1;
 
   while (*spec)
