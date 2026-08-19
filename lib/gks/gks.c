@@ -1179,7 +1179,7 @@ void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *o
     gks_report_error(ESCAPE, 5);
 }
 
-void gks_message(int wkid, char *message)
+void gks_message(int wkid, const char *message)
 {
   if (state >= GKS_K_WSOP)
     {
@@ -1264,7 +1264,7 @@ void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
   gks_set_fill_int_style(saved_ints);
 }
 
-void gks_text(double px, double py, char *str)
+void gks_text(double px, double py, const char *str)
 {
   char *utf8_str = NULL;
 
@@ -3067,8 +3067,8 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
     *errind = GKS_K_ERROR;
 }
 
-void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
-                         double *ty)
+void gks_inq_text_extent(int wkid, double px, double py, const char *str, int *errind, double *cpx, double *cpy,
+                         double *tx, double *ty)
 {
   double bx[9], by[9];
   int i;
@@ -4808,7 +4808,7 @@ done:
   return result;
 }
 
-char *gks_get_metadata(char *path)
+char *gks_get_metadata(const char *path)
 {
   FILE *fp;
   char *result;

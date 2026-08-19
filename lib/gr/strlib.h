@@ -25,7 +25,7 @@ str_format_reference_t *str_get_format_reference(str_format_reference_t *, doubl
 char *str_remove(char *, char);
 char *str_pad(char *, char, int);
 char *str_ftoa(char *, double, str_format_reference_t *, int);
-int str_casecmp(char *, char *);
+int str_casecmp(const char *, const char *);
 int str_utf8_to_unicode(const unsigned char *utf8_str, int *length);
 
 #ifdef __cplusplus

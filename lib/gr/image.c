@@ -12,7 +12,7 @@
 
 #include "gr.h"
 
-static int read_jpeg_image(char *path, int *width, int *height, int **data)
+static int read_jpeg_image(const char *path, int *width, int *height, int **data)
 {
   FILE *stream;
   unsigned int i;
@@ -67,7 +67,7 @@ static int read_jpeg_image(char *path, int *width, int *height, int **data)
 
 #define PNG_BYTES_TO_CHECK 4
 
-static int read_png_image(char *path, int *width, int *height, int **data)
+static int read_png_image(const char *path, int *width, int *height, int **data)
 {
   static FILE *stream;
   unsigned char header[PNG_BYTES_TO_CHECK];
@@ -185,7 +185,7 @@ static int read_png_image(char *path, int *width, int *height, int **data)
   return ret;
 }
 
-int gr_readimage(char *path, int *width, int *height, int **data)
+int gr_readimage(const char *path, int *width, int *height, int **data)
 {
   FILE *stream;
   char header[10];
