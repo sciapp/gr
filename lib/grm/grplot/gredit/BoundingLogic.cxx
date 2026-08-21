@@ -232,7 +232,7 @@ std::unordered_set<unsigned int> BoundingLogic::getElementsAtPoint(int x, int y,
                       elem_name == "cell_array" || elem_name == "nonuniform_cell_array" ||
                       elem_name == "polar_cell_array" || elem_name == "nonuniform_polar_cell_array" ||
                       elem_name == "draw_image" || elem_name == "draw_arc" || elem_name == "fill_arc" ||
-                      elem_name == "fill_area")
+                      elem_name == "fill_area" || elem_name == "gr3_draw_image")
                     {
                       new_group_ids.erase(group_id);
                       auto elem_parent = elem->parentElement();

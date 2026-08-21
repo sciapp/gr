@@ -1,14 +1,14 @@
-#ifndef CSV_PLUGIN_HXX_INCLUDED
-#define CSV_PLUGIN_HXX_INCLUDED
+#ifndef XSF_PLUGIN_HXX_INCLUDED
+#define XSF_PLUGIN_HXX_INCLUDED
 
 #include "plugin_int.hxx"
 #include "grm/util.h"
 
-class CsvSource : public DataSource
+class XsfSource : public DataSource
 {
 public:
-  CsvSource() = default;
-  virtual ~CsvSource() = default;
+  XsfSource() = default;
+  virtual ~XsfSource() = default;
 
   GRM_EXPORT grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
                                       std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
@@ -21,11 +21,11 @@ private:
   std::string normalizeLine(const std::string &str);
 };
 
-class CsvPlugin : public Plugin
+class XsfPlugin : public Plugin
 {
 public:
-  CsvPlugin() = default;
-  virtual ~CsvPlugin() = default;
+  XsfPlugin() = default;
+  virtual ~XsfPlugin() = default;
 
   DataSource *getDataSourceFromFile(const std::string &path) const override;
 
@@ -33,11 +33,11 @@ public:
 };
 
 #ifdef __EMSCRIPTEN__
-extern "C" GRM_EXPORT void *CsvAllocPlugin();
-extern "C" GRM_EXPORT void CsvDeallocPlugin(void *p);
+extern "C" GRM_EXPORT void *XsfAllocPlugin();
+extern "C" GRM_EXPORT void XsfDeallocPlugin(void *p);
 #else
 extern "C" GRM_EXPORT void *allocPlugin();
 extern "C" GRM_EXPORT void deallocPlugin(void *p);
 #endif
 
-#endif /* ifndef CSV_PLUGIN_HXX_INCLUDED */
+#endif /* ifndef XSF_PLUGIN_HXX_INCLUDED */

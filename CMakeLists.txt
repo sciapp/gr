@@ -581,6 +581,30 @@ if(NOT EMSCRIPTEN)
       CXX_STANDARD_REQUIRED ON
       CXX_VISIBILITY_PRESET hidden
   )
+
+  add_library(
+    xsf_plugin
+    SHARED
+    lib/grm/src/grm/import_plugins/xsf_plugin.cxx
+    lib/grm/src/grm/import_utils.cxx
+    lib/grm/src/grm/utilcpp.cxx
+  )
+  target_link_libraries(xsf_plugin PUBLIC GR::GR GR::GRM)
+  if(WIN32)
+    target_compile_definitions(xsf_plugin PRIVATE BUILDING_DLL)
+  endif()
+  set_target_properties(
+    xsf_plugin
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      C_VISIBILITY_PRESET hidden
+      CXX_STANDARD 17
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD_REQUIRED ON
+      CXX_VISIBILITY_PRESET hidden
+  )
 endif()
 
 set(
@@ -635,6 +659,7 @@ set(
 )
 if(EMSCRIPTEN)
   list(APPEND GRM_SOURCES lib/grm/src/grm/import_plugins/csv_plugin.cxx)
+  list(APPEND GRM_SOURCES lib/grm/src/grm/import_plugins/xsf_plugin.cxx)
 endif()
 
 add_library(grm_static STATIC ${GRM_SOURCES})
@@ -2180,6 +2205,9 @@ if(GR_INSTALL)
   install(DIRECTORY lib/gks/fonts DESTINATION ./ USE_SOURCE_PERMISSIONS)
   if(TARGET csv_plugin)
     install(TARGETS csv_plugin LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
+  if(TARGET xsf_plugin)
+    install(TARGETS xsf_plugin LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif()
 endif()
 

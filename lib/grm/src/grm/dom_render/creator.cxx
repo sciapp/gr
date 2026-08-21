@@ -1086,6 +1086,92 @@ std::shared_ptr<GRM::Element> GRM::Creator::createOverlayElement(double x, doubl
   return overlay_element;
 }
 
+std::shared_ptr<GRM::Element> GRM::Creator::createSphere(std::string symbol, std::vector<double> position,
+                                                         std::vector<double> color, double radius,
+                                                         const std::shared_ptr<Element> &ext_element)
+{
+  auto global_root = grm_get_document_root();
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  std::string str = std::to_string(id);
+
+  std::shared_ptr<GRM::Element> sphere = (ext_element == nullptr) ? createElement("sphere") : ext_element;
+
+  sphere->setAttribute("symbol", symbol);
+  sphere->setAttribute("x", position[0]);
+  sphere->setAttribute("y", position[1]);
+  sphere->setAttribute("z", position[2]);
+  (*context)["color_rgb_values" + str] = color;
+  sphere->setAttribute("color_rgb_values", "color_rgb_values" + str);
+  sphere->setAttribute("radius", radius);
+
+  global_root->setAttribute("_id", id + 1);
+  return sphere;
+}
+
+std::shared_ptr<GRM::Element> GRM::Creator::createSpin(std::string symbol, std::vector<double> position,
+                                                       std::vector<double> direction, std::vector<double> color,
+                                                       double length, const std::shared_ptr<Element> &ext_element)
+{
+  auto global_root = grm_get_document_root();
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  std::string str = std::to_string(id);
+
+  std::shared_ptr<GRM::Element> spin = (ext_element == nullptr) ? createElement("spin") : ext_element;
+
+  spin->setAttribute("symbol", symbol);
+  spin->setAttribute("x", position[0]);
+  spin->setAttribute("y", position[1]);
+  spin->setAttribute("z", position[2]);
+  spin->setAttribute("x_dir", direction[0]);
+  spin->setAttribute("y_dir", direction[1]);
+  spin->setAttribute("z_dir", direction[2]);
+  (*context)["color_rgb_values" + str] = color;
+  spin->setAttribute("color_rgb_values", "color_rgb_values" + str);
+  spin->setAttribute("length", length);
+
+  global_root->setAttribute("_id", id + 1);
+  return spin;
+}
+
+std::shared_ptr<GRM::Element> GRM::Creator::createCylinder(std::vector<double> position, std::vector<double> direction,
+                                                           std::vector<double> color, double length,
+                                                           const std::shared_ptr<Element> &ext_element)
+{
+  auto global_root = grm_get_document_root();
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  std::string str = std::to_string(id);
+
+  std::shared_ptr<GRM::Element> cylinder = (ext_element == nullptr) ? createElement("cylinder") : ext_element;
+
+  cylinder->setAttribute("x", position[0]);
+  cylinder->setAttribute("y", position[1]);
+  cylinder->setAttribute("z", position[2]);
+  cylinder->setAttribute("x_dir", direction[0]);
+  cylinder->setAttribute("y_dir", direction[1]);
+  cylinder->setAttribute("z_dir", direction[2]);
+  (*context)["color_rgb_values" + str] = color;
+  cylinder->setAttribute("color_rgb_values", "color_rgb_values" + str);
+  cylinder->setAttribute("length", length);
+
+  global_root->setAttribute("_id", id + 1);
+  return cylinder;
+}
+
+std::shared_ptr<GRM::Element> GRM::Creator::createUnitCell(const std::shared_ptr<Element> &ext_element)
+{
+  std::shared_ptr<GRM::Element> unit_cell = (ext_element == nullptr) ? createElement("unit_cell") : ext_element;
+
+  return unit_cell;
+}
+
+std::shared_ptr<GRM::Element> GRM::Creator::createGR3DrawImage(const std::shared_ptr<GRM::Element> &ext_element)
+{
+  std::shared_ptr<GRM::Element> gr3_draw_image =
+      (ext_element == nullptr) ? createElement("gr3_draw_image") : ext_element;
+
+  return gr3_draw_image;
+}
+
 GRM::Creator::Creator(std::shared_ptr<Context> context)
 {
   /*!

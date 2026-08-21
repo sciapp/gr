@@ -124,6 +124,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
         static_cast<int>((*current_selection)->getRef()->getAttribute("_selected_for_move"))))
     {
       title.append(currently_clicked_name.c_str());
+      if ((*current_selection)->getRef()->hasAttribute("symbol"))
+        title.append(
+            ("(" + static_cast<std::string>((*current_selection)->getRef()->getAttribute("symbol")) + ")").c_str());
     }
   else
     {
@@ -3518,6 +3521,10 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
       {std::string("fill_area"), std::vector<std::string>{"disable_x_trans", "disable_y_trans", "movable", "name", "x",
                                                           "x_max_shift_wc", "x_min_shift_wc", "x_shift_wc", "y",
                                                           "y_max_shift_wc", "y_min_shift_wc", "y_shift_wc", "z_index"}},
+      {std::string("unit_cell"), std::vector<std::string>{"z_index"}},
+      {std::string("cylinder"), std::vector<std::string>{"x", "x_dir", "y", "y_dir", "z", "z_dir", "z_index"}},
+      {std::string("sphere"), std::vector<std::string>{"symbol", "x", "y", "z", "z_index"}},
+      {std::string("spin"), std::vector<std::string>{"symbol", "x", "x_dir", "y", "y_dir", "z", "z_dir", "z_index"}},
       {std::string("series_barplot"),
        std::vector<std::string>{
            "c_range_max",
@@ -3707,6 +3714,22 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "y_shift_wc",
        }},
       {std::string("series_line3"),
+       std::vector<std::string>{
+           "c_range_max",
+           "c_range_min",
+           "disable_x_trans",
+           "disable_y_trans",
+           "movable",
+           "ref_x_axis_location",
+           "ref_y_axis_location",
+           "x_max_shift_wc",
+           "x_min_shift_wc",
+           "x_shift_wc",
+           "y_max_shift_wc",
+           "y_min_shift_wc",
+           "y_shift_wc",
+       }},
+      {std::string("series_molecule"),
        std::vector<std::string>{
            "c_range_max",
            "c_range_min",

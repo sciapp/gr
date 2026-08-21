@@ -62,6 +62,7 @@ struct InputFlags
   std::string error_type;
   bool ignore_blank_lines;
   bool force_legend_line;
+  bool xyz_molecule_file;
 
   InputFlags() { reset(); }
 
@@ -76,6 +77,7 @@ struct InputFlags
     error_type = "relative";
     ignore_blank_lines = false;
     force_legend_line = false;
+    xyz_molecule_file = false;
   }
 };
 

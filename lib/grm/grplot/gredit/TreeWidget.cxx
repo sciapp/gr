@@ -35,17 +35,19 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
 {
   auto elem_name = ref->localName();
   auto advanced_editor = grplot_widget->getEnableAdvancedEditor();
-  if (!advanced_editor &&
-      (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" || elem_name == "polyline_3d" ||
-       elem_name == "polymarker_3d" || elem_name == "fill_rect" || elem_name == "cell_array" ||
-       elem_name == "nonuniform_cell_array" || elem_name == "polar_cell_array" ||
-       elem_name == "nonuniform_polar_cell_array" || elem_name == "draw_image" || elem_name == "draw_arc" ||
-       elem_name == "fill_arc" || elem_name == "fill_area"))
+  if ((!advanced_editor &&
+       (elem_name == "polyline" || elem_name == "polymarker" || elem_name == "draw_rect" ||
+        elem_name == "polyline_3d" || elem_name == "polymarker_3d" || elem_name == "fill_rect" ||
+        elem_name == "cell_array" || elem_name == "nonuniform_cell_array" || elem_name == "polar_cell_array" ||
+        elem_name == "nonuniform_polar_cell_array" || elem_name == "draw_image" || elem_name == "draw_arc" ||
+        elem_name == "fill_arc" || elem_name == "fill_area")) ||
+      elem_name == "gr3_draw_image")
     return;
   auto *item = new CustomTreeWidgetItem(parent, ref);
   std::string name = ref->localName();
 
   if (ref->hasAttribute("name")) name += " (" + static_cast<std::string>(ref->getAttribute("name")) + ")";
+  if (ref->hasAttribute("symbol")) name += " (" + static_cast<std::string>(ref->getAttribute("symbol")) + ")";
   item->setText(0, tr(name.c_str()));
 
   item->setExpanded(true);

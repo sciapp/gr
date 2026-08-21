@@ -175,6 +175,16 @@ public:
   std::shared_ptr<Element> createOverlay(const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createOverlayElement(double x, double y, std::string type,
                                                 const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createSphere(std::string symbol, std::vector<double> position, std::vector<double> color,
+                                        double radius, const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createSpin(std::string symbol, std::vector<double> position, std::vector<double> direction,
+                                      std::vector<double> color, double length,
+                                      const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createCylinder(std::vector<double> position, std::vector<double> direction,
+                                          std::vector<double> color, double length,
+                                          const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createUnitCell(const std::shared_ptr<Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createGR3DrawImage(const std::shared_ptr<Element> &ext_element = nullptr);
 
   /* ---------------------------------- get functions ----------------------------------------------------------------*/
 
