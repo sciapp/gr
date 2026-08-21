@@ -11064,6 +11064,16 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
         }
     }
 
+  /* Exact match with active colormap */
+  for (color = 1000; color < 1256; color++)
+    {
+      if (rgb[color] == rgbmask)
+        {
+          setcolorrep(color, red, green, blue);
+          return color;
+        }
+    }
+
   /* Find nearest color */
   for (color = 80; color < 980; color++)
     {
