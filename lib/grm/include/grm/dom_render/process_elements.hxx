@@ -64,6 +64,11 @@ void processTextRegion(const std::shared_ptr<GRM::Element> &element, const std::
 void processTickGroup(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processTick(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+void processSphere(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+void processSpin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+void processCylinder(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
+void processGR3DrawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 
 /* ------------------------------- process series elements -----------------------------------------------------------*/
 
@@ -89,6 +94,7 @@ void processSurface(const std::shared_ptr<GRM::Element> &element, const std::sha
 void processLine(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &element,
                                 const std::shared_ptr<GRM::Context> &context);
+void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processPie(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processLine3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 void processImshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);

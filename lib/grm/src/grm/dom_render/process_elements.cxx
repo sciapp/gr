@@ -62,6 +62,7 @@ void processElement(const std::shared_ptr<GRM::Element> &element, const std::sha
           {std::string("cell_array"), GRM::PushDrawableToZQueue(processCellArray)},
           {std::string("colorbar"), processColorbar},
           {std::string("coordinate_system"), processCoordinateSystem},
+          {std::string("cylinder"), GRM::PushDrawableToZQueue(processCylinder)},
           {std::string("error_bar"), processErrorBar},
           {std::string("error_bars"), processErrorBars},
           {std::string("legend"), processLegend},
@@ -72,6 +73,7 @@ void processElement(const std::shared_ptr<GRM::Element> &element, const std::sha
           {std::string("fill_arc"), GRM::PushDrawableToZQueue(processFillArc)},
           {std::string("fill_area"), GRM::PushDrawableToZQueue(processFillArea)},
           {std::string("fill_rect"), GRM::PushDrawableToZQueue(processFillRect)},
+          {std::string("gr3_draw_image"), GRM::PushDrawableToZQueue(processGR3DrawImage)},
           {std::string("grid_3d"), GRM::PushDrawableToZQueue(processGrid3d)},
           {std::string("grid_line"), GRM::PushDrawableToZQueue(processGridLine)},
           {std::string("integral"), processIntegral},
@@ -91,6 +93,8 @@ void processElement(const std::shared_ptr<GRM::Element> &element, const std::sha
           {std::string("polymarker_3d"), GRM::PushDrawableToZQueue(processPolymarker3d)},
           {std::string("radial_axes"), processRadialAxes},
           {std::string("series"), processSeries},
+          {std::string("sphere"), GRM::PushDrawableToZQueue(processSphere)},
+          {std::string("spin"), GRM::PushDrawableToZQueue(processSpin)},
           {std::string("side_region"), processSideRegion},
           {std::string("side_plot_region"), processSidePlotRegion},
           {std::string("text"), GRM::PushDrawableToZQueue(processText)},
@@ -99,6 +103,7 @@ void processElement(const std::shared_ptr<GRM::Element> &element, const std::sha
           {std::string("tick"), GRM::PushDrawableToZQueue(processTick)},
           {std::string("tick_group"), processTickGroup},
           {std::string("titles_3d"), GRM::PushDrawableToZQueue(processTitles3d)},
+          {std::string("unit_cell"), GRM::PushDrawableToZQueue(processUnitCell)},
       };
 
   /* Modifier */
@@ -185,8 +190,8 @@ void processElement(const std::shared_ptr<GRM::Element> &element, const std::sha
                           "nonuniform_polar_cell_array", "nonuniform_cell_array", "polar_cell_array", "polyline",
                           "polyline_3d", "polymarker", "polymarker_3d", "series_contour", "series_contourf", "text",
                           "titles_3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
-                          "series_shade", "series_surface", "series_tricontour", "series_trisurface",
-                          "series_volume") ||
+                          "series_shade", "series_surface", "series_tricontour", "series_trisurface", "series_volume",
+                          "sphere", "spin", "cylinder", "gr3_draw_image") ||
              !element->hasChildNodes())) ||
            update_required))
         {
@@ -313,6 +318,7 @@ void processSeries(const std::shared_ptr<GRM::Element> &element, const std::shar
           {std::string("line"), processLine},
           {std::string("pie"), processPie},
           {std::string("line3"), processLine3},
+          {std::string("molecule"), processMolecule},
           {std::string("polar_heatmap"), processPolarHeatmap},
           {std::string("polar_histogram"), processPolarHistogram},
           {std::string("polar_line"), processPolarLine},
@@ -433,6 +439,11 @@ void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared
     {
       global_render->setClipRegion(central_region, 0);
     }
+
+  // needed for legend click hides elements
+  if (kind == "molecule" &&
+      !(element->hasAttribute("_interaction") && static_cast<int>(element->getAttribute("_interaction"))))
+    gr3_clear();
 
   // set the x-, y- and z-data to NAN if the value is <= 0
   // if the plot contains the marginal_heatmap_plot the marginal_heatmap should be child in the following for
@@ -2346,13 +2357,32 @@ void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   auto x_max = static_cast<double>(element->getAttribute("x_max"));
   auto y_min = static_cast<double>(element->getAttribute("y_min"));
   auto y_max = static_cast<double>(element->getAttribute("y_max"));
+  bool added_fill_color_ind = false;
   applyMoveTransformation(element);
 
   if (element->parentElement()->localName() == "bar" &&
       element->parentElement()->parentElement()->hasAttribute("transparency"))
     processTransparency(element->parentElement()->parentElement());
 
+  // since fill_color_rgb can't directly be set in GR this workaround is needed
+  if (element->hasAttribute("fill_color_rgb"))
+    {
+      auto c = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
+      auto c_vec = GRM::get<std::vector<double>>((*context)[c]);
+      auto color_index = PLOT_CUSTOM_COLOR_INDEX;
+      grm_get_render()->setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, c_vec[0], c_vec[1], c_vec[2]);
+
+      element->setAttribute("fill_color_ind", color_index);
+      processAttributes(element);
+      added_fill_color_ind = true;
+    }
+
   if (grm_get_render()->getRedrawWs()) gr_fillrect(x_min, x_max, y_min, y_max);
+  if (added_fill_color_ind)
+    {
+      element->removeAttribute("fill_color_ind");
+      element->removeAttribute("colorrep." + std::to_string(PLOT_CUSTOM_COLOR_INDEX));
+    }
 }
 
 void processFillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -3813,9 +3843,22 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
           for (const auto &series : plot_child->children())
             {
               if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
-                                "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3"))
+                                "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3",
+                                "series_molecule"))
                 continue;
-              if (!series->hasAttribute("label")) continue;
+              if (!series->hasAttribute("label") && kind != "molecule") continue;
+              if (series->localName() == "series_molecule")
+                {
+                  if (!series->hasAttribute("molecule_symbols")) continue;
+                  auto molecule_symbols_key = static_cast<std::string>(series->getAttribute("molecule_symbols"));
+                  auto molecule_symbols_vec = GRM::get<std::vector<std::string>>((*context)[molecule_symbols_key]);
+
+                  sort(molecule_symbols_vec.begin(), molecule_symbols_vec.end());
+                  molecule_symbols_vec.erase(unique(molecule_symbols_vec.begin(), molecule_symbols_vec.end()),
+                                             molecule_symbols_vec.end());
+                  legend_elems += molecule_symbols_vec.size();
+                  continue;
+                }
               if (series->hasChildNodes()) legend_elems += 1;
             }
         }
@@ -3908,402 +3951,572 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
           bool got_polyline = false, got_polymarker = false;
           std::string spec = "";
 
-          if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
-                            "series_scatter", "series_stairs", "series_stem", "series_scatter3", "series_line3"))
-            continue;
-          if (!series->hasAttribute("label")) continue;
-
-          auto label = static_cast<std::string>(series->getAttribute("label"));
-          gr_inqtext(0, 0, (char *)label.c_str(), tbx, tby);
-          dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
-          viewport[3] -= 0.5 * dy;
-
-          std::shared_ptr<GRM::Element> label_elem;
-          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+          if (series->localName() == "series_molecule")
             {
-              label_elem = render->createElement("label");
-              label_elem->setAttribute("_child_id", child_id++);
-              element->append(label_elem);
-            }
-          else
-            {
-              label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
-            }
-          if (label_elem != nullptr)
-            {
-              if (!label_elem->hasAttribute("_char_height_set_by_user"))
-                {
-                  label_elem->setAttribute("char_height",
-                                           static_cast<double>(plot_parent->getAttribute("char_height")) *
-                                               initial_scale_factor);
-                }
-              else
-                {
-                  label_elem->setAttribute("char_height", static_cast<double>(label_elem->getAttribute("char_height")));
-                }
-              if (label_elem->hasAttribute("hidden"))
-                {
-                  label_elem->setAttribute("transparency", 0.5);
-                  series->setAttribute("_hidden", true);
-                }
-              else if (series->hasAttribute("_hidden"))
-                {
-                  series->removeAttribute("_hidden");
-                }
-              gr_savestate();
-              if (series->hasAttribute("line_spec")) spec = static_cast<std::string>(series->getAttribute("line_spec"));
-              const char *spec_char = spec.c_str();
-              mask = gr_uselinespec((char *)spec_char);
-              gr_restorestate();
+              if (!series->hasAttribute("molecule_symbols")) continue;
+              std::vector<std::string> molecule_symbols_vec;
+              std::vector<std::string> hidden_vec;
 
-              if (intEqualsAny(mask, 5, 0, 1, 3, 4, 5))
+              for (const auto &child : series->children())
                 {
-                  legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
-                  legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
-                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                  for (const auto &child : series->children())
+                  if (!child->hasAttribute("symbol")) continue;
+                  auto symbol = static_cast<std::string>(child->getAttribute("symbol"));
+                  if (find(molecule_symbols_vec.begin(), molecule_symbols_vec.end(), symbol) !=
+                      molecule_symbols_vec.end())
                     {
-                      std::shared_ptr<GRM::Element> pl;
-                      if (series->localName() == "series_stem")
-                        {
-                          if (got_polymarker && got_polyline) break;
-                          if (child->localName() == "polyline" && got_polyline) continue;
-                          if (child->localName() == "polymarker" && got_polymarker) continue;
-                        }
+                      if (find(hidden_vec.begin(), hidden_vec.end(), symbol) != hidden_vec.end())
+                        child->setAttribute("_hidden", true);
+                      else
+                        child->removeAttribute("_hidden");
+                      continue;
+                    }
 
+                  molecule_symbols_vec.push_back(symbol);
+                  auto color_key = static_cast<std::string>(child->getAttribute("color_rgb_values"));
+                  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+
+                  gr_inqtext(0, 0, (char *)symbol.c_str(), tbx, tby);
+                  dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
+                  viewport[3] -= 0.5 * dy;
+
+                  std::shared_ptr<GRM::Element> label_elem;
+                  if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                    {
+                      label_elem = render->createElement("label");
+                      label_elem->setAttribute("_child_id", child_id++);
+                      element->append(label_elem);
+                    }
+                  else
+                    {
+                      label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
+                    }
+                  if (label_elem != nullptr)
+                    {
+                      if (!label_elem->hasAttribute("_char_height_set_by_user"))
+                        {
+                          label_elem->setAttribute("char_height",
+                                                   static_cast<double>(plot_parent->getAttribute("char_height")) *
+                                                       initial_scale_factor);
+                        }
+                      else
+                        {
+                          label_elem->setAttribute("char_height",
+                                                   static_cast<double>(label_elem->getAttribute("char_height")));
+                        }
                       if (label_elem->hasAttribute("hidden"))
                         {
+                          label_elem->setAttribute("transparency", 0.5);
                           child->setAttribute("_hidden", true);
+                          hidden_vec.push_back(symbol);
                         }
                       else if (child->hasAttribute("_hidden"))
                         {
                           child->removeAttribute("_hidden");
+                          if (auto pos = find(hidden_vec.begin(), hidden_vec.end(), symbol); pos != hidden_vec.end())
+                            hidden_vec.erase(pos);
                         }
 
-                      if (child->localName() == "polyline")
-                        {
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                                  legend_symbol_y[0], legend_symbol_y[1]);
-                              pl->setAttribute("_child_id", 0);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                               legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setLineSpec(pl, spec);
-                              if (child->hasAttribute("line_color_ind"))
-                                {
-                                  pl->setAttribute("line_color_ind",
-                                                   static_cast<int>(child->getAttribute("line_color_ind")));
-                                }
-                              else
-                                {
-                                  pl->setAttribute("line_color_ind",
-                                                   static_cast<int>(series->getAttribute("line_color_ind")));
-                                }
-                              if (child->hasAttribute("line_type"))
-                                {
-                                  pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
-                                }
-                              else if (series->hasAttribute("line_type"))
-                                {
-                                  pl->setAttribute("line_type", static_cast<int>(series->getAttribute("line_type")));
-                                }
-                              got_polyline = true;
-                            }
-                        }
-                      else if (child->localName() == "polymarker")
-                        {
-                          int markertype;
-                          if (child->hasAttribute("marker_type"))
-                            {
-                              markertype = static_cast<int>(child->getAttribute("marker_type"));
-                            }
-                          else
-                            {
-                              markertype = static_cast<int>(series->getAttribute("marker_type"));
-                            }
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                    legend_symbol_y[0], markertype);
-                              pl->setAttribute("_child_id", 0);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                 legend_symbol_y[0], markertype, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              int marker_color_ind = 989;
-                              if (child->hasAttribute("marker_color_ind"))
-                                {
-                                  marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                                }
-                              else if (series->hasAttribute("marker_color_ind"))
-                                {
-                                  marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                                }
-                              render->setMarkerColorInd(pl, marker_color_ind);
-                              if (child->hasAttribute("marker_type"))
-                                {
-                                  pl->setAttribute("marker_type", static_cast<int>(child->getAttribute("marker_type")));
-                                }
-                              else if (series->hasAttribute("marker_type"))
-                                {
-                                  pl->setAttribute("marker_type",
-                                                   static_cast<int>(series->getAttribute("marker_type")));
-                                }
-                              if (child->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(child->getAttribute("border_color_ind")));
-                                }
-                              else if (series->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(series->getAttribute("border_color_ind")));
-                                }
-                              if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                              processMarkerColorInd(pl);
-                              got_polymarker = true;
-                            }
-                        }
-                      else if (child->localName() == "polyline_3d")
-                        {
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                                  legend_symbol_y[0], legend_symbol_y[1]);
-                              pl->setAttribute("_child_id", 0);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                               legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setLineSpec(pl, spec);
-                              if (child->hasAttribute("line_color_ind"))
-                                {
-                                  pl->setAttribute("line_color_ind",
-                                                   static_cast<int>(child->getAttribute("line_color_ind")));
-                                }
-                              else
-                                {
-                                  pl->setAttribute("line_color_ind",
-                                                   static_cast<int>(series->getAttribute("line_color_ind")));
-                                }
-                              if (child->hasAttribute("line_type"))
-                                {
-                                  pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
-                                }
-                              else if (series->hasAttribute("line_type"))
-                                {
-                                  pl->setAttribute("line_type", static_cast<int>(series->getAttribute("line_type")));
-                                }
-                              got_polyline = true;
-                            }
-                        }
-                      else if (child->localName() == "polymarker_3d")
-                        {
-                          int markertype;
-                          if (child->hasAttribute("marker_type"))
-                            {
-                              markertype = static_cast<int>(child->getAttribute("marker_type"));
-                            }
-                          else
-                            {
-                              markertype = static_cast<int>(series->getAttribute("marker_type"));
-                            }
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                    legend_symbol_y[0], markertype);
-                              pl->setAttribute("_child_id", 0);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                 legend_symbol_y[0], markertype, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              int marker_color_ind = 989;
-                              if (child->hasAttribute("marker_color_ind"))
-                                {
-                                  marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                                }
-                              else if (series->hasAttribute("marker_color_ind"))
-                                {
-                                  marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                                }
-                              render->setMarkerColorInd(pl, marker_color_ind);
-                              if (child->hasAttribute("marker_type"))
-                                {
-                                  pl->setAttribute("marker_type", static_cast<int>(child->getAttribute("marker_type")));
-                                }
-                              else if (series->hasAttribute("marker_type"))
-                                {
-                                  pl->setAttribute("marker_type",
-                                                   static_cast<int>(series->getAttribute("marker_type")));
-                                }
-                              if (child->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(child->getAttribute("border_color_ind")));
-                                }
-                              else if (series->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(series->getAttribute("border_color_ind")));
-                                }
-                              if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                              processMarkerColorInd(pl);
-                              got_polymarker = true;
-                            }
-                        }
-                    }
-                }
-              else if (mask & 2)
-                {
-                  legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
-                  legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
-                  legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
-                  legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
-                  for (const auto &child : series->children())
-                    {
-                      std::shared_ptr<GRM::Element> pl;
-                      if (child->localName() == "polyline")
-                        {
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                                  legend_symbol_y[0], legend_symbol_y[1]);
-                              pl->setAttribute("_child_id", 1);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polyline[_child_id=\"1\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
-                                                               legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setLineSpec(pl, spec);
-                              if (child->hasAttribute("line_color_ind"))
-                                {
-                                  render->setLineColorInd(pl, static_cast<int>(child->getAttribute("line_color_ind")));
-                                }
-                              else
-                                {
-                                  render->setLineColorInd(pl, static_cast<int>(series->getAttribute("line_color_ind")));
-                                }
-                            }
-                        }
-                      else if (child->localName() == "polymarker")
-                        {
-                          int markertype;
-                          if (child->hasAttribute("marker_type"))
-                            {
-                              markertype = static_cast<int>(child->getAttribute("marker_type"));
-                            }
-                          else
-                            {
-                              markertype = static_cast<int>(series->getAttribute("marker_type"));
-                            }
-                          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
-                            {
-                              pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                    legend_symbol_y[0], markertype);
-                              pl->setAttribute("_child_id", 1);
-                              label_elem->append(pl);
-                            }
-                          else
-                            {
-                              pl = label_elem->querySelectors("polymarker[_child_id=\"1\"]");
-                              if (pl != nullptr)
-                                global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
-                                                                 legend_symbol_y[0], markertype, 0.0, 0, pl);
-                            }
-                          if (pl != nullptr)
-                            {
-                              render->setMarkerColorInd(
-                                  pl, (series->hasAttribute("marker_color_ind")
-                                           ? static_cast<int>(series->getAttribute("marker_color_ind"))
-                                           : 989));
-                              if (child->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(child->getAttribute("border_color_ind")));
-                                }
-                              else if (series->hasAttribute("border_color_ind"))
-                                {
-                                  pl->setAttribute("border_color_ind",
-                                                   static_cast<int>(series->getAttribute("border_color_ind")));
-                                }
-                              processMarkerColorInd(pl);
-                            }
-                        }
-                    }
-                }
+                      legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
+                      legend_symbol_x[1] = viewport[0] + 0.04 * scale_factor;
+                      legend_symbol_y[0] = viewport[3] - 0.04 * scale_factor;
+                      legend_symbol_y[1] = viewport[3] - 0.02 * scale_factor;
+                      std::shared_ptr<GRM::Element> label_dr, label_fr;
 
-              std::shared_ptr<GRM::Element> tx;
+                      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                        {
+                          label_dr = global_creator->createDrawRect(legend_symbol_x[0], legend_symbol_x[1],
+                                                                    legend_symbol_y[0], legend_symbol_y[1]);
+                          label_dr->setAttribute("_child_id", 0);
+                          label_elem->append(label_dr);
+                        }
+                      else
+                        {
+                          label_dr = label_elem->querySelectors("draw_rect[_child_id=\"0\"]");
+                          if (label_dr != nullptr)
+                            global_creator->createDrawRect(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                           legend_symbol_y[1], label_dr);
+                        }
+                      if (label_dr != nullptr)
+                        {
+                          if (!label_dr->hasAttribute("_line_color_ind_set_by_user"))
+                            {
+                              auto line_color_ind = 1;
+                              if (label_dr->hasAttribute("line_color_ind"))
+                                line_color_ind = static_cast<int>(label_dr->getAttribute("line_color_ind"));
+                              render->setLineColorInd(label_dr, line_color_ind);
+                            }
+                        }
+
+
+                      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                        {
+                          label_fr = global_creator->createFillRect(legend_symbol_x[0], legend_symbol_x[1],
+                                                                    legend_symbol_y[0], legend_symbol_y[1]);
+                          label_fr->setAttribute("_child_id", 1);
+                          label_elem->append(label_fr);
+                        }
+                      else
+                        {
+                          label_fr = label_elem->querySelectors("fill_rect[_child_id=\"1\"]");
+                          if (label_fr != nullptr)
+                            global_creator->createFillRect(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                           legend_symbol_y[1], 0, 0, -1, label_fr);
+                        }
+                      if (label_fr != nullptr)
+                        {
+                          label_fr->setAttribute("fill_color_rgb", color_key);
+                        }
+
+
+                      std::shared_ptr<GRM::Element> tx;
+                      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                        {
+                          tx = global_creator->createText(viewport[0] + 0.06 * scale_factor,
+                                                          viewport[3] - 0.03 * scale_factor, symbol);
+                          tx->setAttribute("_child_id", 2);
+                          label_elem->append(tx);
+                        }
+                      else
+                        {
+                          tx = label_elem->querySelectors("text[_child_id=\"2\"]");
+                          if (tx != nullptr)
+                            global_creator->createText(viewport[0] + 0.06 * scale_factor,
+                                                       viewport[3] - 0.03 * scale_factor, symbol, CoordinateSpace::NDC,
+                                                       tx);
+                        }
+                      if (tx != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT)
+                        {
+                          if (!tx->hasAttribute("_text_align_vertical_set_by_user"))
+                            {
+                              auto text_align_vertical = GKS_K_TEXT_VALIGN_HALF;
+                              if (element->hasAttribute("text_align_vertical"))
+                                text_align_vertical = static_cast<int>(element->getAttribute("text_align_vertical"));
+                              tx->setAttribute("text_align_vertical", text_align_vertical);
+                            }
+                          if (!tx->hasAttribute("_text_align_horizontal_set_by_user"))
+                            {
+                              auto text_align_horizontal = GKS_K_TEXT_HALIGN_LEFT;
+                              if (element->hasAttribute("text_align_horizontal"))
+                                text_align_horizontal =
+                                    static_cast<int>(element->getAttribute("text_align_horizontal"));
+                              tx->setAttribute("text_align_horizontal", text_align_horizontal);
+                            }
+                        }
+                      viewport[3] -= 0.5 * dy;
+                      viewport[3] -= 0.03 * scale_factor;
+                    }
+                }
+            }
+          else
+            {
+              if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
+                                "series_scatter", "series_stairs", "series_stem", "series_scatter3", "series_line3"))
+                continue;
+              if (!series->hasAttribute("label")) continue;
+
+              auto label = static_cast<std::string>(series->getAttribute("label"));
+              gr_inqtext(0, 0, (char *)label.c_str(), tbx, tby);
+              dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
+              viewport[3] -= 0.5 * dy;
+
+              std::shared_ptr<GRM::Element> label_elem;
               if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
                 {
-                  tx = global_creator->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                                  label);
-                  tx->setAttribute("_child_id", 2);
-                  label_elem->append(tx);
+                  label_elem = render->createElement("label");
+                  label_elem->setAttribute("_child_id", child_id++);
+                  element->append(label_elem);
                 }
               else
                 {
-                  tx = label_elem->querySelectors("text[_child_id=\"2\"]");
-                  if (tx != nullptr)
-                    global_creator->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
-                                               label, CoordinateSpace::NDC, tx);
+                  label_elem = element->querySelectors("label[_child_id=" + std::to_string(child_id++) + "]");
                 }
-              if (tx != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT)
+              if (label_elem != nullptr)
                 {
-                  if (!tx->hasAttribute("_text_align_vertical_set_by_user"))
+                  if (!label_elem->hasAttribute("_char_height_set_by_user"))
                     {
-                      auto text_align_vertical = GKS_K_TEXT_VALIGN_HALF;
-                      if (element->hasAttribute("text_align_vertical"))
-                        text_align_vertical = static_cast<int>(element->getAttribute("text_align_vertical"));
-                      tx->setAttribute("text_align_vertical", text_align_vertical);
+                      label_elem->setAttribute("char_height",
+                                               static_cast<double>(plot_parent->getAttribute("char_height")) *
+                                                   initial_scale_factor);
                     }
-                  if (!tx->hasAttribute("_text_align_horizontal_set_by_user"))
+                  else
                     {
-                      auto text_align_horizontal = GKS_K_TEXT_HALIGN_LEFT;
-                      if (element->hasAttribute("text_align_horizontal"))
-                        text_align_horizontal = static_cast<int>(element->getAttribute("text_align_horizontal"));
-                      tx->setAttribute("text_align_horizontal", text_align_horizontal);
+                      label_elem->setAttribute("char_height",
+                                               static_cast<double>(label_elem->getAttribute("char_height")));
                     }
+                  if (label_elem->hasAttribute("hidden"))
+                    {
+                      label_elem->setAttribute("transparency", 0.5);
+                      series->setAttribute("_hidden", true);
+                    }
+                  else if (series->hasAttribute("_hidden"))
+                    {
+                      series->removeAttribute("_hidden");
+                    }
+                  gr_savestate();
+                  if (series->hasAttribute("line_spec"))
+                    spec = static_cast<std::string>(series->getAttribute("line_spec"));
+                  const char *spec_char = spec.c_str();
+                  mask = gr_uselinespec((char *)spec_char);
+                  gr_restorestate();
+
+                  if (intEqualsAny(mask, 5, 0, 1, 3, 4, 5))
+                    {
+                      legend_symbol_x[0] = viewport[0] + 0.01 * scale_factor;
+                      legend_symbol_x[1] = viewport[0] + 0.07 * scale_factor;
+                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                      for (const auto &child : series->children())
+                        {
+                          std::shared_ptr<GRM::Element> pl;
+                          if (series->localName() == "series_stem")
+                            {
+                              if (got_polymarker && got_polyline) break;
+                              if (child->localName() == "polyline" && got_polyline) continue;
+                              if (child->localName() == "polymarker" && got_polymarker) continue;
+                            }
+
+                          if (label_elem->hasAttribute("hidden"))
+                            {
+                              child->setAttribute("_hidden", true);
+                            }
+                          else if (child->hasAttribute("_hidden"))
+                            {
+                              child->removeAttribute("_hidden");
+                            }
+
+                          if (child->localName() == "polyline")
+                            {
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                      legend_symbol_y[0], legend_symbol_y[1]);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                   legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0,
+                                                                   pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  render->setLineSpec(pl, spec);
+                                  if (child->hasAttribute("line_color_ind"))
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(child->getAttribute("line_color_ind")));
+                                    }
+                                  else
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(series->getAttribute("line_color_ind")));
+                                    }
+                                  if (child->hasAttribute("line_type"))
+                                    {
+                                      pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
+                                    }
+                                  else if (series->hasAttribute("line_type"))
+                                    {
+                                      pl->setAttribute("line_type",
+                                                       static_cast<int>(series->getAttribute("line_type")));
+                                    }
+                                  got_polyline = true;
+                                }
+                            }
+                          else if (child->localName() == "polymarker")
+                            {
+                              int markertype;
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
+                                }
+                              else
+                                {
+                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
+                                }
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                        legend_symbol_y[0], markertype);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                     legend_symbol_y[0], markertype, 0.0, 0, pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  int marker_color_ind = 989;
+                                  if (child->hasAttribute("marker_color_ind"))
+                                    {
+                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                    }
+                                  else if (series->hasAttribute("marker_color_ind"))
+                                    {
+                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                    }
+                                  render->setMarkerColorInd(pl, marker_color_ind);
+                                  if (child->hasAttribute("marker_type"))
+                                    {
+                                      pl->setAttribute("marker_type",
+                                                       static_cast<int>(child->getAttribute("marker_type")));
+                                    }
+                                  else if (series->hasAttribute("marker_type"))
+                                    {
+                                      pl->setAttribute("marker_type",
+                                                       static_cast<int>(series->getAttribute("marker_type")));
+                                    }
+                                  if (child->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                    }
+                                  else if (series->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                    }
+                                  if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
+                                  processMarkerColorInd(pl);
+                                  got_polymarker = true;
+                                }
+                            }
+                          else if (child->localName() == "polyline_3d")
+                            {
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                      legend_symbol_y[0], legend_symbol_y[1]);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polyline[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                   legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0,
+                                                                   pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  render->setLineSpec(pl, spec);
+                                  if (child->hasAttribute("line_color_ind"))
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(child->getAttribute("line_color_ind")));
+                                    }
+                                  else
+                                    {
+                                      pl->setAttribute("line_color_ind",
+                                                       static_cast<int>(series->getAttribute("line_color_ind")));
+                                    }
+                                  if (child->hasAttribute("line_type"))
+                                    {
+                                      pl->setAttribute("line_type", static_cast<int>(child->getAttribute("line_type")));
+                                    }
+                                  else if (series->hasAttribute("line_type"))
+                                    {
+                                      pl->setAttribute("line_type",
+                                                       static_cast<int>(series->getAttribute("line_type")));
+                                    }
+                                  got_polyline = true;
+                                }
+                            }
+                          else if (child->localName() == "polymarker_3d")
+                            {
+                              int markertype;
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
+                                }
+                              else
+                                {
+                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
+                                }
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                        legend_symbol_y[0], markertype);
+                                  pl->setAttribute("_child_id", 0);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polymarker[_child_id=\"0\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                     legend_symbol_y[0], markertype, 0.0, 0, pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  int marker_color_ind = 989;
+                                  if (child->hasAttribute("marker_color_ind"))
+                                    {
+                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                    }
+                                  else if (series->hasAttribute("marker_color_ind"))
+                                    {
+                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                    }
+                                  render->setMarkerColorInd(pl, marker_color_ind);
+                                  if (child->hasAttribute("marker_type"))
+                                    {
+                                      pl->setAttribute("marker_type",
+                                                       static_cast<int>(child->getAttribute("marker_type")));
+                                    }
+                                  else if (series->hasAttribute("marker_type"))
+                                    {
+                                      pl->setAttribute("marker_type",
+                                                       static_cast<int>(series->getAttribute("marker_type")));
+                                    }
+                                  if (child->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                    }
+                                  else if (series->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                    }
+                                  if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
+                                  processMarkerColorInd(pl);
+                                  got_polymarker = true;
+                                }
+                            }
+                        }
+                    }
+                  else if (mask & 2)
+                    {
+                      legend_symbol_x[0] = viewport[0] + 0.02 * scale_factor;
+                      legend_symbol_x[1] = viewport[0] + 0.06 * scale_factor;
+                      legend_symbol_y[0] = viewport[3] - 0.03 * scale_factor;
+                      legend_symbol_y[1] = viewport[3] - 0.03 * scale_factor;
+                      for (const auto &child : series->children())
+                        {
+                          std::shared_ptr<GRM::Element> pl;
+                          if (child->localName() == "polyline")
+                            {
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                      legend_symbol_y[0], legend_symbol_y[1]);
+                                  pl->setAttribute("_child_id", 1);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polyline[_child_id=\"1\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolyline(legend_symbol_x[0], legend_symbol_x[1],
+                                                                   legend_symbol_y[0], legend_symbol_y[1], 0, 0.0, 0,
+                                                                   pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  render->setLineSpec(pl, spec);
+                                  if (child->hasAttribute("line_color_ind"))
+                                    {
+                                      render->setLineColorInd(pl,
+                                                              static_cast<int>(child->getAttribute("line_color_ind")));
+                                    }
+                                  else
+                                    {
+                                      render->setLineColorInd(pl,
+                                                              static_cast<int>(series->getAttribute("line_color_ind")));
+                                    }
+                                }
+                            }
+                          else if (child->localName() == "polymarker")
+                            {
+                              int markertype;
+                              if (child->hasAttribute("marker_type"))
+                                {
+                                  markertype = static_cast<int>(child->getAttribute("marker_type"));
+                                }
+                              else
+                                {
+                                  markertype = static_cast<int>(series->getAttribute("marker_type"));
+                                }
+                              if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                                {
+                                  pl = global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                        legend_symbol_y[0], markertype);
+                                  pl->setAttribute("_child_id", 1);
+                                  label_elem->append(pl);
+                                }
+                              else
+                                {
+                                  pl = label_elem->querySelectors("polymarker[_child_id=\"1\"]");
+                                  if (pl != nullptr)
+                                    global_creator->createPolymarker(legend_symbol_x[0] + 0.02 * scale_factor,
+                                                                     legend_symbol_y[0], markertype, 0.0, 0, pl);
+                                }
+                              if (pl != nullptr)
+                                {
+                                  render->setMarkerColorInd(
+                                      pl, (series->hasAttribute("marker_color_ind")
+                                               ? static_cast<int>(series->getAttribute("marker_color_ind"))
+                                               : 989));
+                                  if (child->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                    }
+                                  else if (series->hasAttribute("border_color_ind"))
+                                    {
+                                      pl->setAttribute("border_color_ind",
+                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                    }
+                                  processMarkerColorInd(pl);
+                                }
+                            }
+                        }
+                    }
+
+                  std::shared_ptr<GRM::Element> tx;
+                  if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                    {
+                      tx = global_creator->createText(viewport[0] + 0.08 * scale_factor,
+                                                      viewport[3] - 0.03 * scale_factor, label);
+                      tx->setAttribute("_child_id", 2);
+                      label_elem->append(tx);
+                    }
+                  else
+                    {
+                      tx = label_elem->querySelectors("text[_child_id=\"2\"]");
+                      if (tx != nullptr)
+                        global_creator->createText(viewport[0] + 0.08 * scale_factor, viewport[3] - 0.03 * scale_factor,
+                                                   label, CoordinateSpace::NDC, tx);
+                    }
+                  if (tx != nullptr && del != DelValues::UPDATE_WITHOUT_DEFAULT)
+                    {
+                      if (!tx->hasAttribute("_text_align_vertical_set_by_user"))
+                        {
+                          auto text_align_vertical = GKS_K_TEXT_VALIGN_HALF;
+                          if (element->hasAttribute("text_align_vertical"))
+                            text_align_vertical = static_cast<int>(element->getAttribute("text_align_vertical"));
+                          tx->setAttribute("text_align_vertical", text_align_vertical);
+                        }
+                      if (!tx->hasAttribute("_text_align_horizontal_set_by_user"))
+                        {
+                          auto text_align_horizontal = GKS_K_TEXT_HALIGN_LEFT;
+                          if (element->hasAttribute("text_align_horizontal"))
+                            text_align_horizontal = static_cast<int>(element->getAttribute("text_align_horizontal"));
+                          tx->setAttribute("text_align_horizontal", text_align_horizontal);
+                        }
+                    }
+                  viewport[3] -= 0.5 * dy;
+                  viewport[3] -= 0.03 * scale_factor;
                 }
-              viewport[3] -= 0.5 * dy;
-              viewport[3] -= 0.03 * scale_factor;
             }
         }
       gr_restorestate();
@@ -6461,6 +6674,342 @@ void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
       gr_setclip(0); // disable clipping for 3d labels cause they are just texts
       gr_titles3d(xlabel.data(), ylabel.data(), zlabel.data());
       gr_setclip(1); // enable clipping again
+    }
+}
+
+void processSphere(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  auto plot_elem = element;
+  GRM::getPlotParent(plot_elem);
+  if (plot_elem->hasAttribute("_interaction")) return;
+
+  float x = static_cast<double>(element->getAttribute("x"));
+  float y = static_cast<double>(element->getAttribute("y"));
+  float z = static_cast<double>(element->getAttribute("z"));
+  float radius = static_cast<double>(element->getAttribute("radius"));
+  auto color_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+  auto symbol = static_cast<std::string>(element->getAttribute("symbol"));
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
+
+  if (element->hasAttribute("_color_scheme_changed"))
+    {
+      element->removeAttribute("_color_scheme_changed");
+      auto color_scheme = static_cast<int>(element->parentElement()->getAttribute("color_scheme"));
+      if (color_scheme != NO_COLOR_SCHEME)
+        {
+          std::vector<int> current_color;
+          if (color_scheme == JMOL_COLOR_SCHEME)
+            current_color = elem_symbol_to_jmol_color[symbol];
+          else if (color_scheme == CPK_COLOR_SCHEME)
+            current_color = elem_symbol_to_cpk_color[symbol];
+          else if (color_scheme == NATURAL_COLOR_SCHEME)
+            current_color = elem_symbol_to_natural_color[symbol];
+
+          color_vec[0] = current_color[0] / 256.0;
+          color_vec[1] = current_color[1] / 256.0;
+          color_vec[2] = current_color[2] / 256.0;
+          (*context)[color_key] = color_vec;
+        }
+    }
+
+  std::vector<float> conv_data = {x, y, z}, radius_data = {radius};
+  std::vector<float> color_data = {static_cast<float>(color_vec[0]), static_cast<float>(color_vec[1]),
+                                   static_cast<float>(color_vec[2])};
+  float *data = &(conv_data[0]);
+  float *radii = &(radius_data[0]);
+  float *color = &(color_data[0]);
+
+  if (grm_get_render()->getRedrawWs() && !hidden) gr3_drawspheremesh(1, data, color, radii);
+}
+
+void processSpin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  auto plot_elem = element;
+  getPlotParent(plot_elem);
+  if (plot_elem->hasAttribute("_interaction")) return;
+
+  float x = static_cast<double>(element->getAttribute("x"));
+  float y = static_cast<double>(element->getAttribute("y"));
+  float z = static_cast<double>(element->getAttribute("z"));
+  float x_dir = static_cast<double>(element->getAttribute("x_dir"));
+  float y_dir = static_cast<double>(element->getAttribute("y_dir"));
+  float z_dir = static_cast<double>(element->getAttribute("z_dir"));
+  auto length = static_cast<double>(element->getAttribute("length"));
+  auto color_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+  auto symbol = static_cast<std::string>(element->getAttribute("symbol"));
+  bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
+
+  if (element->hasAttribute("_color_scheme_changed"))
+    {
+      element->removeAttribute("_color_scheme_changed");
+      auto color_scheme = static_cast<int>(element->parentElement()->getAttribute("color_scheme"));
+      if (color_scheme != NO_COLOR_SCHEME)
+        {
+          std::vector<int> current_color;
+          if (color_scheme == JMOL_COLOR_SCHEME)
+            current_color = elem_symbol_to_jmol_color[symbol];
+          else if (color_scheme == CPK_COLOR_SCHEME)
+            current_color = elem_symbol_to_cpk_color[symbol];
+          else if (color_scheme == NATURAL_COLOR_SCHEME)
+            current_color = elem_symbol_to_natural_color[symbol];
+
+          color_vec[0] = current_color[0] / 256.0;
+          color_vec[1] = current_color[1] / 256.0;
+          color_vec[2] = current_color[2] / 256.0;
+          (*context)[color_key] = color_vec;
+        }
+    }
+
+  std::vector<float> conv_data = {x, y, z}, direction_data = {x_dir, y_dir, z_dir};
+  std::vector<float> color_data = {static_cast<float>(color_vec[0]), static_cast<float>(color_vec[1]),
+                                   static_cast<float>(color_vec[2])};
+  float *data = &(conv_data[0]);
+  float *direction = &(direction_data[0]);
+  float *color = &(color_data[0]);
+
+  if (grm_get_render()->getRedrawWs() && !hidden)
+    gr3_drawspins(1, data, direction, color, length / 4.0, length / 8.0, length / 2.0, length);
+}
+
+void processCylinder(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  auto plot_elem = element;
+  getPlotParent(plot_elem);
+  if (plot_elem->hasAttribute("_interaction")) return;
+
+  float r = NAN;
+  float x = static_cast<double>(element->getAttribute("x"));
+  float y = static_cast<double>(element->getAttribute("y"));
+  float z = static_cast<double>(element->getAttribute("z"));
+  float x_dir = static_cast<double>(element->getAttribute("x_dir"));
+  float y_dir = static_cast<double>(element->getAttribute("y_dir"));
+  float z_dir = static_cast<double>(element->getAttribute("z_dir"));
+  float len = static_cast<double>(element->getAttribute("length"));
+  auto color_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+  if (element->hasAttribute("radius")) r = static_cast<double>(element->getAttribute("radius"));
+  if (!element->parentElement()->hasAttribute("unified_connection_radius") ||
+      !static_cast<int>(element->parentElement()->getAttribute("unified_connection_radius")))
+    r = NAN;
+
+  std::vector<float> conv_data = {x, y, z, x + x_dir / 2.0f, y + y_dir / 2.0f, z + z_dir / 2.0f},
+                     direction_data = {x_dir / 2.0f, y_dir / 2.0f, z_dir / 2.0f,
+                                       x_dir / 2.0f, y_dir / 2.0f, z_dir / 2.0f};
+  std::vector<float> color_data = {static_cast<float>(color_vec[0]), static_cast<float>(color_vec[1]),
+                                   static_cast<float>(color_vec[2]), static_cast<float>(color_vec[3]),
+                                   static_cast<float>(color_vec[4]), static_cast<float>(color_vec[5])};
+  std::vector<float> radius_data = {grm_isnan(r) ? len / 8.0f : r, grm_isnan(r) ? len / 8.0f : r};
+  std::vector<float> length_data = {len / 2.0f, len / 2.0f};
+
+  float *data = &(conv_data[0]);
+  float *direction = &(direction_data[0]);
+  float *color = &(color_data[0]);
+  float *length = &(length_data[0]);
+  float *radius = &(radius_data[0]);
+
+  if (grm_get_render()->getRedrawWs()) gr3_drawcylindermesh(2, data, direction, color, radius, length);
+}
+
+void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  auto plot_elem = element;
+  getPlotParent(plot_elem);
+  if (plot_elem->hasAttribute("_interaction")) return;
+
+  auto max_value = static_cast<double>(element->getAttribute("_max_value"));
+  bool show_unit_cell = false;
+
+  if (element->parentElement()->hasAttribute("show_unit_cell"))
+    show_unit_cell = static_cast<int>(element->parentElement()->getAttribute("show_unit_cell"));
+
+  if (show_unit_cell)
+    {
+      double transparency = 0.4;
+      bool show_mesh = false;
+      std::vector<double> rgb_color = {0, 0, 0};
+      auto cell_key = static_cast<std::string>(element->parentElement()->getAttribute("cell"));
+      auto cell_vec = GRM::get<std::vector<double>>((*context)[cell_key]);
+      auto cell_length = cell_vec.size();
+
+      if (element->hasAttribute("show_mesh")) show_mesh = static_cast<int>(element->getAttribute("show_mesh"));
+      if (element->hasAttribute("transparency"))
+        transparency = static_cast<double>(element->getAttribute("transparency"));
+      if (element->hasAttribute("fill_color_rgb"))
+        {
+          auto rgb_color_key = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
+          rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+        }
+
+      element->setAttribute("transparency", transparency);
+
+      if (cell_length < 9)
+        {
+          fprintf(stderr, "Cant create unit cell. It requires 3 vectors\n");
+        }
+      else
+        {
+          std::vector<double> transformed_start = {(-cell_vec[6] - cell_vec[0] - cell_vec[3]) * 0.5,
+                                                   (-cell_vec[7] - cell_vec[1] - cell_vec[4]) * 0.5,
+                                                   (-cell_vec[8] - cell_vec[2] - cell_vec[5]) * 0.5};
+          std::vector<float> pos_data, dir_data, color_data, length_data, radius_data, normal_data, vertices_data;
+          std::vector<double> start_pos = {transformed_start[0], transformed_start[1], transformed_start[2]},
+                              start_dir = {cell_vec[0], cell_vec[1], cell_vec[2]};
+
+          std::vector<double> vertex_points = {
+              0,
+              0,
+              0,
+              cell_vec[0],
+              cell_vec[1],
+              cell_vec[2],
+              cell_vec[3],
+              cell_vec[4],
+              cell_vec[5],
+              cell_vec[0] + cell_vec[3],
+              cell_vec[1] + cell_vec[4],
+              cell_vec[2] + cell_vec[5],
+              cell_vec[6],
+              cell_vec[7],
+              cell_vec[8],
+              cell_vec[6] + cell_vec[0],
+              cell_vec[7] + cell_vec[1],
+              cell_vec[8] + cell_vec[2],
+              cell_vec[6] + cell_vec[3],
+              cell_vec[7] + cell_vec[4],
+              cell_vec[8] + cell_vec[5],
+              cell_vec[6] + cell_vec[0] + cell_vec[3],
+              cell_vec[7] + cell_vec[1] + cell_vec[4],
+              cell_vec[8] + cell_vec[2] + cell_vec[5],
+          };
+          std::vector<int> indices = {0, 1, 2, 1, 2, 3, 2, 3, 7, 6, 7, 2, 1, 3, 7, 7, 1, 5,
+                                      4, 5, 6, 5, 6, 7, 0, 1, 4, 4, 1, 5, 0, 2, 4, 6, 2, 4};
+
+          for (int i = 0; i < 12; i++)
+            {
+              for (int j = 0; j < 3; j++)
+                {
+                  pos_data.push_back(start_pos[j] / max_value);
+                  dir_data.push_back(start_dir[j] / max_value);
+
+                  if (show_mesh)
+                    {
+                      color_data.push_back(rgb_color[0]);
+                      color_data.push_back(rgb_color[1]);
+                      color_data.push_back(rgb_color[2]);
+                      color_data.push_back(transparency);
+                      for (int k = 0; k < 3; k++)
+                        {
+                          vertices_data.push_back((transformed_start[j] + vertex_points[indices[i * 3 + j] * 3 + k]) /
+                                                  max_value);
+                        }
+                      normal_data.push_back(0);
+                      normal_data.push_back(1);
+                      normal_data.push_back(0);
+                    }
+                }
+              if (!show_mesh)
+                {
+                  color_data.push_back(rgb_color[0]);
+                  color_data.push_back(rgb_color[1]);
+                  color_data.push_back(rgb_color[2]);
+                }
+              auto norm =
+                  sqrt(start_dir[0] * start_dir[0] + start_dir[1] * start_dir[1] + start_dir[2] * start_dir[2]) /
+                  max_value;
+              length_data.push_back(norm);
+              radius_data.push_back(0.1 / max_value);
+
+              if (i < 8)
+                {
+                  start_pos[0] += start_dir[0];
+                  start_pos[1] += start_dir[1];
+                  start_pos[2] += start_dir[2];
+                }
+              else if (i == 8)
+                {
+                  start_pos[0] = transformed_start[0] + cell_vec[0];
+                  start_pos[1] = transformed_start[1] + cell_vec[1];
+                  start_pos[2] = transformed_start[2] + cell_vec[2];
+                }
+              else if (i == 9)
+                {
+                  start_pos[0] = transformed_start[0] + cell_vec[3];
+                  start_pos[1] = transformed_start[1] + cell_vec[4];
+                  start_pos[2] = transformed_start[2] + cell_vec[5];
+                }
+              else if (i == 10)
+                {
+                  start_pos[0] += cell_vec[0];
+                  start_pos[1] += cell_vec[1];
+                  start_pos[2] += cell_vec[2];
+                }
+
+              if (i == 0 || i == 4)
+                {
+                  start_dir[0] = cell_vec[3];
+                  start_dir[1] = cell_vec[4];
+                  start_dir[2] = cell_vec[5];
+                }
+              else if (i == 1 || i == 5 || i == 7)
+                {
+                  start_dir[0] = (i == 5 ? 1 : -1) * cell_vec[0];
+                  start_dir[1] = (i == 5 ? 1 : -1) * cell_vec[1];
+                  start_dir[2] = (i == 5 ? 1 : -1) * cell_vec[2];
+                }
+              else if (i == 2 || i == 6)
+                {
+                  start_dir[0] = -cell_vec[3];
+                  start_dir[1] = -cell_vec[4];
+                  start_dir[2] = -cell_vec[5];
+                }
+              else if (i == 3 || i >= 8)
+                {
+                  start_dir[0] = cell_vec[6];
+                  start_dir[1] = cell_vec[7];
+                  start_dir[2] = cell_vec[8];
+                }
+            }
+          if (show_mesh) gr3_setalphamode(1);
+
+          float *pos = &(pos_data[0]);
+          float *dir = &(dir_data[0]);
+          float *color = &(color_data[0]);
+          float *radii = &(radius_data[0]);
+          float *length = &(length_data[0]);
+          if (grm_get_render()->getRedrawWs()) gr3_drawcylindermesh(12, pos, dir, color, radii, length);
+
+          if (show_mesh)
+            {
+              int unit_cell_mesh;
+              float *vertices = &(vertices_data[0]);
+              float *normals = &(normal_data[0]);
+              gr3_createmesh(&unit_cell_mesh, vertices_data.size() / 3, vertices, normals, color);
+              std::vector<float> pos_data_mesh = {0, 0, 0}, scale_data = {1., 1., 1.}, dir_data_mesh = {0, 0, 1};
+              float *pos_mesh = &(pos_data_mesh[0]);
+              float *dir_mesh = &(dir_data_mesh[0]);
+              float *scale = &(scale_data[0]);
+              if (grm_get_render()->getRedrawWs())
+                {
+                  gr3_drawmesh(unit_cell_mesh, 1, pos_mesh, dir_mesh, normals, color, scale);
+                  gr3_setalphamode(0);
+                }
+            }
+        }
+    }
+}
+
+void processGR3DrawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  int p_width, p_height;
+  GRM::getFigureSize(&p_width, &p_height, nullptr, nullptr);
+
+  if (grm_get_render()->getRedrawWs())
+    {
+      // 2000 as min so the spheres or spins looks smoother
+      gr3_drawimage(-1, 1, -1, 1, grm_max(2000, grm_min(p_width, p_height)), grm_max(2000, grm_min(p_width, p_height)),
+                    GR3_DRAWABLE_GKS);
     }
 }
 
@@ -10577,6 +11126,321 @@ void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &element,
         }
       global_root->setAttribute("_id", ++id);
       processFlip(plot_parent);
+    }
+}
+
+void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  bool spin_style = false, unified_connection_radius = true;
+  int color_scheme = JMOL_COLOR_SCHEME, radius_kind = VAN_DER_WAAL_RADIUS;
+  std::vector<double> color_rgb_vec, spin_x_vec, spin_y_vec, spin_z_vec;
+  double max_value = 0, connection_threshold = NAN;
+  DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
+  int child_id = 0;
+  auto global_render = grm_get_render();
+  auto global_creator = grm_get_creator();
+
+  if (!element->hasAttribute("x")) throw NotFoundError("Molecule series is missing required attribute x-data.\n");
+  auto x_key = static_cast<std::string>(element->getAttribute("x"));
+  auto x_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+  auto x_length = x_vec.size();
+  if (!element->hasAttribute("y")) throw NotFoundError("Molecule series is missing required attribute y-data.\n");
+  auto y_key = static_cast<std::string>(element->getAttribute("y"));
+  auto y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+  auto y_length = y_vec.size();
+  if (!element->hasAttribute("z")) throw NotFoundError("Molecule series is missing required attribute z-data.\n");
+  auto z_key = static_cast<std::string>(element->getAttribute("z"));
+  auto z_vec = GRM::get<std::vector<double>>((*context)[z_key]);
+  auto z_length = z_vec.size();
+  if (!element->hasAttribute("molecule_symbols"))
+    throw NotFoundError("Molecule series is missing required attribute molecule_symbols.\n");
+  auto molecule_symbols_key = static_cast<std::string>(element->getAttribute("molecule_symbols"));
+  auto molecule_symbols_vec = GRM::get<std::vector<std::string>>((*context)[molecule_symbols_key]);
+  auto molecule_symbols_length = molecule_symbols_vec.size();
+
+  if (x_length != y_length || x_length != z_length || x_length != molecule_symbols_length)
+    throw std::length_error("Molecule series requires x, y and z to have the same size.\n");
+
+  gr3_clear();
+
+  if (!element->hasAttribute("ambient") && !element->hasAttribute("diffuse") && !element->hasAttribute("specular") &&
+      !element->hasAttribute("specular_power"))
+    global_render->setGR3LightParameters(element, 0.2, 0.8, 0.7, 128);
+
+  float ambient = static_cast<double>(element->getAttribute("ambient"));
+  float diffuse = static_cast<double>(element->getAttribute("diffuse"));
+  float specular = static_cast<double>(element->getAttribute("specular"));
+  float specular_power = static_cast<double>(element->getAttribute("specular_power"));
+  gr3_setlightparameters(ambient, diffuse, specular, specular_power);
+
+  processWindow(element->parentElement());
+  gr3_setbackgroundcolor(0, 0, 0, 0);
+
+  processSpace3d(element->parentElement()); // use the same logic as GR uses for surface and co
+
+  if (element->hasAttribute("color_scheme")) color_scheme = static_cast<int>(element->getAttribute("color_scheme"));
+  if (element->hasAttribute("radius_kind")) radius_kind = static_cast<int>(element->getAttribute("radius_kind"));
+  if (element->hasAttribute("spin_style")) spin_style = static_cast<int>(element->getAttribute("spin_style"));
+  if (element->hasAttribute("connection_threshold"))
+    connection_threshold = static_cast<double>(element->getAttribute("connection_threshold"));
+  if (element->hasAttribute("unified_connection_radius"))
+    unified_connection_radius = static_cast<int>(element->getAttribute("unified_connection_radius"));
+  element->setAttribute("unified_connection_radius", unified_connection_radius);
+  if (element->hasAttribute("color_rgb_values"))
+    {
+      auto color_rgb_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+      color_rgb_vec = GRM::get<std::vector<double>>((*context)[color_rgb_key]);
+      auto color_rgb_length = color_rgb_vec.size();
+
+      if (x_length != color_rgb_length)
+        throw std::length_error("Molecule series requires colors to have the same size as the data.\n");
+
+      color_scheme = NO_COLOR_SCHEME;
+    }
+  element->setAttribute("color_scheme", color_scheme);
+  element->setAttribute("radius_kind", radius_kind);
+
+  if (element->hasAttribute("spin_x") && element->hasAttribute("spin_y") && element->hasAttribute("spin_z"))
+    {
+      auto spin_x_key = static_cast<std::string>(element->getAttribute("spin_x"));
+      spin_x_vec = GRM::get<std::vector<double>>((*context)[spin_x_key]);
+      auto spin_x_length = spin_x_vec.size();
+      auto spin_y_key = static_cast<std::string>(element->getAttribute("spin_y"));
+      spin_y_vec = GRM::get<std::vector<double>>((*context)[spin_y_key]);
+      auto spin_y_length = spin_y_vec.size();
+      auto spin_z_key = static_cast<std::string>(element->getAttribute("spin_z"));
+      spin_z_vec = GRM::get<std::vector<double>>((*context)[spin_z_key]);
+      auto spin_z_length = spin_z_vec.size();
+
+      if (x_length != spin_z_length || spin_x_length != spin_z_length || spin_x_length != spin_y_length)
+        throw std::length_error("Molecule series requires spin(x,y and z) to have the same size as the data.\n");
+    }
+  if (spin_style &&
+      !(element->hasAttribute("spin_x") && element->hasAttribute("spin_y") && element->hasAttribute("spin_z")))
+    {
+      fprintf(stderr, "spin_style requires spin data -> fallback to sphere\n");
+      spin_style = false;
+    }
+
+  // acquire max_value
+  std::vector<float> radii_data;
+  for (int i = 0; i < x_length; i++)
+    {
+      auto current_symbol = molecule_symbols_vec[i];
+
+      if (radius_kind == VAN_DER_WAAL_RADIUS)
+        radii_data.push_back(elem_symbol_to_van_der_waals_radius[current_symbol]);
+      else if (radius_kind == ATOMIC_RADIUS)
+        radii_data.push_back(elem_symbol_to_atomic_radius[current_symbol]);
+      else if (radius_kind == IONIC_RADIUS)
+        radii_data.push_back(elem_symbol_to_ionic_radius[current_symbol]);
+      else if (radius_kind == COVALENT_RADIUS)
+        radii_data.push_back(elem_symbol_to_covalent_radius[current_symbol]);
+      else if (radius_kind == CRYSTAL_RADIUS)
+        radii_data.push_back(elem_symbol_to_crystal_radius[current_symbol]);
+
+      max_value =
+          grm_max(max_value, sqrt(pow(abs(x_vec[i]) + radii_data[i], 2) + pow(abs(y_vec[i]) + radii_data[i], 2) +
+                                  pow(abs(z_vec[i]) + radii_data[i], 2)));
+    }
+
+  /* clear old heatmaps */
+  del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
+  if (element->hasAttribute("cell"))
+    {
+      std::shared_ptr<GRM::Element> unit_cell;
+      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+        {
+          unit_cell = global_creator->createUnitCell();
+          unit_cell->setAttribute("_child_id", child_id++);
+          element->append(unit_cell);
+        }
+      else
+        {
+          unit_cell = element->querySelectors("unit_cell[_child_id=" + std::to_string(child_id++) + "]");
+          if (unit_cell != nullptr) global_creator->createUnitCell(unit_cell);
+        }
+      if (unit_cell != nullptr)
+        {
+          unit_cell->setAttribute("_max_value", max_value);
+        }
+    }
+
+  for (int i = 0; i < x_length; i++)
+    {
+      std::shared_ptr<GRM::Element> sphere, spin;
+      std::vector<double> conv_data, radius_data, color_data;
+      auto current_symbol = molecule_symbols_vec[i];
+
+      conv_data.push_back(x_vec[i] / max_value);
+      conv_data.push_back(y_vec[i] / max_value);
+      conv_data.push_back(z_vec[i] / max_value);
+
+      if (color_scheme != NO_COLOR_SCHEME)
+        {
+          std::vector<int> current_color;
+          if (color_scheme == JMOL_COLOR_SCHEME)
+            current_color = elem_symbol_to_jmol_color[current_symbol];
+          else if (color_scheme == CPK_COLOR_SCHEME)
+            current_color = elem_symbol_to_cpk_color[current_symbol];
+          else if (color_scheme == NATURAL_COLOR_SCHEME)
+            current_color = elem_symbol_to_natural_color[current_symbol];
+
+          color_data.push_back(current_color[0] / 256.0);
+          color_data.push_back(current_color[1] / 256.0);
+          color_data.push_back(current_color[2] / 256.0);
+        }
+      else
+        {
+          color_data.push_back(color_rgb_vec[0 + i * 3]);
+          color_data.push_back(color_rgb_vec[1 + i * 3]);
+          color_data.push_back(color_rgb_vec[2 + i * 3]);
+        }
+
+      if (spin_style)
+        {
+          std::vector<double> spin_data;
+          spin_data.push_back(spin_x_vec[i] / max_value);
+          spin_data.push_back(spin_y_vec[i] / max_value);
+          spin_data.push_back(spin_z_vec[i] / max_value);
+
+          // todo: factor 0.25 is prob not fix yet
+          auto spin_length =
+              sqrt(spin_x_vec[i] * spin_x_vec[i] + spin_y_vec[i] * spin_y_vec[i] + spin_z_vec[i] * spin_z_vec[i]) /
+              (max_value * 0.25);
+
+          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+            {
+              spin = global_creator->createSpin(current_symbol, conv_data, spin_data, color_data, spin_length);
+              spin->setAttribute("_child_id", child_id++);
+              element->append(spin);
+            }
+          else
+            {
+              spin = element->querySelectors("spin[_child_id=" + std::to_string(child_id++) + "]");
+              if (spin != nullptr)
+                global_creator->createSpin(current_symbol, conv_data, spin_data, color_data, spin_length, spin);
+            }
+        }
+      else
+        {
+          if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+            {
+              sphere = global_creator->createSphere(current_symbol, conv_data, color_data, radii_data[i] / max_value);
+              sphere->setAttribute("_child_id", child_id++);
+              element->append(sphere);
+            }
+          else
+            {
+              sphere = element->querySelectors("sphere[_child_id=" + std::to_string(child_id++) + "]");
+              if (sphere != nullptr)
+                global_creator->createSphere(current_symbol, conv_data, color_data, radii_data[i] / max_value, sphere);
+            }
+        }
+
+      // calculate connections between spins or spheres
+      auto covalent_radius = elem_symbol_to_covalent_radius[current_symbol] / max_value;
+      if (!grm_isnan(connection_threshold)) covalent_radius = connection_threshold / max_value;
+      if (covalent_radius == UNDEF && !spin_style)
+        {
+          fprintf(stderr,
+                  "Covalent radius is not defined for %s. Set a connection threshold to enable connections between "
+                  "single elements.\n",
+                  current_symbol.c_str());
+        }
+      else if (covalent_radius != UNDEF)
+        {
+          double safety_factor = 1.15;
+
+          for (int j = i + 1; j < x_length; j++)
+            {
+              std::vector<double> next_color_data = {color_data[0], color_data[1], color_data[2]};
+              auto next_symbol = molecule_symbols_vec[j];
+              auto next_covalent_radius = elem_symbol_to_covalent_radius[next_symbol] / max_value;
+              auto norm =
+                  sqrt(pow(conv_data[0] - x_vec[j] / max_value, 2) + pow(conv_data[1] - y_vec[j] / max_value, 2) +
+                       pow(conv_data[2] - z_vec[j] / max_value, 2));
+
+              if (color_scheme != NO_COLOR_SCHEME)
+                {
+                  std::vector<int> current_color;
+                  if (color_scheme == JMOL_COLOR_SCHEME)
+                    current_color = elem_symbol_to_jmol_color[next_symbol];
+                  else if (color_scheme == CPK_COLOR_SCHEME)
+                    current_color = elem_symbol_to_cpk_color[next_symbol];
+                  else if (color_scheme == NATURAL_COLOR_SCHEME)
+                    current_color = elem_symbol_to_natural_color[next_symbol];
+
+                  next_color_data.push_back(current_color[0] / 256.0);
+                  next_color_data.push_back(current_color[1] / 256.0);
+                  next_color_data.push_back(current_color[2] / 256.0);
+                }
+              else
+                {
+                  next_color_data.push_back(color_rgb_vec[0 + j * 3]);
+                  next_color_data.push_back(color_rgb_vec[1 + j * 3]);
+                  next_color_data.push_back(color_rgb_vec[2 + j * 3]);
+                }
+
+              if (!grm_isnan(connection_threshold)) next_covalent_radius = connection_threshold / max_value;
+              if (next_covalent_radius == UNDEF && !spin_style)
+                {
+                  fprintf(
+                      stderr,
+                      "Covalent radius is not defined for %s. Set a connection threshold to enable connections between "
+                      "single elements.\n",
+                      next_symbol.c_str());
+                }
+              else if (next_covalent_radius != UNDEF)
+                {
+
+                  std::vector<double> dir_data = {x_vec[j] / max_value - conv_data[0],
+                                                  y_vec[j] / max_value - conv_data[1],
+                                                  z_vec[j] / max_value - conv_data[2]};
+
+                  if (norm < safety_factor * next_covalent_radius * covalent_radius)
+                    {
+                      std::shared_ptr<GRM::Element> cylinder;
+                      if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+                        {
+                          cylinder = global_creator->createCylinder(conv_data, dir_data, next_color_data, norm);
+                          cylinder->setAttribute("_child_id", child_id++);
+                          element->append(cylinder);
+                        }
+                      else
+                        {
+                          cylinder = element->querySelectors("cylinder[_child_id=" + std::to_string(child_id++) + "]");
+                          if (cylinder != nullptr)
+                            global_creator->createCylinder(conv_data, dir_data, next_color_data, norm, cylinder);
+                        }
+                      if (cylinder != nullptr)
+                        {
+                          cylinder->setAttribute("radius", radius_kind == VAN_DER_WAAL_RADIUS ? 0.5 / max_value
+                                                                                              : 0.1 / max_value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  std::shared_ptr<GRM::Element> gr3_draw_image;
+  if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
+    {
+      gr3_draw_image = global_creator->createGR3DrawImage();
+      gr3_draw_image->setAttribute("_child_id", child_id++);
+      element->append(gr3_draw_image);
+    }
+  else
+    {
+      gr3_draw_image = element->querySelectors("gr3_draw_image[_child_id=" + std::to_string(child_id++) + "]");
+      if (gr3_draw_image != nullptr) global_creator->createGR3DrawImage(gr3_draw_image);
+    }
+  if (gr3_draw_image != nullptr)
+    {
+      gr3_draw_image->setAttribute("z_index", 2);
     }
 }
 

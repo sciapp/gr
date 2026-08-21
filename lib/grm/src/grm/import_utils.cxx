@@ -25,8 +25,10 @@ static std::map<std::string, const char *> key_to_types{
     {"bin_edges", "nD"},
     {"bin_width", "d"},
     {"c", "nD"},
+    {"cell", "s"},
     {"clip_negative", "i"},
     {"colormap", "i"},
+    {"connection_threshold", "d"},
     {"draw_edges", "i"},
     {"edge_color", "ddd"},
     {"edge_color", "i"},
@@ -51,6 +53,7 @@ static std::map<std::string, const char *> key_to_types{
     {"marginal_heatmap_kind", "s"},
     {"marker_size", "d"},
     {"marker_type", "i"},
+    {"molecule_file", "i"},
     {"num_bins", "i"},
     {"normalization", "s"},
     {"only_square_aspect_ratio", "i"},
@@ -62,6 +65,7 @@ static std::map<std::string, const char *> key_to_types{
     {"rotation", "d"},
     {"scale", "i"},
     {"scatter_z", "i"},
+    {"spin_style", "i"},
     {"stairs", "i"},
     {"step_where", "s"},
     {"style", "s"},
@@ -101,12 +105,14 @@ static std::map<std::string, const char *> key_to_types{
 
 /* ------------------------- kind types ----------------------------------------------------------------------------- */
 
-static std::list<std::string> kind_types = {
-    "barplot",    "contour",       "contourf",        "heatmap",       "hexbin",   "hist",
-    "histogram",  "imshow",        "isosurface",      "line",          "line3",    "marginal_heatmap",
-    "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "pie",      "plot3",
-    "scatter",    "scatter3",      "shade",           "surface",       "stem",     "stairs",
-    "tricontour", "trisurface",    "quiver",          "volume",        "wireframe"};
+static std::list<std::string> kind_types = {"barplot",       "contour",    "contourf",      "heatmap",
+                                            "hexbin",        "hist",       "histogram",     "imshow",
+                                            "isosurface",    "line",       "line3",         "marginal_heatmap",
+                                            "molecule",      "polar_line", "polar_heatmap", "polar_histogram",
+                                            "polar_scatter", "pie",        "plot3",         "scatter",
+                                            "scatter3",      "shade",      "surface",       "stem",
+                                            "stairs",        "tricontour", "trisurface",    "quiver",
+                                            "volume",        "wireframe"};
 
 /* ------------------------- alias for keys ------------------------------------------------------------------------- */
 
@@ -626,6 +632,19 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                 {
                   if (value == "relative" || value == "absolute") input_flags.error_type = value;
                 }
+              else if (strcmp(search->first.c_str(), "cell") == 0)
+                {
+                  // special case for cell so it fits more the way it would be defined by the user
+                  size_t value_pos;
+                  std::vector<double> cell_vectors;
+                  while ((value_pos = value.find(' ')) != std::string::npos)
+                    {
+                      cell_vectors.push_back(std::stod(value.substr(0, value_pos)));
+                      value.erase(0, value_pos + 1);
+                    }
+                  cell_vectors.push_back(std::stod(value.substr(0, value.length())));
+                  grm_args_push(args, "cell", "nD", cell_vectors.size(), cell_vectors.data());
+                }
               else if (!grm_args_values(args, search->first.c_str(), search->second, &tmp))
                 grm_args_push(args, search->first.c_str(), search->second, value.c_str());
             }
@@ -666,6 +685,11 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                       else if (strcmp(search->first.c_str(), "legend_line") == 0)
                         {
                           input_flags.force_legend_line = std::stoi(value);
+                        }
+                      else if (strcmp(search->first.c_str(), "molecule_file") == 0)
+                        {
+                          // needed since test.dat and a simple molecule dataset are the same parse wise
+                          input_flags.xyz_molecule_file = std::stoi(value);
                         }
                       else
                         {

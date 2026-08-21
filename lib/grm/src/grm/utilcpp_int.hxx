@@ -130,6 +130,7 @@ template <typename... Args> constexpr bool strEqualsAny(std::string_view target,
 }
 
 bool isNumber(std::string_view str);
+bool isIntNumber(std::string_view str);
 double round(double val, int digits);
 double ceil(double val, int digits);
 double floor(double val, int digits);
