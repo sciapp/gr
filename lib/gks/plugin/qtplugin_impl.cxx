@@ -3626,6 +3626,8 @@ static void interp(char *str)
       if (p->painter->hasBackground()) p->painter->drawBackground();
     }
 
+  p->state = GKS_K_WS_ACTIVE; // We always have to start in active state
+
   RESOLVE(len, int, sizeof(int));
   while (*len)
     {
