@@ -315,6 +315,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 
       if (bounding_boxes) gr_cancelbboxcallback();
     }
+
   gr_context_id_manager.markAllIdsAsUnused();
   parent_to_context = {};
   gr_unselectcontext();
@@ -518,6 +519,10 @@ void GRM::Render::render()
       finalizeGrid(active_figure);
       renderHelper(root, this->context);
       renderZQueue(this->context);
+      for (const auto plot : root->querySelectorsAll("plot[_interaction=\"1\"]"))
+        {
+          plot->removeAttribute("_interaction");
+        }
       if (active_figure->hasAttribute("_kind_changed")) active_figure->removeAttribute("_kind_changed");
       automatic_update = false;
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
@@ -699,6 +704,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("c_range_min"), std::vector<std::string>{"None", "The lower color-value"}},
       {std::string("cap_x_max"), std::vector<std::string>{"None", "The maximum x-value for the error cap"}},
       {std::string("cap_x_min"), std::vector<std::string>{"None", "The minimum x-value for the error cap"}},
+      {std::string("cell"), std::vector<std::string>{"None", "References the unit cell data stored in the context"}},
       {std::string("char_height"),
        std::vector<std::string>{"None", "The height of the characters in percentage of NDC-space"}},
       {std::string("char_up_x"),
@@ -721,14 +727,18 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "References the color-value stored in the context in rgb format"}},
       {std::string("color_rgb_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in rgb format"}},
+      {std::string("color_scheme"),
+       std::vector<std::string>{"jmol", "The used color scheme for molecule series if no color is given"}},
       {std::string("colored"), std::vector<std::string>{"1", "Determines whether the quiver plot is shown in color"}},
       {std::string("colormap"), std::vector<std::string>{"viridis", "Sets the current colormap"}},
       {std::string("colormap_inverted"),
        std::vector<std::string>{"0", "Determines whether the colormap should be inverted"}},
+      {std::string("connection_threshold"),
+       std::vector<std::string>{"None", "If given used to calculate connections between molecule spheres"}},
       {std::string("consecutive_colorbars"),
        std::vector<std::string>{
            "None", "Allows to force the same colorbar on all plots that share the same type of coordinate system. "
-                   "Therefore the maximum and minimum values of all matching kinds gets calculated and used."}},
+                   "Therefore the maximum and minimum values of all matching kinds gets calculated and used"}},
       {std::string("count"), std::vector<std::string>{"None", "The count value of a polar bar"}},
       {std::string("counts"),
        std::vector<std::string>{"None", "References the polar histogram counts stored in the context"}},
@@ -816,6 +826,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
       {std::string("labels"),
        std::vector<std::string>{"None", "The labels for all pie segments which will be displayed in the legend"}},
+      {std::string("length"),
+       std::vector<std::string>{"None", "The length of the 3d spin. It also gets used for the radius"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
       {std::string("line_color_ind"), std::vector<std::string>{"1", "Color for the lines in index format"}},
       {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the lines in rgb format"}},
@@ -843,12 +855,14 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("max_y_length"), std::vector<std::string>{"None", "The maximum y length inside the barplot"}},
       {std::string("min_value"), std::vector<std::string>{"None", "The minimum-value of the axis"}},
       {std::string("mirrored_axis"), std::vector<std::string>{"0", "Determines whether the axis should be mirrored"}},
+      {std::string("molecule_symbols"),
+       std::vector<std::string>{"None", "References the molecule symbol of each sphere/spin"}},
       {std::string("movable"),
        std::vector<std::string>{"0", "Determines whether the element can be moved via interaction. This attribute "
                                      "allows to only move certain parts"}},
       {std::string("move_to_plot"),
        std::vector<std::string>{"None", "This attribute can be used to move a single series into a existing or a "
-                                        "complety new generated plot. For this the exisitng plot gets copied."}},
+                                        "complety new generated plot. For this the exisitng plot gets copied"}},
       {std::string("name"), std::vector<std::string>{"None", "The name of the element"}},
       {std::string("num_bins"), std::vector<std::string>{"None", "Number of bins"}},
       {std::string("num_col"), std::vector<std::string>{"None", "Number of columns"}},
@@ -860,7 +874,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("only_square_aspect_ratio"),
        std::vector<std::string>{"0", "Determines whether the aspect ratio must be square and should be retained"}},
       {std::string("orientation"),
-       std::vector<std::string>{"horizontal", "The orientation of all elements. Only works for some 2D kinds."}},
+       std::vector<std::string>{"horizontal", "The orientation of all elements. Only works for some 2D kinds"}},
       {std::string("origin"), std::vector<std::string>{"None", "The origin of the axis. Needed if org != min_value"}},
       {std::string("theta"), std::vector<std::string>{"None", "References the theta angles stored in the context"}},
       {std::string("theta_dim"), std::vector<std::string>{"None", "The dimension of the theta angles"}},
@@ -880,7 +894,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
            "None", "F.e. where the x axis should be placed in relation to the y axis (position on the y axis)"}},
       {std::string("position"),
        std::vector<std::string>{"None", "Defines the position of a grid_layout element. The first numbers defines the "
-                                        "row the second the column. Between both numbers must stand a space."}},
+                                        "row the second the column. Between both numbers must stand a space"}},
       {std::string("px"), std::vector<std::string>{"None", "References the px-values stored in the context. The "
                                                            "px-values are the modified version of the x-values"}},
       {std::string("py"), std::vector<std::string>{"None", "References the py-values stored in the context. The "
@@ -896,6 +910,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("r_range_min"), std::vector<std::string>{"None", "The lower radius-value"}},
       {std::string("r_max"), std::vector<std::string>{"None", "The upper-value for the radius"}},
       {std::string("r_min"), std::vector<std::string>{"None", "The lower-value for the radius"}},
+      {std::string("radius"), std::vector<std::string>{"None", "The radius of the 3d object"}},
+      {std::string("radius_kind"),
+       std::vector<std::string>{"van_der_waal", "The used radius for spheres inside molecule series"}},
       {std::string("ref_x_axis_location"), std::vector<std::string>{"x", "The by the series referenced x axis"}},
       {std::string("ref_y_axis_location"), std::vector<std::string>{"y", "The by the series referenced y axis"}},
       {std::string("rel_downwards_e"),
@@ -916,6 +933,13 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("set_text_color_for_background"),
        std::vector<std::string>{"False", "0 or 1. If this flag is true, the text color will be changed depending on "
                                          "the color of the background to increase the contrast"}},
+      {std::string("show_mesh"),
+       std::vector<std::string>{
+           "0",
+           "This defines if the mesh of the unit cell gets shown if the unit cell is already visible. This parameter "
+           "should be used at the end of the interaction cause it slows down the perfomance significant"}},
+      {std::string("show_unit_cell"),
+       std::vector<std::string>{"0", "This defines whether or not the unit cell is shown, if it has been defined"}},
       {std::string("size_x"), std::vector<std::string>{"None", "The figure width"}},
       {std::string("size_x_type"), std::vector<std::string>{"double", "The figure width type (integer, double, ...)"}},
       {std::string("size_x_unit"), std::vector<std::string>{"px", "The figure width unit (px, ...)"}},
@@ -937,6 +961,11 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("specular"),
        std::vector<std::string>{"0.7", "The specular light. Values between 0.0 and 1.0 are valid"}},
       {std::string("specular_power"), std::vector<std::string>{"128", "The specular light power"}},
+      {std::string("spin_style"),
+       std::vector<std::string>{"None", "Defines if spins or spheres get used to show the single elements"}},
+      {std::string("spin_x"), std::vector<std::string>{"None", "References the spin x-data stored in the context"}},
+      {std::string("spin_y"), std::vector<std::string>{"None", "References the spin y-data stored in the context"}},
+      {std::string("spin_z"), std::vector<std::string>{"None", "References the spin z-data stored in the context"}},
       {std::string("stairs"),
        std::vector<std::string>{"0", "This is a format of the polar histogram where only outline edges are drawn"}},
       {std::string("start_angle"), std::vector<std::string>{"None", "The start angle of the element"}},
@@ -946,6 +975,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("stop_col"), std::vector<std::string>{"None", "The stop column"}},
       {std::string("stop_row"), std::vector<std::string>{"None", "The stop row"}},
       {std::string("style"), std::vector<std::string>{"default", "The barplot style (default, lined, stacked)"}},
+      {std::string("symbol"), std::vector<std::string>{"None", "The symbol of the element"}},
       {std::string("text"), std::vector<std::string>{"None", "The text displayed by this element"}},
       {std::string("text_align_horizontal"),
        std::vector<std::string>{
@@ -982,6 +1012,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"False", "Define if the program should remove empty cells rowwise inside the layout "
                                          "grid if this reduces the number of rows"}},
       {std::string("u"), std::vector<std::string>{"None", "References the u-values stored in the context"}},
+      {std::string("unified_connection_radius"),
+       std::vector<std::string>{"1",
+                                "Defines if all displayed connections have the same radius or if the radius scales "
+                                "with the distance of the two elements"}},
       {std::string("uniform_abs_downwards_e"),
        std::vector<std::string>{"None",
                                 "The uniform absolute error facing downwards. It is applied at all error points"}},
@@ -1037,7 +1071,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "The width of the side region element - inflicting the viewport"}},
       {std::string("width_abs"),
        std::vector<std::string>{"None",
-                                "The absolut width of the imported graphic. The value has to be between 0 and 1."}},
+                                "The absolut width of the imported graphic. The value has to be between 0 and 1"}},
       {std::string("window_x_max"), std::vector<std::string>{"None", "The upper window x-coordinate"}},
       {std::string("window_x_min"), std::vector<std::string>{"None", "The lower window x-coordinate"}},
       {std::string("window_y_max"), std::vector<std::string>{"None", "The upper window y-coordinate"}},
@@ -1060,6 +1094,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("x"), std::vector<std::string>{"None", "References the x-values stored in the context"}},
       {std::string("x_bins"), std::vector<std::string>{"1200", "Bins in x direction"}},
       {std::string("x_dim"), std::vector<std::string>{"None", "The dimension of the x-values"}},
+      {std::string("x_dir"), std::vector<std::string>{"None", "The x component of the 3 dimensional direction vector"}},
       {std::string("x_flip"), std::vector<std::string>{"0", "Determines whether the x axis should be flipped"}},
       {std::string("x_grid"), std::vector<std::string>{"1", "Determines whether a x grid is shown"}},
       {std::string("x_ind"),
@@ -1100,6 +1135,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("y"), std::vector<std::string>{"None", "References the y-values stored in the context"}},
       {std::string("y_bins"), std::vector<std::string>{"1200", "Bins in y direction"}},
       {std::string("y_dim"), std::vector<std::string>{"None", "The dimension of the y-values"}},
+      {std::string("y_dir"), std::vector<std::string>{"None", "The y component of the 3 dimensional direction vector"}},
       {std::string("y_flip"), std::vector<std::string>{"0", "Determines whether the y axis should be flipped"}},
       {std::string("y_grid"), std::vector<std::string>{"1", "When set a y grid is created"}},
       {std::string("y_ind"),
@@ -1141,6 +1177,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("y2"), std::vector<std::string>{"None", "The upper y-coordinate"}},
       {std::string("z"), std::vector<std::string>{"None", "References the z-values stored in the context"}},
       {std::string("z_dims"), std::vector<std::string>{"None", "References the z dimensions stored in the context"}},
+      {std::string("z_dir"), std::vector<std::string>{"None", "The z component of the 3 dimensional direction vector"}},
       {std::string("z_flip"), std::vector<std::string>{"0", "Determines whether the z axis should be flipped"}},
       {std::string("z_grid"), std::vector<std::string>{"1", "When set a z grid is created"}},
       {std::string("z_label_3d"), std::vector<std::string>{"None", "The label of the 3D z axis"}},

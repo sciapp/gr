@@ -878,7 +878,8 @@ int inputImpl(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -912,7 +913,8 @@ int inputImpl(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -1010,7 +1012,8 @@ int inputImpl(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
                     {
@@ -1023,12 +1026,18 @@ int inputImpl(const grm_args_t *input_args)
                       rotation = static_cast<double>(central_region->getAttribute("space_3d_phi"));
                       tilt = static_cast<double>(central_region->getAttribute("space_3d_theta"));
 
-                      rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
-                      tilt = grm_min(180, grm_max(0, tilt));
+                      if (kind != "molecule")
+                        tilt = grm_min(180, grm_max(0, tilt));
+                      else if (tilt > 360)
+                        tilt -= 360;
+
+                      if (kind == "molecule" && tilt > 180) xshift = -xshift;
+                      rotation += xshift * 0.2;
 
                       central_region->setAttribute("space_3d_phi", rotation);
                       central_region->setAttribute("space_3d_theta", tilt);
+                      subplot_element->setAttribute("_interaction", true);
                     }
                 }
               else
@@ -1234,7 +1243,7 @@ int grm_is3d(const int x, const int y)
   auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
   if (subplot_element && strEqualsAny(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
-                                      "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+                                      "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "molecule"))
     {
       return 1;
     }

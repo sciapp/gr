@@ -220,8 +220,13 @@ bool isNumber(std::string_view str)
   auto em_dash = std::string(minus);
   size_t start_pos = 0;
   if (startsWith(str, em_dash)) start_pos = em_dash.size();
-  auto pos = str.find_first_not_of(".-0123456789", start_pos);
+  auto pos = str.find_first_not_of(".-0123456789e", start_pos);
   return pos == std::string::npos;
+}
+
+bool isIntNumber(std::string_view str)
+{
+  return str.find_first_not_of("0123456789") == std::string::npos;
 }
 
 double round(double val, int digits)

@@ -143,6 +143,7 @@ grm_error_t plotHexbin(grm_args_t *subplot_args);
 grm_error_t plotHeatmap(grm_args_t *subplot_args);
 grm_error_t plotPolarHeatmap(grm_args_t *subplot_args);
 grm_error_t plotMarginalHeatmap(grm_args_t *subplot_args);
+grm_error_t plotMolecule(grm_args_t *subplot_args);
 grm_error_t plotWireframe(grm_args_t *subplot_args);
 grm_error_t plotSurface(grm_args_t *subplot_args);
 grm_error_t plotLine3(grm_args_t *subplot_args);
