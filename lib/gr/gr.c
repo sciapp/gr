@@ -11015,12 +11015,10 @@ void gr_inqcolor(int color, int *rgb)
   *rgb = ((nint(r * 255) & 0xff)) | ((nint(g * 255) & 0xff) << 8) | ((nint(b * 255) & 0xff) << 16);
 }
 
-int gr_inqcolorfromrgb(double red, double green, double blue)
+int gr_rgbcolorexists(double red, double green, double blue, int ignored_min, int ignored_max, int tolerance)
 {
-  int wkid = 1, color, errind;
   int rr, gg, bb;
-  int best_color = 80;
-  double best_distance = DBL_MAX;
+  int color;
 
   check_autoinit;
 
@@ -11043,45 +11041,49 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
   else if (bb > 255)
     bb = 255;
 
-  uint32_t rgbmask = (uint32_t)rr | ((uint32_t)gg << 8) | ((uint32_t)bb << 16);
-
-  if (share_colormap)
+  /* add an optional tolerance since the visible color has also a tolerance - f.e. 254 or 255 red looks the same */
+  for (color = 0; color < MAX_COLOR; color++)
     {
-      /* Exact match with shared colormap */
-      for (color = 1000; color < 1256; color++)
-        {
-          if (rgb[color] == rgbmask)
-            {
-              setcolorrep(color, red, green, blue);
-              return color;
-            }
-        }
-    }
+      if (ignored_min != -1 && ignored_max != -1 && color >= ignored_min && color <= ignored_max) continue;
+      uint32_t value = rgb[color];
 
-  /* Exact match */
-  for (color = 80; color < 980; color++)
-    {
-      if (rgb[color] == rgbmask)
-        {
-          setcolorrep(color, red, green, blue);
-          used[color] = 1;
-          return color;
-        }
-    }
+      int dr = (int)(value & 0xff) - rr;
+      int dg = (int)((value >> 8) & 0xff) - gg;
+      int db = (int)((value >> 16) & 0xff) - bb;
 
-  /* Allocate an unused entry */
-  for (color = 80; color < 980; color++)
-    {
-      if (!used[color])
-        {
-          setcolorrep(color, red, green, blue);
-          used[color] = 1;
-          return color;
-        }
+      if (abs(dr) <= tolerance && abs(dg) <= tolerance && abs(db) <= tolerance) return color;
     }
+  return -1;
+}
+
+int gr_inqnearestcolorfromrgb(double red, double green, double blue)
+{
+  int color;
+  int rr, gg, bb;
+  int best_color = 80;
+  double best_distance = DBL_MAX;
+
+  rr = nint(red * 255.0);
+  gg = nint(green * 255.0);
+  bb = nint(blue * 255.0);
+
+  if (rr < 0)
+    rr = 0;
+  else if (rr > 255)
+    rr = 255;
+
+  if (gg < 0)
+    gg = 0;
+  else if (gg > 255)
+    gg = 255;
+
+  if (bb < 0)
+    bb = 0;
+  else if (bb > 255)
+    bb = 255;
 
   /* Find nearest color */
-  for (color = 80; color < 980; color++)
+  for (color = 0; color < MAX_COLOR; color++)
     {
       uint32_t value = rgb[color];
 
@@ -11099,6 +11101,39 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
     }
 
   return best_color;
+}
+
+int gr_inqcolorfromrgb(double red, double green, double blue)
+{
+  int color, ind;
+
+  check_autoinit;
+
+  if (share_colormap)
+    color = gr_rgbcolorexists(red, green, blue, -1, -1, 0);
+  else
+    color = gr_rgbcolorexists(red, green, blue, 1000, 1255, 0);
+
+  if (color != -1)
+    {
+      setcolorrep(color, red, green, blue);
+      used[color] = 1;
+      return color;
+    }
+
+  for (color = 80; color < 980; color++)
+    {
+      if (!used[color])
+        {
+          setcolorrep(color, red, green, blue);
+          used[color] = 1;
+          return color;
+        }
+    }
+
+  ind = gr_inqnearestcolorfromrgb(red, green, blue);
+
+  return ind;
 }
 
 void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b)

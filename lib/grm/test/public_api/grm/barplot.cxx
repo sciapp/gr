@@ -81,18 +81,18 @@ int main(void)
   /* Set individual edge_width and edge_color */
   auto edges = root->querySelectorsAll("drawrect");
   edges[2]->setAttribute("linewidth", 5.0);
-  render->setColorRep(edges[2], PLOT_CUSTOM_COLOR_INDEX, 0.9, 0.6, 0.3);
-  edges[2]->setAttribute("linecolorind", PLOT_CUSTOM_COLOR_INDEX);
+  auto index = render->setColorRep(edges[2], 0.9, 0.6, 0.3);
+  edges[2]->setAttribute("linecolorind", index);
 
   /* Set individual bar_color */
   auto bars = root->querySelectorsAll("fillrect");
   for (int i; i < 2; ++i)
     {
-      render->setColorRep(bars[i], PLOT_CUSTOM_COLOR_INDEX, 0.0, 0.666, 0.333);
-      bars[i]->setAttribute("fillcolorind", PLOT_CUSTOM_COLOR_INDEX);
+      auto index = render->setColorRep(bars[i], 0.0, 0.666, 0.333);
+      bars[i]->setAttribute("fillcolorind", index);
     }
-  render->setColorRep(bars[2], PLOT_CUSTOM_COLOR_INDEX, 0.111, 0.222, 0.333);
-  bars[2]->setAttribute("fillcolorind", PLOT_CUSTOM_COLOR_INDEX);
+  index = render->setColorRep(bars[2], 0.111, 0.222, 0.333);
+  bars[2]->setAttribute("fillcolorind", index);
 
   grm_render();
   sleep(3);
