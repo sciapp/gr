@@ -19,7 +19,6 @@ extern "C" {
 
 typedef struct
 {
-  char *x_time;
   double x;
   double y;
   int x_px;
@@ -27,18 +26,19 @@ typedef struct
   char *x_label;
   char *y_label;
   char *label;
+  char *x_time;
 } grm_tooltip_info_t;
 
 typedef struct
 {
   int n;
-  char *x_time;
   double x;
   double *y;
   int x_px;
   int y_px;
   char *x_label;
   char **y_labels;
+  char *x_time;
 } grm_accumulated_tooltip_info_t;
 
 /* ========================= functions ============================================================================== */

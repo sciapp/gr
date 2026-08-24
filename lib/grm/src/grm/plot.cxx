@@ -206,6 +206,7 @@ static PlotFuncMapEntry kind_to_func[] = {{"line", plotLine},
                                           {"hexbin", plotHexbin},
                                           {"heatmap", plotHeatmap},
                                           {"marginal_heatmap", plotMarginalHeatmap},
+                                          {"molecule", plotMolecule},
                                           {"wireframe", plotWireframe},
                                           {"surface", plotSurface},
                                           {"line3", plotLine3},
@@ -350,7 +351,10 @@ const char *valid_series_keys[] = {"a",
                                    "c",
                                    "c_dims",
                                    "c_range",
+                                   "cell",
                                    "clip_negative",
+                                   "color_rgb_values",
+                                   "connection_threshold",
                                    "draw_edges",
                                    "d_min",
                                    "d_max",
@@ -376,14 +380,20 @@ const char *valid_series_keys[] = {"a",
                                    "marker_color_ind",
                                    "marker_size",
                                    "marker_type",
+                                   "molecule_symbols",
                                    "num_bins",
                                    "r",
+                                   "radius_kind",
                                    "ref_x_axis_location",
                                    "ref_y_axis_location",
                                    "rgb",
                                    "r_range",
                                    "s",
                                    "series_kind",
+                                   "spin_style",
+                                   "spin_x",
+                                   "spin_y",
+                                   "spin_z",
                                    "step_where",
                                    "stairs",
                                    "theta",
@@ -427,9 +437,12 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"c", "D|I"},
                                           {"c_dims", "I"},
                                           {"c_range", "D"},
+                                          {"cell", "D"},
                                           {"col", "i|I"},
                                           {"col_span", "i|I"},
+                                          {"color_rgb_values", "D"},
                                           {"colormap", "i"},
+                                          {"connection_threshold", "d"},
                                           {"d_min", "d"},
                                           {"d_max", "d"},
                                           {"edge_color", "D|i"},
@@ -462,6 +475,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"marker_color_ind", "i"},
                                           {"marker_size", "d"},
                                           {"marker_type", "i|D"},
+                                          {"molecule_symbols", "S"},
                                           {"num_bins", "i"},
                                           {"only_square_aspect_ratio", "i"},
                                           {"orientation", "s"},
@@ -469,6 +483,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"r", "D|I"},
                                           {"r_lim", "D"},
                                           {"r_range", "D"},
+                                          {"radius_kind", "i"},
                                           {"raw", "s"},
                                           {"ref_x_axis_location", "s"},
                                           {"ref_y_axis_location", "s"},
@@ -480,6 +495,10 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"row", "i|I"},
                                           {"row_span", "i|I"},
                                           {"size", "D|I|A"},
+                                          {"spin_style", "i"},
+                                          {"spin_x", "D"},
+                                          {"spin_y", "D"},
+                                          {"spin_y", "D"},
                                           {"step_where", "s"},
                                           {"style", "s"},
                                           {"subplot", "D"},
@@ -1118,7 +1137,7 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
   if (!strEqualsAny(kind, "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
                     "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "barplot",
                     "contour", "contourf", "heatmap", "hexbin", "histogram", "line", "quiver", "scatter", "shade",
-                    "stairs", "stem", "marginal_heatmap", "imshow", "tricontour", "pie"))
+                    "stairs", "stem", "marginal_heatmap", "imshow", "tricontour", "pie", "molecule"))
     {
       error = GRM_ERROR_PLOT_UNKNOWN_KIND;
       error_code = error;
@@ -1389,6 +1408,14 @@ void plotProcessWindow(grm_args_t *subplot_args)
     {
       global_render->setWindow3d(central_region, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
       global_render->setSpace3d(central_region, 45.0, 2.5);
+      if (grm_args_values(subplot_args, "rotation", "d", &rotation))
+        central_region->setAttribute("space_3d_phi", rotation);
+      if (grm_args_values(subplot_args, "tilt", "d", &tilt)) central_region->setAttribute("space_3d_theta", tilt);
+    }
+  else if (strEqualsAny(kind, "molecule") == 0)
+    {
+      global_render->setWindow3d(central_region, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+      global_render->setSpace3d(central_region, 45.0, 0); // todo: anpassen?
       if (grm_args_values(subplot_args, "rotation", "d", &rotation))
         central_region->setAttribute("space_3d_phi", rotation);
       if (grm_args_values(subplot_args, "tilt", "d", &tilt)) central_region->setAttribute("space_3d_theta", tilt);
@@ -2929,6 +2956,98 @@ grm_error_t plotMarginalHeatmap(grm_args_t *subplot_args)
   return error;
 }
 
+grm_error_t plotMolecule(grm_args_t *subplot_args)
+{
+  grm_args_t **current_series;
+  unsigned int x_length, y_length, z_length, color_length, spin_x_length, spin_y_length, spin_z_length, symbols_length,
+      cell_length;
+  double *x_data, *y_data, *z_data, *spin_x_data, *spin_y_data, *spin_z_data, *cell_data;
+  int *rgb_color_values;
+  const char **symbols_data;
+  int spin_style, radius_kind;
+  double connection_threshold;
+
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
+  if (series_args != nullptr)
+    current_series = &series_args;
+  else
+    grm_args_values(subplot_args, "series", "A", &current_series);
+
+  while (*current_series != nullptr)
+    {
+      auto sub_group = global_creator->createSeries("molecule");
+      group->append(sub_group);
+
+      int id = static_cast<int>(global_root->getAttribute("_id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      grm_args_first_value(*current_series, "molecule_symbols", "S", &symbols_data, &symbols_length);
+      grm_args_first_value(*current_series, "x", "D", &x_data, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y_data, &y_length);
+      grm_args_first_value(*current_series, "z", "D", &z_data, &z_length);
+
+      std::vector<std::string> symbols_vec(symbols_data, symbols_data + symbols_length);
+      std::vector<double> x_data_vec(x_data, x_data + x_length);
+      std::vector<double> y_data_vec(y_data, y_data + y_length);
+      std::vector<double> z_data_vec(z_data, z_data + z_length);
+
+      (*context)["molecule_symbols" + str] = symbols_vec;
+      sub_group->setAttribute("molecule_symbols", "molecule_symbols" + str);
+      (*context)["x" + str] = x_data_vec;
+      sub_group->setAttribute("x", "x" + str);
+      (*context)["y" + str] = y_data_vec;
+      sub_group->setAttribute("y", "y" + str);
+      (*context)["z" + str] = z_data_vec;
+      sub_group->setAttribute("z", "z" + str);
+
+      if (grm_args_first_value(*current_series, "spin_x", "D", &spin_x_data, &spin_x_length))
+        {
+          std::vector<double> spin_x_vec(spin_x_data, spin_x_data + spin_x_length);
+          (*context)["spin_x" + str] = spin_x_vec;
+          sub_group->setAttribute("spin_x", "spin_x" + str);
+        }
+      if (grm_args_first_value(*current_series, "spin_y", "D", &spin_y_data, &spin_y_length))
+        {
+          std::vector<double> spin_y_vec(spin_y_data, spin_y_data + spin_y_length);
+          (*context)["spin_y" + str] = spin_y_vec;
+          sub_group->setAttribute("spin_y", "spin_y" + str);
+        }
+      if (grm_args_first_value(*current_series, "spin_z", "D", &spin_z_data, &spin_z_length))
+        {
+          std::vector<double> spin_z_vec(spin_z_data, spin_z_data + spin_z_length);
+          (*context)["spin_z" + str] = spin_z_vec;
+          sub_group->setAttribute("spin_z", "spin_z" + str);
+        }
+      if (grm_args_first_value(*current_series, "color_rgb_values", "D", &rgb_color_values, &color_length))
+        {
+          std::vector<double> rgb_vec(rgb_color_values, rgb_color_values + color_length);
+          (*context)["color_rgb_values" + str] = rgb_vec;
+          sub_group->setAttribute("color_rgb_values", "color_rgb_values" + str);
+        }
+      if (grm_args_first_value(*current_series, "cell", "D", &cell_data, &cell_length))
+        {
+          std::vector<double> cell_data_vec(cell_data, cell_data + cell_length);
+          (*context)["cell" + str] = cell_data_vec;
+          sub_group->setAttribute("cell", "cell" + str);
+        }
+
+      if (grm_args_values(*current_series, "spin_style", "i", &spin_style))
+        sub_group->setAttribute("spin_style", spin_style);
+      if (grm_args_values(*current_series, "connection_threshold", "d", &connection_threshold))
+        sub_group->setAttribute("connection_threshold", connection_threshold);
+      if (grm_args_values(*current_series, "radius_kind", "i", &radius_kind))
+        sub_group->setAttribute("radius_kind", radius_kind);
+
+      global_root->setAttribute("_id", ++id);
+      plotDrawLegend(subplot_args);
+      if (series_args != nullptr) break;
+      ++current_series;
+    }
+
+  return GRM_ERROR_NONE;
+}
+
 grm_error_t plotWireframe(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
@@ -3525,6 +3644,7 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
       auto sub_group = global_creator->createSeries("polar_scatter");
       int clip_negative = 0, marker_type;
       std::string prefix = "";
+      double marker_size;
       group->append(sub_group);
 
       grm_args_first_value(*current_series, "theta", "D", &theta, &theta_length);
@@ -3566,6 +3686,8 @@ grm_error_t plotPolarScatter(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
+      if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
+        sub_group->setAttribute("marker_size", marker_size);
 
       global_root->setAttribute("_id", ++id);
       if (series_args != nullptr) break;
@@ -4013,12 +4135,12 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
 
   if (grm_args_values(args, "timestamp", "i", &timestamp) && timestamp) group->setAttribute("_time_axis", timestamp);
 
-  if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "molecule"))
     {
       type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);
       group->setAttribute("z_grid", z_grid);
-      if (strcmp(kind, "isosurface") == 0) group->setAttribute("hide", 1);
+      if (strEqualsAny(kind, "isosurface", "molecule")) group->setAttribute("hide", 1);
     }
   else
     {
@@ -5344,9 +5466,11 @@ public:
   explicit FileBinInputStream(FILE *file)
   {
     unsigned char sig[8];
-    fread(sig, 1, 8, file);
+    fread(sig, 1, sizeof(sig), file);
+
     if (png_sig_cmp(sig, 0, 8) == 0)
       {
+        // TODO: Add support for PNG in `gr_getmetadatafromstream`
         std::string save_file_name;
 
         rewind(file); // reset the file pointer so that png_read_png doesn't crash
@@ -5391,7 +5515,37 @@ public:
             file_ = fopen(save_file_name.c_str(), "rb");
           }
       }
-    else
+    else if (startsWith((char *)sig, "%PDF-"))
+      {
+        rewind(file);
+        auto save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+        if (save_file_name.empty()) return;
+        std::ofstream save_file_stream(save_file_name);
+
+        save_file_stream << gr_getmetadatafromstream(file) << std::endl;
+        save_file_stream.close();
+        file_ = fopen(save_file_name.c_str(), "rb");
+      }
+    else if (startsWith((char *)sig, "<?xml"))
+      {
+        char line_buf[512];
+        // Read and discard the xml header line
+        fgets(line_buf, sizeof(line_buf), file);
+        fread(sig, 1, 4, file);
+        if (startsWith((char *)sig, "<svg"))
+          {
+            rewind(file);
+            auto save_file_name = std::string(grm_tmp_dir) + "tmp.xml";
+            if (save_file_name.empty()) return;
+            std::ofstream save_file_stream(save_file_name);
+
+            save_file_stream << gr_getmetadatafromstream(file) << std::endl;
+            save_file_stream.close();
+            file_ = fopen(save_file_name.c_str(), "rb");
+          }
+      }
+
+    if (!file_)
       {
         rewind(file);
         file_ = file;
@@ -5609,7 +5763,7 @@ private:
   const std::string look_ahead_prefix_ = "internal=" + std::string(1, attribute_delimiter);
   std::vector<char> buffer_;
   XMLFilePos cur_pos_ = 0;
-  FILE *file_;
+  FILE *file_ = nullptr;
 };
 
 /*!
@@ -6975,20 +7129,30 @@ int grm_process_tree(void)
 int grm_export(const char *file_path, int export_xml)
 {
   auto active_figure = global_root->querySelectors("figure[active=\"1\"]");
-  auto active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
-  auto active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+  std::shared_ptr<GRM::Element> active_plot, active_plot_through_update;
+  if (active_figure != nullptr)
+    {
+      active_plot = active_figure->querySelectors("plot[_active=\"1\"]");
+      active_plot_through_update = active_figure->querySelectors("plot[_active_through_update=\"1\"]");
+    }
 
   if (active_plot != nullptr) active_plot->setAttribute("_active", 0);
   if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 0);
 
   gr_beginprint(const_cast<char *>(file_path));
+  if (export_xml && (endsWith(file_path, ".pdf") || endsWith(file_path, ".svg")))
+    {
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      // TODO: Add support for PNG in `gr_setmetadata`
+      gr_setmetadata(graphics_tree_str.get());
+    }
   int return_value = grm_plot(nullptr);
   gr_endprint();
 
   if (active_plot != nullptr) active_plot->setAttribute("_active", 1);
   if (active_plot_through_update != nullptr) active_plot_through_update->setAttribute("_active_through_update", 1);
 
-  if (export_xml)
+  if (export_xml && endsWith(file_path, ".png"))
     {
       png_inforp info_ptr;
       auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);

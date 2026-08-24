@@ -187,6 +187,20 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       free(t);
       break;
 
+    case 11: /* escape */
+      if (d->state == GKS_K_WS_ACTIVE)
+        {
+          len = (2 + i_arr[1]) * sizeof(int);
+          if (d->nbytes + len > d->size) reallocate(d, len);
+
+          COPY(&len, sizeof(int));
+          COPY(&fctid, sizeof(int));
+          COPY(i_arr, i_arr[1] * sizeof(int));
+
+          d->empty = 0;
+        }
+      break;
+
     case 12: /* polyline */
     case 13: /* polymarker */
     case 15: /* fill area */
@@ -496,6 +510,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
   int sp = 0;
   int null_val = 0, i;
   char *s = dl;
+  int *funid = NULL, *dimidr = NULL;
   int *ia = NULL, *tmp;
   double *r1 = NULL, *r2 = NULL;
   char *chars = NULL;
@@ -514,6 +529,12 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 6: /* clear workstation */
       RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
       memcpy(*gkss, sl, sizeof(gks_state_list_t));
+      break;
+
+    case 11: /* escape */
+      RESOLVE(funid, int, sizeof(int));
+      RESOLVE(dimidr, int, sizeof(int));
+      RESOLVE(ia, int, *dimidr * sizeof(int));
       break;
 
     case 12: /* polyline */

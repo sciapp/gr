@@ -878,7 +878,8 @@ int inputImpl(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -912,7 +913,8 @@ int inputImpl(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   /*
                    * TODO Zoom in 3D
@@ -1010,7 +1012,8 @@ int inputImpl(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
 
-              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+              if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface",
+                               "molecule"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
                     {
@@ -1023,12 +1026,18 @@ int inputImpl(const grm_args_t *input_args)
                       rotation = static_cast<double>(central_region->getAttribute("space_3d_phi"));
                       tilt = static_cast<double>(central_region->getAttribute("space_3d_theta"));
 
-                      rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
-                      tilt = grm_min(180, grm_max(0, tilt));
+                      if (kind != "molecule")
+                        tilt = grm_min(180, grm_max(0, tilt));
+                      else if (tilt > 360)
+                        tilt -= 360;
+
+                      if (kind == "molecule" && tilt > 180) xshift = -xshift;
+                      rotation += xshift * 0.2;
 
                       central_region->setAttribute("space_3d_phi", rotation);
                       central_region->setAttribute("space_3d_theta", tilt);
+                      subplot_element->setAttribute("_interaction", true);
                     }
                 }
               else
@@ -1234,7 +1243,7 @@ int grm_is3d(const int x, const int y)
   auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
   if (subplot_element && strEqualsAny(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
-                                      "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
+                                      "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "molecule"))
     {
       return 1;
     }
@@ -1441,21 +1450,8 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
       double x_double = ndc_x, y_double = ndc_y;
       gr_ndctowc(&x_double, &y_double);
       struct tm timestamp_x_tm;
-#ifdef _WIN32
-      int year, month, day, hour, minute, second;
-
-      if (sscanf(accumulated_tooltip->x_time, "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+      if (parseIso8601WithoutTimezone(accumulated_tooltip->x_time, timestamp_x_tm))
         {
-          timestamp_x_tm.tm_year = year - 1900;
-          timestamp_x_tm.tm_mon = month - 1;
-          timestamp_x_tm.tm_mday = day;
-          timestamp_x_tm.tm_hour = hour;
-          timestamp_x_tm.tm_min = minute;
-          timestamp_x_tm.tm_sec = second;
-#else
-      if (strptime(accumulated_tooltip->x_time, "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
-        {
-#endif
           coordinate_system->setAttribute("x_ind", (int)mktime(&timestamp_x_tm));
         }
       else
@@ -2121,7 +2117,6 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       "colorbar",
       "label",
       "titles_3d",
-      "text",
       "layout_grid_element",
       "layout_grid",
       "central_region",
@@ -2132,7 +2127,6 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       "side_plot_region",
       "text_region",
       "coordinate_system",
-      "overlay_element",
   };
 
   for (const auto &elem : grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]"))
@@ -2140,7 +2134,7 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       if (!elem->hasAttribute("_bbox_x_min")) continue;
       if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), elem->localName()) !=
               ndc_transformation_elems.end() &&
-          !elem->hasAttribute("viewport_x_min") && !strEqualsAny(elem->localName(), "overlay_element", "text"))
+          !elem->hasAttribute("viewport_x_min"))
         continue;
 
       auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
@@ -2148,28 +2142,25 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
       auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
       auto bbox_y_max = static_cast<double>(elem->getAttribute("_bbox_y_max"));
 
-      if (elem->localName() != "text")
-        {
-          // check if the cursor is at the border of the box or not
-          if (((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5) ||
-               (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5)) &&
-              mouse_y > bbox_y_min + 5 && mouse_y < bbox_y_max - 5)
-            return HORIZONTAL_SCALE_HOVER_MODE;
-          if (((mouse_y > bbox_y_min - 5 && mouse_y < bbox_y_min + 5) ||
-               (mouse_y > bbox_y_max - 5 && mouse_y < bbox_y_max + 5)) &&
-              mouse_x > bbox_x_min + 5 && mouse_x < bbox_x_max - 5)
-            return VERTICAL_SCALE_HOVER_MODE;
-          if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_min - 5 &&
-               mouse_y < bbox_y_min + 5) ||
-              (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_max - 5 &&
-               mouse_y < bbox_y_max + 5))
-            return F_DIAGONAL_SCALE_HOVER_MODE;
-          if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_max - 5 &&
-               mouse_y < bbox_y_max + 5) ||
-              (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_min - 5 &&
-               mouse_y < bbox_y_min + 5))
-            return B_DIAGONAL_SCALE_HOVER_MODE;
-        }
+      // check if the cursor is at the border of the box or not
+      if (((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5) ||
+           (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5)) &&
+          mouse_y > bbox_y_min + 5 && mouse_y < bbox_y_max - 5)
+        return HORIZONTAL_SCALE_HOVER_MODE;
+      if (((mouse_y > bbox_y_min - 5 && mouse_y < bbox_y_min + 5) ||
+           (mouse_y > bbox_y_max - 5 && mouse_y < bbox_y_max + 5)) &&
+          mouse_x > bbox_x_min + 5 && mouse_x < bbox_x_max - 5)
+        return VERTICAL_SCALE_HOVER_MODE;
+      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_min - 5 &&
+           mouse_y < bbox_y_min + 5) ||
+          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_max - 5 &&
+           mouse_y < bbox_y_max + 5))
+        return F_DIAGONAL_SCALE_HOVER_MODE;
+      if ((mouse_x > bbox_x_min - 5 && mouse_x < bbox_x_min + 5 && mouse_y > bbox_y_max - 5 &&
+           mouse_y < bbox_y_max + 5) ||
+          (mouse_x > bbox_x_max - 5 && mouse_x < bbox_x_max + 5 && mouse_y > bbox_y_min - 5 &&
+           mouse_y < bbox_y_min + 5))
+        return B_DIAGONAL_SCALE_HOVER_MODE;
       if (bbox_x_min <= mouse_x && mouse_x <= bbox_x_max && bbox_y_min <= mouse_y && mouse_y <= bbox_y_max)
         return MOVE_HOVER_MODE;
     }

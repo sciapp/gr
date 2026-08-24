@@ -512,6 +512,9 @@ void gks_report_error(int routine, int errnum)
     case 901:
       message = "Open failed in routine %s";
       break;
+    case 1001:
+      message = "Invalid function id in routine %s";
+      break;
     default:
       message = "unknown error";
     }
