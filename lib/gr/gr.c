@@ -359,6 +359,7 @@ static int scientific_format = SCIENTIFIC_FORMAT_OPTION_E;
 #define DEFAULT_LAST_COLOR 79
 
 static int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
+static bool share_colormap = false;
 
 #define MAX_COLOR 1256
 
@@ -10803,11 +10804,13 @@ void gr_setcolormap(int index)
       ind %= 100;
       first_color = 1000;
       last_color = 1255;
+      share_colormap = true;
     }
   else
     {
       first_color = DEFAULT_FIRST_COLOR;
       last_color = DEFAULT_LAST_COLOR;
+      share_colormap = false;
     }
 
   if (ind >= (int)(sizeof(cmap) / sizeof(cmap[0]))) ind = 0;
@@ -11042,6 +11045,19 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
 
   uint32_t rgbmask = (uint32_t)rr | ((uint32_t)gg << 8) | ((uint32_t)bb << 16);
 
+  if (share_colormap)
+    {
+      /* Exact match with shared colormap */
+      for (color = 1000; color < 1256; color++)
+        {
+          if (rgb[color] == rgbmask)
+            {
+              setcolorrep(color, red, green, blue);
+              return color;
+            }
+        }
+    }
+
   /* Exact match */
   for (color = 80; color < 980; color++)
     {
@@ -11060,16 +11076,6 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
         {
           setcolorrep(color, red, green, blue);
           used[color] = 1;
-          return color;
-        }
-    }
-
-  /* Exact match with active colormap */
-  for (color = 1000; color < 1256; color++)
-    {
-      if (rgb[color] == rgbmask)
-        {
-          setcolorrep(color, red, green, blue);
           return color;
         }
     }
