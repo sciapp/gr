@@ -840,6 +840,119 @@ GRPlotWidget::~GRPlotWidget()
   grm_finalize();
 }
 
+static void distanceTransform1D(const float *input, float *output, int length)
+{
+  std::vector<int> sites(length);
+  std::vector<float> boundaries(length + 1);
+
+  int k = 0;
+  sites[0] = 0;
+  boundaries[0] = -std::numeric_limits<float>::infinity();
+  boundaries[1] = std::numeric_limits<float>::infinity();
+
+  for (int q = 1; q < length; ++q)
+    {
+      float intersection;
+
+      while (true)
+        {
+          const int p = sites[k];
+
+          intersection = ((input[q] + static_cast<float>(q * q)) - (input[p] + static_cast<float>(p * p))) /
+                         static_cast<float>(2 * q - 2 * p);
+          if (intersection > boundaries[k] || k == 0) break;
+          --k;
+        }
+
+      ++k;
+      sites[k] = q;
+      boundaries[k] = intersection;
+      boundaries[k + 1] = std::numeric_limits<float>::infinity();
+    }
+
+  k = 0;
+
+  for (int q = 0; q < length; ++q)
+    {
+      while (boundaries[k + 1] < q)
+        {
+          ++k;
+        }
+
+      const int difference = q - sites[k];
+
+      output[q] = static_cast<float>(difference * difference) + input[sites[k]];
+    }
+}
+
+bool widenBlackObjects(const unsigned char *input, unsigned char *output, int width, int height, float radius,
+                       unsigned char threshold = 128)
+{
+  if (!input || !output || width <= 0 || height <= 0 || radius < 0.0f) return false;
+
+  const std::size_t pixel_count = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+  const float infinity = std::numeric_limits<float>::max() / 4.0f;
+  std::vector<float> first_pass(pixel_count);
+  std::vector<float> distances_squared(pixel_count);
+  const int maximum_dimension = std::max(width, height);
+  std::vector<float> line_input(maximum_dimension);
+  std::vector<float> line_output(maximum_dimension);
+
+  /*
+   * Initialize:
+   *
+   * 0 for foreground/object pixels.
+   * Infinity for background pixels.
+   */
+  for (std::size_t i = 0; i < pixel_count; ++i)
+    {
+      first_pass[i] = input[i] < threshold ? 0.0f : infinity;
+    }
+
+  // Transform each column.
+  for (int x = 0; x < width; ++x)
+    {
+      for (int y = 0; y < height; ++y)
+        {
+          line_input[y] = first_pass[static_cast<std::size_t>(y) * width + x];
+        }
+
+      distanceTransform1D(line_input.data(), line_output.data(), height);
+
+      for (int y = 0; y < height; ++y)
+        {
+          first_pass[static_cast<std::size_t>(y) * width + x] = line_output[y];
+        }
+    }
+
+  // Transform each row.
+  for (int y = 0; y < height; ++y)
+    {
+      const std::size_t row_offset = static_cast<std::size_t>(y) * width;
+
+      for (int x = 0; x < width; ++x)
+        {
+          line_input[x] = first_pass[row_offset + x];
+        }
+
+      distanceTransform1D(line_input.data(), line_output.data(), width);
+
+      for (int x = 0; x < width; ++x)
+        {
+          distances_squared[row_offset + x] = line_output[x];
+        }
+    }
+
+  const float radius_squared = radius * radius;
+
+  for (std::size_t i = 0; i < pixel_count; ++i)
+    {
+      output[i] = distances_squared[i] <= radius_squared ? 0 : 255;
+    }
+
+  return true;
+}
+
 static void dilatationForImagePart(void *arg)
 {
   constexpr uint32_t no_color = 0xFFFFFFFF;
@@ -1005,17 +1118,76 @@ static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y
 static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
                                   unsigned int *pixels)
 {
-  auto processed_image = dilatationForImage(x, y, width, height, pixels);
   std::vector<unsigned char> image;
-  for (unsigned int j = 0; j < height; j++)
+  auto elem = grm_get_document_root()->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
+
+  if (elem->localName() == "sphere" || elem->localName() == "series_molecule" ||
+      elem->localName() == "series_isosurface" || elem->localName() == "spin" || elem->localName() == "cylinder")
     {
-      for (unsigned int i = 0; i < width; i++)
+      auto box = 5;
+      auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+      auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
+      auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
+      auto new_x = std::max<int>(0, x - box);
+      auto new_y = std::max<int>(0, y - box);
+      unsigned int new_width = std::min<int>(x + width + box, figure_size_x * 2) - new_x;
+      unsigned int new_height = std::min<int>(y + height + box, figure_size_y * 2) - new_y;
+      auto border_x = new_width - width;
+      auto border_y = new_height - height;
+
+      std::vector<unsigned char> input;
+      std::vector<unsigned char> output(static_cast<std::size_t>(new_width) * new_height);
+      input.resize(new_width * new_height, 255);
+
+      for (int i = 0; i < width; i++)
         {
-          const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
-          image.push_back(pixel[0]);
-          image.push_back(pixel[1]);
-          image.push_back(pixel[2]);
-          image.push_back(pixel[3]);
+          for (int j = 0; j < height; j++)
+            {
+              if (pixels[i + j * width] != 0xFFFFFFFF)
+                input[(i + border_x / 2.0) + (j + border_y / 2.0) * new_width] = 0;
+            }
+        }
+
+      widenBlackObjects(input.data(), output.data(), new_width, new_height, 5.0f);
+      for (unsigned int j = 0; j < new_height; j++)
+        {
+          for (unsigned int i = 0; i < new_width; i++)
+            {
+              if (output[i + j * new_width] == 0)
+                {
+                  image.push_back(240);
+                  image.push_back(2);
+                  image.push_back(2);
+                  image.push_back(255);
+                }
+              else
+                {
+                  image.push_back(255);
+                  image.push_back(255);
+                  image.push_back(255);
+                  image.push_back(0);
+                }
+            }
+        }
+      x = new_x;
+      y = new_y;
+      width = new_width;
+      height = new_height;
+    }
+  else
+    {
+      auto processed_image = dilatationForImage(x, y, width, height, pixels);
+
+      for (unsigned int j = 0; j < height; j++)
+        {
+          for (unsigned int i = 0; i < width; i++)
+            {
+              const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
+              image.push_back(pixel[0]);
+              image.push_back(pixel[1]);
+              image.push_back(pixel[2]);
+              image.push_back(pixel[3]);
+            }
         }
     }
   std::free(pixels);
