@@ -414,9 +414,31 @@ void legendSize(const std::shared_ptr<GRM::Element> &element, double *w, double 
         {
           bool has_valid_child = false;
           if (!strEqualsAny(series->localName(), "series_line", "series_polar_line", "series_polar_scatter",
-                            "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3"))
+                            "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3",
+                            "series_molecule"))
             continue;
-          if (!series->hasAttribute("label")) continue;
+          if (!series->hasAttribute("label") && kind != "molecule") continue;
+
+          if (series->localName() == "series_molecule")
+            {
+              if (!series->hasAttribute("molecule_symbols")) continue;
+              auto molecule_symbols_key = static_cast<std::string>(series->getAttribute("molecule_symbols"));
+              auto molecule_symbols_vec =
+                  GRM::get<std::vector<std::string>>((*grm_get_render()->getContext())[molecule_symbols_key]);
+
+              sort(molecule_symbols_vec.begin(), molecule_symbols_vec.end());
+              molecule_symbols_vec.erase(unique(molecule_symbols_vec.begin(), molecule_symbols_vec.end()),
+                                         molecule_symbols_vec.end());
+              legend_elems += molecule_symbols_vec.size();
+
+              for (const auto &symbol : molecule_symbols_vec)
+                {
+                  gr_inqtext(0, 0, (char *)symbol.c_str(), tbx, tby);
+                  *w = grm_max(*w, tbx[2] - tbx[0]);
+                  *h += grm_max(tby[2] - tby[0], 0.03);
+                }
+              continue;
+            }
 
           for (const auto &child : series->children())
             {
@@ -3159,6 +3181,9 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
       char text_c[256];
       double viewport[4];
 
+      // timestamps doesn't get displayed correctly with LaTeX cause of the ':' -> do the same as GR
+      scientific_format = 1;
+
       snprintf(text_c, 256, "%s", text.c_str());
       gr_inqtext(x, y, text_c, tbx, tby);
 
@@ -4083,10 +4108,11 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                   if (strEqualsAny(location, "x", "y") || plot_type != "2d" ||
                       !strEqualsAny(*current_component_name, "x", "y"))
                     {
-                      if (strEqualsAny(kind, "imshow", "isosurface", "volume"))
+                      if (strEqualsAny(kind, "imshow", "isosurface", "volume", "molecule"))
                         {
-                          if (*current_component_name == "c" && strEqualsAny(kind, "volume", "isosurface")) continue;
-                          min_component = (kind == "imshow" ? 0.0 : -1.0);
+                          if (*current_component_name == "c" && strEqualsAny(kind, "volume", "isosurface", "molecule"))
+                            continue;
+                          min_component = (strEqualsAny(kind, "imshow") ? 0.0 : -1.0);
                           max_component = 1.0;
                         }
                     }

@@ -17,7 +17,7 @@
 #include "grm/utilcpp_int.hxx"
 
 
-char detectDelimiter(const std::string &line)
+static char detectDelimiter(const std::string &line)
 {
   std::vector<char> candidates = {',', ';', '|', '\t', ' '};
   unsigned int max_occurences = 0;
@@ -34,7 +34,6 @@ char detectDelimiter(const std::string &line)
     }
   return best;
 }
-
 
 std::string CsvSource::normalizeLine(const std::string &str)
 {
@@ -56,7 +55,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                                     std::vector<std::string> &labels, grm_args_t *args, const char *colms,
                                     const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
                                     grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                                    std::vector<int> &timestamps)
+                                    std::vector<int> &timestamps, double **special_data_grid)
 {
   std::string line;
   std::string token;
@@ -166,7 +165,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   labels.push_back(token);
                 }
             }
-          else
+          else if (args != nullptr)
             {
               /* use key + ":" + value to create a token which is similar to a commandline key:value pair */
               singleTokenConverter(key + ":" + value, args, ranges, special_axis_series, input_flags, linecount);
@@ -178,11 +177,12 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
           auto delim = detectDelimiter(normalized_line);
           std::istringstream line_ss(normalized_line);
           std::string split_label;
+          size_t col;
           if (skip_legend_line)
             break;
           else
             labels.clear();
-          for (size_t col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
+          for (col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
             {
               if (!legend_line && isNumber(token) && !input_flags.use_bins) continue;
               if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() || columns.empty())
@@ -202,6 +202,12 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   labels.push_back(token);
                   legend_line = true;
                 }
+            }
+          // special case for file which contains xyz molecule information
+          if (legend_line && (col == 4 || col == 7 || col == 10) && isNumber(labels[1]))
+            {
+              legend_line = false;
+              input_flags.xyz_molecule_file = true;
             }
           break;
         }
@@ -248,6 +254,22 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
               (columns.empty() && labels.empty() && (!input_flags.use_bins || col > 0)) ||
               (columns.empty() && (!input_flags.use_bins || col > 0)))
             {
+              struct tm timestamp_tm;
+              // case for molecule data
+              if (col == 0 &&
+                  ((!isNumber(token) && !parseIso8601WithoutTimezone(token, timestamp_tm) && token != "NAN") ||
+                   (isIntNumber(token) && input_flags.xyz_molecule_file)))
+                {
+                  input_flags.xyz_molecule_file = true;
+                  labels.push_back(token); // extract molecule name or number into labels
+                  // make sure to ignore any of these user entries in molecule case
+                  if (!x_columns.empty()) x_columns.clear();
+                  if (!y_columns.empty()) y_columns.clear();
+                  if (!e_columns.empty()) e_columns.clear();
+                  if (row - skipped == 0) data.emplace_back(std::vector<std::vector<double>>());
+                  continue;
+                }
+
               if ((row - skipped == 0 &&
                    (col == input_flags.use_bins || (!columns.empty() && col + 1 == columns.front()))) ||
                   (depth_change && (col == input_flags.use_bins || (!columns.empty() && col + 1 == columns.front()))) ||
@@ -272,25 +294,9 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                     }
                   else
                     {
-                      // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                      struct tm timestamp_tm = {0};
-                      int year, month, day, hour, minute, second;
-
-                      if (sscanf(token.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+                      if (parseIso8601WithoutTimezone(token, timestamp_tm))
                         {
-                          timestamp_tm.tm_year = year - 1900;
-                          timestamp_tm.tm_mon = month - 1;
-                          timestamp_tm.tm_mday = day;
-                          timestamp_tm.tm_hour = hour;
-                          timestamp_tm.tm_min = minute;
-                          timestamp_tm.tm_sec = second;
-#else
-                      struct tm timestamp_tm;
-                      if (strptime(token.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
-                        {
-#endif
-                          data[depth][cnt].push_back(mktime(&timestamp_tm));
+                          data[depth][cnt].push_back((int)mktime(&timestamp_tm));
                           timestamps.emplace_back(col);
                           x_columns.emplace_back(col + 1);
                         }
@@ -367,11 +373,11 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   return GRM_ERROR_NONE;
 }
 
-
 DataSource *CsvPlugin::getDataSourceFromFile(const std::string &path) const
 {
   return new CsvSource;
 }
+
 const Plugin::ApiVersion CsvPlugin::apiVersion() const
 {
   return ApiVersion{1, 0};

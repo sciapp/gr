@@ -46,7 +46,7 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
                          std::vector<std::string> &labels, grm_args_t *args, const char *colms, const char *x_colms,
                          const char *y_colms, const char *e_colms, PlotRange *ranges,
                          grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                         std::vector<int> &timestamps)
+                         std::vector<int> &timestamps, double **special_data_grid)
 {
   if (!reader)
     {
@@ -57,7 +57,7 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
   if (source)
     {
       return source->readDataFile(path, data, x_data, y_data, error_data, labels, args, colms, x_colms, y_colms,
-                                  e_colms, ranges, special_axis_series, input_flags, timestamps);
+                                  e_colms, ranges, special_axis_series, input_flags, timestamps, special_data_grid);
     }
   return GRM_ERROR_DATAREADER_UNKNOWN_FILETYPE;
 }
@@ -168,6 +168,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   InputFlags input_flags;
   std::vector<int> timestamps;
+  double *special_data_grid = nullptr;
 
   for (int i = 1; i < argc; i++)
     {
@@ -244,7 +245,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (readDataFile(file_args->file_path, file_data, x_data, y_data, error_data, labels, plot[plot_i],
                        file_args->file_columns.c_str(), file_args->file_x_columns.c_str(),
                        file_args->file_y_columns.c_str(), file_args->file_error_columns.c_str(), &ranges,
-                       special_axis_series, input_flags, timestamps))
+                       special_axis_series, input_flags, timestamps, &special_data_grid))
         {
           return 0;
         }
@@ -277,7 +278,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           fprintf(stderr, "File is empty\n");
           return 0;
         }
-      if (cols + x_data.size() + error_data.size() != labels.size())
+      if (cols + x_data.size() + error_data.size() != labels.size() && !input_flags.xyz_molecule_file)
         {
           fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n",
                   cols + x_data.size() + error_data.size(), labels.size());
@@ -318,6 +319,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
           kind = "volume";
+          grm_args_push(plot[plot_i], "kind", "s", kind);
+          kinds = const_cast<char **>(&kind);
+        }
+      if (input_flags.xyz_molecule_file && strcmp(kind, "molecule") != 0)
+        {
+          fprintf(stderr, "Data file indicates molecule data -> changed kind to molecule\n");
+          kind = "molecule";
           grm_args_push(plot[plot_i], "kind", "s", kind);
           kinds = const_cast<char **>(&kind);
         }
@@ -455,6 +463,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           int series_num;
           int y_cnt = 0, x_cnt = 0, err_cnt = 0;
           double xmin, xmax;
+          double marker_size;
+          int marker_type;
 
           if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
             {
@@ -648,10 +658,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                     grm_args_push(series[col], "label", "s", labels[col].c_str());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
+                  if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                    grm_args_push(series[col], "marker_type", "i", marker_type);
+                  if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                    grm_args_push(series[col], "marker_size", "d", marker_size);
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -685,6 +700,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
                       else if (timestamp && strcmp(kind, "line") == 0)
                         grm_args_push(series[y_cnt], "line_spec", "s", "-+");
+                      if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                        grm_args_push(series[y_cnt], "marker_type", "i", marker_type);
+                      if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                        grm_args_push(series[y_cnt], "marker_size", "d", marker_size);
                       y_cnt += 1;
                     }
                   else if (!input_flags.equal_up_and_down_error && error != nullptr &&
@@ -1137,7 +1156,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -1513,7 +1533,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
-                  bool timestamp = true, keep_aspect_ratio;
+                  bool timestamp = true;
+                  int keep_aspect_ratio = 1;
                   for (const auto x_col : x_data)
                     {
                       if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
@@ -1601,6 +1622,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
         {
+          int marker_type;
+          double marker_size;
+
           if (cols % 2 == 1)
             {
               fprintf(stderr, "For polar_line and polar_scatter plots x and y must always be given, but in this case "
@@ -1617,6 +1641,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                             col / 2 < kinds_length ? kinds[col / 2] : kinds[kinds_length - 1]);
               if (!labels.empty() && col / 2 < labels.size() && !labels[col / 2].empty())
                 grm_args_push(series[col / 2], "label", "s", labels[col / 2].c_str());
+              if (grm_args_values(plot[plot_i], "marker_type", "i", &marker_type))
+                grm_args_push(series[col / 2], "marker_type", "i", marker_type);
+              if (grm_args_values(plot[plot_i], "marker_size", "d", &marker_size))
+                grm_args_push(series[col / 2], "marker_size", "d", marker_size);
             }
           grm_args_push(plot[plot_i], "series", "nA", cols / 2, series.data());
         }
@@ -1740,6 +1768,43 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
           grm_args_push(plot[plot_i], "y", "nD", rows, file_data[depth][1].data());
         }
+      else if (strcmp(kind, "molecule") == 0)
+        {
+          for (row = 0; row < rows; row++)
+            {
+              if (!labels.empty() && !labels[row].empty())
+                {
+                  if (isIntNumber(labels[row]))
+                    labels_c.push_back(elem_number_to_symbol[std::stoi(labels[row])].c_str());
+                  else
+                    labels_c.push_back(labels[row].c_str());
+                }
+            }
+
+          grm_args_push(plot[plot_i], "molecule_symbols", "nS", labels_c.size(), labels_c.data());
+          grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
+          grm_args_push(plot[plot_i], "y", "nD", rows, file_data[depth][1].data());
+          grm_args_push(plot[plot_i], "z", "nD", rows, file_data[depth][2].data());
+          if (cols >= 6) // spin is given aswell
+            {
+              grm_args_push(plot[plot_i], "spin_x", "nD", rows, file_data[depth][3].data());
+              grm_args_push(plot[plot_i], "spin_y", "nD", rows, file_data[depth][4].data());
+              grm_args_push(plot[plot_i], "spin_z", "nD", rows, file_data[depth][5].data());
+            }
+          if (cols >= 9) // a rgb color is given by the user
+            {
+              std::vector<double> rgb(rows * 3);
+              for (row = 0; row < rows; row++)
+                {
+                  for (col = 6; col < 9; col++)
+                    {
+                      rgb[row * 3 + (col - 6)] = file_data[depth][col][row];
+                    }
+                }
+              grm_args_push(plot[plot_i], "color_rgb_values", "nD", rgb.size(), rgb.data());
+            }
+          // maybe add later some information so the molecule movement can be displayed too?
+        }
       if (plot_num > 1)
         {
           grm_args_push(plot[plot_i], "row", "i", plot_i % divisor);
@@ -1786,9 +1851,10 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
   grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   InputFlags input_flags;
   std::vector<int> timestamps;
+  double *special_data_grid;
 
   if (readDataFile(path, file_data, x_data, y_data, error_data, labels, nullptr, "", "", "", "", &ranges,
-                   special_axis_series, input_flags, timestamps))
+                   special_axis_series, input_flags, timestamps, &special_data_grid))
     return 0;
 
   if (!file_data.empty())

@@ -237,6 +237,7 @@
                 <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_molecule" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_nonuniform_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_nonuniform_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
@@ -441,17 +442,17 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="2"/> <!-- tick label -->
                 <xs:element ref="tick" minOccurs="0" maxOccurs="2"/> <!-- tick -->
             </xs:choice>
-        <xs:attributeGroup ref="line_modifications"/>
-        <xs:attributeGroup ref="move_xform_ndc"/>
-        <xs:attributeGroup ref="text_modifications"/>
-        <xs:attribute name="char_height" type="xs:double"/>
-        <xs:attribute name="is_major" type="xs:integer"/>
-        <xs:attribute name="scientific_format" type="strint"/>
-        <xs:attribute name="tick_label" type="xs:string"/>
-        <xs:attribute name="tick_size" type="xs:double"/>
-        <xs:attribute name="value" type="xs:double"/>
-        <xs:attribute name="width" type="xs:double"/>
-        <xs:attribute name="z_index" type="xs:integer"/>
+            <xs:attributeGroup ref="line_modifications"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="text_modifications"/>
+            <xs:attribute name="char_height" type="xs:double"/>
+            <xs:attribute name="is_major" type="xs:integer"/>
+            <xs:attribute name="scientific_format" type="strint"/>
+            <xs:attribute name="tick_label" type="xs:string"/>
+            <xs:attribute name="tick_size" type="xs:double"/>
+            <xs:attribute name="value" type="xs:double"/>
+            <xs:attribute name="width" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -562,6 +563,7 @@
             <xs:attributeGroup ref="text_modifications"/>
             <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="hidden" type="xs:integer"/>
+            <xs:attribute name="transparency" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -846,6 +848,58 @@
         </xs:complexType>
     </xs:element>
 
+    <!-- definition of cylinder -->
+    <xs:element name="cylinder">
+        <xs:complexType>
+            <xs:attribute name="color_rgb_values" type="xs:string" use="required"/>
+            <xs:attribute name="length" type="xs:double" use="required"/>
+            <xs:attribute name="radius" type="xs:double"/>
+            <xs:attribute name="x" type="xs:double" use="required"/>
+            <xs:attribute name="x_dir" type="xs:double" use="required"/>
+            <xs:attribute name="y" type="xs:double" use="required"/>
+            <xs:attribute name="y_dir" type="xs:double" use="required"/>
+            <xs:attribute name="z" type="xs:double" use="required"/>
+            <xs:attribute name="z_dir" type="xs:double" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of sphere -->
+    <xs:element name="sphere">
+        <xs:complexType>
+            <xs:attribute name="color_rgb_values" type="xs:string" use="required"/>
+            <xs:attribute name="radius" type="xs:double" use="required"/>
+            <xs:attribute name="symbol" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:double" use="required"/>
+            <xs:attribute name="y" type="xs:double" use="required"/>
+            <xs:attribute name="z" type="xs:double" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of spin -->
+    <xs:element name="spin">
+        <xs:complexType>
+            <xs:attribute name="color_rgb_values" type="xs:string" use="required"/>
+            <xs:attribute name="length" type="xs:double" use="required"/>
+            <xs:attribute name="symbol" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:double" use="required"/>
+            <xs:attribute name="x_dir" type="xs:double" use="required"/>
+            <xs:attribute name="y" type="xs:double" use="required"/>
+            <xs:attribute name="y_dir" type="xs:double" use="required"/>
+            <xs:attribute name="z" type="xs:double" use="required"/>
+            <xs:attribute name="z_dir" type="xs:double" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of gr3_draw_image -->
+    <xs:element name="gr3_draw_image">
+        <xs:complexType>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- ||||||||||||||||||||||||||||| Plottypes |||||||||||||||||||||||||||||||||||||||| -->
 
     <!-- definition of barplot -->
@@ -1064,6 +1118,43 @@
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of molecule -->
+    <xs:element name="series_molecule">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="cylinder" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="gr3_draw_image" minOccurs="0" maxOccurs="1"/> <!-- just for internal usage -->
+                <xs:element ref="unit_cell" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="sphere" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="spin" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_image" minOccurs="0" maxOccurs="1"/> <!-- contourf -->
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="ambient" type="xs:double"/>
+            <xs:attribute name="cell" type="xs:string"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="color_scheme" type="xs:integer"/>
+            <xs:attribute name="connection_threshold" type="xs:double"/>
+            <xs:attribute name="diffuse" type="xs:double"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="molecule_symbols" type="xs:string"/>
+            <xs:attribute name="move_to_plot" type="xs:string"/>
+            <xs:attribute name="radius_kind" type="xs:integer"/>
+            <xs:attribute name="show_unit_cell" type="xs:integer"/>
+            <xs:attribute name="specular" type="xs:double"/>
+            <xs:attribute name="specular_power" type="xs:double"/>
+            <xs:attribute name="spin_style" type="xs:integer"/>
+            <xs:attribute name="spin_x" type="xs:string"/>
+            <xs:attribute name="spin_y" type="xs:string"/>
+            <xs:attribute name="spin_z" type="xs:string"/>
+            <xs:attribute name="unified_connection_radius" type="xs:integer"/>
+            <xs:attribute name="x" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -1450,6 +1541,16 @@
             <xs:attribute name="end_angle" type="xs:double" use="required"/>
             <xs:attribute name="start_angle" type="xs:double" use="required"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of unit_cell -->
+    <xs:element name="unit_cell">
+        <xs:complexType>
+            <xs:attribute name="fill_color_rgb" type="xs:string"/>
+            <xs:attribute name="show_mesh" type="xs:integer"/>
+            <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 

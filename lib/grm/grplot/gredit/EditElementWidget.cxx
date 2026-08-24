@@ -1,6 +1,7 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
 #include "PreviewTextWidget.hxx"
+#include "../Util.hxx"
 
 #include <grm/dom_render/render_util.hxx>
 #include <grm/dom_render/casts.hxx>
@@ -123,6 +124,9 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
         static_cast<int>((*current_selection)->getRef()->getAttribute("_selected_for_move"))))
     {
       title.append(currently_clicked_name.c_str());
+      if ((*current_selection)->getRef()->hasAttribute("symbol"))
+        title.append(
+            ("(" + static_cast<std::string>((*current_selection)->getRef()->getAttribute("symbol")) + ")").c_str());
     }
   else
     {
@@ -2850,7 +2854,7 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                         {
                           const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
                           if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                              !util::isDigits(value))
+                              (!util::isDigits(value) || value == ""))
                             {
                               if (current_selection->parentElement()->localName() == "text_region")
                                 {
@@ -2894,25 +2898,9 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                               if (coordinate_system->hasAttribute("_time_axis") &&
                                   static_cast<int>(coordinate_system->getAttribute("_time_axis")))
                                 {
-                                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                                  struct tm timestamp_tm = {0};
-                                  int year, month, day, hour, minute, second;
-
-                                  if (sscanf(value.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute,
-                                             &second))
-                                    {
-                                      timestamp_tm.tm_year = year - 1900;
-                                      timestamp_tm.tm_mon = month - 1;
-                                      timestamp_tm.tm_mday = day;
-                                      timestamp_tm.tm_hour = hour;
-                                      timestamp_tm.tm_min = minute;
-                                      timestamp_tm.tm_sec = second;
-#else
                                   struct tm timestamp_tm;
-                                  if (strptime(value.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                                  if (util::parseIso8601WithoutTimezone(value, timestamp_tm))
                                     {
-#endif
                                       current_selection->setAttribute(attr_name, (int)mktime(&timestamp_tm));
                                     }
                                   else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
@@ -3533,6 +3521,10 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
       {std::string("fill_area"), std::vector<std::string>{"disable_x_trans", "disable_y_trans", "movable", "name", "x",
                                                           "x_max_shift_wc", "x_min_shift_wc", "x_shift_wc", "y",
                                                           "y_max_shift_wc", "y_min_shift_wc", "y_shift_wc", "z_index"}},
+      {std::string("unit_cell"), std::vector<std::string>{"z_index"}},
+      {std::string("cylinder"), std::vector<std::string>{"x", "x_dir", "y", "y_dir", "z", "z_dir", "z_index"}},
+      {std::string("sphere"), std::vector<std::string>{"symbol", "x", "y", "z", "z_index"}},
+      {std::string("spin"), std::vector<std::string>{"symbol", "x", "x_dir", "y", "y_dir", "z", "z_dir", "z_index"}},
       {std::string("series_barplot"),
        std::vector<std::string>{
            "c_range_max",
@@ -3722,6 +3714,22 @@ bool EditElementWidget::isAdvancedAttribute(const std::shared_ptr<GRM::Element> 
            "y_shift_wc",
        }},
       {std::string("series_line3"),
+       std::vector<std::string>{
+           "c_range_max",
+           "c_range_min",
+           "disable_x_trans",
+           "disable_y_trans",
+           "movable",
+           "ref_x_axis_location",
+           "ref_y_axis_location",
+           "x_max_shift_wc",
+           "x_min_shift_wc",
+           "x_shift_wc",
+           "y_max_shift_wc",
+           "y_min_shift_wc",
+           "y_shift_wc",
+       }},
+      {std::string("series_molecule"),
        std::vector<std::string>{
            "c_range_max",
            "c_range_min",

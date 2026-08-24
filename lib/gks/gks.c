@@ -1148,15 +1148,38 @@ void gks_set_deferral_state(int wkid, int defmo, int regmo)
 
 void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *odr)
 {
-  GKS_UNUSED(dimidr);
-  GKS_UNUSED(idr);
+  int *dr, len;
+
   GKS_UNUSED(maxodr);
   GKS_UNUSED(lenodr);
   GKS_UNUSED(odr);
-  gks_perror("escape function %d not implemented", funid);
+
+  if (state >= GKS_K_WSAC)
+    {
+      if (funid == GKS_K_ESCAPE_SET_METADATA)
+        {
+          len = dimidr + 2;
+          dr = (int *)gks_malloc(len * sizeof(int));
+          dr[0] = funid;
+          dr[1] = dimidr;
+          memmove(dr + 2, idr, dimidr * sizeof(int));
+
+          /* call the device driver link routine */
+          gks_ddlk(ESCAPE, len, 1, len, dr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+
+          free(dr);
+        }
+      else
+        /* Invalid function id */
+        gks_report_error(ESCAPE, 1001);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(ESCAPE, 5);
 }
 
-void gks_message(int wkid, char *message)
+void gks_message(int wkid, const char *message)
 {
   if (state >= GKS_K_WSOP)
     {
@@ -1241,7 +1264,7 @@ void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
   gks_set_fill_int_style(saved_ints);
 }
 
-void gks_text(double px, double py, char *str)
+void gks_text(double px, double py, const char *str)
 {
   char *utf8_str = NULL;
 
@@ -3044,8 +3067,8 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
     *errind = GKS_K_ERROR;
 }
 
-void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
-                         double *ty)
+void gks_inq_text_extent(int wkid, double px, double py, const char *str, int *errind, double *cpx, double *cpy,
+                         double *tx, double *ty)
 {
   double bx[9], by[9];
   int i;
@@ -4686,4 +4709,115 @@ void gks_set_nominal_size(double factor)
 void gks_inq_nominal_size(double *factor)
 {
   *factor = s->nominal_size;
+}
+
+static char *find_object(char *pdf, long objnum)
+{
+  static char marker[64];
+
+  snprintf(marker, sizeof(marker), "%ld 0 obj", objnum);
+  return strstr(pdf, marker);
+}
+
+char *gks_get_metadata_from_stream(FILE *fp)
+{
+  char *buffer = NULL;
+  char *result = NULL;
+  size_t size;
+  int filetype;
+
+  filetype = gks_detect_stream_type(fp);
+
+  if (fseek(fp, 0, SEEK_END) != 0) goto done;
+
+  size = (size_t)ftell(fp);
+  rewind(fp);
+
+  buffer = malloc(size + 1);
+  if (buffer == NULL) goto done;
+
+  if (fread(buffer, 1, size, fp) != size) goto done;
+
+  buffer[size] = '\0';
+
+  if (filetype == FILETYPE_SVG)
+    {
+      char *start, *end;
+      const char *tag = "<!-- gks-metadata";
+
+      start = strstr(buffer, tag);
+      if (start == NULL) goto done;
+
+      start += strlen(tag);
+      while (*start == '\r' || *start == '\n') start++;
+
+      end = strstr(start, "\ngks-metadata -->");
+      if (end == NULL) goto done;
+
+      size_t length = (size_t)(end - start);
+
+      result = malloc(length + 1);
+      if (result != NULL)
+        {
+          memcpy(result, start, length);
+          result[length] = '\0';
+
+          char *metadata = gks_escape_or_unescape(result, '\\', '-', true);
+          length = strlen(metadata);
+          memcpy(result, metadata, length);
+          gks_free(metadata);
+          result[length] = '\0';
+        }
+    }
+  else if (filetype == FILETYPE_PDF)
+    {
+      char *filespec = strstr(buffer, "/F (gks-metadata)");
+      if (filespec == NULL) goto done;
+
+      char *ef = strstr(filespec, "/EF");
+      long objnum;
+      if (ef == NULL || sscanf(ef, "/EF << /F %ld 0 R", &objnum) != 1) goto done;
+
+      char *obj = find_object(buffer, objnum);
+      if (obj == NULL) goto done;
+
+      char *lenptr = strstr(obj, "/Length");
+      long length;
+      if (lenptr == NULL || sscanf(lenptr, "/Length %ld", &length) != 1 || length < 0) goto done;
+
+      char *stream = strstr(obj, "stream");
+      if (stream == NULL) goto done;
+
+      stream += 6;
+      if (*stream == '\r') stream++;
+      if (*stream == '\n') stream++;
+
+      if ((size_t)(stream - buffer) + (size_t)length > size) goto done;
+
+      result = malloc((size_t)length + 1);
+      if (result != NULL)
+        {
+          memcpy(result, stream, (size_t)length);
+          result[length] = '\0';
+        }
+    }
+
+done:
+  free(buffer);
+  fclose(fp);
+  return result;
+}
+
+char *gks_get_metadata(const char *path)
+{
+  FILE *fp;
+  char *result;
+
+  fp = fopen(path, "rb");
+  if (fp == NULL) return NULL;
+
+  result = gks_get_metadata_from_stream(fp);
+  fclose(fp);
+
+  return result;
 }

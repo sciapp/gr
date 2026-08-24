@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <math.h>
 
@@ -2292,4 +2293,148 @@ char *gks_strdup(const char *str)
     {
       return NULL;
     }
+}
+
+#define NPOS ((size_t)-1)
+
+static size_t stringConsistsOf(const char *input, char c, char ends_with, size_t pos)
+{
+  const char *p = input + pos;
+
+  while (*p == c) ++p;
+
+  if (*p == '\0' || *p != ends_with) return NPOS;
+
+  return (size_t)(p - input);
+}
+
+char *gks_escape_or_unescape(const char *input, char escape_char, char to_escape_char, bool unescape)
+{
+  size_t in_len = strlen(input);
+
+  size_t capacity = in_len * 2 + 1;
+  char *output = malloc(capacity);
+
+  if (!output) return NULL;
+
+  size_t out_pos = 0;
+  size_t input_offset = 0;
+
+  const char *current = input;
+  char *found = strchr(current, to_escape_char);
+
+  while (found != NULL)
+    {
+      size_t start_pos = (size_t)(found - current);
+      size_t end_pos = stringConsistsOf(current, escape_char, to_escape_char, start_pos + 1);
+
+      if (end_pos != NPOS)
+        {
+          size_t subtract = 0;
+
+          if (unescape && end_pos - start_pos > 1) subtract = 1;
+
+          size_t copy_len = end_pos - subtract;
+
+          while (out_pos + copy_len + 2 >= capacity)
+            {
+              capacity *= 2;
+              char *tmp = realloc(output, capacity);
+
+              if (!tmp)
+                {
+                  free(output);
+                  return NULL;
+                }
+
+              output = tmp;
+            }
+
+          memcpy(output + out_pos, current, copy_len);
+          out_pos += copy_len;
+
+          if (!unescape) output[out_pos++] = escape_char;
+
+          current += end_pos;
+          input_offset += end_pos;
+
+          found = strchr(current, to_escape_char);
+        }
+      else
+        {
+          found = strchr(found + 1, to_escape_char);
+        }
+    }
+
+  size_t remaining_len = strlen(current);
+
+  while (out_pos + remaining_len + 1 >= capacity)
+    {
+      capacity *= 2;
+      char *tmp = realloc(output, capacity);
+
+      if (!tmp)
+        {
+          free(output);
+          return NULL;
+        }
+
+      output = tmp;
+    }
+
+  memcpy(output + out_pos, current, remaining_len);
+  out_pos += remaining_len;
+  output[out_pos] = '\0';
+
+  (void)input_offset;
+
+  return output;
+}
+
+int gks_detect_stream_type(FILE *fp)
+{
+  unsigned char buf[512];
+  size_t n;
+  long pos;
+
+  if (fp == NULL) return FILETYPE_UNKNOWN;
+
+  /* Save current position if possible */
+  pos = ftell(fp);
+
+  n = fread(buf, 1, sizeof(buf), fp);
+
+  /* Restore position if possible */
+  if (pos != -1L) fseek(fp, pos, SEEK_SET);
+
+  if (n >= 5 && memcmp(buf, "%PDF-", 5) == 0) return FILETYPE_PDF;
+
+  static const unsigned char png_sig[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+
+  if (n >= 8 && memcmp(buf, png_sig, 8) == 0) return FILETYPE_PNG;
+
+  /* SVG detection */
+  const char *p = (const char *)buf;
+  const char *end = (const char *)buf + n;
+
+  /* Skip UTF-8 BOM */
+  if (n >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB && (unsigned char)p[2] == 0xBF) p += 3;
+
+  /* Skip leading whitespace */
+  while (p < end && isspace((unsigned char)*p)) p++;
+
+  /* Direct <svg> */
+  if (end - p >= 4 && memcmp(p, "<svg", 4) == 0) return FILETYPE_SVG;
+
+  /* XML declaration followed by <svg> */
+  if (end - p >= 5 && memcmp(p, "<?xml", 5) == 0)
+    {
+      const char *q;
+      for (q = p; q + 4 <= end; ++q)
+        {
+          if (memcmp(q, "<svg", 4) == 0) return FILETYPE_SVG;
+        }
+    }
+
+  return FILETYPE_UNKNOWN;
 }

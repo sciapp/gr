@@ -123,6 +123,20 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
       "z",
   };
+  std::vector<std::string> series_molecule{
+      "color_scheme",
+      "connection_threshold",
+      "molecule_symbols",
+      "move_to_plot",
+      "radius_kind",
+      "spin_style",
+      "spin_x",
+      "spin_y",
+      "spin_z",
+      "x",
+      "y",
+      "z",
+  };
   std::vector<std::string> series_polar_heatmap = series_nonuniform_polar_heatmap;
   std::vector<std::string> series_polar_histogram{
       "bin_counts",      "bin_edges",       "bin_width",    "bin_widths",  "counts",
@@ -208,6 +222,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       {std::string("series_nonuniform_polar_heatmap"), series_nonuniform_polar_heatmap},
       {std::string("series_pie"), series_pie},
       {std::string("series_line3"), series_line3},
+      {std::string("series_molecule"), series_molecule},
       {std::string("series_polar_heatmap"), series_polar_heatmap},
       {std::string("series_polar_histogram"), series_polar_histogram},
       {std::string("series_polar_line"), series_polar_line},
@@ -936,10 +951,22 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                 {
                   element->setAttribute("_update_required", true);
                   element->setAttribute("_delete_children", 1);
-                  if (strEqualsAny(attr, "clip_negative")) element->setAttribute("_delete_children", 0);
-                  if (strEqualsAny(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "error_bar_style",
-                                   "inner_series", "levels", "line_spec", "marginal_heatmap_kind", "num_bins", "px",
-                                   "py", "pz", "r", "stairs", "theta", "u", "v", "x", "y", "z") &&
+                  if (strEqualsAny(attr, "clip_negative", "color_scheme"))
+                    {
+                      if (attr == "color_scheme")
+                        {
+                          for (const auto &child : element->children())
+                            {
+                              if (strEqualsAny(child->localName(), "sphere", "spin"))
+                                child->setAttribute("_color_scheme_changed", true);
+                            }
+                        }
+                      element->setAttribute("_delete_children", 0);
+                    }
+                  if (strEqualsAny(attr, "bin_edges", "bin_widths", "bins", "c", "connection_threshold", "draw_edges",
+                                   "error_bar_style", "inner_series", "levels", "line_spec", "marginal_heatmap_kind",
+                                   "molecule_symbols", "num_bins", "px", "py", "pz", "r", "radius_kind", "spin_style",
+                                   "spin_x", "spin_y", "spin_z", "stairs", "theta", "u", "v", "x", "y", "z") &&
                       element->localName() != "overlay_element")
                     element->setAttribute("_delete_children", 2);
                   if (attr == "marginal_heatmap_kind")
@@ -3111,6 +3138,24 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                 }
             }
           else if (attr == "label")
+            {
+              auto plot_parent = element;
+              getPlotParent(plot_parent);
+
+              if (auto legend = plot_parent->querySelectors("legend"); legend != nullptr)
+                {
+                  legend->setAttribute("_update_required", true);
+                  legend->setAttribute("_delete_children", static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
+                  legend->removeAttribute("_start_w");
+                  legend->removeAttribute("_start_h");
+                }
+              else
+                {
+                  legend = global_creator->createLegend();
+                  plot_parent->append(legend);
+                }
+            }
+          else if (attr == "molecule_symbols")
             {
               auto plot_parent = element;
               getPlotParent(plot_parent);

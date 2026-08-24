@@ -15,6 +15,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 typedef enum
 {
   GR_PROJECTION_DEFAULT,
@@ -290,7 +292,7 @@ DLLEXPORT int gr_debug(void);
 DLLEXPORT void gr_opengks(void);
 DLLEXPORT void gr_closegks(void);
 DLLEXPORT void gr_inqdspsize(double *, double *, int *, int *);
-DLLEXPORT void gr_openws(int, char *, int);
+DLLEXPORT void gr_openws(int, const char *, int);
 DLLEXPORT void gr_closews(int);
 DLLEXPORT void gr_activatews(int);
 DLLEXPORT void gr_deactivatews(int);
@@ -299,10 +301,10 @@ DLLEXPORT void gr_clearws(void);
 DLLEXPORT void gr_updatews(void);
 DLLEXPORT void gr_polyline(int, double *, double *);
 DLLEXPORT void gr_polymarker(int, double *, double *);
-DLLEXPORT void gr_text(double, double, char *);
-DLLEXPORT void gr_textx(double, double, char *, int);
-DLLEXPORT void gr_inqtext(double, double, char *, double *, double *);
-DLLEXPORT void gr_inqtextx(double, double, char *, int, double *, double *);
+DLLEXPORT void gr_text(double, double, const char *);
+DLLEXPORT void gr_textx(double, double, const char *, int);
+DLLEXPORT void gr_inqtext(double, double, const char *, double *, double *);
+DLLEXPORT void gr_inqtextx(double, double, const char *, int, double *, double *);
 DLLEXPORT void gr_fillarea(int, double *, double *);
 DLLEXPORT void gr_cellarray(double, double, double, double, int, int, int, int, int, int, int *);
 DLLEXPORT void gr_nonuniformcellarray(double *, double *, int, int, int, int, int, int, int *);
@@ -363,8 +365,8 @@ DLLEXPORT int gr_setspace(double, double, int, int);
 DLLEXPORT void gr_inqspace(double *, double *, int *, int *);
 DLLEXPORT int gr_setscale(int);
 DLLEXPORT void gr_inqscale(int *);
-DLLEXPORT int gr_textext(double, double, char *);
-DLLEXPORT void gr_inqtextext(double, double, char *, double *, double *);
+DLLEXPORT int gr_textext(double, double, const char *);
+DLLEXPORT void gr_inqtextext(double, double, const char *, double *, double *);
 DLLEXPORT void gr_setscientificformat(int);
 DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
@@ -381,8 +383,8 @@ DLLEXPORT void gr_herrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_polyline3d(int, double *, double *, double *);
 DLLEXPORT void gr_polymarker3d(int, double *, double *, double *);
 DLLEXPORT void gr_axes3d(double, double, double, double, double, double, int, int, int, double);
-DLLEXPORT void gr_titles3d(char *, char *, char *);
-DLLEXPORT void gr_settitles3d(char *, char *, char *);
+DLLEXPORT void gr_titles3d(const char *, const char *, const char *);
+DLLEXPORT void gr_settitles3d(const char *, const char *, const char *);
 DLLEXPORT void gr_surface(int, int, double *, double *, double *, int);
 DLLEXPORT void gr_contour(int, int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_contourf(int, int, int, double *, double *, double *, double *, int);
@@ -401,8 +403,8 @@ DLLEXPORT double gr_tick(double, double);
 DLLEXPORT int gr_validaterange(double, double);
 DLLEXPORT void gr_adjustlimits(double *, double *);
 DLLEXPORT void gr_adjustrange(double *, double *);
-DLLEXPORT void gr_beginprint(char *);
-DLLEXPORT void gr_beginprintext(char *, char *, char *, char *);
+DLLEXPORT void gr_beginprint(const char *);
+DLLEXPORT void gr_beginprintext(const char *, const char *, const char *, const char *);
 DLLEXPORT void gr_endprint(void);
 DLLEXPORT void gr_ndctowc(double *, double *);
 DLLEXPORT void gr_wctondc(double *, double *);
@@ -415,24 +417,24 @@ DLLEXPORT void gr_drawpath(int, vertex_t *, unsigned char *, int);
 DLLEXPORT void gr_setarrowstyle(int);
 DLLEXPORT void gr_setarrowsize(double);
 DLLEXPORT void gr_drawarrow(double, double, double, double);
-DLLEXPORT int gr_readimage(char *, int *, int *, int **);
+DLLEXPORT int gr_readimage(const char *, int *, int *, int **);
 DLLEXPORT void gr_drawimage(double, double, double, double, int, int, int *, int);
-DLLEXPORT int gr_importgraphics(char *);
+DLLEXPORT int gr_importgraphics(const char *);
 DLLEXPORT void gr_setshadow(double, double, double);
 DLLEXPORT void gr_settransparency(double);
 DLLEXPORT void gr_inqtransparency(double *);
 DLLEXPORT void gr_setcoordxform(double[3][2]);
-DLLEXPORT void gr_begingraphics(char *);
+DLLEXPORT void gr_begingraphics(const char *);
 DLLEXPORT void gr_endgraphics(void);
 DLLEXPORT char *gr_getgraphics(void);
-DLLEXPORT int gr_drawgraphics(char *);
+DLLEXPORT int gr_drawgraphics(const char *);
 DLLEXPORT int gr_startlistener(void);
 DLLEXPORT int gr_inqgrplotport(void);
 DLLEXPORT int gr_setgrplotport(int);
-DLLEXPORT void gr_mathtex(double, double, char *);
-DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
-DLLEXPORT void gr_mathtex3d(double, double, double, char *, int);
-DLLEXPORT void gr_inqmathtex3d(double, double, double, char *, int, double *, double *, double *, double *);
+DLLEXPORT void gr_mathtex(double, double, const char *);
+DLLEXPORT void gr_inqmathtex(double, double, const char *, double *, double *);
+DLLEXPORT void gr_mathtex3d(double, double, double, const char *, int);
+DLLEXPORT void gr_inqmathtex3d(double, double, double, const char *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double),
@@ -456,7 +458,7 @@ DLLEXPORT void gr_savecontext(int);
 DLLEXPORT void gr_selectcontext(int);
 DLLEXPORT void gr_destroycontext(int);
 DLLEXPORT void gr_unselectcontext(void);
-DLLEXPORT int gr_uselinespec(char *);
+DLLEXPORT int gr_uselinespec(const char *);
 DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
 DLLEXPORT void gr_reducepoints(int, const double *, const double *, int, double *, double *);
 DLLEXPORT void gr_trisurface(int, double *, double *, double *);
@@ -496,11 +498,11 @@ DLLEXPORT void gr_setscalefactors3d(double, double, double);
 DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
 DLLEXPORT void gr_setspace3d(double, double, double, double);
 DLLEXPORT void gr_inqspace3d(int *, double *, double *, double *, double *);
-DLLEXPORT void gr_text3d(double, double, double, char *, int axis);
-DLLEXPORT void gr_inqtext3d(double, double, double, char *, int axis, double *, double *);
+DLLEXPORT void gr_text3d(double, double, double, const char *, int axis);
+DLLEXPORT void gr_inqtext3d(double, double, double, const char *, int axis, double *, double *);
 DLLEXPORT void gr_settextencoding(int);
 DLLEXPORT void gr_inqtextencoding(int *);
-DLLEXPORT void gr_loadfont(char *, int *);
+DLLEXPORT void gr_loadfont(const char *, int *);
 DLLEXPORT void gr_setcallback(char *(*)(const char *));
 DLLEXPORT void gr_setthreadnumber(int);
 DLLEXPORT void gr_setpicturesizeforvolume(int, int);
@@ -536,6 +538,9 @@ DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double mi
                             int major);
 DLLEXPORT void gr_setcolorlimits(double, double);
 DLLEXPORT void gr_inqcolorlimits(double *, double *);
+DLLEXPORT void gr_setmetadata(const char *);
+DLLEXPORT char *gr_getmetadata(const char *);
+DLLEXPORT char *gr_getmetadatafromstream(FILE *fp);
 
 #ifdef __cplusplus
 }

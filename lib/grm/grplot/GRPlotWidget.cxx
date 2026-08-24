@@ -28,6 +28,7 @@
 
 #include "GRPlotWidget.hxx"
 #include "Threadpool.hxx"
+#include "Util.hxx"
 
 #include "gredit/AddElementWidget.hxx"
 
@@ -157,6 +158,7 @@ static std::list<HighlightMask> mask_highlights_cache;
 static uint32_t color = 0xFF0202F0;
 static bool move_to_plot = false;
 static std::string plot_id = "";
+static std::string input_data_name = "";
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -224,6 +226,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "axis_type",
       "clip_region",
       "color_model",
+      "color_scheme",
       "colormap",
       "element_type",
       "error_bar_style",
@@ -241,6 +244,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "norm",
       "orientation",
       "plot_type",
+      "radius_kind",
       "ref_x_axis_location",
       "ref_y_axis_location",
       "resample_method",
@@ -291,11 +295,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "polar_with_pan",
       "r_log",
       "set_text_color_for_background",
+      "show_mesh",
+      "show_unit_cell",
+      "spin_style",
       "stairs",
       "text_is_title",
       "theta_flip",
       "trim_col",
       "trim_row",
+      "unified_connection_radius",
       "use_gr3",
       "use_grplot_changes",
       "x_flip",
@@ -416,7 +424,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
         }
       if (file_name.empty()) file_name = optional_file;
 
-      if (util::endsWith(file_name, ".xml.png") || util::endsWith(file_name, ".xml"))
+      if (util::endsWith(file_name, ".xml.png") || util::endsWith(file_name, ".xml.pdf") ||
+          util::endsWith(file_name, ".xml.svg") || util::endsWith(file_name, ".xml"))
         {
 #ifndef NO_XERCES_C
           auto file = fopen(file_name.c_str(), "rb");
@@ -438,6 +447,32 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       else
         {
           if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
+
+          std::string token;
+          int j = 1;
+          for (int i = 1; i < argc; i++)
+            {
+              token = argv[i];
+              if (token == "--plot") continue;
+              if (util::startsWith(token, "file:"))
+                {
+                  input_data_name = token.substr(5, token.length() - 1);
+                  break;
+                }
+              else if (j == 1 && (token.find(":") == std::string::npos ||
+                                  // Check if is an absolute Windows path, like `C:\Users\...`
+                                  (token.length() > 2 && isalpha(token[0]) && token[1] == ':' &&
+                                   (token[2] == '/' || token[2] == '\\'))))
+                {
+                  optional_file = token; /* it's only used, if no "file:" keyword was found */
+                  break;
+                }
+              j += 1;
+            }
+          if (input_data_name.empty() && !optional_file.empty()) input_data_name = optional_file;
+          auto dir_sep_pos = input_data_name.find_last_of("/\\");
+          dir_sep_pos = dir_sep_pos != std::string::npos ? dir_sep_pos + 1 : 0;
+          input_data_name = input_data_name.substr(dir_sep_pos, input_data_name.find_last_of(".") + 1 - dir_sep_pos);
         }
       if (test_mode)
         {
@@ -628,14 +663,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       editor_action = new QAction(tr("&Enable Editorview"));
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enableEditorFunctions()));
-
-      save_file_action = new QAction("&Save");
-      save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-      save_file_action->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave));
-      save_file_action->setIconVisibleInMenu(true);
-#endif
-      QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(saveFileSlot()));
 
       load_file_action = new QAction("&Load");
       load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
@@ -1016,7 +1043,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
       x_axis_location_list, y_axis_location_list, marker_type_list, move_to_plot_list, text_align_horizontal_list,
       text_align_vertical_list, algorithm_volume_list, color_model_list, context_attr_list, fill_style_list,
-      fill_int_style_list, transformation_list;
+      fill_int_style_list, transformation_list, color_scheme_list, radius_kind_list;
   auto size_unit_vec = GRM::getSizeUnits();
   size_unit_list.reserve(static_cast<int>(size_unit_vec.size()));
   for (auto &i : size_unit_vec) size_unit_list.push_back(i.c_str());
@@ -1069,6 +1096,12 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve(static_cast<int>(context_attr_vec.size()));
   for (auto &i : context_attr_vec) context_attr_list.push_back(i.c_str());
+  auto color_scheme_vec = GRM::getColorScheme();
+  color_scheme_list.reserve(static_cast<int>(color_scheme_vec.size()));
+  for (auto &i : color_scheme_vec) color_scheme_list.push_back(i.c_str());
+  auto radius_kind_vec = GRM::getRadiusKind();
+  radius_kind_list.reserve(static_cast<int>(radius_kind_vec.size()));
+  for (auto &i : radius_kind_vec) radius_kind_list.push_back(i.c_str());
   std::vector<std::string> move_to_plot_vec;
   for (const auto &elem : grm_get_document_root()->querySelectorsAll("plot"))
     {
@@ -1116,6 +1149,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"z_origin_pos", org_pos_list},
       {"tick_orientation", tick_orientation_list},
       {"transformation", transformation_list},
+      {"color_scheme", color_scheme_list},
+      {"radius_kind", radius_kind_list},
   };
   // add for all context attributes all possible values
   for (const auto &attr : GRM::getContextAttributes())
@@ -1257,7 +1292,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList barplot_group = {"barplot", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList polar_line_group = {"polar_line", "polar_scatter"};
-      QStringList other_kinds = {"histogram", "pie", "polar_heatmap", "polar_histogram", "quiver"};
+      QStringList other_kinds = {"histogram", "pie", "polar_heatmap", "polar_histogram", "quiver", "molecule"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -1477,6 +1512,16 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           GRM::worldCoordinatesIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "color_scheme" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::colorSchemeIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "radius_kind" && current_selection->getRef()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          GRM::radiusKindIntToString(static_cast<int>(current_selection->getRef()->getAttribute(cur_attr_name)));
+    }
 
   int index = static_cast<QComboBox *>(*line_edit)->findText(current_text.c_str());
   if (index == -1) index += static_cast<QComboBox *>(*line_edit)->count();
@@ -1691,6 +1736,14 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, const s
             {
               element->setAttribute(label, GRM::worldCoordinatesStringToInt(value));
             }
+          else if (label == "color_scheme")
+            {
+              element->setAttribute(label, GRM::colorSchemeStringToInt(value));
+            }
+          else if (label == "radius_kind")
+            {
+              element->setAttribute(label, GRM::radiusKindStringToInt(value));
+            }
         }
       catch (std::logic_error &e)
         {
@@ -1716,14 +1769,9 @@ void GRPlotWidget::draw()
 {
   if (!file_export.empty())
     {
-      if (util::endsWith(file_export, ".xml.png"))
-        {
-          grm_export(file_export.c_str(), true);
-        }
-      else
-        {
-          grm_export(file_export.c_str(), false);
-        }
+      grm_export(file_export.c_str(),
+                 (util::endsWith(file_export, ".xml.png") || util::endsWith(file_export, ".xml.pdf") ||
+                  util::endsWith(file_export, ".xml.svg")));
       file_export.clear();
     }
   else
@@ -2353,6 +2401,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 }
             }
           auto parent = current_selection->getRef()->parentElement();
+          current_selection->getRef()->remove();
           while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
             {
               auto tmp_parent = parent->parentElement();
@@ -2362,7 +2411,6 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               parent->remove();
               parent = tmp_parent;
             }
-          current_selection->getRef()->remove();
           // to prevent recreation of the tree a new flag is introduced
           if (parent->localName() == "root" && !parent->hasChildNodes())
             parent->setAttribute("_removed_children", true);
@@ -2797,6 +2845,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 {
                   auto global_root = grm_get_document_root();
                   auto elem = global_root->querySelectors("[_bbox_id=\"" + std::to_string((int)(set_elem)) + "\"]");
+                  if (elem == nullptr || !elem->hasAttribute("_bbox_x_min")) continue;
                   auto bbox_x_min = static_cast<double>(elem->getAttribute("_bbox_x_min"));
                   auto bbox_x_max = static_cast<double>(elem->getAttribute("_bbox_x_max"));
                   auto bbox_y_min = static_cast<double>(elem->getAttribute("_bbox_y_min"));
@@ -2965,6 +3014,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
   grm_args_t *args = grm_args_new();
   int x, y;
+  bool was_pan = false;
   getMousePos(event, &x, &y);
 
   if (mouse_state.mode == MouseState::Mode::BOXZOOM)
@@ -2981,6 +3031,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
     }
   else if (mouse_state.mode == MouseState::Mode::PAN)
     {
+      was_pan = true;
       mouse_state.mode = MouseState::Mode::NORMAL;
     }
   else if (mouse_state.mode == MouseState::Mode::MOVABLE_XFORM)
@@ -3023,7 +3074,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   grm_input(args);
   grm_args_delete(args);
 
-  redraw();
+  if (!was_pan) redraw();
 }
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
@@ -3735,7 +3786,8 @@ void GRPlotWidget::polarScatter()
 
 void GRPlotWidget::exportGraphics(const QString &file_type, const QString &file_ext)
 {
-  QFileDialog file_dialog(this, "Save " + file_type, QDir::homePath(), file_type + " files (*." + file_ext + ")");
+  QFileDialog file_dialog(this, "Save " + file_type, QDir::currentPath(), file_type + " files (*." + file_ext + ")");
+  file_dialog.selectFile((input_data_name + file_ext.toStdString()).c_str());
   file_dialog.setDefaultSuffix("." + file_ext);
   file_dialog.setAcceptMode(QFileDialog::AcceptSave);
   if (!file_dialog.exec()) return;
@@ -3747,12 +3799,12 @@ void GRPlotWidget::exportGraphics(const QString &file_type, const QString &file_
 
 void GRPlotWidget::pdf()
 {
-  exportGraphics("PDF", "pdf");
+  exportGraphics("PDF", "xml.pdf");
 }
 
 void GRPlotWidget::png()
 {
-  exportGraphics("PNG", "png");
+  exportGraphics("PNG", "xml.png");
 }
 
 void GRPlotWidget::jpeg()
@@ -3762,7 +3814,7 @@ void GRPlotWidget::jpeg()
 
 void GRPlotWidget::svg()
 {
-  exportGraphics("SVG", "svg");
+  exportGraphics("SVG", "xml.svg");
 }
 
 void GRPlotWidget::moveableMode()
@@ -4246,25 +4298,9 @@ void GRPlotWidget::xLimSlot()
             {
               if (timestamp)
                 {
-                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                  struct tm timestamp_tm = {0};
-                  int year, month, day, hour, minute, second;
-
-                  if (sscanf(fields[0]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
-                             &minute, &second))
-                    {
-                      timestamp_tm.tm_year = year - 1900;
-                      timestamp_tm.tm_mon = month - 1;
-                      timestamp_tm.tm_mday = day;
-                      timestamp_tm.tm_hour = hour;
-                      timestamp_tm.tm_min = minute;
-                      timestamp_tm.tm_sec = second;
-#else
                   struct tm timestamp_tm;
-                  if (strptime(fields[0]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                  if (util::parseIso8601WithoutTimezone(fields[0]->text().toStdString(), timestamp_tm))
                     {
-#endif
                       plot_elem->setAttribute("x_lim_min", (int)mktime(&timestamp_tm));
                     }
                 }
@@ -4280,25 +4316,9 @@ void GRPlotWidget::xLimSlot()
             {
               if (timestamp)
                 {
-                  // TODO: Put time parsing into a utility function
-#ifdef _WIN32
-                  struct tm timestamp_tm = {0};
-                  int year, month, day, hour, minute, second;
-
-                  if (sscanf(fields[1]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
-                             &minute, &second))
-                    {
-                      timestamp_tm.tm_year = year - 1900;
-                      timestamp_tm.tm_mon = month - 1;
-                      timestamp_tm.tm_mday = day;
-                      timestamp_tm.tm_hour = hour;
-                      timestamp_tm.tm_min = minute;
-                      timestamp_tm.tm_sec = second;
-#else
                   struct tm timestamp_tm;
-                  if (strptime(fields[1]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                  if (util::parseIso8601WithoutTimezone(fields[1]->text().toStdString(), timestamp_tm))
                     {
-#endif
                       plot_elem->setAttribute("x_lim_max", (int)mktime(&timestamp_tm));
                     }
                 }
@@ -5094,6 +5114,7 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
 
   if (enable_editor)
     {
+      auto old_pen = painter.pen();
       painter.setPen(QPen(QColor(255, 0, 0, 100)));
 
       for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
@@ -5114,6 +5135,7 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
               bounding_logic->addBoundingObject(b);
             }
         }
+      painter.setPen(old_pen);
     }
 }
 
@@ -5446,6 +5468,47 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                       if (elem->localName() == "text") y_pos = 0;
                       painter.drawText(rect.topLeft() + QPointF(x_pos, y_pos), elem->localName().c_str());
                     }
+                  else if (elem != nullptr)
+                    {
+                      // atleast 1 element is selected to be moved or scaled -> show the viewport bbox so the user can
+                      // actually see the borders amd know where to drag to scale the element
+                      int width, height;
+                      double mwidth, mheight;
+                      GRM::getFigureSize(&width, &height, &mwidth, &mheight);
+                      auto aspect_r = mwidth / mheight;
+
+                      if (elem->hasAttribute("viewport_x_min") && elem->hasAttribute("viewport_x_max") &&
+                          elem->hasAttribute("viewport_y_min") && elem->hasAttribute("viewport_y_max"))
+                        {
+                          auto vp_x_min = static_cast<double>(elem->getAttribute("viewport_x_min"));
+                          auto vp_x_max = static_cast<double>(elem->getAttribute("viewport_x_max"));
+                          auto vp_y_min = static_cast<double>(elem->getAttribute("viewport_y_min"));
+                          auto vp_y_max = static_cast<double>(elem->getAttribute("viewport_y_max"));
+
+                          vp_x_min *= width;
+                          vp_x_max *= width;
+                          vp_y_min *= height;
+                          vp_y_max *= height;
+
+                          if (aspect_r > 1)
+                            {
+                              vp_y_min *= aspect_r;
+                              vp_y_max *= aspect_r;
+                            }
+                          else
+                            {
+                              vp_x_min /= aspect_r;
+                              vp_x_max /= aspect_r;
+                            }
+
+                          auto old_pen = painter.pen();
+                          painter.setPen(QPen(QColor(0, 0, 225, 100), 1.5, Qt::DashLine));
+
+                          painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
+                                           abs(vp_y_max - vp_y_min));
+                          painter.setPen(old_pen);
+                        }
+                    }
                 }
               mask_highlights.clear();
             }
@@ -5514,7 +5577,9 @@ void GRPlotWidget::loadFileSlot()
     {
 #ifndef NO_XERCES_C
       std::string path =
-          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml.png)").toStdString();
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::currentPath(),
+                                       "XML (*.xml*);;XML-PNG (*.xml.png);;XML-PDF (*.xml.pdf);;XML-SVG (*.xml.svg)")
+              .toStdString();
       if (path.empty()) return;
 
       auto file = fopen(path.c_str(), "r");
@@ -5536,27 +5601,6 @@ void GRPlotWidget::loadFileSlot()
       QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
       return;
 #endif
-    }
-}
-
-void GRPlotWidget::saveFileSlot()
-{
-  if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
-    {
-      if (grm_get_render() == nullptr)
-        {
-          QApplication::beep();
-          return;
-        }
-      QFileDialog file_dialog(this, "Save XML-PNG", QDir::homePath(), "XML-PNG files (*.xml.png)");
-      file_dialog.setDefaultSuffix(".xml.png");
-      file_dialog.setAcceptMode(QFileDialog::AcceptSave);
-      if (!file_dialog.exec()) return;
-      auto save_file_name = file_dialog.selectedFiles().front().toStdString();
-      if (save_file_name.empty()) return;
-
-      file_export = save_file_name.c_str();
-      redraw();
     }
 }
 
@@ -5764,7 +5808,7 @@ void GRPlotWidget::showContextSlot()
 void GRPlotWidget::addContextSlot()
 {
   std::string path =
-      QFileDialog::getOpenFileName(this, "Open column data file", QDir::homePath(), "(*.dat *.csv *.xyz)")
+      QFileDialog::getOpenFileName(this, "Open column data file", QDir::currentPath(), "(*.dat *.csv *.xyz)")
           .toStdString();
   if (path.empty()) return;
 
@@ -5780,9 +5824,9 @@ void GRPlotWidget::addContextSlot()
 
 void GRPlotWidget::addGRPlotDataContextSlot()
 {
-  std::string path =
-      QFileDialog::getOpenFileName(this, "Interpret matrix as 1 column data", QDir::homePath(), "(*.dat *.csv *.xyz)")
-          .toStdString();
+  std::string path = QFileDialog::getOpenFileName(this, "Interpret matrix as 1 column data", QDir::currentPath(),
+                                                  "(*.dat *.csv *.xyz)")
+                         .toStdString();
   if (path.empty()) return;
 
   // convert the data
@@ -6046,7 +6090,8 @@ void GRPlotWidget::addImageSlot()
       figure_elem->appendChild(overlay);
     }
 
-  QString filename = QFileDialog::getOpenFileName(this, tr("Load Image"), QDir::homePath(), tr("Images (*.png *.jpg)"));
+  QString filename =
+      QFileDialog::getOpenFileName(this, tr("Load Image"), QDir::currentPath(), tr("Images (*.png *.jpg)"));
   if (filename.isEmpty()) return;
   QPixmap p(filename);
   auto image = p.toImage();
@@ -6698,6 +6743,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
           "series_imshow",
           "series_isosurface",
           "series_line",
+          "series_molecule",
           "series_nonuniform_heatmap",
           "series_nonuniform_polar_heatmap",
           "series_pie",
@@ -7207,11 +7253,6 @@ QAction *GRPlotWidget::getEditorAct()
   return editor_action;
 }
 
-QAction *GRPlotWidget::getSaveFileAct()
-{
-  return save_file_action;
-}
-
 QAction *GRPlotWidget::getLoadFileAct()
 {
   return load_file_action;
@@ -7683,8 +7724,7 @@ void GRPlotWidget::cursorHandler(int x, int y)
                 elem_name == "layout_grid_element" || elem_name == "colorbar" || elem_name == "label" ||
                 elem_name == "titles_3d" || elem_name == "text" || elem_name == "central_region" ||
                 elem_name == "side_region" || elem_name == "marginal_heatmap_plot" || elem_name == "legend" ||
-                elem_name == "text_region" || elem_name == "overlay_element")) &&
-              mouse_state.mode == MouseState::Mode::NORMAL)
+                elem_name == "text_region" || elem_name == "overlay_element")))
             {
               if (cursor_state == DEFAULT_HOVER_MODE)
                 {

@@ -252,6 +252,8 @@ extern "C" {
 #define GKS_K_GDP_DRAW_TRIANGLES 4
 #define GKS_K_GDP_FILL_POLYGONS 5
 
+#define GKS_K_ESCAPE_SET_METADATA 1
+
 /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0
@@ -561,11 +563,11 @@ DLLEXPORT void gks_redraw_seg_on_ws(int wkid);
 DLLEXPORT void gks_update_ws(int wkid, int regfl);
 DLLEXPORT void gks_set_deferral_state(int wkid, int defmo, int regmo);
 DLLEXPORT void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *odr);
-DLLEXPORT void gks_message(int wkid, char *message);
+DLLEXPORT void gks_message(int wkid, const char *message);
 
 DLLEXPORT void gks_polyline(int n, double *pxa, double *pya);
 DLLEXPORT void gks_polymarker(int n, double *pxa, double *pya);
-DLLEXPORT void gks_text(double px, double py, char *str);
+DLLEXPORT void gks_text(double px, double py, const char *str);
 DLLEXPORT void gks_fillarea(int n, double *pxa, double *pya);
 DLLEXPORT void gks_cellarray(double qx, double qy, double rx, double ry, int dimx, int dimy, int scol, int srow,
                              int ncol, int nrow, int *colia);
@@ -656,8 +658,8 @@ DLLEXPORT void gks_inq_xform(int tnr, int *errind, double *wn, double *vp);
 DLLEXPORT void gks_inq_clip(int *errind, int *clsw, double *clrt);
 DLLEXPORT void gks_inq_ws_conntype(int wkid, int *errind, int *conid, int *wtype);
 DLLEXPORT void gks_inq_ws_category(int wkid, int *errind, int *wscat);
-DLLEXPORT void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy,
-                                   double *tx, double *ty);
+DLLEXPORT void gks_inq_text_extent(int wkid, double px, double py, const char *str, int *errind, double *cpx,
+                                   double *cpy, double *tx, double *ty);
 DLLEXPORT void gks_inq_max_ds_size(int wtype, int *errind, int *dcunit, double *rx, double *ry, int *lx, int *ly);
 
 DLLEXPORT void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *device_pixel_ratio);
@@ -714,6 +716,9 @@ DLLEXPORT void gks_inq_clip_region(int *errind, int *region);
 
 DLLEXPORT void gks_set_clip_sector(double start_angle, double end_angle);
 DLLEXPORT void gks_inq_clip_sector(int *errind, double *start_angle, double *end_angle);
+
+DLLEXPORT char *gks_get_metadata_from_stream(FILE *fp);
+DLLEXPORT char *gks_get_metadata(const char *path);
 
 /* Entry point definitions */
 
