@@ -988,7 +988,7 @@
             <xs:attributeGroup ref="_fill_modifications"/>
             <xs:attributeGroup ref="_line_modifications"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_text_color_ind_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_text_color_set_by_user" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -1087,8 +1087,7 @@
 
     <!-- definition of _line_modifications attributes -->
     <xs:attributeGroup name="_line_modifications">
-        <xs:attribute name="_line_color_ind_set_by_user" type="xs:integer"/>
-        <xs:attribute name="_line_color_rgb_set_by_user" type="xs:string"/>
+        <xs:attribute name="_line_color_set_by_user" type="strint"/>
         <xs:attribute name="_line_spec_set_by_user" type="xs:string"/>
         <xs:attribute name="_line_type_set_by_user" type="xs:integer"/>
         <xs:attribute name="_line_width_set_by_user" type="xs:double"/>
@@ -1096,8 +1095,7 @@
 
     <!-- definition of _fill_modifications attributes -->
     <xs:attributeGroup name="_fill_modifications">
-        <xs:attribute name="_fill_color_ind_set_by_user" type="xs:integer"/>
-        <xs:attribute name="_fill_color_rgb_set_by_user" type="xs:string"/>
+        <xs:attribute name="_fill_color_set_by_user" type="strint"/>
         <xs:attribute name="_fill_int_style_set_by_user" type="xs:integer"/>
         <xs:attribute name="_fill_style_set_by_user" type="xs:integer"/>
     </xs:attributeGroup>
@@ -1108,17 +1106,24 @@
         <xs:attribute name="_font_precision_set_by_user" type="xs:integer"/>
         <xs:attribute name="_text_align_horizontal_set_by_user" type="xs:integer"/>
         <xs:attribute name="_text_align_vertical_set_by_user" type="xs:integer"/>
-        <xs:attribute name="_text_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_text_color_set_by_user" type="strint"/>
     </xs:attributeGroup>
 
     <!-- definition of _marker_modifications attributes -->
     <xs:attributeGroup name="_marker_modifications">
-        <xs:attribute name="_border_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_border_color_set_by_user" type="strint"/>
         <xs:attribute name="_border_width_set_by_user" type="xs:double"/>
-        <xs:attribute name="_marker_color_ind_set_by_user" type="xs:integer"/>
+        <xs:attribute name="_marker_color_set_by_user" type="strint"/>
         <xs:attribute name="_marker_color_indices_set_by_user" type="xs:string"/>
         <xs:attribute name="_marker_size_set_by_user" type="xs:double"/>
         <xs:attribute name="_marker_sizes_set_by_user" type="xs:string"/>
         <xs:attribute name="_marker_type_set_by_user" type="xs:integer"/>
     </xs:attributeGroup>
+
+    <!-- ||||||||||||||||||||||||||||| simple types |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of string and int type -->
+    <xs:simpleType name="strint">
+        <xs:union memberTypes="xs:string xs:integer"/>
+    </xs:simpleType>
 </xs:schema>

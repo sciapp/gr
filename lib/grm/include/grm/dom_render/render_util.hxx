@@ -114,7 +114,8 @@ extern "C" {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define PLOT_CUSTOM_COLOR_INDEX 979
+#define CUSTOM_COLOR_START 80
+#define CUSTOM_COLOR_END 256
 #define UNDEF -1
 
 #define VAN_DER_WAAL_RADIUS 0
@@ -514,6 +515,7 @@ void getMajorCount(const std::shared_ptr<GRM::Element> &element, const std::stri
 void clearAxisAttributes(const std::shared_ptr<GRM::Element> &axis);
 std::tuple<double, int> getColorbarAttributes(const std::string &kind, const std::shared_ptr<GRM::Element> &plot);
 double getLightness(int color);
+double getLightness(std::string color);
 void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element);
 bool removeBoundingBoxId(GRM::Element &element);
 double transformCoordinate(double value, double v_min, double v_max, double range_min, double range_max,
@@ -533,8 +535,6 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element);
 bool hasHighlightedParent(const std::shared_ptr<GRM::Element> &element);
 double autoTick(double min, double max);
 std::shared_ptr<GRM::Element> getPlotElement(const std::shared_ptr<GRM::Element> &element);
-int setNextColor(const std::string &key, GRColorType color_type, const std::shared_ptr<GRM::Element> &element,
-                 const std::shared_ptr<GRM::Context> &context);
 void calculateWindowTransformationParameter(const std::shared_ptr<GRM::Element> &plot_parent, double w1_min,
                                             double w1_max, double w2_min, double w2_max, std::string location,
                                             double *a, double *b);
