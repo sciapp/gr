@@ -219,6 +219,9 @@ CsvSource::readDataFile(const std::string &path, std::vector<std::vector<std::ve
           if (legend_line && (col == 4 || col == 7 || col == 10) && isNumber(labels.back()[1]))
             {
               legend_line = false;
+              /* For now csv files only define exactly one plot therefore changing input flags for a specific plot here
+               * is synonimous with changing them for the entire file.
+               */
               input_flags.xyz_molecule_file = true;
             }
           break;

@@ -12,6 +12,22 @@ public:
   DataSource() = default;
   virtual ~DataSource() = default;
 
+  /*
+   * Output parameters are passed to the plugin as vector, which already contains data for previously parsed plots. The
+   * plugin is expected to append a new entry for every plot the current file (passed as `path`) defines to each vector
+   * (output vectors must all have the same size after reading the file).
+   * Parameters, which are both input and output may already contain data for a plot in the given file (e.g.
+   * specified on the command line). Therefore these parameters already contain a new element for the first plot upon
+   * calling `readDataFile`.
+   *
+   * In parameters:
+   * `path`, `colms`, `x_colms`, `y_colms`, `e_colms`, `input_flags`
+   * `args`, `ranges`, `special_axis_series`
+   *
+   * Out parameters:
+   * `data`, `x_data`, `y_data`, `error_data`, `labels`, `timestamps`, `special_data_grids`
+   * `args`, `ranges`, `special_axis_series`
+   */
   virtual grm_error_t
   readDataFile(const std::string &path, std::vector<std::vector<std::vector<std::vector<double>>>> &data,
                std::vector<std::vector<int>> &x_data, std::vector<std::vector<int>> &y_data,
