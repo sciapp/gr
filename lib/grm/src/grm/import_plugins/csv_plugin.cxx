@@ -50,13 +50,24 @@ std::string CsvSource::normalizeLine(const std::string &str)
   return s;
 }
 
-grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
-                                    std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
-                                    std::vector<std::string> &labels, grm_args_t *args, const char *colms,
-                                    const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
-                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                                    std::vector<int> &timestamps, double **special_data_grid)
+grm_error_t
+CsvSource::readDataFile(const std::string &path, std::vector<std::vector<std::vector<std::vector<double>>>> &data,
+                        std::vector<std::vector<int>> &x_data, std::vector<std::vector<int>> &y_data,
+                        std::vector<std::vector<int>> &error_data, std::vector<std::vector<std::string>> &labels,
+                        std::vector<grm_args_t *> &args, const char *colms, const char *x_colms, const char *y_colms,
+                        const char *e_colms, std::vector<PlotRange> &ranges,
+                        std::vector<grm_special_axis_series_t *> &special_axis_series, InputFlags &input_flags,
+                        std::vector<std::vector<int>> &timestamps, std::vector<double *> special_data_grids)
 {
+  // csv files only allow for a single plot per file => hardcoded only one vector required for each output
+  x_data.push_back(std::vector<int>());
+  y_data.push_back(std::vector<int>());
+  error_data.push_back(std::vector<int>());
+  labels.push_back(std::vector<std::string>());
+  timestamps.push_back(std::vector<int>());
+
+  data.emplace_back(std::vector<std::vector<std::vector<double>>>());
+
   std::string line;
   std::string token;
   std::ifstream file_path(path);
@@ -71,7 +82,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
 
   /* read the columns from the colms string also converts slicing into numbers */
   if ((error = parseColumns(&columns, colms)) != GRM_ERROR_NONE) return error;
-  if (!columns.empty()) ranges->ymin = *columns.begin();
+  if (!columns.empty()) ranges.back().ymin = *columns.begin();
   /* read the columns from the x_colms, y_colms and e_colms string also converts slicing into numbers */
   if ((error = parseColumns(&x_columns, x_colms)) != GRM_ERROR_NONE) return error;
   if ((error = parseColumns(&y_columns, y_colms)) != GRM_ERROR_NONE) return error;
@@ -158,17 +169,18 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   if (!split_label.empty())
                     {
                       token.erase(std::remove(token.begin(), token.end(), '"'), token.end());
-                      labels.push_back(split_label.append(" ").append(token));
+                      labels.back().push_back(split_label.append(" ").append(token));
                       split_label = "";
                       continue;
                     }
-                  labels.push_back(token);
+                  labels.back().push_back(token);
                 }
             }
-          else if (args != nullptr)
+          else if (args.back() != nullptr)
             {
               /* use key + ":" + value to create a token which is similar to a commandline key:value pair */
-              singleTokenConverter(key + ":" + value, args, ranges, special_axis_series, input_flags, linecount);
+              singleTokenConverter(key + ":" + value, args.back(), &ranges.back(), special_axis_series.back(),
+                                   input_flags, linecount);
             }
         }
       else /* the line contains the labels for the plot */
@@ -181,7 +193,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
           if (skip_legend_line)
             break;
           else
-            labels.clear();
+            labels.back().clear();
           for (col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
             {
               if (!legend_line && isNumber(token) && !input_flags.use_bins) continue;
@@ -195,18 +207,21 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   if (!split_label.empty())
                     {
                       token.erase(std::remove(token.begin(), token.end(), '"'), token.end());
-                      labels.push_back(split_label.append(" ").append(token));
+                      labels.back().push_back(split_label.append(" ").append(token));
                       split_label = "";
                       continue;
                     }
-                  labels.push_back(token);
+                  labels.back().push_back(token);
                   legend_line = true;
                 }
             }
           // special case for file which contains xyz molecule information
-          if (legend_line && (col == 4 || col == 7 || col == 10) && isNumber(labels[1]))
+          if (legend_line && (col == 4 || col == 7 || col == 10) && isNumber(labels.back()[1]))
             {
               legend_line = false;
+              /* For now csv files only define exactly one plot therefore changing input flags for a specific plot here
+               * is synonimous with changing them for the entire file.
+               */
               input_flags.xyz_molecule_file = true;
             }
           break;
@@ -251,7 +266,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
       for (col = 0; std::getline(line_ss, token, delim) && (token.length() || start_with_nan); col++)
         {
           if ((!columns.empty() && std::find(columns.begin(), columns.end(), col + 1) != columns.end()) ||
-              (columns.empty() && labels.empty() && (!input_flags.use_bins || col > 0)) ||
+              (columns.empty() && labels.back().empty() && (!input_flags.use_bins || col > 0)) ||
               (columns.empty() && (!input_flags.use_bins || col > 0)))
             {
               struct tm timestamp_tm;
@@ -261,12 +276,12 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                    (isIntNumber(token) && input_flags.xyz_molecule_file)))
                 {
                   input_flags.xyz_molecule_file = true;
-                  labels.push_back(token); // extract molecule name or number into labels
+                  labels.back().push_back(token); // extract molecule name or number into labels
                   // make sure to ignore any of these user entries in molecule case
                   if (!x_columns.empty()) x_columns.clear();
                   if (!y_columns.empty()) y_columns.clear();
                   if (!e_columns.empty()) e_columns.clear();
-                  if (row - skipped == 0) data.emplace_back(std::vector<std::vector<double>>());
+                  if (row - skipped == 0) data.back().emplace_back(std::vector<std::vector<double>>());
                   continue;
                 }
 
@@ -275,9 +290,9 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   (depth_change && (col == input_flags.use_bins || (!columns.empty() && col + 1 == columns.front()))) ||
                   (start_with_nan && (col == input_flags.use_bins || (!columns.empty() && col + 1 == columns.front()))))
                 {
-                  data.emplace_back(std::vector<std::vector<double>>());
+                  data.back().emplace_back(std::vector<std::vector<double>>());
                 }
-              if (depth_change) data[depth].emplace_back(std::vector<double>());
+              if (depth_change) data.back()[depth].emplace_back(std::vector<double>());
               if (max_col != -1 && max_col < (int)cnt + 1)
                 {
                   fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
@@ -290,21 +305,21 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                   token.erase(std::remove(token.begin(), token.end(), '\t'), token.end());
                   if (token.empty() && delim == ',')
                     {
-                      data[depth][cnt].push_back(NAN);
+                      data.back()[depth][cnt].push_back(NAN);
                     }
                   else
                     {
                       if (parseIso8601WithoutTimezone(token, timestamp_tm))
                         {
-                          data[depth][cnt].push_back((int)mktime(&timestamp_tm));
-                          timestamps.emplace_back(col);
+                          data.back()[depth][cnt].push_back((int)mktime(&timestamp_tm));
+                          timestamps.back().emplace_back(col);
                           x_columns.emplace_back(col + 1);
                         }
                       else
                         {
                           try
                             {
-                              data[depth][cnt].push_back(std::stod(token));
+                              data.back()[depth][cnt].push_back(std::stod(token));
                             }
                           catch (const std::out_of_range e)
                             {
@@ -314,7 +329,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                                       row + linecount + 1, token.c_str());
                               return GRM_ERROR_PLOT_MISSING_DATA;
                             }
-                          if (!timestamps.empty()) y_columns.emplace_back(col + 1);
+                          if (!timestamps.back().empty()) y_columns.emplace_back(col + 1);
                         }
                     }
                 }
@@ -326,13 +341,13 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                 }
               if (row - skipped == 0 && !x_columns.empty() &&
                   std::find(x_columns.begin(), x_columns.end(), col + 1) != x_columns.end())
-                x_data.emplace_back(cnt + 1);
+                x_data.back().emplace_back(cnt + 1);
               if (row - skipped == 0 && !y_columns.empty() &&
                   std::find(y_columns.begin(), y_columns.end(), col + 1) != y_columns.end())
-                y_data.emplace_back(cnt + 1);
+                y_data.back().emplace_back(cnt + 1);
               if (row - skipped == 0 && !e_columns.empty() &&
                   std::find(e_columns.begin(), e_columns.end(), col + 1) != e_columns.end())
-                error_data.emplace_back(cnt + 1);
+                error_data.back().emplace_back(cnt + 1);
               cnt += 1;
             }
           else if (input_flags.use_bins && col == 0)
@@ -341,18 +356,19 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                 {
                   if (row - skipped == 0)
                     {
-                      ranges->ymin = std::stod(token);
+                      ranges.back().ymin = std::stod(token);
                     }
                   else
                     {
-                      ranges->ymax = std::stod(token); // not the best way to get ymax but the number of rows is unknown
+                      ranges.back().ymax =
+                          std::stod(token); // not the best way to get ymax but the number of rows is unknown
                     }
                 }
               catch (std::invalid_argument &e)
                 {
                   fprintf(stderr,
                           "Invalid argument for y_range parameter (%s) while using option use_bins in line %i\n",
-                          labels[0].c_str(), (int)row + linecount + 1);
+                          labels.back()[0].c_str(), (int)row + linecount + 1);
                 }
             }
         }
