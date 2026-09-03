@@ -272,16 +272,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       grm_args_first_value(plot_template, "kind", "nS", &kinds, &kinds_length);
       kind = kinds[0]; // since all kinds are of the same group its okay to just use the first kind here
-
-      char **copy = (char **)malloc(sizeof(char *) * (kinds_length));
-      memcpy(copy, kinds, sizeof(char *) * (kinds_length));
-      for (int i = 0; i < kinds_length; i++)
-        {
-          int len = strlen(kinds[i]) + 1;
-          copy[i] = (char *)malloc(sizeof(char) * len);
-          strcpy(copy[i], kinds[i]);
-        }
-      kinds_all.push_back(copy);
+      kinds_all.push_back(kinds);
       kinds_length_all.push_back(kinds_length);
     }
 
@@ -2008,16 +1999,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       grm_send_args(handle, args);
       grm_close(handle);
-    }
-
-  // TODO free on other returns?
-  for (int i = 0; i < kinds_all.size(); i++)
-    {
-      for (int j = 0; j < kinds_length_all[i]; j++)
-        {
-          free(kinds_all[i][j]);
-        }
-      free(kinds_all[i]);
     }
 
   delete file_args;
