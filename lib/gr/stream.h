@@ -1,5 +1,5 @@
-#ifndef _IO_H_
-#define _IO_H_
+#ifndef _STREAM_H_
+#define _STREAM_H_
 
 #ifdef __cplusplus
 extern "C" {
