@@ -397,6 +397,8 @@ DLLEXPORT void gr_setcolormapfromrgb(int n, double *r, double *g, double *b, dou
 DLLEXPORT void gr_inqcolormapinds(int *, int *);
 DLLEXPORT void gr_colorbar(void);
 DLLEXPORT void gr_inqcolor(int, int *);
+DLLEXPORT int gr_rgbcolorexists(double, double, double, int, int, int);
+DLLEXPORT int gr_inqnearestcolorfromrgb(double, double, double);
 DLLEXPORT int gr_inqcolorfromrgb(double, double, double);
 DLLEXPORT void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b);
 DLLEXPORT double gr_tick(double, double);

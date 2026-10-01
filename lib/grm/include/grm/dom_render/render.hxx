@@ -35,7 +35,6 @@ inline std::set<std::string> valid_context_attributes = {"abs_downwards_e",
                                                          "counts",
                                                          "data",
                                                          "directions",
-                                                         "fill_color_rgb",
                                                          "indices",
                                                          "int_limits_high",
                                                          "int_limits_low",
@@ -59,6 +58,7 @@ inline std::set<std::string> valid_context_attributes = {"abs_downwards_e",
                                                          "spin_x",
                                                          "spin_y",
                                                          "spin_z",
+                                                         "text_color_rgb",
                                                          "theta",
                                                          "u",
                                                          "v",
@@ -115,16 +115,6 @@ public:
 
   /* ------------------------------- setter functions ----------------------------------------------------------------*/
 
-  //! next 2 functions -> store color indices vec or color rgb values
-  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
-                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &ext_context = nullptr);
-  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_rgb_values_key,
-                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &ext_context = nullptr);
-  //! only keys -> reusing stored context vectors
-  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
-                    std::optional<std::string> color_rgb_values_key);
-  //! Use Fallback
-  void setNextColor(const std::shared_ptr<Element> &element);
   void setClipRegion(const std::shared_ptr<Element> &element, int region);
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
   void setWSViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
@@ -139,7 +129,8 @@ public:
   void setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
                          std::optional<std::vector<int>> colorinds,
                          const std::shared_ptr<Context> &ext_context = nullptr);
-  void setMarkerColorInd(const std::shared_ptr<Element> &element, int color);
+  void setMarkerColor(const std::shared_ptr<Element> &element, int color);
+  void setMarkerColor(const std::shared_ptr<Element> &element, std::string color);
   void setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
                    std::optional<std::vector<int>> types, const std::shared_ptr<Context> &ext_context = nullptr);
   void setLineType(const std::shared_ptr<Element> &element, int type);
@@ -149,14 +140,17 @@ public:
   void setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
                        std::optional<std::vector<int>> colorinds,
                        const std::shared_ptr<Context> &ext_context = nullptr);
-  void setLineColorInd(const std::shared_ptr<Element> &element, int color);
+  void setLineColor(const std::shared_ptr<Element> &element, int color);
+  void setLineColor(const std::shared_ptr<Element> &element, std::string color);
   void setCharUp(const std::shared_ptr<Element> &element, double ux, double uy);
   void setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical);
   void setTextWidthAndHeight(const std::shared_ptr<Element> &element, double width, double height);
-  void setColorRep(const std::shared_ptr<Element> &element, int index, double red, double green, double blue);
+  int setColorRep(const std::shared_ptr<Element> &element, double red, double green, double blue);
+  void clearUsedColors();
   void setLineSpec(const std::shared_ptr<Element> &element, const std::string &spec);
   void setFillIntStyle(const std::shared_ptr<Element> &element, int index);
-  void setFillColorInd(const std::shared_ptr<Element> &element, int color);
+  void setFillColor(const std::shared_ptr<Element> &element, int color);
+  void setFillColor(const std::shared_ptr<Element> &element, std::string color);
   void setFillStyle(const std::shared_ptr<Element> &element, int index);
   void setScale(const std::shared_ptr<Element> &element, int scale);
   void setWindow3d(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax,
@@ -164,8 +158,10 @@ public:
   void setSpace3d(const std::shared_ptr<Element> &element, double fov, double camera_distance);
   void setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt);
   void setSelectSpecificXform(const std::shared_ptr<Element> &element, int transform);
-  void setTextColorInd(const std::shared_ptr<Element> &element, int index);
-  void setBorderColorInd(const std::shared_ptr<Element> &element, int index);
+  void setTextColor(const std::shared_ptr<Element> &element, int color);
+  void setTextColor(const std::shared_ptr<Element> &element, std::string color);
+  void setBorderColor(const std::shared_ptr<Element> &element, int index);
+  void setBorderColor(const std::shared_ptr<Element> &element, std::string str);
   void setBorderWidth(const std::shared_ptr<Element> &element, double width);
   void setCharHeight(const std::shared_ptr<Element> &element, double height);
   void setTransparency(const std::shared_ptr<Element> &element, double transparency);

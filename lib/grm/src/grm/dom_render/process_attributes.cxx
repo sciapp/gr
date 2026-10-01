@@ -20,7 +20,7 @@ void processAttributes(const std::shared_ptr<GRM::Element> &element)
   // Map used for processing all kinds of attributes
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attr_string_to_func{
       {std::string("background_color"), processBackgroundColor},
-      {std::string("border_color_ind"), processBorderColorInd},
+      {std::string("border_color"), processBorderColor},
       {std::string("border_width"), processBorderWidth},
       {std::string("marginal_heatmap_side_plot"), processMarginalHeatmapSidePlot},
       {std::string("char_expan"), processCharExpan},
@@ -28,16 +28,16 @@ void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("char_up_x"), processCharUp}, // the x element can be used cause both must be set
       {std::string("clip_region"), processClipRegion},
       {std::string("colormap"), processColormap},
-      {std::string("fill_color_ind"), processFillColorInd},
+      {std::string("fill_color"), processFillColor},
       {std::string("fill_int_style"), processFillIntStyle},
       {std::string("fill_style"), processFillStyle},
       {std::string("font"), processFont},
-      {std::string("line_color_ind"), processLineColorInd},
+      {std::string("line_color"), processLineColor},
       {std::string("line_spec"), processLineSpec},
       {std::string("line_type"), processLineType},
       {std::string("line_width"), processLineWidth},
       {std::string("marginal_heatmap_kind"), processMarginalHeatmapKind},
-      {std::string("marker_color_ind"), processMarkerColorInd},
+      {std::string("marker_color"), processMarkerColor},
       {std::string("marker_size"), processMarkerSize},
       {std::string("marker_type"), processMarkerType},
       {std::string("ref_x_axis_location"), processRefAxisLocation},
@@ -48,7 +48,7 @@ void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("space_tilt"), processSpace},
       {std::string("space_3d_fov"), processSpace3d},          // the fov element can be used cause both must be set
       {std::string("text_align_vertical"), processTextAlign}, // the alignment in both directions is set
-      {std::string("text_color_ind"), processTextColorInd},
+      {std::string("text_color"), processTextColor},
       {std::string("text_encoding"), processTextEncoding},
       {std::string("viewport"), processViewport},
       {std::string("ws_viewport_x_min"),
@@ -66,22 +66,9 @@ void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("set_text_color_for_background"), processTextColorForBackground},
   };
 
-  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &, const std::string attribute)>>
-      multi_attr_string_to_func{
-          /* This map contains functions for attributes of which an element can hold more than one e.g. colorrep */
-          {std::string("colorrep"), processColorRep},
-      };
-
   for (const auto &attribute : element->getAttributeNames())
     {
-      if (auto end = attribute.find('.');
-          end != std::string::npos) /* element can hold more than one attribute of this kind */
-        {
-          if (auto attribute_kind = attribute.substr(0U, end);
-              multi_attr_string_to_func.find(attribute_kind) != multi_attr_string_to_func.end())
-            multi_attr_string_to_func[attribute_kind](element, attribute);
-        }
-      else if (attr_string_to_func.find(attribute) != attr_string_to_func.end())
+      if (attr_string_to_func.find(attribute) != attr_string_to_func.end())
         {
           attr_string_to_func[attribute](element);
         }
@@ -1900,10 +1887,10 @@ void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &element)
                       marker_elem = global_creator->createPolymarker(x_pos, y_pos);
                     }
 
-                  if (!marker_elem->hasAttribute("_line_color_ind_set_by_user"))
-                    global_render->setLineColorInd(line_elem, 989);
-                  if (!marker_elem->hasAttribute("_marker_color_ind_set_by_user"))
-                    global_render->setMarkerColorInd(marker_elem, 2);
+                  if (!marker_elem->hasAttribute("_line_color_set_by_user"))
+                    global_render->setLineColor(line_elem, 989);
+                  if (!marker_elem->hasAttribute("_marker_color_set_by_user"))
+                    global_render->setMarkerColor(marker_elem, 2);
                   if (!marker_elem->hasAttribute("_marker_type_set_by_user"))
                     global_render->setMarkerType(marker_elem, -1);
                   auto marker_size = 1.5 * (len / ((location == "right") ? (marker_y_max - marker_y_min)
@@ -1975,8 +1962,8 @@ void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &element)
                     {
                       for (const auto &rect : bar->children())
                         {
-                          if (rect->hasAttribute("line_color_ind")) continue;
-                          rect->setAttribute("fill_color_ind", 989);
+                          if (rect->hasAttribute("line_color")) continue;
+                          rect->setAttribute("fill_color", 989);
                         }
                     }
                   continue;
@@ -1993,8 +1980,8 @@ void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &element)
                 {
                   for (const auto &rect : group->children())
                     {
-                      if (rect->hasAttribute("line_color_ind")) continue;
-                      rect->setAttribute("fill_color_ind", (cnt == (is_horizontal ? x_ind : y_ind)) ? 2 : 989);
+                      if (rect->hasAttribute("line_color")) continue;
+                      rect->setAttribute("fill_color", (cnt == (is_horizontal ? x_ind : y_ind)) ? 2 : 989);
                       cnt += 1;
                     }
                 }
@@ -2015,9 +2002,30 @@ void processResetRotation(const std::shared_ptr<GRM::Element> &element)
   element->removeAttribute("reset_rotation");
 }
 
-void processLineColorInd(const std::shared_ptr<GRM::Element> &element)
+void processLineColor(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_setlinecolorind(static_cast<int>(element->getAttribute("line_color_ind")));
+  int line_color = -1;
+  bool keep_string = false;
+  if (strEqualsAny(element->localName(), "sphere", "spin", "series_isosurface", "unit_cell")) keep_string = true;
+
+  if (element->getAttribute("line_color").isInt())
+    {
+      line_color = static_cast<int>(element->getAttribute("line_color"));
+    }
+  else if (element->getAttribute("line_color").isString())
+    {
+      auto context = grm_get_render()->getContext();
+      auto rgb_color_key = static_cast<std::string>(element->getAttribute("line_color"));
+      auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+
+      line_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+      if (!keep_string && (line_color != -1 && (line_color < CUSTOM_COLOR_START || line_color > CUSTOM_COLOR_END)))
+        {
+          element->removeAttribute("line_color");
+          element->setAttribute("line_color", line_color);
+        }
+    }
+  if (line_color != -1) gr_setlinecolorind(line_color);
 }
 
 void processLineSpec(const std::shared_ptr<GRM::Element> &element)
@@ -2045,9 +2053,27 @@ void processLineWidth(const std::shared_ptr<GRM::Element> &element)
   gr_setlinewidth(static_cast<double>(element->getAttribute("line_width")));
 }
 
-void processMarkerColorInd(const std::shared_ptr<GRM::Element> &element)
+void processMarkerColor(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_setmarkercolorind(static_cast<int>(element->getAttribute("marker_color_ind")));
+  int marker_color = -1;
+  if (element->getAttribute("marker_color").isInt())
+    {
+      marker_color = static_cast<int>(element->getAttribute("marker_color"));
+    }
+  else if (element->getAttribute("marker_color").isString())
+    {
+      auto context = grm_get_render()->getContext();
+      auto rgb_color_key = static_cast<std::string>(element->getAttribute("marker_color"));
+      auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+
+      marker_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+      if (marker_color != -1 && (marker_color < CUSTOM_COLOR_START || marker_color > CUSTOM_COLOR_END))
+        {
+          element->removeAttribute("marker_color");
+          element->setAttribute("marker_color", marker_color);
+        }
+    }
+  if (marker_color != -1) gr_setmarkercolorind(marker_color);
 }
 
 void processMarkerSize(const std::shared_ptr<GRM::Element> &element)
@@ -2197,9 +2223,27 @@ void processTextAlign(const std::shared_ptr<GRM::Element> &element)
   gr_settextalign(text_align_horizontal, text_align_vertical);
 }
 
-void processTextColorInd(const std::shared_ptr<GRM::Element> &element)
+void processTextColor(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_settextcolorind(static_cast<int>(element->getAttribute("text_color_ind")));
+  int text_color = -1;
+  if (element->getAttribute("text_color").isInt())
+    {
+      text_color = static_cast<int>(element->getAttribute("text_color"));
+    }
+  else if (element->getAttribute("text_color").isString())
+    {
+      auto context = grm_get_render()->getContext();
+      auto rgb_color_key = static_cast<std::string>(element->getAttribute("text_color"));
+      auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+
+      text_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+      if (text_color != -1 && (text_color < CUSTOM_COLOR_START || text_color > CUSTOM_COLOR_END))
+        {
+          element->removeAttribute("text_color");
+          element->setAttribute("text_color", text_color);
+        }
+    }
+  if (text_color != -1) gr_settextcolorind(text_color);
 }
 
 void processTextColorForBackground(const std::shared_ptr<GRM::Element> &element)
@@ -2217,27 +2261,52 @@ void processTextColorForBackground(const std::shared_ptr<GRM::Element> &element)
   int color_ind;
   unsigned char color_rgb[4];
   std::shared_ptr<GRM::Element> plot_parent = element;
+  auto context = grm_get_render()->getContext();
+  std::vector<double> color_vec;
   getPlotParent(plot_parent);
 
   if (!static_cast<int>(element->getAttribute("set_text_color_for_background"))) return;
-  if (element->hasAttribute("_text_color_ind_set_by_user")) return;
+  if (element->hasAttribute("_text_color_set_by_user")) return;
 
   double r, g, b;
-  int text_color_ind = 1;
+  int text_color = 1;
 
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()); !render)
     throw NotFoundError("Render-document not found for element\n");
 
-  gr_inqfillcolorind(&color_ind);
-  gr_inqcolor(color_ind, (int *)color_rgb);
+  if (element->parentElement()->hasAttribute("fill_color"))
+    {
+      if (element->parentElement()->getAttribute("fill_color").isInt())
+        color_ind = static_cast<int>(element->parentElement()->getAttribute("fill_color"));
+      else if (element->parentElement()->getAttribute("fill_color").isString())
+        {
+          auto color_key = static_cast<std::string>(element->parentElement()->getAttribute("fill_color"));
+          color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+        }
+    }
+  else
+    {
+      gr_inqfillcolorind(&color_ind);
+    }
 
-  r = color_rgb[0] / 255.0;
-  g = color_rgb[1] / 255.0;
-  b = color_rgb[2] / 255.0;
+  if (color_vec.empty())
+    {
+      gr_inqcolor(color_ind, (int *)color_rgb);
 
-  if (auto color_lightness = getLightnessFromRGB(r, g, b); color_lightness < 0.4) text_color_ind = 0;
-  element->setAttribute("text_color_ind", text_color_ind);
-  processTextColorInd(element);
+      r = color_rgb[0] / 255.0;
+      g = color_rgb[1] / 255.0;
+      b = color_rgb[2] / 255.0;
+    }
+  else
+    {
+      r = color_vec[0];
+      g = color_vec[1];
+      b = color_vec[2];
+    }
+
+  if (auto color_lightness = getLightnessFromRGB(r, g, b); color_lightness < 0.4) text_color = 0;
+  element->setAttribute("text_color", text_color);
+  processTextColor(element);
 }
 
 void processTextEncoding(const std::shared_ptr<GRM::Element> &element)
@@ -2472,20 +2541,59 @@ void processBackgroundColor(const std::shared_ptr<GRM::Element> &element)
 
       if (!GRM::Render::getViewport(element, &vp[0], &vp[1], &vp[2], &vp[3])) return;
 
-      auto background_color_index = static_cast<int>(element->getAttribute("background_color"));
-      gr_savestate();
-      gr_selntran(0);
-      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-      gr_setfillcolorind(background_color_index);
-      if (grm_get_render()->getRedrawWs()) gr_fillrect(vp[0], vp[1], vp[2], vp[3]);
-      gr_selntran(1);
-      gr_restorestate();
+      int background_color = -1;
+      if (element->getAttribute("background_color").isInt())
+        {
+          background_color = static_cast<int>(element->getAttribute("background_color"));
+        }
+      else if (element->getAttribute("background_color").isString())
+        {
+          auto context = grm_get_render()->getContext();
+          auto rgb_color_key = static_cast<std::string>(element->getAttribute("background_color"));
+          auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+
+          background_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+          if (background_color != -1 && (background_color < CUSTOM_COLOR_START || background_color > CUSTOM_COLOR_END))
+            {
+              element->removeAttribute("background_color");
+              element->setAttribute("background_color", background_color);
+            }
+        }
+
+      if (background_color != -1)
+        {
+          gr_savestate();
+          gr_selntran(0);
+          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+          gr_setfillcolorind(background_color);
+          if (grm_get_render()->getRedrawWs()) gr_fillrect(vp[0], vp[1], vp[2], vp[3]);
+          gr_selntran(1);
+          gr_restorestate();
+        }
     }
 }
 
-void processBorderColorInd(const std::shared_ptr<GRM::Element> &element)
+void processBorderColor(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_setbordercolorind(static_cast<int>(element->getAttribute("border_color_ind")));
+  int border_color = -1;
+  if (element->getAttribute("border_color").isInt())
+    {
+      border_color = static_cast<int>(element->getAttribute("border_color"));
+    }
+  else if (element->getAttribute("border_color").isString())
+    {
+      auto context = grm_get_render()->getContext();
+      auto rgb_color_key = static_cast<std::string>(element->getAttribute("border_color"));
+      auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+
+      border_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+      if (border_color != -1 && (border_color < CUSTOM_COLOR_START || border_color > CUSTOM_COLOR_END))
+        {
+          element->removeAttribute("border_color");
+          element->setAttribute("border_color", border_color);
+        }
+    }
+  if (border_color != -1) gr_setbordercolorind(border_color);
 }
 
 void processBorderWidth(const std::shared_ptr<GRM::Element> &element)
@@ -2572,41 +2680,30 @@ void processColormap(const std::shared_ptr<GRM::Element> &element)
   gr_setcolormap(colormap);
 }
 
-void processColorRep(const std::shared_ptr<GRM::Element> &element, const std::string &attribute)
+void processFillColor(const std::shared_ptr<GRM::Element> &element)
 {
-  int index, hex_int;
-  double red, green, blue;
-  std::string name, hex_string;
-  std::stringstream string_stream;
+  int fill_color = -1;
+  bool keep_string = false;
+  if (strEqualsAny(element->localName(), "sphere", "spin", "series_isosurface", "unit_cell")) keep_string = true;
 
-  auto end = attribute.find('.');
-  index = std::stoi(attribute.substr(end + 1, attribute.size()));
-
-  hex_int = 0;
-  hex_string = static_cast<std::string>(element->getAttribute(attribute));
-  string_stream << std::hex << hex_string;
-  string_stream >> hex_int;
-
-  red = ((hex_int >> 16) & 0xFF) / 255.0;
-  green = ((hex_int >> 8) & 0xFF) / 255.0;
-  // clang-format off
-  blue = ((hex_int)&0xFF) / 255.0;
-  // clang-format on
-
-  gr_setcolorrep(index, red, green, blue);
-}
-
-void processColorReps(const std::shared_ptr<GRM::Element> &element)
-{
-  for (auto &attr : element->getAttributeNames())
+  if (element->getAttribute("fill_color").isInt())
     {
-      if (attr.substr(0U, attr.find('.')) == "colorrep") processColorRep(element, attr);
+      fill_color = static_cast<int>(element->getAttribute("fill_color"));
     }
-}
+  else if (element->getAttribute("fill_color").isString())
+    {
+      auto context = grm_get_render()->getContext();
+      auto rgb_color_key = static_cast<std::string>(element->getAttribute("fill_color"));
+      auto rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
 
-void processFillColorInd(const std::shared_ptr<GRM::Element> &element)
-{
-  gr_setfillcolorind(static_cast<int>(element->getAttribute("fill_color_ind")));
+      fill_color = grm_get_render()->setColorRep(element, rgb_color[0], rgb_color[1], rgb_color[2]);
+      if (!keep_string && (fill_color != -1 && (fill_color < CUSTOM_COLOR_START || fill_color > CUSTOM_COLOR_END)))
+        {
+          element->removeAttribute("fill_color");
+          element->setAttribute("fill_color", fill_color);
+        }
+    }
+  if (fill_color != -1) gr_setfillcolorind(fill_color);
 }
 
 void processFillIntStyle(const std::shared_ptr<GRM::Element> &element)

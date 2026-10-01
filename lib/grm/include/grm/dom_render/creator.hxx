@@ -32,18 +32,18 @@ public:
   std::shared_ptr<Element> createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
                                             const std::shared_ptr<Context> &ext_context = nullptr, int marker_type = 0,
-                                            double marker_size = 0.0, int marker_color_ind = 0,
+                                            double marker_size = 0.0, int marker_color = 0,
                                             const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createPolymarker(double x, double y, int marker_type = 0, double marker_size = 0.0,
-                                            int marker_colorind = 0,
+                                            int marker_color = 0,
                                             const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createPolyline(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,
                                           const std::shared_ptr<Context> &ext_context = nullptr, int line_type = 0,
-                                          double line_width = 0.0, int line_colorind = 0,
+                                          double line_width = 0.0, int line_color = 0,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createPolyline(double x1, double x2, double y1, double y2, int line_type = 0,
-                                          double line_width = 0.0, int line_colorind = 0,
+                                          double line_width = 0.0, int line_color = 0,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createText(double x, double y, const std::string &text,
                                       CoordinateSpace space = CoordinateSpace::NDC,
@@ -51,7 +51,7 @@ public:
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,
                                           const std::shared_ptr<Context> &ext_context = nullptr, int fill_int_style = 0,
-                                          int fill_style = 0, int fill_color_ind = -1,
+                                          int fill_style = 0, int fill_color = -1,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createCellArray(double xmin, double xmax, double ymin, double ymax, int dimx, int dimy,
                                            int scol, int srow, int ncol, int nrow, const std::string &color_key,
@@ -98,12 +98,12 @@ public:
   std::shared_ptr<Element> createDrawArc(double xmin, double xmax, double ymin, double ymax, double start_angle,
                                          double end_angle, const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createFillArc(double xmin, double xmax, double ymin, double ymax, double a1, double a2,
-                                         int fill_int_style = 0, int fill_style = 0, int fill_color_ind = -1,
+                                         int fill_int_style = 0, int fill_style = 0, int fill_color = -1,
                                          const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createDrawRect(double xmin, double xmax, double ymin, double ymax,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createFillRect(double xmin, double xmax, double ymin, double ymax, int fill_int_style = 0,
-                                          int fill_style = 0, int fill_color_ind = -1,
+                                          int fill_style = 0, int fill_color = -1,
                                           const std::shared_ptr<Element> &ext_element = nullptr);
   std::shared_ptr<Element> createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y,

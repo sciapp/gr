@@ -257,7 +257,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   text_button->setMinimumWidth(0);
 
   text_sub_menu = new QMenu(this);
-  text_sub_menu->addAction(grplot_widget->getTextColorIndAct());
+  text_sub_menu->addAction(grplot_widget->getTextColorAct());
   text_sub_menu->addAction(grplot_widget->getTextScaleAct());
   text_sub_menu->menuAction()->setVisible(true);
   text_button->setMenu(text_sub_menu);

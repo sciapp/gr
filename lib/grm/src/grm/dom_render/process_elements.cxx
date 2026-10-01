@@ -31,6 +31,11 @@
   (GR_OPTION_X_LOG & (scale_options) ? (pow(10.0, (double)((xFlipIf(x, scale_options, xmin, xmax) - (b)) / (a)))) \
                                      : xFlipIf(x, scale_options, xmin, xmax))
 
+/* ------------------------- static variables ----------------------------------------------------------------------- */
+
+static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 14, 7, 5, 17, 18, 19};
+static int def_color;
+
 /* ------------------------------- process high lvl elements ---------------------------------------------------------*/
 
 void processElement(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -814,11 +819,12 @@ void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared
                   axis->setAttribute("name", location + "-axis");
                   axis->setAttribute("location", location);
                   axis->setAttribute("mirrored_axis", false);
-                  axis->setAttribute("line_color_ind", 1);
+                  axis->setAttribute("line_color", 1);
                 }
             }
         }
     }
+  def_color = 0; // reset linespec colors
 }
 
 /* ------------------------------- pre process elements --------------------------------------------------------------*/
@@ -1967,13 +1973,22 @@ void processRadialAxes(const std::shared_ptr<GRM::Element> &element, const std::
             }
           if (arc_grid_line != nullptr)
             {
-              int line_color_ind = 90; // Todo: make the line_color editable like 2d axis
-              if (i % 2 == 0 && i > 0) line_color_ind = 88;
-              if (!arc_grid_line->hasAttribute("_line_color_ind_set_by_user"))
+              int line_color = 639; // Todo: make the line_color editable like 2d axis
+              std::string line_color_rgb;
+              if (i % 2 == 0 && i > 0) line_color = 630;
+              if (!arc_grid_line->hasAttribute("_line_color_set_by_user"))
                 {
-                  if (element->hasAttribute("line_color_ind"))
-                    line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-                  arc_grid_line->setAttribute("line_color_ind", line_color_ind);
+                  if (element->hasAttribute("line_color"))
+                    {
+                      if (element->getAttribute("line_color").isInt())
+                        line_color = static_cast<int>(element->getAttribute("line_color"));
+                      else if (element->getAttribute("line_color").isString())
+                        line_color_rgb = static_cast<std::string>(element->getAttribute("line_color"));
+                    }
+                  if (line_color_rgb.empty())
+                    arc_grid_line->setAttribute("line_color", line_color);
+                  else
+                    arc_grid_line->setAttribute("line_color", line_color_rgb);
                 }
               if (!value_string.empty()) arc_grid_line->setAttribute("arc_label", value_string);
             }
@@ -2011,7 +2026,7 @@ void processRadialAxes(const std::shared_ptr<GRM::Element> &element, const std::
           if (arc != nullptr)
             {
               if (!with_pan) arc->setAttribute("name", "radial-axes line");
-              arc->setAttribute("line_color_ind", 88);
+              arc->setAttribute("line_color", 630);
             }
 
           if (i % labeled_arc_line_skip == 0 && i == n)
@@ -2114,12 +2129,21 @@ void processAngleLine(const std::shared_ptr<GRM::Element> &element, const std::s
     {
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT)
         {
-          if (!line->hasAttribute("_line_color_ind_set_by_user"))
+          if (!line->hasAttribute("_line_color_set_by_user"))
             {
-              auto line_color_ind = 88;
-              if (element->hasAttribute("line_color_ind"))
-                line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-              global_render->setLineColorInd(line, line_color_ind);
+              auto line_color = 630;
+              std::string line_color_rgb;
+              if (element->hasAttribute("line_color"))
+                {
+                  if (element->getAttribute("line_color").isInt())
+                    line_color = static_cast<int>(element->getAttribute("line_color"));
+                  else if (element->getAttribute("line_color").isString())
+                    line_color_rgb = static_cast<std::string>(element->getAttribute("line_color"));
+                }
+              if (line_color_rgb.empty())
+                global_render->setLineColor(line, line_color);
+              else
+                global_render->setLineColor(line, line_color_rgb);
             }
         }
     }
@@ -2357,32 +2381,13 @@ void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   auto x_max = static_cast<double>(element->getAttribute("x_max"));
   auto y_min = static_cast<double>(element->getAttribute("y_min"));
   auto y_max = static_cast<double>(element->getAttribute("y_max"));
-  bool added_fill_color_ind = false;
   applyMoveTransformation(element);
 
   if (element->parentElement()->localName() == "bar" &&
       element->parentElement()->parentElement()->hasAttribute("transparency"))
     processTransparency(element->parentElement()->parentElement());
 
-  // since fill_color_rgb can't directly be set in GR this workaround is needed
-  if (element->hasAttribute("fill_color_rgb"))
-    {
-      auto c = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-      auto c_vec = GRM::get<std::vector<double>>((*context)[c]);
-      auto color_index = PLOT_CUSTOM_COLOR_INDEX;
-      grm_get_render()->setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, c_vec[0], c_vec[1], c_vec[2]);
-
-      element->setAttribute("fill_color_ind", color_index);
-      processAttributes(element);
-      added_fill_color_ind = true;
-    }
-
   if (grm_get_render()->getRedrawWs()) gr_fillrect(x_min, x_max, y_min, y_max);
-  if (added_fill_color_ind)
-    {
-      element->removeAttribute("fill_color_ind");
-      element->removeAttribute("colorrep." + std::to_string(PLOT_CUSTOM_COLOR_INDEX));
-    }
 }
 
 void processFillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -2595,22 +2600,46 @@ void processIntegral(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (fill_area != nullptr)
     {
       int fill_color_ind = 989, fill_int_style = 2;
+      std::string fill_color_rgb;
       /* when there is a color defined on the series element use it */
-      if (series_element->hasAttribute("line_color_ind"))
-        fill_color_ind = static_cast<int>(series_element->getAttribute("line_color_ind"));
+      if (series_element->hasAttribute("line_color"))
+        {
+          if (series_element->getAttribute("line_color").isInt())
+            fill_color_ind = static_cast<int>(series_element->getAttribute("line_color"));
+          else if (series_element->getAttribute("line_color").isString())
+            fill_color_rgb = static_cast<std::string>(series_element->getAttribute("line_color"));
+        }
       /* when there is a color defined on the integral_group element use it */
-      if (element->parentElement()->hasAttribute("fill_color_ind"))
-        fill_color_ind = static_cast<int>(element->parentElement()->getAttribute("fill_color_ind"));
+      if (element->parentElement()->hasAttribute("fill_color"))
+        {
+          if (element->parentElement()->getAttribute("fill_color").isInt())
+            fill_color_ind = static_cast<int>(element->parentElement()->getAttribute("fill_color"));
+          else if (element->parentElement()->getAttribute("fill_color").isString())
+            fill_color_rgb = static_cast<std::string>(element->parentElement()->getAttribute("fill_color"));
+        }
       /* when there is a color defined on the polyline use it no matter if there was a color defined on the series */
       for (const auto &elem : series_element->querySelectorsAll("polyline[_child_id=0]"))
         {
-          if (elem->hasAttribute("line_color_ind"))
-            fill_color_ind = static_cast<int>(elem->getAttribute("line_color_ind"));
+          if (elem->hasAttribute("line_color"))
+            {
+              if (elem->getAttribute("line_color").isInt())
+                fill_color_ind = static_cast<int>(elem->getAttribute("line_color"));
+              else if (elem->getAttribute("line_color").isString())
+                fill_color_rgb = static_cast<std::string>(elem->getAttribute("line_color"));
+            }
         }
       /* color on the integral element has the highest priority */
-      if (element->hasAttribute("fill_color_ind"))
-        fill_color_ind = static_cast<int>(element->getAttribute("fill_color_ind"));
-      fill_area->setAttribute("fill_color_ind", fill_color_ind);
+      if (element->hasAttribute("fill_color"))
+        {
+          if (element->getAttribute("fill_color").isInt())
+            fill_color_ind = static_cast<int>(element->getAttribute("fill_color"));
+          else if (element->getAttribute("fill_color").isString())
+            fill_color_rgb = static_cast<std::string>(element->getAttribute("fill_color"));
+        }
+      if (fill_color_rgb.empty())
+        fill_area->setAttribute("fill_color", fill_color_ind);
+      else
+        fill_area->setAttribute("fill_color", fill_color_rgb);
       /* when there is a fill int style defined on the integral_group element use it */
       if (element->parentElement()->hasAttribute("fill_int_style"))
         fill_int_style = static_cast<int>(element->parentElement()->getAttribute("fill_int_style"));
@@ -2634,11 +2663,11 @@ void processIntegral(const std::shared_ptr<GRM::Element> &element, const std::sh
     }
   if (left_border != nullptr)
     {
-      int line_color_ind = 1;
       double transparency = 0;
-      if (element->hasAttribute("line_color_ind"))
-        line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-      left_border->setAttribute("line_color_ind", line_color_ind);
+      if (element->hasAttribute("line_color"))
+        left_border->setAttribute("line_color", element->getAttribute("line_color"));
+      else
+        left_border->setAttribute("line_color", 1);
       left_border->setAttribute("name", "integral_left");
       if (left_border->hasAttribute("transparency"))
         transparency = static_cast<double>(left_border->getAttribute("transparency"));
@@ -2660,11 +2689,11 @@ void processIntegral(const std::shared_ptr<GRM::Element> &element, const std::sh
     }
   if (right_border != nullptr)
     {
-      int line_color_ind = 1;
       double transparency = 0;
-      if (element->hasAttribute("line_color_ind"))
-        line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-      right_border->setAttribute("line_color_ind", line_color_ind);
+      if (element->hasAttribute("line_color"))
+        right_border->setAttribute("line_color", element->getAttribute("line_color"));
+      else
+        right_border->setAttribute("line_color", 1);
       right_border->setAttribute("name", "integral_right");
       if (right_border->hasAttribute("transparency"))
         transparency = static_cast<double>(right_border->getAttribute("transparency"));
@@ -2788,8 +2817,8 @@ void processArcGridLine(const std::shared_ptr<GRM::Element> &element, const std:
     {
       if (kind != "polar_heatmap" && kind != "nonuniform_polar_heatmap") arc->setAttribute("z_index", -1);
       arc->setAttribute("name", "polar grid line");
-      if (element->hasAttribute("line_color_ind"))
-        arc->setAttribute("line_color_ind", static_cast<int>(element->getAttribute("line_color_ind")));
+      if (element->hasAttribute("line_color"))
+        arc->setAttribute("line_color", static_cast<int>(element->getAttribute("line_color")));
     }
 
   if (!arc_label.empty())
@@ -2895,7 +2924,7 @@ void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   processWindow(element->parentElement()->parentElement());
   processSpace3d(element->parentElement()->parentElement());
 
-  if (!element->hasAttribute("text_color_ind")) element->setAttribute("text_color_ind", 1);
+  if (!element->hasAttribute("text_color")) element->setAttribute("text_color", 1);
 
   if (global_render->getRedrawWs())
     gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
@@ -3141,7 +3170,7 @@ void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
                                                  axis.major_count, axis.num_ticks, axis.num_tick_labels,
                                                  abs(axis.tick_size), tick_orientation, axis.label_position);
           axis_elem->setAttribute("_child_id", 1);
-          if (!axis_elem->hasAttribute("_line_color_ind_set_by_user")) global_render->setLineColorInd(axis_elem, 1);
+          if (!axis_elem->hasAttribute("_line_color_set_by_user")) global_render->setLineColor(axis_elem, 1);
           element->append(axis_elem);
         }
       else if (axis_elem != nullptr)
@@ -3228,7 +3257,7 @@ void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
                                                  axis.major_count, axis.num_ticks, axis.num_tick_labels,
                                                  abs(axis.tick_size), tick_orientation, axis.label_position);
           axis_elem->setAttribute("_child_id", 1);
-          if (!axis_elem->hasAttribute("_line_color_ind_set_by_user")) global_render->setLineColorInd(axis_elem, 1);
+          if (!axis_elem->hasAttribute("_line_color_set_by_user")) global_render->setLineColor(axis_elem, 1);
           element->append(axis_elem);
         }
       else
@@ -3451,7 +3480,8 @@ void processErrorBars(const std::shared_ptr<GRM::Element> &element, const std::s
 
   gr_inqlinecolorind(&color_error_bar);
   // special case for barplot
-  if (kind == "barplot") color_error_bar = static_cast<int>(element->parentElement()->getAttribute("line_color_ind"));
+  if (kind == "barplot" && element->parentElement()->getAttribute("line_color").isInt())
+    color_error_bar = static_cast<int>(element->parentElement()->getAttribute("line_color"));
   color_upwards_cap = color_downwards_cap = color_error_bar;
   if (element->hasAttribute("upwards_cap_color"))
     color_upwards_cap = static_cast<int>(element->getAttribute("upwards_cap_color"));
@@ -3902,7 +3932,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
 
           if (!element->hasAttribute("_fill_int_style_set_by_user"))
             render->setFillIntStyle(element, GKS_K_INTSTYLE_SOLID);
-          if (!element->hasAttribute("_fill_color_ind_set_by_user")) render->setFillColorInd(element, 0);
+          if (!element->hasAttribute("_fill_color_set_by_user")) render->setFillColor(element, 0);
 
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
@@ -3925,12 +3955,12 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                     line_type = static_cast<int>(element->getAttribute("line_type"));
                   render->setLineType(dr, line_type);
                 }
-              if (!dr->hasAttribute("_line_color_ind_set_by_user"))
+              if (!dr->hasAttribute("_line_color_set_by_user"))
                 {
-                  auto line_color_ind = 1;
-                  if (element->hasAttribute("line_color_ind"))
-                    line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-                  render->setLineColorInd(dr, line_color_ind);
+                  if (element->hasAttribute("line_color"))
+                    dr->setAttribute("line_color", element->getAttribute("line_color"));
+                  else
+                    render->setLineColor(dr, 1);
                 }
               if (!dr->hasAttribute("_line_width_set_by_user"))
                 {
@@ -3972,8 +4002,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                     }
 
                   molecule_symbols_vec.push_back(symbol);
-                  auto color_key = static_cast<std::string>(child->getAttribute("color_rgb_values"));
-                  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+                  auto color_key = static_cast<std::string>(child->getAttribute("fill_color"));
 
                   gr_inqtext(0, 0, (char *)symbol.c_str(), tbx, tby);
                   dy = grm_max((tby[2] - tby[0]) - 0.03 * scale_factor, 0);
@@ -4038,12 +4067,12 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                         }
                       if (label_dr != nullptr)
                         {
-                          if (!label_dr->hasAttribute("_line_color_ind_set_by_user"))
+                          if (!label_dr->hasAttribute("_line_color_set_by_user"))
                             {
-                              auto line_color_ind = 1;
-                              if (label_dr->hasAttribute("line_color_ind"))
-                                line_color_ind = static_cast<int>(label_dr->getAttribute("line_color_ind"));
-                              render->setLineColorInd(label_dr, line_color_ind);
+                              if (label_dr->hasAttribute("line_color"))
+                                label_dr->setAttribute("line_color", label_dr->getAttribute("line_color"));
+                              else
+                                render->setLineColor(label_dr, 1);
                             }
                         }
 
@@ -4064,7 +4093,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                         }
                       if (label_fr != nullptr)
                         {
-                          label_fr->setAttribute("fill_color_rgb", color_key);
+                          label_fr->setAttribute("fill_color", color_key);
                         }
 
 
@@ -4204,15 +4233,13 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               if (pl != nullptr)
                                 {
                                   render->setLineSpec(pl, spec);
-                                  if (child->hasAttribute("line_color_ind"))
+                                  if (child->hasAttribute("line_color"))
                                     {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(child->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", child->getAttribute("line_color"));
                                     }
                                   else
                                     {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(series->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", series->getAttribute("line_color"));
                                     }
                                   if (child->hasAttribute("line_type"))
                                     {
@@ -4254,15 +4281,13 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               if (pl != nullptr)
                                 {
                                   int marker_color_ind = 989;
-                                  if (child->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
-                                    }
-                                  else if (series->hasAttribute("marker_color_ind"))
-                                    {
-                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
-                                    }
-                                  render->setMarkerColorInd(pl, marker_color_ind);
+                                  std::string marker_color_rgb;
+
+                                  if (child->hasAttribute("marker_color"))
+                                    pl->setAttribute("marker_color", child->getAttribute("marker_color"));
+                                  else if (series->hasAttribute("marker_color"))
+                                    pl->setAttribute("marker_color", series->getAttribute("marker_color"));
+
                                   if (child->hasAttribute("marker_type"))
                                     {
                                       pl->setAttribute("marker_type",
@@ -4273,18 +4298,16 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                                       pl->setAttribute("marker_type",
                                                        static_cast<int>(series->getAttribute("marker_type")));
                                     }
-                                  if (child->hasAttribute("border_color_ind"))
+                                  if (child->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", child->getAttribute("border_color"));
                                     }
-                                  else if (series->hasAttribute("border_color_ind"))
+                                  else if (series->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", series->getAttribute("border_color"));
                                     }
                                   if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                                  processMarkerColorInd(pl);
+                                  processMarkerColor(pl);
                                   got_polymarker = true;
                                 }
                             }
@@ -4308,15 +4331,13 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               if (pl != nullptr)
                                 {
                                   render->setLineSpec(pl, spec);
-                                  if (child->hasAttribute("line_color_ind"))
+                                  if (child->hasAttribute("line_color"))
                                     {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(child->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", child->getAttribute("line_color"));
                                     }
                                   else
                                     {
-                                      pl->setAttribute("line_color_ind",
-                                                       static_cast<int>(series->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", series->getAttribute("line_color"));
                                     }
                                   if (child->hasAttribute("line_type"))
                                     {
@@ -4358,15 +4379,30 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               if (pl != nullptr)
                                 {
                                   int marker_color_ind = 989;
-                                  if (child->hasAttribute("marker_color_ind"))
+                                  std::string marker_color_rgb;
+
+                                  if (child->hasAttribute("marker_color"))
                                     {
-                                      marker_color_ind = static_cast<int>(child->getAttribute("marker_color_ind"));
+                                      if (child->getAttribute("marker_color").isInt())
+                                        marker_color_ind = static_cast<int>(child->getAttribute("marker_color"));
+                                      else
+                                        marker_color_rgb =
+                                            static_cast<std::string>(child->getAttribute("marker_color"));
                                     }
-                                  else if (series->hasAttribute("marker_color_ind"))
+                                  else if (series->hasAttribute("marker_color"))
                                     {
-                                      marker_color_ind = static_cast<int>(series->getAttribute("marker_color_ind"));
+                                      if (series->getAttribute("marker_color").isInt())
+                                        marker_color_ind = static_cast<int>(series->getAttribute("marker_color"));
+                                      else
+                                        marker_color_rgb =
+                                            static_cast<std::string>(series->getAttribute("marker_color"));
                                     }
-                                  render->setMarkerColorInd(pl, marker_color_ind);
+
+                                  if (marker_color_rgb.empty())
+                                    render->setMarkerColor(pl, marker_color_ind);
+                                  else
+                                    render->setMarkerColor(pl, marker_color_rgb);
+
                                   if (child->hasAttribute("marker_type"))
                                     {
                                       pl->setAttribute("marker_type",
@@ -4377,18 +4413,16 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                                       pl->setAttribute("marker_type",
                                                        static_cast<int>(series->getAttribute("marker_type")));
                                     }
-                                  if (child->hasAttribute("border_color_ind"))
+                                  if (child->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", child->getAttribute("border_color"));
                                     }
-                                  else if (series->hasAttribute("border_color_ind"))
+                                  else if (series->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", series->getAttribute("border_color"));
                                     }
                                   if (series->localName() == "series_stem") pl->setAttribute("x", legend_symbol_x[1]);
-                                  processMarkerColorInd(pl);
+                                  processMarkerColor(pl);
                                   got_polymarker = true;
                                 }
                             }
@@ -4423,15 +4457,13 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               if (pl != nullptr)
                                 {
                                   render->setLineSpec(pl, spec);
-                                  if (child->hasAttribute("line_color_ind"))
+                                  if (child->hasAttribute("line_color"))
                                     {
-                                      render->setLineColorInd(pl,
-                                                              static_cast<int>(child->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", child->getAttribute("line_color"));
                                     }
                                   else
                                     {
-                                      render->setLineColorInd(pl,
-                                                              static_cast<int>(series->getAttribute("line_color_ind")));
+                                      pl->setAttribute("line_color", series->getAttribute("line_color"));
                                     }
                                 }
                             }
@@ -4462,21 +4494,20 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                                 }
                               if (pl != nullptr)
                                 {
-                                  render->setMarkerColorInd(
-                                      pl, (series->hasAttribute("marker_color_ind")
-                                               ? static_cast<int>(series->getAttribute("marker_color_ind"))
-                                               : 989));
-                                  if (child->hasAttribute("border_color_ind"))
+                                  if (series->hasAttribute("marker_color"))
+                                    pl->setAttribute("marker_color", series->getAttribute("marker_color"));
+                                  else
+                                    pl->setAttribute("marker_color", 989);
+
+                                  if (child->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(child->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", child->getAttribute("border_color"));
                                     }
-                                  else if (series->hasAttribute("border_color_ind"))
+                                  else if (series->hasAttribute("border_color"))
                                     {
-                                      pl->setAttribute("border_color_ind",
-                                                       static_cast<int>(series->getAttribute("border_color_ind")));
+                                      pl->setAttribute("border_color", series->getAttribute("border_color"));
                                     }
-                                  processMarkerColorInd(pl);
+                                  processMarkerColor(pl);
                                 }
                             }
                         }
@@ -4561,7 +4592,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
         }
 
       if (!element->hasAttribute("_fill_int_style_set_by_user")) render->setFillIntStyle(element, GKS_K_INTSTYLE_SOLID);
-      if (!element->hasAttribute("_fill_color_ind_set_by_user")) render->setFillColorInd(element, 0);
+      if (!element->hasAttribute("_fill_color_set_by_user")) render->setFillColor(element, 0);
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -4576,7 +4607,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
         }
 
       if (!element->hasAttribute("_line_type_set_by_user")) render->setLineType(element, GKS_K_INTSTYLE_SOLID);
-      if (!element->hasAttribute("_line_color_ind_set_by_user")) render->setLineColorInd(element, 1);
+      if (!element->hasAttribute("_line_color_set_by_user")) render->setLineColor(element, 1);
       if (!element->hasAttribute("_line_width_set_by_user")) render->setLineWidth(element, 1);
 
       for (auto &current_label : labels)
@@ -4647,12 +4678,8 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               child->querySelectors("pie_segment[_child_id=" + std::to_string(child_id - 3) + "]");
                           if (pie_segment != nullptr)
                             {
-                              int color_ind = static_cast<int>(pie_segment->getAttribute("fill_color_ind"));
-                              auto color_rep = static_cast<std::string>(
-                                  pie_segment->getAttribute("colorrep." + std::to_string(color_ind)));
-                              fr->setAttribute("fill_color_ind", color_ind);
-                              if (!color_rep.empty())
-                                fr->setAttribute("colorrep." + std::to_string(color_ind), color_rep);
+                              fr->setAttribute("fill_color", pie_segment->getAttribute("fill_color"));
+
                               if (!fr->hasAttribute("_fill_int_style_set_by_user"))
                                 {
                                   if (pie_segment->hasAttribute("fill_int_style"))
@@ -4724,7 +4751,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
             }
         }
 
-      processLineColorInd(element);
+      processLineColor(element);
       processLineWidth(element);
       processLineType(element);
     }
@@ -4732,18 +4759,18 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
   processScale(element);
   processFillStyle(element);
   processFillIntStyle(element);
-  processFillColorInd(element);
+  processFillColor(element);
 }
 
 void processBar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double x1, x2, y1, y2;
-  int bar_color_index, edge_color_index, color_save_spot = PLOT_CUSTOM_COLOR_INDEX;
+  int bar_color_index = -1, edge_color_index = -1;
   std::shared_ptr<GRM::Element> fill_rect, draw_rect, text_elem;
   std::string orientation = PLOT_DEFAULT_ORIENTATION, text;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   double line_width = NAN, y_lightness = NAN;
-  std::vector<double> bar_color_rgb, edge_color_rgb;
+  std::string bar_color_rgb, edge_color_rgb;
   int child_id = 0;
   auto global_render = grm_get_render();
   auto global_creator = grm_get_creator();
@@ -4752,26 +4779,34 @@ void processBar(const std::shared_ptr<GRM::Element> &element, const std::shared_
   x2 = static_cast<double>(element->getAttribute("x2"));
   y1 = static_cast<double>(element->getAttribute("y1"));
   y2 = static_cast<double>(element->getAttribute("y2"));
-  bar_color_index = static_cast<int>(element->getAttribute("fill_color_ind"));
-  if (element->hasAttribute("_fill_color_ind_set_by_user"))
-    bar_color_index = static_cast<int>(element->getAttribute("_fill_color_ind_set_by_user"));
-  edge_color_index = static_cast<int>(element->getAttribute("line_color_ind"));
-  if (element->hasAttribute("_line_color_ind_set_by_user"))
-    edge_color_index = static_cast<int>(element->getAttribute("_line_color_ind_set_by_user"));
+  if (element->getAttribute("fill_color").isInt())
+    bar_color_index = static_cast<int>(element->getAttribute("fill_color"));
+  else if (element->getAttribute("fill_color").isString())
+    bar_color_rgb = static_cast<std::string>(element->getAttribute("fill_color"));
+
+  if (element->hasAttribute("_fill_color_set_by_user"))
+    {
+      if (element->getAttribute("_fill_color_set_by_user").isInt())
+        bar_color_index = static_cast<int>(element->getAttribute("_fill_color_set_by_user"));
+      else if (element->getAttribute("_fill_color_set_by_user").isString())
+        bar_color_rgb = static_cast<std::string>(element->getAttribute("_fill_color_set_by_user"));
+    }
+
+  if (element->getAttribute("line_color").isInt())
+    edge_color_index = static_cast<int>(element->getAttribute("line_color"));
+  else if (element->getAttribute("line_color").isString())
+    edge_color_rgb = static_cast<std::string>(element->getAttribute("line_color"));
+
+  if (element->hasAttribute("_line_color_set_by_user"))
+    {
+      if (element->getAttribute("_line_color_set_by_user").isInt())
+        edge_color_index = static_cast<int>(element->getAttribute("_line_color_set_by_user"));
+      else if (element->getAttribute("_line_color_set_by_user").isString())
+        edge_color_rgb = static_cast<std::string>(element->getAttribute("_line_color_set_by_user"));
+    }
   if (element->hasAttribute("text")) text = static_cast<std::string>(element->getAttribute("text"));
   if (element->hasAttribute("line_width")) line_width = static_cast<double>(element->getAttribute("line_width"));
   if (element->parentElement()->hasAttribute("transparency")) processTransparency(element->parentElement());
-
-  if (element->hasAttribute("fill_color_rgb"))
-    {
-      auto bar_color_rgb_key = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-      bar_color_rgb = GRM::get<std::vector<double>>((*context)[bar_color_rgb_key]);
-    }
-  if (element->hasAttribute("line_color_rgb"))
-    {
-      auto edge_color_rgb_key = static_cast<std::string>(element->getAttribute("line_color_rgb"));
-      edge_color_rgb = GRM::get<std::vector<double>>((*context)[edge_color_rgb_key]);
-    }
 
   /* clear old rects */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -4808,26 +4843,21 @@ void processBar(const std::shared_ptr<GRM::Element> &element, const std::shared_
           if (fill_style != 0) global_render->setFillStyle(fill_rect, fill_style);
         }
 
-      if (!bar_color_rgb.empty() && bar_color_rgb[0] != -1)
-        {
-          global_render->setColorRep(fill_rect, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-          bar_color_index = color_save_spot;
-          processColorReps(fill_rect);
-        }
-      global_render->setFillColorInd(fill_rect, bar_color_index);
+      if (bar_color_rgb.empty())
+        global_render->setFillColor(fill_rect, bar_color_index);
+      else
+        global_render->setFillColor(fill_rect, bar_color_rgb);
 
       if (!text.empty())
         {
-          int color;
-          if (bar_color_index != -1)
+          if (bar_color_rgb.empty())
             {
-              color = bar_color_index;
+              if (bar_color_index != -1) y_lightness = getLightness(bar_color_index);
             }
-          else if (element->hasAttribute("fill_color_ind"))
+          else
             {
-              color = static_cast<int>(element->getAttribute("fill_color_ind"));
+              y_lightness = getLightness(bar_color_rgb);
             }
-          y_lightness = getLightness(color);
         }
     }
 
@@ -4846,16 +4876,11 @@ void processBar(const std::shared_ptr<GRM::Element> &element, const std::shared_
     {
       draw_rect->setAttribute("z_index", 2);
 
-      if (!edge_color_rgb.empty() && edge_color_rgb[0] != -1)
-        {
-          global_render->setColorRep(draw_rect, color_save_spot - 1, edge_color_rgb[0], edge_color_rgb[1],
-                                     edge_color_rgb[2]);
-          edge_color_index = color_save_spot - 1;
-        }
-      if (element->parentElement()->localName() == "series_barplot")
-        element->parentElement()->setAttribute("line_color_ind", edge_color_index);
-      global_render->setLineColorInd(draw_rect, edge_color_index);
-      processLineColorInd(draw_rect);
+      if (edge_color_rgb.empty())
+        global_render->setLineColor(draw_rect, edge_color_index);
+      else
+        global_render->setLineColor(draw_rect, edge_color_rgb);
+      processLineColor(draw_rect);
       if (!std::isnan(line_width)) global_render->setLineWidth(draw_rect, line_width);
     }
 
@@ -4891,8 +4916,8 @@ void processBar(const std::shared_ptr<GRM::Element> &element, const std::shared_
               text_elem->setAttribute("text_align_horizontal", text_align_horizontal);
             }
           global_render->setTextWidthAndHeight(text_elem, x2 - x1, y2 - y1);
-          if (!std::isnan(y_lightness) && !text_elem->hasAttribute("_text_color_ind_set_by_user"))
-            global_render->setTextColorInd(text_elem, (y_lightness < 0.4) ? 0 : 1);
+          if (!std::isnan(y_lightness) && !text_elem->hasAttribute("_text_color_set_by_user"))
+            global_render->setTextColor(text_elem, (y_lightness < 0.4) ? 0 : 1);
         }
     }
 }
@@ -5257,7 +5282,7 @@ void processPolyline(const std::shared_ptr<GRM::Element> &element, const std::sh
 
       auto n = std::min<int>((int)x_vec.size(), (int)y_vec.size());
       auto group = element->parentElement();
-      if (element->hasAttribute("line_color_ind")) processLineColorInd(element);
+      if (element->hasAttribute("line_color")) processLineColor(element);
       if ((element->hasAttribute("line_types") || element->hasAttribute("line_widths") ||
            element->hasAttribute("line_color_indices")) ||
           ((parent_types.count(group->localName())) &&
@@ -5279,7 +5304,7 @@ void processPolyline(const std::shared_ptr<GRM::Element> &element, const std::sh
       double x[2] = {x1, x2};
       double y[2] = {y1, y2};
 
-      if (element->hasAttribute("line_color_ind")) processLineColorInd(element);
+      if (element->hasAttribute("line_color")) processLineColor(element);
       if (grm_get_render()->getRedrawWs() && !hidden) gr_polyline(2, x, y);
     }
   if (startsWith(name, "x-axis-line") || startsWith(name, "y-axis-line")) gr_setclip(1);
@@ -5589,7 +5614,7 @@ void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element, const
         }
       if (radial_axes != nullptr)
         {
-          if (!radial_axes->hasAttribute("text_color_ind")) radial_axes->setAttribute("text_color_ind", 1);
+          if (!radial_axes->hasAttribute("text_color")) radial_axes->setAttribute("text_color", 1);
         }
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
@@ -5605,7 +5630,7 @@ void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element, const
         }
       if (theta_axes != nullptr)
         {
-          if (!theta_axes->hasAttribute("text_color_ind")) theta_axes->setAttribute("text_color_ind", 1);
+          if (!theta_axes->hasAttribute("text_color")) theta_axes->setAttribute("text_color", 1);
         }
     }
   else
@@ -5616,13 +5641,13 @@ void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element, const
       bool y_grid =
           (element->hasAttribute("y_grid")) ? static_cast<int>(element->getAttribute("y_grid")) : PLOT_DEFAULT_YGRID;
 
-      if (!element->hasAttribute("_line_color_ind_set_by_user") ||
-          !static_cast<int>(element->getAttribute("_line_color_ind_set_by_user")))
-        global_render->setLineColorInd(element, 1);
+      if (!element->hasAttribute("_line_color_set_by_user") ||
+          !static_cast<int>(element->getAttribute("_line_color_set_by_user")))
+        global_render->setLineColor(element, 1);
       if (!element->hasAttribute("_line_width_set_by_user") ||
           !static_cast<int>(element->getAttribute("_line_width_set_by_user")))
         global_render->setLineWidth(element, 1);
-      processLineColorInd(element);
+      processLineColor(element);
       processLineWidth(element);
 
       if (type == "3d")
@@ -5950,10 +5975,10 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
   std::vector<double> f1, f2, arc_2_x, arc_2_y, theta_vec, bin_edges;
   int child_id = 0;
   int edge_color = 1, face_color = 989;
-  double count, bin_width = -1.0, r_max;
+  double count, r_max;
   int num_bins, num_bin_edges = 0, bin_nr;
-  std::string norm = "count", str;
-  bool theta_flip = false, draw_edges = false, keep_radii_axes = false, r_lim = false, r_log = false;
+  std::string str;
+  bool draw_edges = false, keep_radii_axes = false, r_lim = false, r_log = false;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   std::shared_ptr<GRM::Element> plot_parent = element;
   getPlotParent(plot_parent);
@@ -5973,12 +5998,9 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (plot_parent->hasAttribute("r_log")) r_log = static_cast<int>(plot_parent->getAttribute("r_log"));
 
   if (element->parentElement()->hasAttribute("transparency")) processTransparency(element->parentElement());
-  if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
-  if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
-  if (element->hasAttribute("theta_flip")) theta_flip = static_cast<int>(element->getAttribute("theta_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
-  if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
-  if (element->hasAttribute("fill_color_ind")) face_color = static_cast<int>(element->getAttribute("fill_color_ind"));
+  if (!element->hasAttribute("line_color")) element->setAttribute("line_color", edge_color);
+  if (!element->hasAttribute("fill_color")) element->setAttribute("fill_color", face_color);
 
   if (element->hasAttribute("bin_edges"))
     {
@@ -5993,7 +6015,6 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
       auto bin_widths_key = static_cast<std::string>(element->parentElement()->getAttribute("bin_widths"));
       auto bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
       num_bins = static_cast<int>(bin_widths_vec.size());
-      bin_width = bin_widths_vec[bin_nr];
     }
   r_max = static_cast<double>(plot_parent->querySelectors("central_region")->getAttribute("r_max"));
   if (r_log) r_max = log10(r_max);
@@ -6099,7 +6120,8 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
                     fill_style = static_cast<int>(element->getAttribute("fill_style"));
                   if (fill_style != 0) global_render->setFillStyle(arc, fill_style);
                 }
-              if (!arc->hasAttribute("_fill_color_ind_set_by_user")) global_render->setFillColorInd(arc, face_color);
+              if (!arc->hasAttribute("_fill_color_set_by_user"))
+                arc->setAttribute("fill_color", element->getAttribute("fill_color"));
             }
         }
 
@@ -6119,8 +6141,8 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
         {
           if (!draw_arc->hasAttribute("_fill_int_style_set_by_user"))
             global_render->setFillIntStyle(draw_arc, 0); // because it's a draw_arc
-          if (!draw_arc->hasAttribute("_fill_color_ind_set_by_user"))
-            global_render->setFillColorInd(draw_arc, edge_color);
+          if (!draw_arc->hasAttribute("_fill_color_set_by_user"))
+            draw_arc->setAttribute("fill_color", element->getAttribute("line_color"));
           if (!draw_arc->hasAttribute("z_index")) draw_arc->setAttribute("z_index", 2);
         }
     }
@@ -6199,8 +6221,8 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
 
               if (area != nullptr)
                 {
-                  if (!area->hasAttribute("_fill_color_ind_set_by_user"))
-                    global_render->setFillColorInd(area, face_color);
+                  if (!area->hasAttribute("_fill_color_set_by_user"))
+                    area->setAttribute("fill_color", element->getAttribute("fill_color"));
                   if (!area->hasAttribute("_fill_int_style_set_by_user"))
                     {
                       auto fill_int_style = 1;
@@ -6226,7 +6248,8 @@ void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::sh
             }
           if (area != nullptr)
             {
-              if (!area->hasAttribute("_fill_color_ind_set_by_user")) global_render->setFillColorInd(area, edge_color);
+              if (!area->hasAttribute("_fill_color_set_by_user"))
+                area->setAttribute("fill_color", element->getAttribute("line_color"));
               if (!area->hasAttribute("_fill_int_style_set_by_user"))
                 {
                   auto fill_int_style = 0;
@@ -6247,7 +6270,7 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   std::shared_ptr<GRM::Element> arc, text_elem;
   double text_pos[2];
   auto global_creator = grm_get_creator();
-  int fill_color_ind = -1, fill_int_style = 0, fill_style = 0;
+  int fill_int_style = 0, fill_style = 0;
 
   /* clear old child nodes */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -6257,8 +6280,6 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   auto end_angle = static_cast<double>(element->getAttribute("end_angle"));
   auto text = static_cast<std::string>(element->getAttribute("text"));
 
-  if (element->hasAttribute("fill_color_ind"))
-    fill_color_ind = static_cast<int>(element->getAttribute("fill_color_ind"));
   if (element->hasAttribute("fill_int_style"))
     fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
   if (element->hasAttribute("fill_style")) fill_style = static_cast<int>(element->getAttribute("fill_style"));
@@ -6273,8 +6294,12 @@ void processPieSegment(const std::shared_ptr<GRM::Element> &element, const std::
     {
       arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
       if (arc != nullptr)
-        global_creator->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, fill_int_style, fill_style,
-                                      fill_color_ind, arc);
+        global_creator->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, fill_int_style, fill_style, -1,
+                                      arc);
+    }
+  if (arc != nullptr)
+    {
+      if (element->hasAttribute("fill_color")) arc->setAttribute("fill_color", element->getAttribute("fill_color"));
     }
 
   auto middle_angle = (start_angle + end_angle) / 2.0;
@@ -6311,7 +6336,7 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
    */
   gr_savestate();
   double tbx[4], tby[4];
-  int text_color_ind = 1, scientific_format = 0;
+  int scientific_format = 0;
   bool text_fits = true;
   auto x = static_cast<double>(element->getAttribute("x"));
   auto y = static_cast<double>(element->getAttribute("y"));
@@ -6333,14 +6358,12 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
                             static_cast<int>(element->getAttribute("_world_coordinates_set_by_user")));
     }
 
-  if (plot_parent->hasAttribute("text_color_ind"))
-    text_color_ind = static_cast<int>(plot_parent->getAttribute("text_color_ind"));
-  if (element->parentElement()->parentElement()->hasAttribute("text_color_ind"))
-    text_color_ind = static_cast<int>(element->parentElement()->parentElement()->getAttribute("text_color_ind"));
-  if (element->parentElement()->hasAttribute("text_color_ind"))
-    text_color_ind = static_cast<int>(element->parentElement()->getAttribute("text_color_ind"));
-  if (element->hasAttribute("text_color_ind"))
-    text_color_ind = static_cast<int>(element->getAttribute("text_color_ind"));
+  gr_settextcolorind(1); // default if nothing is set
+  if (plot_parent->hasAttribute("text_color")) processTextColor(plot_parent);
+  if (element->parentElement()->parentElement()->hasAttribute("text_color"))
+    processTextColor(element->parentElement()->parentElement());
+  if (element->parentElement()->hasAttribute("text_color")) processTextColor(element->parentElement());
+  if (element->hasAttribute("text_color")) processTextColor(element);
   if (element->hasAttribute("scientific_format"))
     scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
 
@@ -6388,17 +6411,14 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   if (text_fits && redraw_ws && scientific_format == 2)
     {
-      gr_settextcolorind(text_color_ind); // needed to have a visible text after update
       gr_textext(x, y, &str[0]);
     }
   else if (text_fits && redraw_ws && scientific_format == 3)
     {
-      gr_settextcolorind(text_color_ind); // needed to have a visible text after update
       gr_mathtex(x, y, &str[0]);
     }
   else if (text_fits && redraw_ws)
     {
-      gr_settextcolorind(text_color_ind); // needed to have a visible text after update
       gr_text(x, y, &str[0]);
     }
   gr_restorestate();
@@ -6664,7 +6684,7 @@ void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
   zlabel = static_cast<std::string>(element->getAttribute("z_label_3d"));
   applyMoveTransformation(element);
 
-  if (!element->hasAttribute("text_color_ind")) element->setAttribute("text_color_ind", 1);
+  if (!element->hasAttribute("text_color")) element->setAttribute("text_color", 1);
 
   if (grm_get_render()->getRedrawWs() && !hide && coordinate_system_type == "3d")
     {
@@ -6687,7 +6707,7 @@ void processSphere(const std::shared_ptr<GRM::Element> &element, const std::shar
   float y = static_cast<double>(element->getAttribute("y"));
   float z = static_cast<double>(element->getAttribute("z"));
   float radius = static_cast<double>(element->getAttribute("radius"));
-  auto color_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+  auto color_key = static_cast<std::string>(element->getAttribute("fill_color"));
   auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
   auto symbol = static_cast<std::string>(element->getAttribute("symbol"));
   bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
@@ -6736,7 +6756,7 @@ void processSpin(const std::shared_ptr<GRM::Element> &element, const std::shared
   float y_dir = static_cast<double>(element->getAttribute("y_dir"));
   float z_dir = static_cast<double>(element->getAttribute("z_dir"));
   auto length = static_cast<double>(element->getAttribute("length"));
-  auto color_key = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+  auto color_key = static_cast<std::string>(element->getAttribute("fill_color"));
   auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
   auto symbol = static_cast<std::string>(element->getAttribute("symbol"));
   bool hidden = element->hasAttribute("_hidden") && static_cast<int>(element->getAttribute("_hidden"));
@@ -6828,7 +6848,7 @@ void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::sh
     {
       double transparency = 0.4;
       bool show_mesh = false;
-      std::vector<double> rgb_color = {0, 0, 0};
+      std::vector<double> fill_rgb_color = {0, 0, 0}, line_rgb_color = {0, 0, 0};
       auto cell_key = static_cast<std::string>(element->parentElement()->getAttribute("cell"));
       auto cell_vec = GRM::get<std::vector<double>>((*context)[cell_key]);
       auto cell_length = cell_vec.size();
@@ -6836,10 +6856,15 @@ void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::sh
       if (element->hasAttribute("show_mesh")) show_mesh = static_cast<int>(element->getAttribute("show_mesh"));
       if (element->hasAttribute("transparency"))
         transparency = static_cast<double>(element->getAttribute("transparency"));
-      if (element->hasAttribute("fill_color_rgb"))
+      if (element->hasAttribute("fill_color"))
         {
-          auto rgb_color_key = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-          rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+          auto rgb_color_key = static_cast<std::string>(element->getAttribute("fill_color"));
+          fill_rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
+        }
+      if (element->hasAttribute("line_color"))
+        {
+          auto rgb_color_key = static_cast<std::string>(element->getAttribute("line_color"));
+          line_rgb_color = GRM::get<std::vector<double>>((*context)[rgb_color_key]);
         }
 
       element->setAttribute("transparency", transparency);
@@ -6895,9 +6920,9 @@ void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::sh
 
                   if (show_mesh)
                     {
-                      color_data.push_back(rgb_color[0]);
-                      color_data.push_back(rgb_color[1]);
-                      color_data.push_back(rgb_color[2]);
+                      color_data.push_back(fill_rgb_color[0]);
+                      color_data.push_back(fill_rgb_color[1]);
+                      color_data.push_back(fill_rgb_color[2]);
                       color_data.push_back(transparency);
                       for (int k = 0; k < 3; k++)
                         {
@@ -6911,9 +6936,9 @@ void processUnitCell(const std::shared_ptr<GRM::Element> &element, const std::sh
                 }
               if (!show_mesh)
                 {
-                  color_data.push_back(rgb_color[0]);
-                  color_data.push_back(rgb_color[1]);
-                  color_data.push_back(rgb_color[2]);
+                  color_data.push_back(line_rgb_color[0]);
+                  color_data.push_back(line_rgb_color[1]);
+                  color_data.push_back(line_rgb_color[2]);
                 }
               auto norm =
                   sqrt(start_dir[0] * start_dir[0] + start_dir[1] * start_dir[1] + start_dir[2] * start_dir[2]) /
@@ -7013,7 +7038,8 @@ void processGR3DrawImage(const std::shared_ptr<GRM::Element> &element, const std
     }
 }
 
-/* ------------------------------- process series elements -----------------------------------------------------------*/
+/* ------------------------------- process series elements
+ * -----------------------------------------------------------*/
 
 void processHeatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
@@ -7503,15 +7529,13 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
    */
   /* plot level */
   int bar_color = 989, edge_color = 1;
-  std::vector<double> bar_color_rgb = {-1, -1, -1};
-  std::vector<double> edge_color_rgb = {-1, -1, -1};
+  std::string edge_color_rgb;
   double bar_width = 0.8, edge_width = 1.0, bar_shift = 1;
-  std::string style = "default", orientation = PLOT_DEFAULT_ORIENTATION, line_spec = SERIES_DEFAULT_SPEC;
+  std::string style = "default", orientation = PLOT_DEFAULT_ORIENTATION;
   double wfac;
   int len_std_colors = 20;
   int std_colors[20] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                         991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  int color_save_spot = PLOT_CUSTOM_COLOR_INDEX;
   unsigned int i;
 
   /* series level */
@@ -7544,17 +7568,11 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   auto series_index = static_cast<int>(element->getAttribute("series_index"));
   auto fixed_y_length = static_cast<int>(plot_parent->getAttribute("max_y_length"));
 
-  // Todo: using line_spec here isn't really clean, cause no lines are drawn, but it's the only option atm to get the
-  // same different colors like multiple line series have
-  const char *spec_char = line_spec.c_str();
-  gr_uselinespec((char *)spec_char);
-  gr_inqmarkercolorind(&bar_color);
+  // the important part from linespec to get different colors
+  bar_color = 980 + predef_colors[def_color];
+  def_color = (def_color + 1) % 20;
 
-  if (element->hasAttribute("fill_color_rgb"))
-    {
-      auto bar_color_rgb_key = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-      bar_color_rgb = GRM::get<std::vector<double>>((*context)[bar_color_rgb_key]);
-    }
+  if (!element->hasAttribute("fill_color")) element->setAttribute("fill_color", bar_color);
   if (element->hasAttribute("bar_width")) bar_width = static_cast<double>(element->getAttribute("bar_width"));
   if (element->hasAttribute("style"))
     {
@@ -7568,15 +7586,6 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
     orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
   is_vertical = orientation == "vertical";
   x_log = plot_parent->hasAttribute("x_log") && static_cast<int>(plot_parent->getAttribute("x_log"));
-
-  if (bar_color_rgb[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          if (bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0)
-            throw std::out_of_range("For barplot series bar_color_rgb must be inside [0, 1].\n");
-        }
-    }
 
   /* retrieve attributes form the series level */
   if (!element->hasAttribute("y")) throw NotFoundError("Barplot series is missing y.\n");
@@ -7593,25 +7602,17 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   wfac = 0.9 * bar_width;
 
-  if (element->hasAttribute("line_color_rgb"))
+  if (element->hasAttribute("line_color"))
     {
-      auto edge_color_rgb_key = static_cast<std::string>(element->getAttribute("line_color_rgb"));
-      edge_color_rgb = GRM::get<std::vector<double>>((*context)[edge_color_rgb_key]);
+      if (element->getAttribute("line_color").isInt())
+        edge_color = static_cast<int>(element->getAttribute("line_color"));
+      else if (element->getAttribute("line_color").isString())
+        edge_color_rgb = static_cast<std::string>(element->getAttribute("line_color"));
     }
-  if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
   if (element->hasAttribute("edge_width")) edge_width = static_cast<double>(element->getAttribute("edge_width"));
   if (!element->hasAttribute("_text_align_vertical_set_by_user") &&
       !element->hasAttribute("_text_align_horizontal_set_by_user"))
     global_render->setTextAlign(element, 2, 3);
-
-  if (edge_color_rgb[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          if (edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0)
-            throw std::out_of_range("For barplot series edge_color_rgb must be inside [0, 1].\n");
-        }
-    }
 
   if (element->hasAttribute("color_ind_values"))
     {
@@ -7696,25 +7697,8 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (!element->hasAttribute("_fill_int_style_set_by_user")) global_render->setFillIntStyle(element, 1);
   processFillIntStyle(element);
-  if (!element->hasAttribute("fill_color_ind"))
-    {
-      global_render->setFillColorInd(element, bar_color);
-    }
-  else
-    {
-      bar_color = static_cast<int>(element->getAttribute("fill_color_ind"));
-    }
-  processFillColorInd(element);
+  processFillColor(element);
 
-  /* overrides bar_color */
-  if (bar_color_rgb[0] != -1)
-    {
-      global_render->setColorRep(element, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-      processColorReps(element);
-      bar_color = color_save_spot;
-      global_render->setFillColorInd(element, bar_color);
-      processFillColorInd(element);
-    }
   if (!inner_series)
     {
       /* draw bar */
@@ -7764,8 +7748,8 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
             }
 
           int fillcolorind = -1;
-          std::vector<double> bar_fillcolor_rgb, edge_fillcolor_rgb;
-          std::string bar_color_rgb_key, edge_color_rgb_key;
+          std::vector<double> bar_fill_color_rgb;
+          std::string bar_color_rgb_key;
           std::shared_ptr<GRM::Element> bar;
           auto id = static_cast<int>(global_root->getAttribute("_id"));
           auto str = std::to_string(id);
@@ -7778,31 +7762,28 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
             }
           else if (!c_rgb.empty() && c_rgb[i * 3] != -1)
             {
-              bar_fillcolor_rgb = std::vector<double>{c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]};
+              bar_fill_color_rgb = std::vector<double>{c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]};
               bar_color_rgb_key = "fill_color_rgb" + str;
-              (*context)[bar_color_rgb_key] = bar_fillcolor_rgb;
+              (*context)[bar_color_rgb_key] = bar_fill_color_rgb;
             }
 
           if (fillcolorind == -1)
-            fillcolorind = element->hasAttribute("fill_color_ind")
-                               ? static_cast<int>(element->getAttribute("fill_color_ind"))
+            fillcolorind = element->hasAttribute("fill_color") && element->getAttribute("fill_color").isInt()
+                               ? static_cast<int>(element->getAttribute("fill_color"))
                                : 989;
-          if (element->hasAttribute("_fill_color_ind_set_by_user"))
-            fillcolorind = static_cast<int>(element->getAttribute("fill_color_ind"));
-
-          /* Colorrep for draw_rect */
-          if (edge_color_rgb[0] != -1)
+          if (element->hasAttribute("_fill_color_set_by_user"))
             {
-              edge_fillcolor_rgb = std::vector<double>{edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]};
-              edge_color_rgb_key = "line_color_rgb" + str;
-              (*context)[edge_color_rgb_key] = edge_fillcolor_rgb;
+              if (element->getAttribute("_fill_color_set_by_user").isInt())
+                fillcolorind = static_cast<int>(element->getAttribute("_fill_color_set_by_user"));
+              else if (element->getAttribute("_fill_color_set_by_user").isString())
+                bar_color_rgb_key = static_cast<std::string>(element->getAttribute("_fill_color_set_by_user"));
             }
 
           /* Create bars */
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
               bar = global_creator->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
-                                              edge_color_rgb_key, edge_width, "");
+                                              edge_color_rgb, edge_width, "");
               bar->setAttribute("_child_id", child_id++);
               element->append(bar);
             }
@@ -7810,8 +7791,8 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
             {
               bar = element->querySelectors("bar[_child_id=" + std::to_string(child_id++) + "]");
               if (bar != nullptr)
-                global_creator->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
-                                          edge_color_rgb_key, edge_width, "", bar);
+                global_creator->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key, edge_color_rgb,
+                                          edge_width, "", bar);
             }
           if (bar != nullptr)
             {
@@ -7836,16 +7817,13 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
     {
       /* edge has the same with and color for every inner series */
       global_render->setLineWidth(element, edge_width);
-      if (edge_color_rgb[0] != -1)
-        {
-          global_render->setColorRep(element, color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
-          processFillColorInd(element);
-          edge_color = color_save_spot;
-        }
-      global_render->setLineColorInd(element, edge_color);
-      element->setAttribute("line_color_ind", edge_color);
+
+      if (edge_color_rgb.empty())
+        global_render->setLineColor(element, edge_color);
+      else
+        global_render->setLineColor(element, edge_color_rgb);
       processLineWidth(element);
-      processLineColorInd(element);
+      processLineColor(element);
 
       int inner_y_start_index = 0;
       /* Draw inner_series */
@@ -7886,8 +7864,8 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                 }
 
               int fillcolorind = -1;
-              std::vector<double> bar_fillcolor_rgb, edge_fillcolor_rgb;
-              std::string bar_color_rgb_key, edge_color_rgb_key;
+              std::vector<double> bar_fillcolor_rgb;
+              std::string bar_color_rgb_key;
               std::shared_ptr<GRM::Element> bar;
               auto id = static_cast<int>(global_root->getAttribute("_id"));
               auto str = std::to_string(id);
@@ -7912,14 +7890,19 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                   (*context)[bar_color_rgb_key] = bar_fillcolor_rgb;
                 }
               if (fillcolorind == -1) fillcolorind = std_colors[inner_series_index % len_std_colors];
-              if (element->hasAttribute("_fill_color_ind_set_by_user"))
-                fillcolorind = static_cast<int>(element->getAttribute("fill_color_ind"));
+              if (element->hasAttribute("_fill_color_set_by_user"))
+                {
+                  if (element->getAttribute("_fill_color_set_by_user").isInt())
+                    fillcolorind = static_cast<int>(element->getAttribute("_fill_color_set_by_user"));
+                  else if (element->getAttribute("_fill_color_set_by_user").isString())
+                    bar_color_rgb_key = static_cast<std::string>(element->getAttribute("_fill_color_set_by_user"));
+                }
 
               /* Create bars */
               if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
                 {
                   bar = global_creator->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
-                                                  edge_color_rgb_key, edge_width, "");
+                                                  edge_color_rgb, edge_width, "");
                   bar->setAttribute("_child_id", child_id++);
                   element->append(bar);
                 }
@@ -7928,7 +7911,7 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                   bar = element->querySelectors("bar[_child_id=" + std::to_string(child_id++) + "]");
                   if (bar != nullptr)
                     global_creator->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
-                                              edge_color_rgb_key, edge_width, "", bar);
+                                              edge_color_rgb, edge_width, "", bar);
                 }
               if (bar != nullptr)
                 {
@@ -7953,8 +7936,12 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
           inner_y_start_index += inner_y_length;
         }
     }
-  element->setAttribute("line_color_ind", edge_color);
-  processLineColorInd(element);
+
+  if (edge_color_rgb.empty())
+    element->setAttribute("line_color", edge_color);
+  else
+    element->setAttribute("line_color", edge_color_rgb);
+  processLineColor(element);
 
   // error_bar handling
   for (const auto &child : element->children())
@@ -8316,7 +8303,7 @@ void processContourf(const std::shared_ptr<GRM::Element> &element, const std::sh
           element->setAttribute("z_min", z_min);
           element->setAttribute("z_max", z_max);
 
-          if (!element->hasAttribute("_line_color_ind_set_by_user")) global_render->setLineColorInd(element, 989);
+          if (!element->hasAttribute("_line_color_set_by_user")) global_render->setLineColor(element, 989);
           global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90); // central_region
           processSpace(element->parentElement());
 
@@ -8329,7 +8316,7 @@ void processContourf(const std::shared_ptr<GRM::Element> &element, const std::sh
           if (x_length * y_length != z_length)
             throw std::length_error("For contourf series x_length * y_length must be z_length.\n");
 
-          if (!element->hasAttribute("_line_color_ind_set_by_user")) global_render->setLineColorInd(element, 989);
+          if (!element->hasAttribute("_line_color_set_by_user")) global_render->setLineColor(element, 989);
 
           px_vec = x_vec;
           py_vec = y_vec;
@@ -8342,7 +8329,7 @@ void processContourf(const std::shared_ptr<GRM::Element> &element, const std::sh
       element->setAttribute("py", "py" + str);
       (*context)["pz" + str] = pz_vec;
       element->setAttribute("pz", "pz" + str);
-      processLineColorInd(element);
+      processLineColor(element);
     }
   else
     {
@@ -8399,10 +8386,11 @@ void processIsosurface(const std::shared_ptr<GRM::Element> &element, const std::
 
   if (element->hasAttribute("isovalue")) isovalue = static_cast<double>(element->getAttribute("isovalue"));
   element->setAttribute("isovalue", isovalue);
-  /* We need to convert the double values to floats, as GR3 expects floats, but an argument can only contain doubles. */
-  if (element->hasAttribute("color_rgb"))
+  /* We need to convert the double values to floats, as GR3 expects floats, but an argument can only contain doubles.
+   */
+  if (element->hasAttribute("fill_color"))
     {
-      auto temp_c = static_cast<std::string>(element->getAttribute("color_rgb"));
+      auto temp_c = static_cast<std::string>(element->getAttribute("fill_color"));
       temp_colors = GRM::get<std::vector<double>>((*context)[temp_c]);
       i = temp_colors.size();
       if (i != 3) throw std::length_error("For isosurface series the foreground colors must have size 3.\n");
@@ -8414,8 +8402,8 @@ void processIsosurface(const std::shared_ptr<GRM::Element> &element, const std::
       std::string id_str = std::to_string(id);
 
       std::vector<double> rgb_vec = {foreground_colors[0], foreground_colors[1], foreground_colors[2]};
-      (*context)["color_rgb" + id_str] = rgb_vec;
-      element->setAttribute("color_rgb", "color_rgb" + id_str);
+      (*context)["fill_color_rgb" + id_str] = rgb_vec;
+      element->setAttribute("fill_color", "fill_color_rgb" + id_str);
     }
   logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
 
@@ -8470,12 +8458,10 @@ void processHistogram(const std::shared_ptr<GRM::Element> &element, const std::s
    * \param[in] context The GRM::Context that contains the actual data
    */
   int bar_color_index = 989, i;
-  std::vector<double> bar_color_rgb_vec = {-1, -1, -1};
   std::shared_ptr<GRM::Element> plot_parent;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   int child_id = 0;
   int edge_color_index = 1;
-  std::vector<double> edge_color_rgb_vec = {-1, -1, -1};
   double x_min, x_max, bar_width, y_min, y_max;
   std::vector<double> bins_vec;
   unsigned int num_bins;
@@ -8484,60 +8470,12 @@ void processHistogram(const std::shared_ptr<GRM::Element> &element, const std::s
   auto global_render = grm_get_render();
   auto global_creator = grm_get_creator();
 
-  if (element->hasAttribute("fill_color_rgb"))
-    {
-      auto bar_color_rgb = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-      bar_color_rgb_vec = GRM::get<std::vector<double>>((*context)[bar_color_rgb]);
-    }
-
-  // Todo: using line_spec here isn't really clean, cause no lines are drawn, but it's the only option atm to get the
-  // same different colors like multiple line series have
-  const char *spec_char = line_spec.c_str();
-  gr_uselinespec((char *)spec_char);
-  gr_inqmarkercolorind(&bar_color_index);
-
-  if (element->hasAttribute("fill_color_ind"))
-    bar_color_index = static_cast<int>(element->getAttribute("fill_color_ind"));
-  else
-    element->setAttribute("fill_color_ind", bar_color_index);
-
   plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
-  if (bar_color_rgb_vec[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          if (bar_color_rgb_vec[i] > 1 || bar_color_rgb_vec[i] < 0)
-            throw std::out_of_range("For histogram series bar_color_rgb must be inside [0, 1].\n");
-        }
-      bar_color_index = 1000;
-      global_render->setColorRep(element, bar_color_index, bar_color_rgb_vec[0], bar_color_rgb_vec[1],
-                                 bar_color_rgb_vec[2]);
-      // processColorRep has to be manually triggered.
-      processColorReps(element);
-    }
-
-  if (element->hasAttribute("line_color_rgb"))
-    {
-      auto edge_color_rgb = static_cast<std::string>(element->getAttribute("line_color_rgb"));
-      edge_color_rgb_vec = GRM::get<std::vector<double>>((*context)[edge_color_rgb]);
-    }
-
-  if (element->hasAttribute("line_color_ind"))
-    edge_color_index = static_cast<int>(element->getAttribute("line_color_ind"));
-  if (edge_color_rgb_vec[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          if (edge_color_rgb_vec[i] > 1 || edge_color_rgb_vec[i] < 0)
-            throw std::out_of_range("For histogram series edge_color_rgb must be inside [0, 1].\n");
-        }
-      edge_color_index = 1001;
-      global_render->setColorRep(element, edge_color_index, edge_color_rgb_vec[0], edge_color_rgb_vec[1],
-                                 edge_color_rgb_vec[2]);
-      processColorReps(element);
-    }
+  // the important part from linespec to get different colors
+  bar_color_index = 980 + predef_colors[def_color];
+  def_color = (def_color + 1) % 20;
 
   if (!element->hasAttribute("bins")) histBins(element, context);
   auto bins = static_cast<std::string>(element->getAttribute("bins"));
@@ -8645,6 +8583,9 @@ void processHistogram(const std::shared_ptr<GRM::Element> &element, const std::s
           if (element->hasAttribute("_fill_style_set_by_user"))
             bar->setAttribute("_fill_style_set_by_user",
                               static_cast<int>(element->getAttribute("_fill_style_set_by_user")));
+
+          if (element->hasAttribute("line_color")) bar->setAttribute("line_color", element->getAttribute("line_color"));
+          if (element->hasAttribute("fill_color")) bar->setAttribute("fill_color", element->getAttribute("fill_color"));
         }
     }
 
@@ -8800,10 +8741,7 @@ void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::s
       std::shared_ptr<GRM::Element> line;
       int current_line_color_ind;
       gr_inqlinecolorind(&current_line_color_ind);
-      if (element->hasAttribute("line_color_ind"))
-        current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-      else
-        element->setAttribute("line_color_ind", current_line_color_ind);
+      if (!element->hasAttribute("line_color")) element->setAttribute("line_color", current_line_color_ind);
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -8819,8 +8757,8 @@ void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::s
         }
       if (line != nullptr)
         {
-          if (!line->hasAttribute("_line_color_ind_set_by_user"))
-            line->setAttribute("line_color_ind", current_line_color_ind);
+          if (!line->hasAttribute("_line_color_set_by_user"))
+            line->setAttribute("line_color", element->getAttribute("line_color"));
         }
     }
   if (mask & 2)
@@ -8828,10 +8766,7 @@ void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::s
       std::shared_ptr<GRM::Element> marker;
       int current_marker_color_ind;
       gr_inqmarkercolorind(&current_marker_color_ind);
-      if (element->hasAttribute("marker_color_ind"))
-        current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
-      else
-        element->setAttribute("marker_color_ind", current_marker_color_ind);
+      if (!element->hasAttribute("marker_color")) element->setAttribute("marker_color", current_marker_color_ind);
 
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
@@ -8847,8 +8782,8 @@ void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::s
         }
       if (marker != nullptr)
         {
-          if (!marker->hasAttribute("_marker_solor_ind_set_by_user"))
-            marker->setAttribute("marker_color_ind", current_marker_color_ind);
+          if (!marker->hasAttribute("_marker_color_set_by_user"))
+            marker->setAttribute("marker_color", element->getAttribute("marker_color"));
           marker->setAttribute("z_index", 2);
 
           if (!marker->hasAttribute("_marker_type_set_by_user"))
@@ -8924,10 +8859,7 @@ void processPolarScatter(const std::shared_ptr<GRM::Element> &element, const std
   if (marker != nullptr)
     {
       gr_inqmarkercolorind(&current_marker_color_ind);
-      if (element->hasAttribute("marker_color_ind"))
-        current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
-      else
-        marker->setAttribute("marker_color_ind", current_marker_color_ind);
+      if (!element->hasAttribute("marker_color")) marker->setAttribute("marker_color", current_marker_color_ind);
       if (element->hasAttribute("marker_size") && !marker->hasAttribute("_marker_size_set_by_user"))
         {
           auto marker_size = static_cast<double>(element->getAttribute("marker_size"));
@@ -9293,8 +9225,8 @@ void processWireframe(const std::shared_ptr<GRM::Element> &element, const std::s
   y_length = y_vec.size();
   z_length = z_vec.size();
 
-  if (!element->hasAttribute("fill_color_ind")) global_render->setFillColorInd(element, 0);
-  processFillColorInd(element);
+  if (!element->hasAttribute("fill_color")) global_render->setFillColor(element, 0);
+  processFillColor(element);
 
   auto id_int = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", ++id_int);
@@ -9339,7 +9271,7 @@ void processWireframe(const std::shared_ptr<GRM::Element> &element, const std::s
 void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   unsigned int num_bins, num_bin_edges = 0;
-  int edge_color = 1, face_color = 989, total_observations = 0;
+  int edge_color = 1, total_observations = 0;
   int child_id = 0, i;
   double transparency = 0.75, bin_width = -1.0;
   double r_min = 0.0, r_max = 1.0;
@@ -9364,9 +9296,6 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   clearOldChildren(&del, element);
 
   if (plot_group->hasAttribute("r_log")) r_log = static_cast<int>(plot_group->getAttribute("r_log"));
-
-  if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
-  if (element->hasAttribute("fill_color_ind")) face_color = static_cast<int>(element->getAttribute("fill_color_ind"));
   if (element->hasAttribute("transparency")) transparency = static_cast<double>(element->getAttribute("transparency"));
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
   if (plot_group->hasAttribute("theta_flip")) theta_flip = static_cast<int>(plot_group->getAttribute("theta_flip"));
@@ -9494,8 +9423,10 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               if (norm != "count") polar_bar->setAttribute("norm", norm);
               if (theta_flip) polar_bar->setAttribute("theta_flip", theta_flip);
               if (draw_edges) polar_bar->setAttribute("draw_edges", draw_edges);
-              if (edge_color != 1) polar_bar->setAttribute("line_color_ind", edge_color);
-              if (face_color != 989) polar_bar->setAttribute("fill_color_ind", face_color);
+              if (element->hasAttribute("line_color"))
+                polar_bar->setAttribute("line_color", element->getAttribute("line_color"));
+              if (element->hasAttribute("fill_color"))
+                polar_bar->setAttribute("fill_color", element->getAttribute("fill_color"));
               if (!bin_widths.empty()) polar_bar->setAttribute("bin_widths", bin_widths[class_nr]);
               if (!bin_edges.empty())
                 {
@@ -9522,12 +9453,17 @@ void processPolarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           std::shared_ptr<GRM::Element> arc;
           double arc_pos = 0.0;
 
-          if (!element->hasAttribute("_fill_color_ind_set_by_user")) global_render->setFillColorInd(element, 1);
-          if (!element->hasAttribute("_line_color_ind_set_by_user"))
-            global_render->setLineColorInd(element, edge_color);
+          if (!element->hasAttribute("_fill_color_set_by_user")) global_render->setFillColor(element, 1);
+          if (!element->hasAttribute("_line_color_set_by_user"))
+            {
+              if (element->hasAttribute("line_color"))
+                element->setAttribute("line_color", element->getAttribute("line_color"));
+              else
+                element->setAttribute("line_color", edge_color);
+            }
           if (!element->hasAttribute("_line_width_set_by_user")) global_render->setLineWidth(element, edge_width);
-          processLineColorInd(element);
-          processFillColorInd(element);
+          processLineColor(element);
+          processFillColor(element);
           processLineWidth(element);
 
           /* perform calculations for later usages, this r is used for complex calculations */
@@ -9795,9 +9731,9 @@ void processScatter(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   processMarkerType(element);
 
-  if (c_vec.empty() && element->hasAttribute("marker_color_ind"))
+  if (c_vec.empty() && element->hasAttribute("marker_color") && element->getAttribute("marker_color").isInt())
     {
-      c_index = static_cast<int>(element->getAttribute("marker_color_ind"));
+      c_index = static_cast<int>(element->getAttribute("marker_color"));
       if (c_index < 0)
         {
           logger((stderr, "Invalid scatter color %d, using 0 instead\n", c_index));
@@ -10016,9 +9952,9 @@ void processScatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
     {
       global_render->setMarkerColorInd(element, "marker_color_indices" + id, marker_c_vec);
     }
-  else if (element->hasAttribute("marker_color_ind"))
+  else if (element->hasAttribute("marker_color"))
     {
-      global_render->setMarkerColorInd(element, (int)c_index);
+      element->setAttribute("marker_color", static_cast<int>(c_index));
     }
 
   /* clear old marker */
@@ -10134,10 +10070,7 @@ void processStairs(const std::shared_ptr<GRM::Element> &element, const std::shar
           std::string where = PLOT_DEFAULT_STEP_WHERE;
           int current_line_color_ind;
           gr_inqlinecolorind(&current_line_color_ind);
-          if (element->hasAttribute("line_color_ind"))
-            current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-          else
-            element->setAttribute("line_color_ind", current_line_color_ind);
+          if (!element->hasAttribute("line_color")) element->setAttribute("line_color", current_line_color_ind);
           if (element->hasAttribute("step_where"))
             {
               where = static_cast<std::string>(element->getAttribute("step_where"));
@@ -10255,8 +10188,8 @@ void processStairs(const std::shared_ptr<GRM::Element> &element, const std::shar
             }
           if (line != nullptr)
             {
-              if (!line->hasAttribute("_line_color_ind_set_by_user"))
-                line->setAttribute("line_color_ind", current_line_color_ind);
+              if (!line->hasAttribute("_line_color_set_by_user"))
+                line->setAttribute("line_color", element->getAttribute("line_color"));
               if (element->hasAttribute("_hidden"))
                 line->setAttribute("_hidden", true);
               else
@@ -10272,10 +10205,8 @@ void processStairs(const std::shared_ptr<GRM::Element> &element, const std::shar
           std::vector<double> marker_x = x_vec, marker_y = y_vec;
           int current_marker_color_ind;
           gr_inqmarkercolorind(&current_marker_color_ind);
-          if (element->hasAttribute("line_color_ind"))
-            current_marker_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-          else
-            element->setAttribute("line_color_ind", current_marker_color_ind);
+          if (!element->hasAttribute("line_color")) element->setAttribute("line_color", current_marker_color_ind);
+
           if (is_vertical) marker_x = y_vec, marker_y = x_vec;
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
@@ -10291,8 +10222,8 @@ void processStairs(const std::shared_ptr<GRM::Element> &element, const std::shar
             }
           if (marker != nullptr)
             {
-              if (!marker->hasAttribute("_marker_color_ind_set_by_user"))
-                marker->setAttribute("marker_color_ind", current_marker_color_ind);
+              if (!marker->hasAttribute("_marker_color_set_by_user"))
+                marker->setAttribute("marker_color", element->getAttribute("marker_color"));
               marker->setAttribute("z_index", 2);
 
               if (!marker->hasAttribute("_marker_type_set_by_user"))
@@ -10394,10 +10325,8 @@ void processStem(const std::shared_ptr<GRM::Element> &element, const std::shared
       if (intEqualsAny(mask, 5, 0, 1, 3, 4, 5))
         {
           gr_inqlinecolorind(&current_line_color_ind);
-          if (element->hasAttribute("line_color_ind"))
-            current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-          else
-            element->setAttribute("line_color_ind", current_line_color_ind);
+          if (!element->hasAttribute("line_color")) element->setAttribute("line_color", current_line_color_ind);
+          if (!element->hasAttribute("marker_color")) element->setAttribute("marker_color", current_line_color_ind);
           if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
             {
               line = global_creator->createPolyline(stem_x[0], stem_x[1], stem_y[0], stem_y[1]);
@@ -10412,8 +10341,8 @@ void processStem(const std::shared_ptr<GRM::Element> &element, const std::shared
             }
           if (line != nullptr)
             {
-              if (!line->hasAttribute("_line_color_ind_set_by_user"))
-                line->setAttribute("line_color_ind", current_line_color_ind);
+              if (!line->hasAttribute("_line_color_set_by_user"))
+                line->setAttribute("line_color", element->getAttribute("line_color"));
               if (element->hasAttribute("_hidden"))
                 line->setAttribute("_hidden", true);
               else
@@ -10445,8 +10374,8 @@ void processStem(const std::shared_ptr<GRM::Element> &element, const std::shared
   if (marker != nullptr)
     {
       marker->setAttribute("z_index", 2);
-      if (!marker->hasAttribute("_marker_color_ind_set_by_user"))
-        marker->setAttribute("marker_color_ind", current_line_color_ind);
+      if (!marker->hasAttribute("_marker_color_set_by_user"))
+        marker->setAttribute("marker_color", element->getAttribute("marker_color"));
       if (element->hasAttribute("_hidden"))
         marker->setAttribute("_hidden", true);
       else
@@ -10723,12 +10652,7 @@ void processLine(const std::shared_ptr<GRM::Element> &element, const std::shared
     {
       int current_line_color_ind;
       gr_inqlinecolorind(&current_line_color_ind);
-      if (element->hasAttribute("_line_color_ind_set_by_user"))
-        current_line_color_ind = static_cast<int>(element->getAttribute("_line_color_ind_set_by_user"));
-      else if (element->hasAttribute("line_color_ind"))
-        current_line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-      else
-        element->setAttribute("line_color_ind", current_line_color_ind);
+      if (!element->hasAttribute("line_color")) element->setAttribute("line_color", current_line_color_ind);
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
 
@@ -10757,16 +10681,19 @@ void processLine(const std::shared_ptr<GRM::Element> &element, const std::shared
         }
 
       global_root->setAttribute("_id", ++id);
-      if (line != nullptr) line->setAttribute("line_color_ind", current_line_color_ind);
+      if (line != nullptr)
+        {
+          if (element->hasAttribute("_line_color_set_by_user"))
+            line->setAttribute("line_color", element->getAttribute("_line_color_set_by_user"));
+          else
+            line->setAttribute("line_color", element->getAttribute("line_color"));
+        }
     }
   if (mask & 2)
     {
       int current_marker_color_ind;
       gr_inqmarkercolorind(&current_marker_color_ind);
-      if (element->hasAttribute("marker_color_ind"))
-        current_marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
-      else
-        element->setAttribute("marker_color_ind", current_marker_color_ind);
+      if (!element->hasAttribute("marker_color")) element->setAttribute("marker_color", current_marker_color_ind);
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
 
@@ -10787,7 +10714,7 @@ void processLine(const std::shared_ptr<GRM::Element> &element, const std::shared
 
       if (marker != nullptr)
         {
-          marker->setAttribute("marker_color_ind", current_marker_color_ind);
+          marker->setAttribute("marker_color", element->getAttribute("marker_color"));
           marker->setAttribute("z_index", 2);
 
           if (element->hasAttribute("marker_type"))
@@ -10947,10 +10874,7 @@ void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &element,
   for (k = 0; k < 2; k++)
     {
       double value, bin_max = 0;
-      int bar_color_index = 989;
-      double bar_color_rgb[3] = {-1};
-      int edge_color_index = 1;
-      double edge_color_rgb[3] = {-1};
+      int bar_color_index = 989, edge_color_index = 1;
 
       id = static_cast<int>(global_root->getAttribute("_id"));
       str = std::to_string(id);
@@ -11031,15 +10955,8 @@ void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &element,
 
           if (sub_group != nullptr)
             {
-              std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
-              (*context)["fill_color_rgb" + str] = bar_color_rgb_vec;
-              sub_group->setAttribute("fill_color_rgb", "fill_color_rgb" + str);
-              sub_group->setAttribute("fill_color_ind", bar_color_index);
-
-              std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
-              (*context)["line_color_rgb" + str] = edge_color_rgb_vec;
-              sub_group->setAttribute("line_color_rgb", "line_color_rgb" + str);
-              sub_group->setAttribute("line_color_ind", edge_color_index);
+              sub_group->setAttribute("fill_color", bar_color_index);
+              sub_group->setAttribute("line_color", edge_color_index);
 
               (*context)["bins" + str] = bins;
               sub_group->setAttribute("bins", "bins" + str);
@@ -11387,11 +11304,11 @@ void processMolecule(const std::shared_ptr<GRM::Element> &element, const std::sh
               if (!grm_isnan(connection_threshold)) next_covalent_radius = connection_threshold / max_value;
               if (next_covalent_radius == UNDEF && !spin_style)
                 {
-                  fprintf(
-                      stderr,
-                      "Covalent radius is not defined for %s. Set a connection threshold to enable connections between "
-                      "single elements.\n",
-                      next_symbol.c_str());
+                  fprintf(stderr,
+                          "Covalent radius is not defined for %s. Set a connection threshold to enable connections "
+                          "between "
+                          "single elements.\n",
+                          next_symbol.c_str());
                 }
               else if (next_covalent_radius != UNDEF)
                 {
@@ -11453,16 +11370,21 @@ void processPie(const std::shared_ptr<GRM::Element> &element, const std::shared_
    * \param[in] context The GRM::Context that contains the actual data
    */
   unsigned int x_length;
-  int color_index;
   double start_angle, end_angle;
   char text[80];
   std::string title;
-  unsigned int i;
+  unsigned int i, index = 0;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
   int child_id = 0;
+  std::vector<int> color_indices;
+  std::vector<double> color_rgb_values;
   std::shared_ptr<GRM::Element> pie_segment;
+  std::vector<int> fallback_color_indices = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                                             991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+
   auto global_render = grm_get_render();
   auto global_creator = grm_get_creator();
+  auto global_root = grm_get_document_root();
 
   if (!element->hasAttribute("fill_int_style")) global_render->setFillIntStyle(element, GKS_K_INTSTYLE_SOLID);
   if (!element->hasAttribute("text_align_vertical"))
@@ -11481,7 +11403,18 @@ void processPie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   GRM::normalizeVecInt(x_vec, &normalized_x_int, 1000);
 
   start_angle = 90;
-  color_index = setNextColor("c", GR_COLOR_FILL, element, context); // key doesn't matter as long as it's not empty
+  if (element->hasAttribute("color_ind_values"))
+    {
+      auto c = static_cast<std::string>(element->getAttribute("color_ind_values"));
+      color_indices = GRM::get<std::vector<int>>((*context)[c]);
+    }
+  else if (element->hasAttribute("color_rgb_values"))
+    {
+      auto c = static_cast<std::string>(element->getAttribute("color_rgb_values"));
+      color_rgb_values = GRM::get<std::vector<double>>((*context)[c]);
+    }
+
+  int id = static_cast<int>(global_root->getAttribute("_id"));
 
   /* clear old pie_segments */
   del = DelValues(static_cast<int>(element->getAttribute("_delete_children")));
@@ -11494,27 +11427,39 @@ void processPie(const std::shared_ptr<GRM::Element> &element, const std::shared_
       snprintf(text, 80, "%.2lf\n%.1lf %%", x_vec[i], normalized_x_int[i] / 10.0);
       if (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT)
         {
-          pie_segment = global_creator->createPieSegment(start_angle, end_angle, text, color_index);
+          pie_segment = global_creator->createPieSegment(start_angle, end_angle, text, -1);
           pie_segment->setAttribute("_child_id", child_id++);
           element->append(pie_segment);
         }
       else
         {
           pie_segment = element->querySelectors("pie_segment[_child_id=" + std::to_string(child_id++) + "]");
-          if (pie_segment != nullptr)
-            global_creator->createPieSegment(start_angle, end_angle, text, color_index, pie_segment);
+          if (pie_segment != nullptr) global_creator->createPieSegment(start_angle, end_angle, text, -1, pie_segment);
         }
       if (pie_segment != nullptr)
         {
-          color_index = setNextColor("", GR_COLOR_FILL, pie_segment, context);
-          processFillColorInd(pie_segment);
+          if (!color_rgb_values.empty())
+            {
+              std::string id_str = std::to_string(id++);
+              std::vector<double> c_rgb_vec = {color_rgb_values[index], color_rgb_values[index + 1],
+                                               color_rgb_values[index + 2]};
+              (*context)["fill_color_rgb" + id_str] = c_rgb_vec;
+              pie_segment->setAttribute("fill_color", "fill_color_rgb" + id_str);
+            }
+          else if (!color_indices.empty())
+            pie_segment->setAttribute("fill_color", color_indices[i]);
+          else
+            pie_segment->setAttribute("fill_color", fallback_color_indices[i % 20]);
+
+          processFillColor(pie_segment);
         }
 
+      index += 3;
       start_angle = end_angle;
       if (start_angle < 0) start_angle += 360.0;
     }
-  setNextColor("", GR_COLOR_RESET, element, context);
-  processFillColorInd(element);
+  global_root->setAttribute("_id", ++id);
+  processFillColor(element);
   processFillIntStyle(element);
   processTextAlign(element);
 }
@@ -11574,7 +11519,7 @@ void processLine3(const std::shared_ptr<GRM::Element> &element, const std::share
     }
   if (line != nullptr)
     {
-      if (!line->hasAttribute("_line_color_ind_set_by_user")) line->setAttribute("line_color_ind", 989);
+      if (!line->hasAttribute("_line_color_set_by_user")) line->setAttribute("line_color", 989);
       if (element->hasAttribute("_hidden"))
         line->setAttribute("_hidden", true);
       else
