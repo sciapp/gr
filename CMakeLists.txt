@@ -1132,6 +1132,8 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESS
     lib/grm/grplot/gredit/CustomQListWidgetItem.cxx
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cxx
     lib/grm/grplot/gredit/EditElementWidget.cxx
+    lib/grm/grplot/gredit/GRColorSlider.cxx
+    lib/grm/grplot/gredit/GRRGBPicker.cxx
     lib/grm/grplot/gredit/IconBarWidget.cxx
     lib/grm/grplot/gredit/PreviewTextWidget.cxx
     lib/grm/grplot/gredit/SelectionListWidget.cxx
@@ -1382,6 +1384,8 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
       lib/grm/grplot/gredit/CustomQListWidgetItem.cxx
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cxx
       lib/grm/grplot/gredit/EditElementWidget.cxx
+      lib/grm/grplot/gredit/GRColorSlider.cxx
+      lib/grm/grplot/gredit/GRRGBPicker.cxx
       lib/grm/grplot/gredit/IconBarWidget.cxx
       lib/grm/grplot/gredit/PreviewTextWidget.cxx
       lib/grm/grplot/gredit/SelectionListWidget.cxx
@@ -1547,6 +1551,22 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerMixed.hxx
       )
       add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GRColorSlider.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRColorSlider.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRColorSlider.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRColorSlider.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GRRGBPicker.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRRGBPicker.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRRGBPicker.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRRGBPicker.hxx
+      )
+      add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cxx
         COMMAND
           ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
@@ -1607,6 +1627,8 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
           ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerMixed.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRColorSlider.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRRGBPicker.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cxx
           ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cxx
@@ -1631,6 +1653,8 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AN
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerMixed.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRColorSlider.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/GRRGBPicker.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
           ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx

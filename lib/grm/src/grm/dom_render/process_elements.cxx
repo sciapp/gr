@@ -410,6 +410,8 @@ void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared
   if (kind == "marginal_heatmap") central_region_parent = element->querySelectors("marginal_heatmap_plot");
   auto global_creator = grm_get_creator();
 
+  global_render->clearUsedColors();
+
   for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")

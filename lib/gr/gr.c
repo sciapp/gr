@@ -6021,7 +6021,7 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
           if (color != 1)
             gks_set_transparency(axis->ticks[i].is_major ? alpha * 0.4 : alpha * 0.2);
           else
-            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+            gks_set_pline_color_index(axis->ticks[i].is_major ? 630 : 639);
 
           if (which == 'X')
             {
@@ -6147,7 +6147,7 @@ static void grid_line(double x0, double y0, double x1, double y1, int color, dou
   if (color != 1)
     gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_color_index(major ? 88 : 90);
+    gks_set_pline_color_index(major ? 630 : 639);
 
   start_pline(x0, y0);
   pline(x1, y1);
@@ -6360,7 +6360,7 @@ static void grid_line3d(double x0, double y0, double z0, double x1, double y1, d
   if (color != 1)
     gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_color_index(major ? 88 : 90);
+    gks_set_pline_color_index(major ? 630 : 639);
 
   start_pline3d(x0, y0, z0);
   pline3d(x1, y1, z1);
@@ -11015,10 +11015,29 @@ void gr_inqcolor(int color, int *rgb)
   *rgb = ((nint(r * 255) & 0xff)) | ((nint(g * 255) & 0xff) << 8) | ((nint(b * 255) & 0xff) << 16);
 }
 
-int gr_rgbcolorexists(double red, double green, double blue, int ignored_min, int ignored_max, int tolerance)
+/*!
+ * \brief Return the color index of the nearest color to the given RGB values within a given maximum color distance.
+ *
+ * \param[in] red The red intensity in the range 0.0 to 1.0
+ * \param[in] green The green intensity in the range 0.0 to 1.0
+ * \param[in] blue The blue intensity in the range 0.0 to 1.0
+ * \param[in] excluded_range_min The minimum color index of color indices to be excluded in the color search. Negative
+ *                               values disable color exclusion.
+ * \param[in] excluded_range_max The maximum color index of color indices to be excluded in the color search. Negative
+ *                               values disable color exclusion.
+ * \param[in] distance_max The maximum color distance in the range 0.0 to 1.0. NaN and values outside this range disable
+ *                         a maximum distance threshold.
+ * \param[out] distance The address of a memory location to store the color distance. Is set even if the distance is
+ *                      greater than `distance_max`.
+ * \return The nearest color index or -1 if no color is found within the given `distance_max` threshold
+ */
+int gr_inqnearestcolorfromrgb(double red, double green, double blue, int excluded_range_min, int excluded_range_max,
+                              double distance_max, double *distance)
 {
-  int rr, gg, bb;
   int color;
+  int rr, gg, bb;
+  int best_color = 80;
+  double best_distance = DBL_MAX;
 
   check_autoinit;
 
@@ -11041,64 +11060,34 @@ int gr_rgbcolorexists(double red, double green, double blue, int ignored_min, in
   else if (bb > 255)
     bb = 255;
 
-  /* add an optional tolerance since the visible color has also a tolerance - f.e. 254 or 255 red looks the same */
+  if (excluded_range_max < excluded_range_min || excluded_range_min < 0 || excluded_range_max < 0)
+    excluded_range_min = excluded_range_max = -1;
+
+  /* Find nearest color */
   for (color = 0; color < MAX_COLOR; color++)
     {
-      if (ignored_min != -1 && ignored_max != -1 && color >= ignored_min && color <= ignored_max) continue;
+      if (excluded_range_min >= 0 && color >= excluded_range_min && color <= excluded_range_max) continue;
+
       uint32_t value = rgb[color];
 
       int dr = (int)(value & 0xff) - rr;
       int dg = (int)((value >> 8) & 0xff) - gg;
       int db = (int)((value >> 16) & 0xff) - bb;
+      double dist = 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
 
-      if (abs(dr) <= tolerance && abs(dg) <= tolerance && abs(db) <= tolerance) return color;
-    }
-  return -1;
-}
-
-int gr_inqnearestcolorfromrgb(double red, double green, double blue)
-{
-  int color;
-  int rr, gg, bb;
-  int best_color = 80;
-  double best_distance = DBL_MAX;
-
-  rr = nint(red * 255.0);
-  gg = nint(green * 255.0);
-  bb = nint(blue * 255.0);
-
-  if (rr < 0)
-    rr = 0;
-  else if (rr > 255)
-    rr = 255;
-
-  if (gg < 0)
-    gg = 0;
-  else if (gg > 255)
-    gg = 255;
-
-  if (bb < 0)
-    bb = 0;
-  else if (bb > 255)
-    bb = 255;
-
-  /* Find nearest color */
-  for (color = 0; color < MAX_COLOR; color++)
-    {
-      uint32_t value = rgb[color];
-
-      double dr = (int)(value & 0xff) - rr;
-      double dg = (int)((value >> 8) & 0xff) - gg;
-      double db = (int)((value >> 16) & 0xff) - bb;
-      double distance = 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
-
-      if (distance < best_distance)
+      if (dist < best_distance)
         {
           best_color = color;
-          best_distance = distance;
-          if (distance < FEPS) break;
+          best_distance = dist;
+          if (dist < FEPS) break;
         }
     }
+
+  /* Save distance if out parameter was given */
+  if (distance) *distance = sqrt(best_distance) / 255.0;
+
+  if (distance_max > 0 && !isnan(distance_max) && best_distance > distance_max * distance_max * 255.0 * 255.0)
+    return -1;
 
   return best_color;
 }
@@ -11109,10 +11098,16 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
 
   check_autoinit;
 
-  /* Exact match with shared colormap */
-  if (share_colormap) color = gr_rgbcolorexists(red, green, blue, 0, 1000, 0);
-  /* Exact match */
-  color = gr_rgbcolorexists(red, green, blue, 1000, 1255, 0);
+  if (share_colormap)
+    {
+      /* Exact match with shared colormap */
+      color = gr_inqnearestcolorfromrgb(red, green, blue, 0, 999, 0.0, NULL);
+    }
+  else
+    {
+      /* Exact match */
+      color = gr_inqnearestcolorfromrgb(red, green, blue, 1000, 1255, 0.0, NULL);
+    }
 
   if (color != -1)
     {
@@ -11133,7 +11128,7 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
     }
 
   /* Find nearest color */
-  ind = gr_inqnearestcolorfromrgb(red, green, blue);
+  ind = gr_inqnearestcolorfromrgb(red, green, blue, -1, -1, DBL_MAX, NULL);
 
   return ind;
 }

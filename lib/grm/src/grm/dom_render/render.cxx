@@ -74,8 +74,7 @@ static bool highlighted_attr_exist = false;
 static const char *grm_tmp_dir = nullptr;
 static bool enable_editor = false;
 static int plot_id = 0;
-static std::vector<int>
-    used_colors[CUSTOM_COLOR_END - CUSTOM_COLOR_START]; // maybe id based so they can be cleared faster?
+static int next_free_color_index = CUSTOM_COLOR_START;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1559,31 +1558,27 @@ int GRM::Render::setColorRep(const std::shared_ptr<Element> &element, double red
    * \param[in] green Green intensity in the range 0.0 to 1.0
    * \param[in] blue Blue intensity in the range 0.0 to 1.0
    */
-  auto ind = gr_rgbcolorexists(red, green, blue, CUSTOM_COLOR_START, CUSTOM_COLOR_END, 1);
+  auto ind = gr_inqnearestcolorfromrgb(red, green, blue, CUSTOM_COLOR_START, CUSTOM_COLOR_END, 1.0 / 255.0, nullptr);
 
   if (ind != -1) // the set rgb color is the same as the color at index ind
     {
       return ind;
     }
 
-  for (int color = CUSTOM_COLOR_START; color <= CUSTOM_COLOR_END; color++)
+  if (next_free_color_index <= CUSTOM_COLOR_END)
     {
-      if (std::find(used_colors->begin(), used_colors->end(), color - CUSTOM_COLOR_START) == used_colors->end())
-        {
-          gr_setcolorrep(color, red, green, blue);
-          used_colors->emplace_back(color);
-          return color;
-        }
+      gr_setcolorrep(next_free_color_index, red, green, blue);
+      return next_free_color_index++;
     }
 
   fprintf(stderr, "Too many custom color indices used. Can`t use another one without deleting an existing so the "
                   "closest existing color gets used\n");
-  return gr_inqnearestcolorfromrgb(red, green, blue);
+  return gr_inqnearestcolorfromrgb(red, green, blue, -1, -1, DBL_MAX, nullptr);
 }
 
 void GRM::Render::clearUsedColors()
 {
-  used_colors->clear();
+  next_free_color_index = CUSTOM_COLOR_START;
 }
 
 void GRM::Render::setFillIntStyle(const std::shared_ptr<GRM::Element> &element, int index)
