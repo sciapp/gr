@@ -14,6 +14,7 @@
 #if defined(cray) || defined(__SVR4) || defined(_WIN32) || defined(__EMSCRIPTEN__)
 #include <fcntl.h>
 #else
+#include <fcntl.h>
 #include <sys/file.h>
 #endif
 

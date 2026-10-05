@@ -7,6 +7,13 @@
 #define BACKTRACE_AVAILABLE 1
 #endif
 
+/* musl has no execinfo.h */
+#if defined(BACKTRACE_AVAILABLE) && defined(__has_include)
+#if !__has_include(<execinfo.h>)
+#undef BACKTRACE_AVAILABLE
+#endif
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #ifdef BACKTRACE_AVAILABLE
