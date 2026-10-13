@@ -126,5 +126,26 @@ else
 	       -exec "$${GERSEMI}" -i {} \;
 endif
 
+check-naming:
+	@if [ -d .tmp_build ]; then \
+	  rm -rf .tmp_build; \
+	fi
+	@cmake \
+	  -DCMAKE_C_COMPILER=clang \
+	  -DCMAKE_CXX_COMPILER=clang++ \
+	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+	  -S . \
+	  -B .tmp_build && \
+	run-clang-tidy \
+	  -p .tmp_build \
+	  -config-file lib/grm/.clang-tidy-naming \
+	  -use-color 1 \
+	  -header-filter "^$(CURDIR)/lib/grm/.*$$" \
+	  "^$(CURDIR)/lib/grm/.*$$"; \
+	return_code=$$?; \
+	rm -rf .tmp_build; \
+	exit $${return_code}
+
 
 .PHONY: default all pre-check configure build install clean realclean bundled-libraries self osxpkg code-format
+.PHONY: check-naming
