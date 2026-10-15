@@ -33,7 +33,7 @@ private slots:
   void reject();
   void accept();
   void colorIndexSlot();
-  void colorRGBSlot();
+  void colorMixedSlot();
   void openDataContext();
   void openTextPreview();
 

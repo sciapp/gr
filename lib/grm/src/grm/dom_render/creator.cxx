@@ -52,7 +52,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createCentralRegion(const std::share
 std::shared_ptr<GRM::Element>
 GRM::Creator::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
                                std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &ext_context,
-                               int marker_type, double marker_size, int marker_colorind,
+                               int marker_type, double marker_size, int marker_color,
                                const std::shared_ptr<GRM::Element> &ext_element)
 {
   /*!
@@ -66,7 +66,7 @@ GRM::Creator::createPolymarker(const std::string &x_key, std::optional<std::vect
    * GRM::Context object but an external GRM::Context can be used
    * \param[in] marker_type An Integer setting the gr_markertype. By default it is 0
    * \param[in] marker_size A Double value setting the gr_markersize. By default it is 0.0
-   * \param[in] marker_colorind An Integer setting the gr_markercolorind. By default it is 0
+   * \param[in] marker_color An Integer or string setting the gr_markercolor. By default it is 0
    */
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polymarker") : ext_element;
@@ -78,13 +78,13 @@ GRM::Creator::createPolymarker(const std::string &x_key, std::optional<std::vect
 
   if (marker_type != 0) element->setAttribute("marker_type", marker_type);
   if (marker_size != 0.0) element->setAttribute("marker_size", marker_size);
-  if (marker_colorind != 0) element->setAttribute("marker_color_ind", marker_colorind);
+  if (marker_color != 0) element->setAttribute("marker_color", marker_color);
 
   return element;
 }
 
 std::shared_ptr<GRM::Element> GRM::Creator::createPolymarker(double x, double y, int marker_type, double marker_size,
-                                                             int marker_colorind,
+                                                             int marker_color,
                                                              const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polymarker") : ext_element;
@@ -93,13 +93,13 @@ std::shared_ptr<GRM::Element> GRM::Creator::createPolymarker(double x, double y,
   element->setAttribute("y", y);
   if (marker_type != 0) element->setAttribute("marker_type", marker_type);
   if (marker_size != 0.0) element->setAttribute("marker_size", marker_size);
-  if (marker_colorind != 0) element->setAttribute("marker_color_ind", marker_colorind);
+  if (marker_color != 0) element->setAttribute("marker_color", marker_color);
 
   return element;
 }
 
 std::shared_ptr<GRM::Element> GRM::Creator::createPolyline(double x1, double x2, double y1, double y2, int line_type,
-                                                           double line_width, int line_colorind,
+                                                           double line_width, int line_color,
                                                            const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polyline") : ext_element;
@@ -110,7 +110,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createPolyline(double x1, double x2,
   element->setAttribute("y2", y2);
   if (line_type != 0) element->setAttribute("line_type", line_type);
   if (line_width != 0.0) element->setAttribute("line_width", line_width);
-  if (line_colorind != 0) element->setAttribute("line_color_ind", line_colorind);
+  if (line_color != 0) element->setAttribute("line_color", line_color);
 
   return element;
 }
@@ -118,7 +118,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createPolyline(double x1, double x2,
 std::shared_ptr<GRM::Element>
 GRM::Creator::createPolyline(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
                              std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &ext_context,
-                             int line_type, double line_width, int line_colorind,
+                             int line_type, double line_width, int line_color,
                              const std::shared_ptr<GRM::Element> &ext_element)
 {
   /*!
@@ -132,7 +132,6 @@ GRM::Creator::createPolyline(const std::string &x_key, std::optional<std::vector
    * GRM::Context object but an external GRM::Context can be used
    * \param[in] line_type An Integer setting the gr_linetype. By default it is 0
    * \param[in] line_width A Double value setting the gr_linewidth. By default it is 0.0
-   * \param[in] marker_colorind An Integer setting the gr_linecolorind. By default it is 0
    */
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polyline") : ext_element;
@@ -144,7 +143,7 @@ GRM::Creator::createPolyline(const std::string &x_key, std::optional<std::vector
 
   if (line_type != 0) element->setAttribute("line_type", line_type);
   if (line_width != 0.0) element->setAttribute("line_width", line_width);
-  if (line_colorind != 0) element->setAttribute("line_color_ind", line_colorind);
+  if (line_color != 0) element->setAttribute("line_color", line_color);
 
   return element;
 }
@@ -174,7 +173,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createText(double x, double y, const
 std::shared_ptr<GRM::Element>
 GRM::Creator::createFillArea(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
                              std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &ext_context,
-                             int fill_int_style, int fill_style, int fill_color_ind,
+                             int fill_int_style, int fill_style, int fill_color,
                              const std::shared_ptr<GRM::Element> &ext_element)
 {
   /*!
@@ -200,7 +199,7 @@ GRM::Creator::createFillArea(const std::string &x_key, std::optional<std::vector
 
   if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
   if (fill_style != 0) element->setAttribute("fill_style", fill_style);
-  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
+  if (fill_color != -1) element->setAttribute("fill_color", fill_color);
 
   return element;
 }
@@ -343,7 +342,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createPieSegment(const double start_
   element->setAttribute("start_angle", start_angle);
   element->setAttribute("end_angle", end_angle);
   element->setAttribute("text", text);
-  element->setAttribute("fill_color_ind", color_index);
+  if (color_index != -1) element->setAttribute("fill_color", color_index);
 
   return element;
 }
@@ -361,10 +360,10 @@ std::shared_ptr<GRM::Element> GRM::Creator::createBar(const double x1, const dou
   element->setAttribute("x2", x2);
   element->setAttribute("y1", y1);
   element->setAttribute("y2", y2);
-  element->setAttribute("line_color_ind", edge_color_index);
-  element->setAttribute("fill_color_ind", bar_color_index);
-  if (!bar_color_rgb.empty()) element->setAttribute("fill_color_rgb", bar_color_rgb);
-  if (!edge_color_rgb.empty()) element->setAttribute("line_color_rgb", edge_color_rgb);
+  element->setAttribute("line_color", edge_color_index);
+  element->setAttribute("fill_color", bar_color_index);
+  if (!bar_color_rgb.empty()) element->setAttribute("fill_color", bar_color_rgb);
+  if (!edge_color_rgb.empty()) element->setAttribute("line_color", edge_color_rgb);
   if (linewidth != -1) element->setAttribute("line_width", linewidth);
   if (!text.empty()) element->setAttribute("text", text);
 
@@ -436,8 +435,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createDrawArc(double xmin, double xm
 }
 
 std::shared_ptr<GRM::Element> GRM::Creator::createFillArc(double xmin, double xmax, double ymin, double ymax, double a1,
-                                                          double a2, int fill_int_style, int fill_style,
-                                                          int fill_color_ind,
+                                                          double a2, int fill_int_style, int fill_style, int fill_color,
                                                           const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("fill_arc") : ext_element;
@@ -451,7 +449,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createFillArc(double xmin, double xm
 
   if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
   if (fill_style != 0) element->setAttribute("fill_style", fill_style);
-  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
+  if (fill_color != -1) element->setAttribute("fill_color", fill_color);
 
   return element;
 }
@@ -470,7 +468,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createDrawRect(double xmin, double x
 }
 
 std::shared_ptr<GRM::Element> GRM::Creator::createFillRect(double xmin, double xmax, double ymin, double ymax,
-                                                           int fill_int_style, int fill_style, int fill_color_ind,
+                                                           int fill_int_style, int fill_style, int fill_color,
                                                            const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("fill_rect") : ext_element;
@@ -482,7 +480,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createFillRect(double xmin, double x
 
   if (fill_int_style != 0) element->setAttribute("fill_int_style", fill_int_style);
   if (fill_style != 0) element->setAttribute("fill_style", fill_style);
-  if (fill_color_ind != -1) element->setAttribute("fill_color_ind", fill_color_ind);
+  if (fill_color != -1) element->setAttribute("fill_color", fill_color);
 
   return element;
 }
@@ -1100,8 +1098,8 @@ std::shared_ptr<GRM::Element> GRM::Creator::createSphere(std::string symbol, std
   sphere->setAttribute("x", position[0]);
   sphere->setAttribute("y", position[1]);
   sphere->setAttribute("z", position[2]);
-  (*context)["color_rgb_values" + str] = color;
-  sphere->setAttribute("color_rgb_values", "color_rgb_values" + str);
+  (*context)["fill_color_rgb" + str] = color;
+  sphere->setAttribute("fill_color", "fill_color_rgb" + str);
   sphere->setAttribute("radius", radius);
 
   global_root->setAttribute("_id", id + 1);
@@ -1125,8 +1123,8 @@ std::shared_ptr<GRM::Element> GRM::Creator::createSpin(std::string symbol, std::
   spin->setAttribute("x_dir", direction[0]);
   spin->setAttribute("y_dir", direction[1]);
   spin->setAttribute("z_dir", direction[2]);
-  (*context)["color_rgb_values" + str] = color;
-  spin->setAttribute("color_rgb_values", "color_rgb_values" + str);
+  (*context)["fill_color_rgb" + str] = color;
+  spin->setAttribute("fill_color", "fill_color_rgb" + str);
   spin->setAttribute("length", length);
 
   global_root->setAttribute("_id", id + 1);

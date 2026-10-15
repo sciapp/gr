@@ -24,18 +24,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                        const std::string &value = "")
 {
   std::vector<std::string> bar{
-      "fill_color_rgb",
-      "fill_color_ind",
-      "fill_int_style",
-      "fill_style",
-      "line_color_rgb",
-      "line_color_ind",
-      "line_width",
-      "text",
-      "x1",
-      "x2",
-      "y1",
-      "y2",
+      "fill_color", "fill_int_style", "fill_style", "line_color", "line_width", "text", "x1", "x2", "y1", "y2",
   };
   std::vector<std::string> error_bar{
       "cap_x_max", "cap_x_min", "downwards_e", "error_bar_x", "error_bar_y_max", "error_bar_y_min", "upwards_e",
@@ -53,22 +42,27 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
   };
   std::vector<std::string> polar_bar{
-      "bin_width",      "bin_widths",     "bin_edges",  "bin_nr",         "count", "draw_edges",
-      "fill_color_ind", "fill_int_style", "fill_style", "line_color_ind", "norm",  "theta_flip",
+      "bin_width",  "bin_widths",     "bin_edges",  "bin_nr",     "count", "draw_edges",
+      "fill_color", "fill_int_style", "fill_style", "line_color", "norm",  "theta_flip",
+  };
+  std::vector<std::string> pie_segment{
+      "fill_color",
+      "fill_int_style",
+      "fill_style",
   };
   std::vector<std::string> series_barplot{
       "bar_width",
       "color_ind_values",
       "color_rgb_values",
       "edge_width",
-      "fill_color_ind",
+      "fill_color",
       "fill_int_style",
       "fill_style",
       "font",
       "font_precision",
       "indices",
       "inner_series",
-      "line_color_ind",
+      "line_color",
       "line_spec",
       "line_width",
       "move_to_plot",
@@ -76,7 +70,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "style",
       "text_align_horizontal",
       "text_align_vertical",
-      "text_color_ind",
+      "text_color",
       "width",
       "y",
       "y_labels",
@@ -95,17 +89,16 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
   };
   std::vector<std::string> series_histogram{
-      "bins",           "fill_color_ind", "fill_color_rgb", "fill_int_style", "fill_style",
-      "line_color_ind", "line_color_rgb", "line_spec",      "move_to_plot",   "weights",
+      "bins", "fill_color", "fill_int_style", "fill_style", "line_color", "line_spec", "move_to_plot", "weights",
   };
   std::vector<std::string> series_imshow{
       "data", "move_to_plot", "x", "y", "z", "z_dims",
   };
   std::vector<std::string> series_isosurface{
-      "ambient", "color_rgb", "diffuse", "isovalue", "move_to_plot", "specular", "specular_power", "z", "z_dims",
+      "ambient", "diffuse", "fill_color", "isovalue", "move_to_plot", "specular", "specular_power", "z", "z_dims",
   };
   std::vector<std::string> series_line{
-      "line_color_ind", "line_spec", "line_type", "line_width", "move_to_plot", "x", "y",
+      "line_color", "line_spec", "line_type", "line_width", "move_to_plot", "x", "y",
   };
   std::vector<std::string> series_nonuniform_heatmap = series_heatmap;
   std::vector<std::string> series_nonuniform_polar_heatmap{
@@ -146,20 +139,20 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
 
   };
   std::vector<std::string> series_polar_line{
-      "clip_negative", "line_color_ind", "line_spec", "line_type",       "marker_color_ind",
-      "marker_type",   "move_to_plot",   "r_max",     "r_min",           "r",
-      "r_range_max",   "r_range_min",    "theta",     "theta_range_max", "theta_range_min",
+      "clip_negative", "line_color",   "line_spec", "line_type",       "marker_color",
+      "marker_type",   "move_to_plot", "r_max",     "r_min",           "r",
+      "r_range_max",   "r_range_min",  "theta",     "theta_range_max", "theta_range_min",
   };
   std::vector<std::string> series_polar_scatter{
-      "clip_negative", "line_color_ind", "line_spec", "line_type",       "marker_color_ind",
-      "marker_type",   "move_to_plot",   "r_max",     "r_min",           "r",
-      "r_range_max",   "r_range_min",    "theta",     "theta_range_max", "theta_range_min",
+      "clip_negative", "line_color",   "line_spec", "line_type",       "marker_color",
+      "marker_type",   "move_to_plot", "r_max",     "r_min",           "r",
+      "r_range_max",   "r_range_min",  "theta",     "theta_range_max", "theta_range_min",
   };
   std::vector<std::string> series_quiver{
       "colored", "move_to_plot", "u", "v", "x", "y",
   };
   std::vector<std::string> series_scatter{
-      "c", "marker_color_ind", "move_to_plot", "x", "y", "z",
+      "c", "marker_color", "move_to_plot", "x", "y", "z",
   };
   std::vector<std::string> series_scatter3{
       "c", "move_to_plot", "x", "y", "z",
@@ -168,10 +161,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "move_to_plot", "transformation", "x", "x_bins", "y", "y_bins",
   };
   std::vector<std::string> series_stairs{
-      "line_color_ind", "line_spec", "move_to_plot", "step_where", "x", "y", "z",
+      "line_color", "line_spec", "move_to_plot", "step_where", "x", "y", "z",
   };
   std::vector<std::string> series_stem{
-      "line_color_ind", "line_spec", "move_to_plot", "x", "y", "y_range_min",
+      "line_color", "line_spec", "move_to_plot", "x", "y", "y_range_min",
   };
   std::vector<std::string> series_surface{
       "move_to_plot", "use_gr3", "x", "y", "z",
@@ -196,8 +189,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   };
   std::vector<std::string> coordinate_system_element{"theta_flip", "x_grid", "x_ind", "y_grid", "z_grid", "plot_type"};
   std::vector<std::string> tick_group{
-      "line_color_ind",
-      "line_color_rgb",
+      "line_color",
       "line_spec",
       "line_type",
   };
@@ -205,6 +197,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       {std::string("bar"), bar},
       {std::string("error_bar"), error_bar},
       {std::string("error_bars"), error_bars},
+      {std::string("pie_segment"), pie_segment},
       {std::string("polar_bar"), polar_bar},
       {std::string("coordinate_system"), coordinate_system_element},
       {std::string("marginal_heatmap_plot"), marginal_heatmap_plot},
@@ -1806,7 +1799,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                       element->setAttribute("draw_grid", true);
                                       parent->appendChild(axis);
                                       axis->setAttribute("mirrored_axis", false);
-                                      axis->setAttribute("line_color_ind", 1);
+                                      axis->setAttribute("line_color", 1);
                                     }
                                 }
                               for (const auto &child : element->children())
@@ -1834,7 +1827,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                     }
 
                                   element->setAttribute("mirrored_axis", false);
-                                  element->setAttribute("line_color_ind", 1);
+                                  element->setAttribute("line_color", 1);
                                   if (axis != nullptr)
                                     {
                                       parent->appendChild(axis);
@@ -2826,9 +2819,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto world_coordinates = static_cast<int>(element->getAttribute("world_coordinates"));
               element->setAttribute("_world_coordinates_set_by_user", world_coordinates);
             }
-          else if (strEqualsAny(attr, "fill_color_ind") && element->localName() == "legend")
+          else if (strEqualsAny(attr, "fill_color") && element->localName() == "legend")
             {
-              element->setAttribute("_fill_color_ind_set_by_user", true);
+              element->setAttribute("_fill_color_set_by_user", element->getAttribute("fill_color"));
             }
           else if (strEqualsAny(attr, "fill_int_style") && element->localName() == "legend")
             {
@@ -2842,9 +2835,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
             {
               element->setAttribute("_select_specific_xform_set_by_user", 1);
             }
-          else if (strEqualsAny(attr, "text_color_ind") && element->localName() == "bar")
+          else if (strEqualsAny(attr, "text_color") && element->localName() == "bar")
             {
-              element->setAttribute("_text_color_ind_set_by_user", true);
+              element->setAttribute("_text_color_set_by_user", element->getAttribute("text_color"));
             }
           else if (strEqualsAny(attr, "num_col") &&
                    strEqualsAny(element->localName(), "cell_array", "nonuniform_cell_array"))
@@ -2978,20 +2971,15 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto start_row = static_cast<int>(element->getAttribute("start_row"));
               element->setAttribute("_start_row_set_by_user", start_row);
             }
-          else if (strEqualsAny(attr, "line_color_ind"))
+          else if (strEqualsAny(attr, "line_color"))
             {
-              auto line_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
-              element->setAttribute("_line_color_ind_set_by_user", line_color_ind);
+              auto line_color = element->getAttribute("line_color");
+              element->setAttribute("_line_color_set_by_user", line_color);
             }
           else if (strEqualsAny(attr, "line_width"))
             {
               auto line_width = static_cast<double>(element->getAttribute("line_width"));
               element->setAttribute("_line_width_set_by_user", line_width);
-            }
-          else if (strEqualsAny(attr, "line_color_rgb"))
-            {
-              auto line_color_rgb = static_cast<std::string>(element->getAttribute("line_color_rgb"));
-              element->setAttribute("_line_color_rgb_set_by_user", line_color_rgb);
             }
           else if (strEqualsAny(attr, "line_spec"))
             {
@@ -3003,15 +2991,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto line_type = static_cast<int>(element->getAttribute("line_type"));
               element->setAttribute("_line_type_set_by_user", line_type);
             }
-          else if (strEqualsAny(attr, "fill_color_ind"))
+          else if (strEqualsAny(attr, "fill_color"))
             {
-              auto fill_color_ind = static_cast<int>(element->getAttribute("fill_color_ind"));
-              element->setAttribute("_fill_color_ind_set_by_user", fill_color_ind);
-            }
-          else if (strEqualsAny(attr, "fill_color_rgb"))
-            {
-              auto fill_color_rgb = static_cast<std::string>(element->getAttribute("fill_color_rgb"));
-              element->setAttribute("_fill_color_rgb_set_by_user", fill_color_rgb);
+              auto fill_color = element->getAttribute("fill_color");
+              element->setAttribute("_fill_color_set_by_user", fill_color);
             }
           else if (strEqualsAny(attr, "fill_int_style"))
             {
@@ -3043,15 +3026,15 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto text_align_horizontal = static_cast<int>(element->getAttribute("text_align_horizontal"));
               element->setAttribute("_text_align_horizontal_set_by_user", text_align_horizontal);
             }
-          else if (strEqualsAny(attr, "text_color_ind"))
+          else if (strEqualsAny(attr, "text_color"))
             {
-              auto text_color_ind = static_cast<int>(element->getAttribute("text_color_ind"));
-              element->setAttribute("_text_color_ind_set_by_user", text_color_ind);
+              auto text_color = element->getAttribute("text_color");
+              element->setAttribute("_text_color_set_by_user", text_color);
             }
-          else if (strEqualsAny(attr, "marker_color_ind"))
+          else if (strEqualsAny(attr, "marker_color"))
             {
-              auto marker_color_ind = static_cast<int>(element->getAttribute("marker_color_ind"));
-              element->setAttribute("_marker_color_ind_set_by_user", marker_color_ind);
+              auto marker_color = element->getAttribute("marker_color");
+              element->setAttribute("_marker_color_set_by_user", marker_color);
             }
           else if (strEqualsAny(attr, "marker_color_indices"))
             {
@@ -3073,10 +3056,10 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
               auto marker_type = static_cast<int>(element->getAttribute("marker_type"));
               element->setAttribute("_marker_type_set_by_user", marker_type);
             }
-          else if (strEqualsAny(attr, "border_color_ind"))
+          else if (strEqualsAny(attr, "border_color"))
             {
-              auto border_color_ind = static_cast<int>(element->getAttribute("border_color_ind"));
-              element->setAttribute("_border_color_ind_set_by_user", border_color_ind);
+              auto border_color = element->getAttribute("border_color");
+              element->setAttribute("_border_color_set_by_user", border_color);
             }
           else if (strEqualsAny(attr, "border_width"))
             {

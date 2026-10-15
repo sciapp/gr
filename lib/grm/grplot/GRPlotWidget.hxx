@@ -24,7 +24,7 @@ class GRPlotWidget;
 #include "gredit/AddElementWidget.hxx"
 #include "gredit/EditElementWidget.hxx"
 #include "gredit/TableWidget.hxx"
-#include "gredit/ColorPickerRGB.hxx"
+#include "gredit/ColorPickerMixed.hxx"
 #include "gredit/SelectionListWidget.hxx"
 #include "gredit/IconBarWidget.hxx"
 #include "qtterm/Receiver.hxx"
@@ -70,9 +70,8 @@ public:
   void setCurrentSelection(BoundingObject *current_selection);
   void setTreeUpdate(bool status);
   void setReferencedElements(const std::vector<BoundingObject> &referenced_elements);
-  void colorIndexPopUp(const std::string &attribute_name, int current_index,
-                       const std::shared_ptr<GRM::Element> &element);
-  void colorRGBPopUp(const std::string &attribute_name, const std::shared_ptr<GRM::Element> &element);
+  void colorMixedPopUp(const std::shared_ptr<GRM::Element> &element, const std::string &attribute_name,
+                       int current_index);
   void createHistoryElement(std::string flag = "");
   static void removeHistoryElement();
   void highlightTableWidgetAt(std::string column_name);
@@ -98,8 +97,7 @@ public:
   std::shared_ptr<GRM::Document> getSchemaTree();
   const QStringList &getCheckBoxAttributes();
   const QStringList &getComboBoxAttributes();
-  const QStringList &getColorIndAttributes();
-  const QStringList &getColorRGBAttributes();
+  const QStringList &getColorAttributes();
   const QStringList &getSliderAttributes();
   BoundingObject *getSelectedParent();
   BoundingObject **getCurrentSelection();
@@ -210,7 +208,7 @@ public:
   QAction *getYLimAct();
   QAction *getZLimAct();
   QAction *getIconBarAct();
-  QAction *getTextColorIndAct();
+  QAction *getTextColorAct();
   QAction *getDisableGridAct();
   QAction *getUpdateEditElementTitleAct();
   QAction *getConsecutiveColorbarsAct();
@@ -326,7 +324,7 @@ private slots:
   void listItemPressed(QListWidgetItem *item);
   void showIconBarSlot();
   void multipleRadioButtonGroupsListener();
-  void colorIndexSlot();
+  void textColorIndexSlot();
   void possibleElementsMenuSlot();
   void disableGridSlot();
   void highlightMoveToPlotSlot(int index);
@@ -449,11 +447,11 @@ private:
   std::shared_ptr<GRM::Document> schema_tree;
   bool tree_update = true;
   QSize size_hint;
-  QStringList check_box_attr, combo_box_attr, color_ind_attr, color_rgb_attr, slider_attr;
+  QStringList check_box_attr, combo_box_attr, slider_attr, color_attr;
   TableWidget *table_widget;
   EditElementWidget *edit_element_widget;
   PreviewTextWidget *preview_text_widget;
-  ColorPickerRGB *color_picker_rgb;
+  ColorPickerMixed *color_picker_mixed;
   SelectionListWidget *selection_list_widget;
   IconBarWidget *icon_bar_widget;
   bool hide_grid_bbox = true;
@@ -483,7 +481,7 @@ private:
       *hide_multiplot_sub_menu_act, *show_multiplot_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
-  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act,
+  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_act, *disable_grid_act,
       *text_scale_act;
   QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
@@ -514,8 +512,6 @@ private:
   void hidePlotTypeMenuElements();
   void cursorHandler(int x, int y);
   void overlayElementEdit();
-  void colorIndexHelper(const std::shared_ptr<GRM::Element> &plot_elem, int current_index, QGridLayout *grid_layout,
-                        QList<QRadioButton *> &radio_buttons, int max_index, int index_name_start);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
