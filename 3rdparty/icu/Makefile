@@ -8,12 +8,12 @@ VERSION = 74.2
 ICU_EXTRA_CONFIGURE_FLAGS ?=
 ifndef OS
 ifeq ($(shell uname),Darwin)
-ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
-ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=10.15
+ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=12
+ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
-ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=10.15
+ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=12
+ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=12
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

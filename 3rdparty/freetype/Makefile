@@ -10,10 +10,10 @@ FTINCLUDES = -Isrc -Iinclude
 
 ifndef OS
 ifeq ($(shell uname),Darwin)
- FTCFLAGS += -mmacosx-version-min=10.15
+ FTCFLAGS += -mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
- FTCFLAGS += -mmacosx-version-min=10.15
+ FTCFLAGS += -mmacosx-version-min=12
 endif
 
       OBJS = \

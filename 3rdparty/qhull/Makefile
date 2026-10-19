@@ -6,10 +6,10 @@ endif
 ifeq ($(notdir $(CC)), emcc)
 else ifndef OS
 ifeq ($(shell uname),Darwin)
-CFLAGS += -mmacosx-version-min=10.15
+CFLAGS += -mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-CFLAGS += -mmacosx-version-min=10.15
+CFLAGS += -mmacosx-version-min=12
 endif
 
    OBJS = \

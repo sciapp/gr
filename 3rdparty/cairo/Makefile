@@ -8,10 +8,10 @@ VERSION = 1.16.0
 CAIRO_EXTRA_CONFIGURE_FLAGS ?=
 ifndef OS
 ifeq ($(shell uname),Darwin)
-CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=10.15
+CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=10.15
+CAIRO_EXTRA_CONFIGURE_FLAGS  += CFLAGS=-mmacosx-version-min=12
 endif
 
 CAIRO_EXTRA_CFLAGS ?=
