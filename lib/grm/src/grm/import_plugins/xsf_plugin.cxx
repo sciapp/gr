@@ -178,13 +178,26 @@ static void calculateDataWithUnitCell(std::vector<std::vector<std::vector<double
     }
 }
 
-grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
-                                    std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
-                                    std::vector<std::string> &labels, grm_args_t *args, const char *colms,
-                                    const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
-                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                                    std::vector<int> &timestamps, double **special_data_grid)
+grm_error_t
+XsfSource::readDataFile(const std::string &path, std::vector<std::vector<std::vector<std::vector<double>>>> &data,
+                        std::vector<std::vector<int>> &x_data, std::vector<std::vector<int>> &y_data,
+                        std::vector<std::vector<int>> &error_data, std::vector<std::vector<std::string>> &labels,
+                        std::vector<grm_args_t *> &args, const char *colms, const char *x_colms, const char *y_colms,
+                        const char *e_colms, std::vector<PlotRange> &ranges,
+                        std::vector<grm_special_axis_series_t *> &special_axis_series, InputFlags &input_flags,
+                        std::vector<std::vector<int>> &timestamps, std::vector<double *> special_data_grids)
 {
+  // xsf files only allow for a single plot per file => hardcoded only one vector required for each output
+  x_data.push_back(std::vector<int>());
+  y_data.push_back(std::vector<int>());
+  error_data.push_back(std::vector<int>());
+
+  labels.push_back(std::vector<std::string>());
+  timestamps.push_back(std::vector<int>());
+  special_data_grids.push_back(nullptr);
+
+  data.emplace_back(std::vector<std::vector<std::vector<double>>>());
+
   std::string line;
   std::string token;
   std::ifstream file_path(path);
@@ -229,9 +242,9 @@ grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::ve
         }
       else if (startsWith(line, " END_DATAGRID_2D"))
         {
-          *special_data_grid = contour_plot_data;
+          special_data_grids.back() = contour_plot_data;
           int crystal_radius = 4;
-          if (crystal_data) grm_args_push(args, "radius_kind", "i", crystal_radius);
+          if (crystal_data) grm_args_push(args.back(), "radius_kind", "i", crystal_radius);
           break;
         }
 
@@ -248,16 +261,16 @@ grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::ve
       else if (prim_coord_line == 1)
         {
           prim_coord_line = 2;
-          data.emplace_back(std::vector<std::vector<double>>());
-          data[0].emplace_back(std::vector<double>()); // x
-          data[0].emplace_back(std::vector<double>()); // y
-          data[0].emplace_back(std::vector<double>()); // z
+          data.back().emplace_back(std::vector<std::vector<double>>());
+          data.back()[0].emplace_back(std::vector<double>()); // x
+          data.back()[0].emplace_back(std::vector<double>()); // y
+          data.back()[0].emplace_back(std::vector<double>()); // z
 
           grm_x_value_shift = -(prim_vec[6] + prim_vec[0] + prim_vec[3]) / 2.0;
           grm_y_value_shift = -(prim_vec[7] + prim_vec[1] + prim_vec[4]) / 2.0;
           grm_z_value_shift = -(prim_vec[8] + prim_vec[2] + prim_vec[5]) / 2.0;
 
-          grm_args_push(args, "cell", "nD", prim_vec.size(), prim_vec.data());
+          grm_args_push(args.back(), "cell", "nD", prim_vec.size(), prim_vec.data());
         }
       else if (prim_coord_line == 2)
         {
@@ -268,7 +281,7 @@ grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::ve
           for (col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
             {
               if (col == 0)
-                labels.push_back(token); // element number or symbol
+                labels.back().push_back(token); // element number or symbol
               else if (col == 1)
                 prim_coord_vec.push_back(stod(token) + grm_x_value_shift); // Needed internally
               else if (col == 2)
@@ -278,11 +291,11 @@ grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::ve
             }
           if (col != 0)
             {
-              data[0][0].push_back(prim_coord_vec[0]);
-              data[0][1].push_back(prim_coord_vec[1]);
-              data[0][2].push_back(prim_coord_vec[2]);
+              data.back()[0][0].push_back(prim_coord_vec[0]);
+              data.back()[0][1].push_back(prim_coord_vec[1]);
+              data.back()[0][2].push_back(prim_coord_vec[2]);
 
-              if (crystal_data) calculateDataWithUnitCell(data, labels, prim_vec, prim_coord_vec, cnt);
+              if (crystal_data) calculateDataWithUnitCell(data.back(), labels.back(), prim_vec, prim_coord_vec, cnt);
               cnt += 1;
             }
           else
@@ -303,8 +316,8 @@ grm_error_t XsfSource::readDataFile(const std::string &path, std::vector<std::ve
             }
           // not completely clean but timestamp is never set during molecule so it can be reused to transfer the shape
           // of the contour plot
-          timestamps.push_back(data_grid_x_dim);
-          timestamps.push_back(data_grid_y_dim);
+          timestamps.back().push_back(data_grid_x_dim);
+          timestamps.back().push_back(data_grid_y_dim);
           contour_plot_data = static_cast<double *>(malloc(data_grid_x_dim * data_grid_y_dim * sizeof(double)));
           data_grid_plane = 2;
         }
