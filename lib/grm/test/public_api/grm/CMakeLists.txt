@@ -53,7 +53,7 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   set_target_properties(
     "${PROJECT_NAME}_${executable}"
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_STANDARD_REQUIRED ON
       C_EXTENSIONS OFF
       CXX_STANDARD 17

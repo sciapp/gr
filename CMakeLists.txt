@@ -225,7 +225,7 @@ target_compile_options(term_util PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 target_include_directories(term_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks)
 set_target_properties(
   term_util
-  PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON
+  PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON
 )
 
 set(
@@ -315,7 +315,7 @@ foreach(LIBRARY IN LISTS GKS_LIBRARIES)
   set_target_properties(
     ${LIBRARY}
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       POSITION_INDEPENDENT_CODE ON
@@ -412,7 +412,7 @@ foreach(LIBRARY IN LISTS GR_LIBRARIES)
   set_target_properties(
     ${LIBRARY}
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       POSITION_INDEPENDENT_CODE ON
@@ -506,7 +506,7 @@ foreach(LIBRARY IN LISTS GR3_LIBRARIES)
   set_target_properties(
     ${LIBRARY}
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       POSITION_INDEPENDENT_CODE ON
@@ -536,7 +536,7 @@ if(UNIX AND NOT APPLE)
     set_target_properties(
       gr3platform
       PROPERTIES
-        C_STANDARD 90
+        C_STANDARD 99
         C_EXTENSIONS OFF
         C_STANDARD_REQUIRED ON
         POSITION_INDEPENDENT_CODE ON
@@ -572,7 +572,7 @@ if(NOT EMSCRIPTEN)
   set_target_properties(
     csv_plugin
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       C_VISIBILITY_PRESET hidden
@@ -596,7 +596,7 @@ if(NOT EMSCRIPTEN)
   set_target_properties(
     xsf_plugin
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       C_VISIBILITY_PRESET hidden
@@ -717,7 +717,7 @@ foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   set_target_properties(
     ${LIBRARY}
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       CXX_STANDARD 17
@@ -780,7 +780,7 @@ if(NOT EMSCRIPTEN)
   target_compile_definitions(cairoplugin PRIVATE NO_X11)
   set_target_properties(
     cairoplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(aggplugin SHARED lib/gks/plugin/aggplugin.cxx)
@@ -843,7 +843,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(pgfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     pgfplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- pgfplugin:\n")
   string(APPEND GR_REPORT "\tTeX output: Yes\n")
@@ -853,7 +853,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(wmfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     wmfplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- wmfplugin:\n")
   string(APPEND GR_REPORT "\tWMF output: Yes\n")
@@ -878,7 +878,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(gsplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     gsplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(svgplugin SHARED lib/gks/plugin/svgplugin.c)
@@ -887,7 +887,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(svgplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     svgplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- svgplugin:\n")
   string(APPEND GR_REPORT "\tSVG output: Yes\n")
@@ -912,7 +912,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(glplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     glplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
@@ -927,7 +927,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(zmqplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     zmqplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(x11plugin SHARED lib/gks/plugin/x11plugin.c)
@@ -952,7 +952,7 @@ if(NOT EMSCRIPTEN)
   set_target_properties(
     x11plugin
     PROPERTIES
-      C_STANDARD 90
+      C_STANDARD 99
       C_EXTENSIONS OFF
       C_STANDARD_REQUIRED ON
       CXX_STANDARD 11
@@ -1019,7 +1019,7 @@ if(NOT EMSCRIPTEN)
   target_link_libraries(gtkplugin PUBLIC gks_static)
   set_target_properties(
     gtkplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   target_compile_options(gtkplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
@@ -1038,7 +1038,7 @@ if(APPLE)
   target_compile_options(quartzplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     quartzplugin
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 endif()
 
@@ -2006,7 +2006,7 @@ if(GR_BUILD_DEMOS)
   target_compile_options(gksdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     gksdemo
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
   )
 
   add_executable(grdemo lib/gr/demo.c)
@@ -2015,7 +2015,7 @@ if(GR_BUILD_DEMOS)
   target_compile_options(grdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     grdemo
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
   )
 
   add_subdirectory(lib/grm/test/public_api/grm grm_test_public_api)
@@ -2028,7 +2028,7 @@ if(GR_BUILD_GKSM)
   target_compile_options(gksm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     gksm
-    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+    PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
   )
 endif()
 

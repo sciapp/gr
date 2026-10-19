@@ -22,6 +22,7 @@
 		6625B77710298D6C0059B278 /* io.c in Sources */ = {isa = PBXBuildFile; fileRef = 6625B77610298D6C0059B278 /* io.c */; };
 		6629D22916E0F03F009E93C2 /* ft.c in Sources */ = {isa = PBXBuildFile; fileRef = 6629D22816E0F03F009E93C2 /* ft.c */; };
 		6641A634102AC967001FB593 /* dl.c in Sources */ = {isa = PBXBuildFile; fileRef = 6641A633102AC967001FB593 /* dl.c */; };
+		665DDDAC3086104700BFE3ED /* term_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 665DDDAB3086104700BFE3ED /* term_util.c */; };
 		666F41B0102DB39500B8F004 /* GKSView.m in Sources */ = {isa = PBXBuildFile; fileRef = 666F41AF102DB39500B8F004 /* GKSView.m */; };
 		8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 29B97318FDCFA39411CA2CEA /* MainMenu.nib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
@@ -57,6 +58,7 @@
 		6625B77610298D6C0059B278 /* io.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = io.c; path = ../io.c; sourceTree = SOURCE_ROOT; };
 		6629D22816E0F03F009E93C2 /* ft.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ft.c; path = ../ft.c; sourceTree = "<group>"; };
 		6641A633102AC967001FB593 /* dl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dl.c; path = ../dl.c; sourceTree = SOURCE_ROOT; };
+		665DDDAB3086104700BFE3ED /* term_util.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = term_util.c; path = ../term_util.c; sourceTree = SOURCE_ROOT; };
 		666F41AE102DB39500B8F004 /* GKSView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GKSView.h; sourceTree = "<group>"; };
 		666F41AF102DB39500B8F004 /* GKSView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GKSView.m; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 				6625B75C10298C790059B278 /* error.c */,
 				6625B75D10298C790059B278 /* malloc.c */,
 				6625B75E10298C790059B278 /* util.c */,
+				665DDDAB3086104700BFE3ED /* term_util.c */,
 				2093412D10285A27004FC05A /* gkscore.h */,
 				4BF11C1A1C89ED700018E037 /* marker.h */,
 				2093412E10285A27004FC05A /* gksquartz.h */,
@@ -244,6 +247,7 @@
 				6625B76010298C790059B278 /* error.c in Sources */,
 				6625B76110298C790059B278 /* malloc.c in Sources */,
 				6625B76210298C790059B278 /* util.c in Sources */,
+				665DDDAC3086104700BFE3ED /* term_util.c in Sources */,
 				6625B77410298D570059B278 /* font.c in Sources */,
 				6625B77710298D6C0059B278 /* io.c in Sources */,
 				13E82E0423507CA0004A4130 /* resample.c in Sources */,
@@ -299,7 +303,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12;
 				"OTHER_CFLAGS[arch=*]" = "-DNO_FT";
 				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_BUNDLE_IDENTIFIER = "de.fz-juelich.GKSTerm";
@@ -323,7 +327,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 12;
 				"OTHER_CFLAGS[arch=*]" = "-DNO_FT";
 				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_BUNDLE_IDENTIFIER = "de.fz-juelich.GKSTerm";

@@ -5,10 +5,10 @@ endif
  CXXFLAGS = -Wall -pedantic -O -Iinclude -std=c++11 -fPIC -fno-common $(ARCHS)
 ifndef OS
 ifeq ($(shell uname),Darwin)
-CXXFLAGS += -mmacosx-version-min=10.11
+CXXFLAGS += -mmacosx-version-min=12.0
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-CXXFLAGS += -mmacosx-version-min=10.11
+CXXFLAGS += -mmacosx-version-min=12.0
 endif
      OBJS = agg_arc.o \
         agg_arrowhead.o \

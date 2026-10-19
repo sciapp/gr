@@ -8,12 +8,12 @@ FFMPEG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(notdir $(CC)), emcc)
 else ifndef OS
  ifeq ($(shell uname),Darwin)
-  FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
+  FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=12
  else ifeq ($(shell uname),Linux)
   FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-Wno-error=incompatible-pointer-types
  endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
- FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
+ FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=12
 else ifeq ($(shell [[ "$(OS)" =~ [lL]"inux" ]] && echo linux), linux)
  FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-Wno-error=incompatible-pointer-types
 endif

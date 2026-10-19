@@ -269,7 +269,7 @@ darwin-self-contained:
 
       merge_directories "$@"
     )
-  - export MACOSX_DEPLOYMENT_TARGET=10.15
+  - export MACOSX_DEPLOYMENT_TARGET=12.0
   - make -C 3rdparty default extras
   - cmake
       -S .
@@ -282,7 +282,7 @@ darwin-self-contained:
   - create_artifacts_directory
   - mv artifacts artifacts-darwin-aarch64
   - git clean -fdx --exclude=artifacts-darwin-aarch64
-  - export MACOSX_DEPLOYMENT_TARGET=11.0
+  - export MACOSX_DEPLOYMENT_TARGET=12.0
   - make -C 3rdparty default extras
       ARCHS="-arch x86_64"
       CC="cc -arch x86_64"

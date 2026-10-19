@@ -7,10 +7,10 @@ THEORA_CONFIGURE ?= ./configure
 THEORA_EXTRA_CONFIGURE_FLAGS ?=
 ifndef OS
 ifeq ($(shell uname),Darwin)
-THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=12
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

@@ -847,7 +847,7 @@ target_link_libraries(gen_preview_images PRIVATE GR::GKS GR::GR)\n\
 set_target_properties(\n\
 gen_preview_images\n\
 PROPERTIES\n\
-  C_STANDARD 90\n\
+  C_STANDARD 99\n\
   C_STANDARD_REQUIRED ON\n\
   C_EXTENSIONS OFF\n\
 )\n\
