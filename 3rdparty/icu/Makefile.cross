@@ -15,8 +15,8 @@ endif
 
 VERSION = 74.2
 ifeq ($(HOST),x86_64-apple-darwin)
-ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
-ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=10.15
+ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=12
+ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=12
 else ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 MINGW_STD_THREADS_COMMIT_SHORT_HASH = c931bac2
 ICU_CPPFLAGS += "-I$(PREFIX)/src/mingw-std-threads"

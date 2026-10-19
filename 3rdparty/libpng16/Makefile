@@ -6,7 +6,7 @@ endif
 ifeq ($(notdir $(CC)), emcc)
 else ifndef OS
  ifeq ($(shell uname),Darwin)
-  PNGCFLAGS += -mmacosx-version-min=10.15
+  PNGCFLAGS += -mmacosx-version-min=12
   ifeq ($(shell arch),arm64)
    PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
   endif
@@ -14,7 +14,7 @@ else ifndef OS
   PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
  endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
- PNGCFLAGS += -mmacosx-version-min=10.15
+ PNGCFLAGS += -mmacosx-version-min=12
  ifeq ($(shell arch),arm64)
   PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
  endif

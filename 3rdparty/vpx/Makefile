@@ -6,10 +6,10 @@ VERSION = 1.4.0
 VPX_EXTRA_CONFIGURE_FLAGS ?=
 ifndef OS
 ifeq ($(shell uname),Darwin)
-VPX_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
+VPX_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
-VPX_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
+VPX_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=12
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

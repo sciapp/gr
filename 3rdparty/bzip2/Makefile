@@ -5,10 +5,10 @@ endif
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
 ifndef OS
 ifeq ($(shell uname),Darwin)
- CFLAGS += -mmacosx-version-min=10.15
+ CFLAGS += -mmacosx-version-min=12
 endif
 else ifeq ($(shell [[ "$(OS)" =~ [dD]"arwin" ]] && echo macos), macos)
- CFLAGS += -mmacosx-version-min=10.15
+ CFLAGS += -mmacosx-version-min=12
 endif
     OBJS = blocksort.o \
         huffman.o \
