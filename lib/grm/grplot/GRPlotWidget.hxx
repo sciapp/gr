@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <variant>
+#include <filesystem>
 
 #include <QMenu>
 #include <QMenuBar>
@@ -15,6 +16,7 @@
 #include <QGuiApplication>
 #include <QPalette>
 #include <QStyleHints>
+#include <QProgressBar>
 
 #include "gredit/BoundingObject.hxx"
 #include "gredit/BoundingLogic.hxx"
@@ -197,6 +199,7 @@ public:
   QAction *getShowSelectionListWidgetAct();
   QAction *getShowIconBarAct();
   QAction *getShowAddElementAct();
+  QAction *getShowProgressBarAct();
   QAction *getHideEditElementAct();
   QAction *getHideTreeWidgetAct();
   QAction *getHideTableWidgetAct();
@@ -204,6 +207,7 @@ public:
   QAction *getHideSelectionListWidgetAct();
   QAction *getHideIconBarAct();
   QAction *getHideAddElementAct();
+  QAction *getHideProgressBarAct();
   QAction *getXLimAct();
   QAction *getYLimAct();
   QAction *getZLimAct();
@@ -214,6 +218,7 @@ public:
   QAction *getConsecutiveColorbarsAct();
   QAction *getFlipLayoutAct();
   QAction *getTextScaleAct();
+  QAction *getAnimateAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -221,6 +226,7 @@ public:
   QWidget *getSelectionListWidget();
   QWidget *getIconBarWidget();
   QWidget *getAddElementWidget();
+  QWidget *getProgressBarWidget();
 
 protected:
   virtual void draw();
@@ -329,6 +335,7 @@ private slots:
   void disableGridSlot();
   void highlightMoveToPlotSlot(int index);
   void textScaleSlot();
+  void animationSlot();
 
 private:
   struct MouseState
@@ -454,6 +461,7 @@ private:
   ColorPickerMixed *color_picker_mixed;
   SelectionListWidget *selection_list_widget;
   IconBarWidget *icon_bar_widget;
+  QProgressBar *progress_bar_widget;
   bool hide_grid_bbox = true;
   bool enable_advanced_editor = false;
   int add_pos_x, add_pos_y;
@@ -491,14 +499,20 @@ private:
   QMenu *add_overlay_menu, *possible_elems_menu;
   QAction *add_text_act, *add_image_act;
   QAction *show_edit_element_act, *show_tree_widget_act, *show_table_widget_act, *show_preview_text_act,
-      *show_selection_list_widget_act, *show_icon_bar_widget_act, *show_add_element_act;
+      *show_selection_list_widget_act, *show_icon_bar_widget_act, *show_add_element_act, *show_progress_bar_act;
   QAction *hide_edit_element_act, *hide_tree_widget_act, *hide_table_widget_act, *hide_preview_text_act,
-      *hide_selection_list_widget_act, *hide_icon_bar_widget_act, *hide_add_element_act;
+      *hide_selection_list_widget_act, *hide_icon_bar_widget_act, *hide_add_element_act, *hide_progress_bar_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
-  QAction *icon_bar_act;
+  QAction *icon_bar_act, *animation_act;
   bool overlay_element_edit = false, called_by_location_change = false, selected_elem_via_menu = false;
   QRadioButton *last_checked_radio_button = nullptr;
+  QTimer *timer;
   int ignore_resize = 0;
+  char **input_argv;
+  int input_argc;
+  std::set<std::string>::iterator set_iter{};
+  bool first_timer_call;
+  int progress_bar_value;
 
   void resetPixmap();
   void highlightCurrentSelection(QPainter &painter);

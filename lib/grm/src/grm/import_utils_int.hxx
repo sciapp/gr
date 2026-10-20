@@ -63,6 +63,7 @@ struct InputFlags
   bool ignore_blank_lines;
   bool force_legend_line;
   bool xyz_molecule_file;
+  int skip_lines;
 
   InputFlags() { reset(); }
 
@@ -78,6 +79,7 @@ struct InputFlags
     ignore_blank_lines = false;
     force_legend_line = false;
     xyz_molecule_file = false;
+    skip_lines = 0;
   }
 };
 

@@ -30,7 +30,7 @@ private:
   QLineEdit *find_line_edit;
   QTextBrowser *message;
   QDockWidget *edit_element_dock_widget, *tree_dock_widget, *table_dock_widget, *text_preview_dock_widget,
-      *selection_list_dock_widget, *icon_bar_dock_widget, *add_element_dock_widget;
+      *selection_list_dock_widget, *icon_bar_dock_widget, *add_element_dock_widget, *progress_bar_dock_widget;
   bool help_mode = false;
 
   void center();
@@ -44,6 +44,7 @@ private slots:
   void showSelectionListDockSlot();
   void showIconBarDockSlot();
   void showAddElementDockSlot();
+  void showProgressBarDockSlot();
   void hideEditElementDockSlot();
   void hideTreeWidgetDockSlot();
   void hideTableWidgetDockSlot();
@@ -51,6 +52,7 @@ private slots:
   void hideSelectionListDockSlot();
   void hideIconBarDockSlot();
   void hideAddElementDockSlot();
+  void hideProgressBarDockSlot();
   void closeEditElementDockSlot();
   void closeTreeWidgetDockSlot();
   void closeTableWidgetDockSlot();
@@ -58,6 +60,7 @@ private slots:
   void closeSelectionListDockSlot();
   void closeIconBarDockSlot();
   void closeAddElementDockSlot();
+  void closeProgressBarDockSlot();
   void updateEditElementDockTitleSlot();
 };
 

@@ -253,6 +253,18 @@ bool isNumber(const std::string &str)
   return pos == std::string::npos;
 }
 
+std::string toLower(std::string string)
+{
+  for (char &c : string) c = static_cast<char>(std::tolower(c));
+  return string;
+}
+
+std::string toUpper(std::string string)
+{
+  for (char &c : string) c = static_cast<char>(std::toupper(c));
+  return string;
+}
+
 /*!
  * \brief Parse an ISO 8601 string without timezone (format `YYYY-MM-DDTHH:MM:SS`).
  *
@@ -437,6 +449,26 @@ void setGrdir(bool force)
   gr_header_path_stream << gr_dir_absolute_c_ptr.get() << "/include/gr.h";
   if (!fileExists(gr_header_path_stream.str())) throw(CorruptedGrDirError(gr_dir_absolute_c_ptr.get()));
   if (setenv("GRDIR", gr_dir_absolute_c_ptr.get(), 1) != 0) throw(SetEnvError());
+#endif
+}
+
+#ifdef _WIN32
+std::string utf8(const std::wstring &ws)
+{
+  if (ws.empty()) return {};
+  int size = WideCharToMultiByte(CP_UTF8, 0, ws.data(), (int)ws.size(), nullptr, 0, nullptr, nullptr);
+  std::string result(size, 0);
+  WideCharToMultiByte(CP_UTF8, 0, ws.data(), (int)ws.size(), result.data(), size, nullptr, nullptr);
+  return result;
+}
+#endif
+
+std::string utf8path(const std::filesystem::path &path)
+{
+#ifdef _WIN32
+  return utf8(path.wstring());
+#else
+  return path.string();
 #endif
 }
 } // namespace util

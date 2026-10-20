@@ -2,6 +2,7 @@
 #define UTIL_HXX_INCLUDED
 
 #include <ctime>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <fstream>
@@ -186,6 +187,8 @@ bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 bool isDigits(const std::string &str);
 bool isNumber(const std::string &str);
+std::string toLower(std::string string);
+std::string toUpper(std::string string);
 bool parseIso8601WithoutTimezone(const std::string &s, struct tm &tm);
 int isEnvVariableEnabled(const char *env_variable_name);
 #ifdef _WIN32
@@ -204,6 +207,18 @@ std::string getExecutablePath();
 #endif
 
 void setGrdir(bool force = false);
+
+/*
+ * `utf8` can be used to convert a C++ `std::wstring` to a UTF-8 `std::string` on Windows, but not on other platforms
+ */
+#ifdef _WIN32
+std::string utf8(const std::wstring &ws);
+#else
+#define utf8(x) (x)
+#endif
+
+std::string utf8path(const std::filesystem::path &path);
+
 
 template <typename... Args> std::string stringFormat(const std::string &format, Args... args)
 {
