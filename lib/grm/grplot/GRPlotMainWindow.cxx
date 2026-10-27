@@ -19,6 +19,7 @@
 #endif
 #include "GRPlotMainWindow.hxx"
 #include "GRPlotDockWidget.hxx"
+#include "GRPlotHelpDialog.hxx"
 
 const int LEFT_AREA_WIDTH = 300;
 const int RIGHT_AREA_WIDTH = 250;
@@ -33,47 +34,8 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
   if (help_mode)
     {
-      if (!QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode)))
-        {
-          auto *w = new QWidget(this);
-          std::string kind;
-          auto path = util::getEnvVar(W("GRDIR"), W(GRDIR)) + W("/lib");
-
-          this->help_mode = help_mode;
-          find_line_edit = new QLineEdit(w);
-          find_line_edit->setPlaceholderText("Search in document");
-          auto button = new QPushButton("Find", w);
-          QObject::connect(button, SIGNAL(clicked()), this, SLOT(findButtonClickedSlot()));
-          auto form = new QGridLayout;
-          form->addWidget(find_line_edit, 0, 0);
-          form->addWidget(button, 0, 1);
-
-          message = new QTextBrowser(w);
-#ifdef _WIN32
-          message->setSearchPaths(QStringList(QString::fromStdWString(path)));
-#else
-          message->setSearchPaths(QStringList(QString::fromStdString(path)));
-#endif
-          message->setSource(QUrl("../share/doc/grplot/grplot.man.md"));
-          message->setReadOnly(true);
-          message->setOpenExternalLinks(true);
-          message->setAlignment(Qt::AlignTop);
-          if (argc >= 3)
-            {
-              kind = argv[2];
-              std::transform(kind.begin(), kind.end(), kind.begin(), ::toupper);
-              if (!message->find(QString(kind.c_str()), QTextDocument::FindCaseSensitively))
-                fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
-            }
-          form->addWidget(message, 1, 0, 1, 2);
-          w->setLayout(form);
-          setCentralWidget(w);
-          resize(width, height);
-        }
-      else
-        {
-          exit(0);
-        }
+      showHelpDialogSlot();
+      exit(0);
     }
   else
     {
@@ -100,7 +62,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       QTimer::singleShot(100, grplot_widget_, &GRPlotWidget::processTestCommandsFile);
     }
 
-  if (grplot_widget_ && !test_mode && !grplot_widget_->getTestCommandsStream() && !help_mode)
+  if (grplot_widget_ && !test_mode && !grplot_widget_->getTestCommandsStream())
     {
       menu = menuBar();
       file_menu = new QMenu("&File");
@@ -110,6 +72,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       export_menu->menuAction()->setIconVisibleInMenu(true);
 #endif
       modi_menu = new QMenu("&Modi");
+      help_menu = new QMenu("&Help");
 
       export_menu->addAction(grplot_widget_->getPdfAct());
       export_menu->addAction(grplot_widget_->getPngAct());
@@ -117,6 +80,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       export_menu->addAction(grplot_widget_->getSvgAct());
       modi_menu->addAction(grplot_widget_->getMovableModeAct());
       if (hide_colormap) grplot_widget_->getColormapAct()->setVisible(false);
+      help_menu->addAction(grplot_widget_->getShowHelpAct());
 
       menu->addMenu(file_menu);
       menu->addMenu(modi_menu);
@@ -272,23 +236,9 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
 
 GRPlotMainWindow::~GRPlotMainWindow() = default;
 
-void GRPlotMainWindow::findButtonClickedSlot()
-{
-  QString search_string = find_line_edit->text();
-  message->find(search_string, QTextDocument::FindWholeWords);
-}
-
 void GRPlotMainWindow::closeEvent(QCloseEvent *event)
 {
   grm_finalize();
-}
-
-void GRPlotMainWindow::keyPressEvent(QKeyEvent *event)
-{
-  if (this->help_mode)
-    {
-      if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) findButtonClickedSlot();
-    }
 }
 
 void GRPlotMainWindow::resizeGRPlotWidget(int w, int h)
@@ -596,6 +546,15 @@ void GRPlotMainWindow::updateEditElementDockTitleSlot()
 {
   if (edit_element_dock_widget->isVisible())
     edit_element_dock_widget->setWindowTitle(grplot_widget_->getEditElementWidget()->windowTitle());
+}
+
+void GRPlotMainWindow::showHelpDialogSlot(std::optional<std::string> kind)
+{
+  // TODO: Call Slot in GRPlotWidget?
+  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode))) return;
+
+  auto help_dialog = new GRPlotHelpDialog(this);
+  help_dialog->exec();
 }
 
 void GRPlotMainWindow::keepInDisplay()

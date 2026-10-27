@@ -25,18 +25,14 @@ protected:
 private:
   GRPlotWidget *grplot_widget_;
   QMenuBar *menu;
-  QMenu *file_menu, *export_menu, *editor_menu, *modi_menu;
+  QMenu *file_menu, *export_menu, *editor_menu, *modi_menu, *help_menu;
   QMenu *context_menu, *add_context_data;
-  QLineEdit *find_line_edit;
-  QTextBrowser *message;
   QDockWidget *edit_element_dock_widget, *tree_dock_widget, *table_dock_widget, *text_preview_dock_widget,
       *selection_list_dock_widget, *icon_bar_dock_widget, *add_element_dock_widget, *progress_bar_dock_widget;
-  bool help_mode = false;
 
   void center();
   void keepInDisplay();
 private slots:
-  void findButtonClickedSlot();
   void showEditElementDockSlot();
   void showTreeWidgetDockSlot();
   void showTableWidgetDockSlot();
@@ -62,6 +58,7 @@ private slots:
   void closeAddElementDockSlot();
   void closeProgressBarDockSlot();
   void updateEditElementDockTitleSlot();
+  void showHelpDialogSlot(std::optional<std::string> kind = std::nullopt);
 };
 
 #endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */

@@ -28,6 +28,7 @@
 #include <QIcon>
 
 #include "GRPlotWidget.hxx"
+#include "GRPlotHelpDialog.hxx"
 #include "Threadpool.hxx"
 #include "Util.hxx"
 
@@ -793,6 +794,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
 
       animation_act = new QAction(tr("&Animation"));
       QObject::connect(animation_act, SIGNAL(triggered()), this, SLOT(animationSlot()));
+
+      show_help_act = new QAction(tr("&Help"));
+      QObject::connect(show_help_act, SIGNAL(triggered()), this, SLOT(showHelpDialogSlot()));
     }
 }
 
@@ -6345,6 +6349,14 @@ void GRPlotWidget::animationSlot()
     }
 }
 
+void GRPlotWidget::showHelpDialogSlot()
+{
+  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/index.html", QUrl::TolerantMode))) return;
+
+  auto help_dialog = new GRPlotHelpDialog(this);
+  help_dialog->exec();
+}
+
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -7771,6 +7783,11 @@ QAction *GRPlotWidget::getTextScaleAct()
 QAction *GRPlotWidget::getAnimateAct()
 {
   return animation_act;
+}
+
+QAction *GRPlotWidget::getShowHelpAct()
+{
+  return show_help_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()

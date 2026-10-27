@@ -219,6 +219,7 @@ public:
   QAction *getFlipLayoutAct();
   QAction *getTextScaleAct();
   QAction *getAnimateAct();
+  QAction *getShowHelpAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -336,6 +337,7 @@ private slots:
   void highlightMoveToPlotSlot(int index);
   void textScaleSlot();
   void animationSlot();
+  void showHelpDialogSlot();
 
 private:
   struct MouseState
@@ -504,6 +506,7 @@ private:
       *hide_selection_list_widget_act, *hide_icon_bar_widget_act, *hide_add_element_act, *hide_progress_bar_act;
   QAction *x_lim_act, *y_lim_act, *z_lim_act;
   QAction *icon_bar_act, *animation_act;
+  QAction *show_help_act;
   bool overlay_element_edit = false, called_by_location_change = false, selected_elem_via_menu = false;
   QRadioButton *last_checked_radio_button = nullptr;
   QTimer *timer;
