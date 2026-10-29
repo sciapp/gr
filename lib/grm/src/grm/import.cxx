@@ -1781,6 +1781,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
             }
 
+          if (file_data[depth][0].size() != file_data[depth][1].size() ||
+              file_data[depth][0].size() != file_data[depth][2].size() || file_data[depth][1].size() != labels_c.size())
+            {
+              fprintf(stderr, "For molecule series x, y and z must have the same size. Its also required that there "
+                              "are as many symbols given as data points. In case of an xyz-file use the key-value pair "
+                              "\"molecule_file:1\" and try it again.\n");
+              return 0;
+            }
           grm_args_push(plot[plot_i], "molecule_symbols", "nS", labels_c.size(), labels_c.data());
           grm_args_push(plot[plot_i], "x", "nD", rows, file_data[depth][0].data());
           grm_args_push(plot[plot_i], "y", "nD", rows, file_data[depth][1].data());
