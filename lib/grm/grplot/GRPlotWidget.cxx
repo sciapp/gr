@@ -49,9 +49,11 @@ struct HighlightMask
   int id;
   int x, y;
   int width, height;
-  std::vector<unsigned char> image;
-  HighlightMask(int id, int x, int y, int width, int height, std::vector<unsigned char> image)
+  std::vector<uint32_t> image;
+  HighlightMask(int id, int x, int y, int width, int height, const std::vector<uint32_t> &image)
       : id(id), x(x), y(y), width(width), height(height), image(image) {};
+  HighlightMask(int id, int x, int y, int width, int height, std::vector<uint32_t> &&image)
+      : id(id), x(x), y(y), width(width), height(height), image(std::move(image)) {};
 };
 
 struct ThreadAttr
@@ -156,6 +158,8 @@ static std::list<HighlightMask> mask_highlights;
 static std::list<HighlightMask> referred_elements_highlights_cache;
 static std::list<HighlightMask> mask_highlights_cache;
 static uint32_t color = 0xFF0202F0;
+static constexpr uint32_t NO_COLOR = 0xFFFFFFFF;
+static constexpr int BOX_SIZE = 11, INNER_BOX_SIZE = 5;
 static bool move_to_plot = false;
 static std::string plot_id = "";
 static std::string input_data_name = "";
@@ -839,6 +843,31 @@ GRPlotWidget::~GRPlotWidget()
   grm_finalize();
 }
 
+/*!
+ * \brief Calculate the needed space at the image boundary to apply the widening / dilation.
+ *
+ * \param[in] x The x position of the partial drawing in the complete drawing
+ * \param[in] y The y position of the partial drawing in the complete drawing
+ * \param[in] width The width of the partial drawing
+ * \param[in] height The height of the partial drawing
+ * \return The widened values of x, y, width and height as tuple
+ */
+static std::tuple<int, int, unsigned int, unsigned int>
+reserveSpaceForImageWidening(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+{
+  const auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+  auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
+  auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
+
+  // Reserve some more space for the dilatation at the image boundary
+  auto new_x = std::max<int>(0, x - BOX_SIZE / 2);
+  auto new_y = std::max<int>(0, y - BOX_SIZE / 2);
+  unsigned int new_width = std::min<int>(x + width + BOX_SIZE / 2, figure_size_x * 2) - new_x;
+  unsigned int new_height = std::min<int>(y + height + BOX_SIZE / 2, figure_size_y * 2) - new_y;
+
+  return {new_x, new_y, new_width, new_height};
+}
+
 static void distanceTransform1D(const float *input, float *output, int length)
 {
   std::vector<int> sites(length);
@@ -884,78 +913,92 @@ static void distanceTransform1D(const float *input, float *output, int length)
     }
 }
 
-bool widenBlackObjects(const unsigned char *input, unsigned char *output, int width, int height, float radius,
-                       unsigned char threshold = 128)
+/*!
+ * \brief Widen objects based on the euclidean distance to its shape boundary.
+ *
+ * This algorithm uses a method described by Felzenszwalb and Huttenlocher, published in
+ * <https://doi.org/10.4086/toc.2012.v008a019>.
+ *
+ * \param[in,out] x The left horizontal coordinate of the partial drawing
+ * \param[in,out] y The top vertical coordinate of the partial drawing
+ * \param[in,out] width The width of the partial drawing
+ * \param[in,out] height The height of the partial drawing
+ * \param[in] pixels The pixels of the partial drawing as ARGB values
+ * \return The widened image
+ */
+static std::vector<uint32_t> widenObjectsEuclidean(unsigned int &x, unsigned int &y, unsigned int &width,
+                                                   unsigned int &height, const uint32_t *pixels)
 {
-  if (!input || !output || width <= 0 || height <= 0 || radius < 0.0f) return false;
-
-  const std::size_t pixel_count = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+  constexpr int radius_squared = INNER_BOX_SIZE * INNER_BOX_SIZE;
+  const auto [new_x, new_y, new_width, new_height] = reserveSpaceForImageWidening(x, y, width, height);
+  std::vector<uint32_t> image;
   const float infinity = std::numeric_limits<float>::max() / 4.0f;
-  std::vector<float> first_pass(pixel_count);
-  std::vector<float> distances_squared(pixel_count);
-  const int maximum_dimension = std::max(width, height);
-  std::vector<float> line_input(maximum_dimension);
-  std::vector<float> line_output(maximum_dimension);
+  std::vector<float> first_pass(new_width * new_height, infinity);
+  std::vector<float> line_input(std::max(new_width, new_height));
+  std::vector<float> line_output(std::max(new_width, new_height));
 
+  const auto x_diff = x - new_x;
+  const auto y_diff = y - new_y;
+
+  image.resize(new_width * new_height, 0x00FFFFFF);
   /*
    * Initialize:
    *
    * 0 for foreground/object pixels.
-   * Infinity for background pixels.
+   * Infinity for background pixels (already pre-filled on vector initialization).
    */
-  for (std::size_t i = 0; i < pixel_count; ++i)
-    {
-      first_pass[i] = input[i] < threshold ? 0.0f : infinity;
-    }
-
-  // Transform each column.
   for (int x = 0; x < width; ++x)
     {
       for (int y = 0; y < height; ++y)
         {
-          line_input[y] = first_pass[static_cast<std::size_t>(y) * width + x];
+          if (pixels[y * width + x] != NO_COLOR) first_pass[(y + y_diff) * new_width + x + x_diff] = 0.0f;
+        }
+    }
+
+  // Transform each column.
+  for (int x = 0; x < new_width; ++x)
+    {
+      for (int y = 0; y < new_height; ++y)
+        {
+          line_input[y] = first_pass[static_cast<std::size_t>(y) * new_width + x];
         }
 
-      distanceTransform1D(line_input.data(), line_output.data(), height);
+      distanceTransform1D(line_input.data(), line_output.data(), new_height);
 
-      for (int y = 0; y < height; ++y)
+      for (int y = 0; y < new_height; ++y)
         {
-          first_pass[static_cast<std::size_t>(y) * width + x] = line_output[y];
+          first_pass[static_cast<std::size_t>(y) * new_width + x] = line_output[y];
         }
     }
 
   // Transform each row.
-  for (int y = 0; y < height; ++y)
+  for (int y = 0; y < new_height; ++y)
     {
-      const std::size_t row_offset = static_cast<std::size_t>(y) * width;
+      const std::size_t row_offset = static_cast<std::size_t>(y) * new_width;
 
-      for (int x = 0; x < width; ++x)
+      for (int x = 0; x < new_width; ++x)
         {
           line_input[x] = first_pass[row_offset + x];
         }
 
-      distanceTransform1D(line_input.data(), line_output.data(), width);
+      distanceTransform1D(line_input.data(), line_output.data(), new_width);
 
-      for (int x = 0; x < width; ++x)
+      for (int x = 0; x < new_width; ++x)
         {
-          distances_squared[row_offset + x] = line_output[x];
+          image[y * new_width + x] = line_output[x] <= radius_squared ? color : NO_COLOR;
         }
     }
 
-  const float radius_squared = radius * radius;
+  x = new_x;
+  y = new_y;
+  width = new_width;
+  height = new_height;
 
-  for (std::size_t i = 0; i < pixel_count; ++i)
-    {
-      output[i] = distances_squared[i] <= radius_squared ? 0 : 255;
-    }
-
-  return true;
+  return image;
 }
 
 static void dilatationForImagePart(void *arg)
 {
-  constexpr uint32_t no_color = 0xFFFFFFFF;
-  constexpr int box_size = 11, inner_box_size = 5;
   auto attr = static_cast<struct ThreadAttr *>(arg);
 
   for (unsigned int j = attr->y_start; j < attr->y_end; j++)
@@ -963,21 +1006,21 @@ static void dilatationForImagePart(void *arg)
       for (unsigned int i = attr->x_start; i < attr->x_end; i++)
         {
           auto found_pixel_distance_from_center = -1;
-          for (int box_offset_y = 0; box_offset_y <= box_size / 2; box_offset_y++)
+          for (int box_offset_y = 0; box_offset_y <= BOX_SIZE / 2; box_offset_y++)
             {
               int pixel_y_0 = j + box_offset_y - attr->y_diff;
               int pixel_y_1 = j - box_offset_y - attr->y_diff;
               if (pixel_y_0 < 0 || pixel_y_0 >= attr->height) pixel_y_0 = -1;
               if (pixel_y_1 < 0 || pixel_y_1 >= attr->height) pixel_y_1 = -1;
               if (pixel_y_0 == -1 && pixel_y_1 == -1) continue;
-              for (int box_offset_x = 0; box_offset_x <= box_size / 2; box_offset_x++)
+              for (int box_offset_x = 0; box_offset_x <= BOX_SIZE / 2; box_offset_x++)
                 {
                   int pixel_x_0 = i + box_offset_x - attr->x_diff;
                   int pixel_x_1 = i - box_offset_x - attr->x_diff;
                   if (pixel_x_0 >= 0 && pixel_x_0 < attr->width)
                     {
-                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_0] != no_color) ||
-                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_0] != no_color))
+                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_0] != NO_COLOR) ||
+                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_0] != NO_COLOR))
                         {
                           found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
                           break;
@@ -985,8 +1028,8 @@ static void dilatationForImagePart(void *arg)
                     }
                   if (pixel_x_1 >= 0 && pixel_x_1 < attr->width)
                     {
-                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_1] != no_color) ||
-                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_1] != no_color))
+                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_1] != NO_COLOR) ||
+                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_1] != NO_COLOR))
                         {
                           found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
                           break;
@@ -998,9 +1041,9 @@ static void dilatationForImagePart(void *arg)
           if (found_pixel_distance_from_center >= 0)
             {
               (*attr->image)[j * attr->new_width + i] = color;
-              (found_pixel_distance_from_center <= inner_box_size / 2)
+              (found_pixel_distance_from_center <= INNER_BOX_SIZE / 2)
                   ? color
-                  : attr->smoothed_colors[found_pixel_distance_from_center - inner_box_size / 2 - 1];
+                  : attr->smoothed_colors[found_pixel_distance_from_center - INNER_BOX_SIZE / 2 - 1];
             }
         }
     }
@@ -1019,15 +1062,23 @@ static int systemProcessorCount(void)
   return static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
 }
 
+/*!
+ * \brief Widen objects based on dilation. This preserves corners and is best suited for rectangular shapes.
+ *
+ * \param[in,out] x The left horizontal coordinate of the partial drawing
+ * \param[in,out] y The top vertical coordinate of the partial drawing
+ * \param[in,out] width The width of the partial drawing
+ * \param[in,out] height The height of the partial drawing
+ * \param[in] pixels The pixels of the partial drawing as ARGB values
+ * \return The widened image
+ */
 static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y, unsigned int &width,
-                                                unsigned int &height, const unsigned int *pixels)
+                                                unsigned int &height, const uint32_t *pixels)
 {
-  constexpr uint32_t no_color = 0xFFFFFFFF;
-  constexpr int box_size = 11, inner_box_size = 5;
-  constexpr int smoothed_colors_count = std::max(box_size / 2 - inner_box_size / 2, 0);
+  constexpr int smoothed_colors_count = std::max(BOX_SIZE / 2 - INNER_BOX_SIZE / 2, 0);
   std::vector<uint32_t> image;
   std::array<uint32_t, smoothed_colors_count> smoothed_colors;
-  auto no_color_rgba = reinterpret_cast<const uint8_t *>(&no_color);
+  auto no_color_rgba = reinterpret_cast<const uint8_t *>(&NO_COLOR);
   auto color_rgba = reinterpret_cast<const uint8_t *>(&color);
   ThreadAttr *jobs;
   int x_start = 0, y_start = 0, x_end, y_end;
@@ -1046,15 +1097,7 @@ static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y
         }
     }
 
-  auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
-  auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
-  auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
-
-  // Reserve some more space for the dilatation at the image boundary
-  auto new_x = std::max<int>(0, x - box_size / 2);
-  auto new_y = std::max<int>(0, y - box_size / 2);
-  unsigned int new_width = std::min<int>(x + width + box_size / 2, figure_size_x * 2) - new_x;
-  unsigned int new_height = std::min<int>(y + height + box_size / 2, figure_size_y * 2) - new_y;
+  const auto [new_x, new_y, new_width, new_height] = reserveSpaceForImageWidening(x, y, width, height);
 
   image.resize(new_width * new_height, 0x00FFFFFF);
 
@@ -1114,80 +1157,32 @@ static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y
   return image;
 }
 
+/*!
+ * \brief Widen a partial drawing to use it as a highlight mask.
+ *
+ * \param[in] id The id of the object associated with the partial drawing
+ * \param[in] x The left horizontal coordinate of the partial drawing
+ * \param[in] y The top vertical coordinate of the partial drawing
+ * \param[in] width The width of the partial drawing
+ * \param[in] height The height of the partial drawing
+ * \param[in] pixels The pixels of the partial drawing as ARGB values
+ */
 static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
                                   unsigned int *pixels)
 {
-  std::vector<unsigned char> image;
+  std::vector<uint32_t> image;
   auto elem = grm_get_document_root()->querySelectors("[_bbox_id=\"" + std::to_string(id) + "\"]");
 
+  /* Check for plot types which use mainly round shapes -> Use a widening algorithm that is based on the Euclidean
+   * distance to the shape boundary to keep rounded shapes. */
   if (elem->localName() == "sphere" || elem->localName() == "series_molecule" ||
       elem->localName() == "series_isosurface" || elem->localName() == "spin" || elem->localName() == "cylinder")
     {
-      auto box = 5;
-      auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
-      auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
-      auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
-      auto new_x = std::max<int>(0, x - box);
-      auto new_y = std::max<int>(0, y - box);
-      unsigned int new_width = std::min<int>(x + width + box, figure_size_x * 2) - new_x;
-      unsigned int new_height = std::min<int>(y + height + box, figure_size_y * 2) - new_y;
-      auto border_x = new_width - width;
-      auto border_y = new_height - height;
-
-      std::vector<unsigned char> input;
-      std::vector<unsigned char> output(static_cast<std::size_t>(new_width) * new_height);
-      input.resize(new_width * new_height, 255);
-
-      for (int i = 0; i < width; i++)
-        {
-          for (int j = 0; j < height; j++)
-            {
-              if (pixels[i + j * width] != 0xFFFFFFFF)
-                input[(i + border_x / 2.0) + (j + border_y / 2.0) * new_width] = 0;
-            }
-        }
-
-      widenBlackObjects(input.data(), output.data(), new_width, new_height, 5.0f);
-      for (unsigned int j = 0; j < new_height; j++)
-        {
-          for (unsigned int i = 0; i < new_width; i++)
-            {
-              if (output[i + j * new_width] == 0)
-                {
-                  image.push_back(240);
-                  image.push_back(2);
-                  image.push_back(2);
-                  image.push_back(255);
-                }
-              else
-                {
-                  image.push_back(255);
-                  image.push_back(255);
-                  image.push_back(255);
-                  image.push_back(0);
-                }
-            }
-        }
-      x = new_x;
-      y = new_y;
-      width = new_width;
-      height = new_height;
+      image = widenObjectsEuclidean(x, y, width, height, pixels);
     }
   else
     {
-      auto processed_image = dilatationForImage(x, y, width, height, pixels);
-
-      for (unsigned int j = 0; j < height; j++)
-        {
-          for (unsigned int i = 0; i < width; i++)
-            {
-              const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
-              image.push_back(pixel[0]);
-              image.push_back(pixel[1]);
-              image.push_back(pixel[2]);
-              image.push_back(pixel[3]);
-            }
-        }
+      image = dilatationForImage(x, y, width, height, pixels);
     }
   std::free(pixels);
   bool contains_id = false;
@@ -1200,7 +1195,7 @@ static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsign
         }
     }
 
-  auto mask = HighlightMask(id, x, y, width, height, image);
+  auto mask = HighlightMask(id, x, y, width, height, std::move(image));
   if (!contains_id) mask_highlights.emplace_back(mask);
   if (color == 0xFF0202F0)
     mask_highlights_cache.emplace_back(mask);
@@ -5202,7 +5197,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                       auto rect =
                           QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                 mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-                      auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+                      auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width,
+                                          mask.height, QImage::Format_ARGB32);
                       painter.drawImage(rect, image);
                       painter.setOpacity(1.0);
 
@@ -5257,7 +5253,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                   painter.setOpacity(0.2);
                   auto rect = QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                     mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-                  auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+                  auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width,
+                                      mask.height, QImage::Format_ARGB32);
                   painter.drawImage(rect, image);
                   painter.setOpacity(1.0);
 
@@ -5304,7 +5301,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                       auto rect =
                           QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                 mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-                      auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+                      auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width,
+                                          mask.height, QImage::Format_ARGB32);
                       painter.drawImage(rect, image);
                       painter.setOpacity(1.0);
 
@@ -5359,7 +5357,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                   painter.setOpacity(0.4);
                   auto rect = QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                     mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-                  auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+                  auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width,
+                                      mask.height, QImage::Format_ARGB32);
                   painter.drawImage(rect, image);
                   painter.setOpacity(1.0);
 
@@ -5402,7 +5401,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
               painter.setOpacity(0.4);
               auto rect = QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                 mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-              auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+              auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width, mask.height,
+                                  QImage::Format_ARGB32);
               painter.drawImage(rect, image);
               painter.setOpacity(1.0);
             }
@@ -5451,7 +5451,8 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                   painter.setOpacity(0.2);
                   auto rect = QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
                                     mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
-                  auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+                  auto image = QImage(reinterpret_cast<const unsigned char *>(mask.image.data()), mask.width,
+                                      mask.height, QImage::Format_ARGB32);
                   painter.drawImage(rect, image);
                   painter.setOpacity(1.0);
 
