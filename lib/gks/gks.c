@@ -340,6 +340,22 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
               printf("GKS: %s\n", gks_function_name(fctid));
               break;
             }
+#elif defined(GR_QT_WASM)
+          switch (ws->wtype)
+            {
+            case 381:
+              gks_qt6plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+                            ptr);
+              break;
+            case 5:
+              gks_drv_wiss(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+                           ptr);
+              break;
+            default:
+              gks_perror("Unsupported workstation %d in the Qt Wasm build", ws->wtype);
+              if (fctid == OPEN_WS) i_arr[0] = i_arr[1] = 0;
+              break;
+            }
 #else
           gks_drv_js(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr, ptr);
 #endif
@@ -3154,6 +3170,11 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
 
       switch (ws->wtype)
         {
+#if defined(__EMSCRIPTEN__) && defined(GR_QT_WASM)
+        case 381:
+          gks_qt6plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
+          break;
+#endif
 #ifndef __EMSCRIPTEN__
         case 381:
           gks_qt_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);

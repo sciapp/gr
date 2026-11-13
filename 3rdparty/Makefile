@@ -1,6 +1,6 @@
 UNAME := $(shell uname)
 
- TARGETS = freetype jpeg libpng16 zlib qhull bzip2
+ TARGETS = freetype jpeg libpng16 zlib libqhull_r bzip2
 ifeq ($(UNAME), Darwin)
  TARGETS += zeromq
 endif
