@@ -6,6 +6,7 @@
 #include <sstream>
 #include <functional>
 #include <cassert>
+#include <set>
 
 #include <gr.h>
 
@@ -27,6 +28,7 @@
 #include <QIcon>
 
 #include "GRPlotWidget.hxx"
+#include "GRPlotHelpDialog.hxx"
 #include "Threadpool.hxx"
 #include "Util.hxx"
 
@@ -140,6 +142,8 @@ QStringList world_coordinates_list{"ndc", "wc"};
 QStringList label_orientation_list{"up", "down"};
 
 static std::string file_export;
+static std::string animation_file;
+static bool animation = false;
 static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
@@ -449,6 +453,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
         }
       else
         {
+          input_argv = argv;
+          input_argc = argc;
           if (!grm_interactive_plot_from_file(args_, argc, argv)) exit(0);
 
           std::string token;
@@ -741,6 +747,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       QObject::connect(add_image_act, SIGNAL(triggered()), this, SLOT(addImageSlot()));
       add_overlay_menu->addAction(add_image_act);
 
+      progress_bar_widget = new QProgressBar(this);
+      progress_bar_widget->hide();
+      progress_bar_widget->setOrientation(Qt::Orientation::Horizontal);
+      progress_bar_widget->setMinimum(0);
+
       hide_location_sub_menu_act = new QAction(this);
       show_location_sub_menu_act = new QAction(this);
       hide_lim_sub_menu_act = new QAction(this);
@@ -758,6 +769,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       show_selection_list_widget_act = new QAction();
       show_icon_bar_widget_act = new QAction();
       show_add_element_act = new QAction();
+      show_progress_bar_act = new QAction();
       hide_edit_element_act = new QAction();
       hide_tree_widget_act = new QAction();
       hide_table_widget_act = new QAction();
@@ -765,6 +777,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       hide_selection_list_widget_act = new QAction();
       hide_icon_bar_widget_act = new QAction();
       hide_add_element_act = new QAction();
+      hide_progress_bar_act = new QAction();
       update_edit_element_title_act = new QAction();
 
       connect(selection_list_widget, SIGNAL(itemChanged(QListWidgetItem *)), this,
@@ -782,6 +795,20 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       icon_bar_act->setCheckable(true);
       icon_bar_act->setChecked(true);
       QObject::connect(icon_bar_act, SIGNAL(triggered()), this, SLOT(showIconBarSlot()));
+
+      animation_act = new QAction(tr("&Animation"));
+      QObject::connect(animation_act, SIGNAL(triggered()), this, SLOT(animationSlot()));
+
+      show_help_act = new QAction(tr("&Open Documentation"));
+      show_help_act->setShortcut(QKeySequence("F1"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+      show_help_act->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::HelpFaq));
+      show_help_act->setIconVisibleInMenu(true);
+#endif
+      QObject::connect(show_help_act, SIGNAL(triggered()), this, SLOT(showHelpDialogSlot()));
+
+      cleanup_animation_act = new QAction();
+      QObject::connect(cleanup_animation_act, SIGNAL(triggered()), this, SLOT(cleanupAnimationSlot()));
     }
 }
 
@@ -1939,6 +1966,20 @@ void GRPlotWidget::draw()
                  (util::endsWith(file_export, ".xml.png") || util::endsWith(file_export, ".xml.pdf") ||
                   util::endsWith(file_export, ".xml.svg")));
       file_export.clear();
+    }
+  else if (!animation_file.empty() && !animation)
+    {
+      if (util::isEnvVariableEnabled("GRM_DEBUG")) qDebug() << "start animation";
+      gr_beginprint(const_cast<char *>(animation_file.c_str()));
+      animation = true;
+    }
+  else if (animation_file.empty() && animation)
+    {
+      if (util::isEnvVariableEnabled("GRM_DEBUG")) qDebug() << "end animation";
+      gr_endprint();
+      animation = false;
+      csr->setShape(Qt::ArrowCursor);
+      setCursor(*csr);
     }
   else
     {
@@ -6237,6 +6278,425 @@ void GRPlotWidget::textScaleSlot()
   redraw();
 }
 
+bool compareNat(const std::string &a, const std::string &b)
+{
+  if (a.empty()) return true;
+  if (b.empty()) return false;
+  if (std::isdigit(a[0]) && !std::isdigit(b[0])) return true;
+  if (!std::isdigit(a[0]) && std::isdigit(b[0])) return false;
+  if (!std::isdigit(a[0]) && !std::isdigit(b[0]))
+    {
+      if (a[0] == b[0]) return compareNat(a.substr(1), b.substr(1));
+      return (util::toUpper(a) < util::toUpper(b));
+      // toUpper() is a function to convert a std::string to uppercase.
+    }
+
+  // Both strings begin with digit --> parse both numbers
+  std::istringstream iss_a(a);
+  std::istringstream iss_b(b);
+  int ia, ib;
+  iss_a >> ia;
+  iss_b >> ib;
+  if (ia != ib) return ia < ib;
+
+  // Numbers are the same --> remove numbers and recurse
+  std::string a_new, b_new;
+  std::getline(iss_a, a_new);
+  std::getline(iss_b, b_new);
+  return (compareNat(a_new, b_new));
+}
+
+void GRPlotWidget::animationSlot()
+{
+  const QList<QString> video_formats{"mov", "mp4", "webm"};
+  const std::pair<unsigned int, unsigned int> valid_fps_range{1, 120};
+  const std::pair<unsigned int, unsigned int> valid_resolution_range{100, 10000};
+  const unsigned int initial_width{720};
+  const unsigned int size_update_delay{500}; // ms
+  const double figure_aspect_ratio = []() {
+    auto active_figure = grm_get_document_root()->querySelectors("figure[active=1]");
+    auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
+    auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
+    return static_cast<double>(figure_size_x) / figure_size_y;
+  }();
+
+  for (int i = 0; i < input_argc; i++)
+    {
+      // ignore multiplots and error data for now since animation on multiple plots can be kinda hard
+      if (strcmp(input_argv[i], "--plot") == 0 || std::string(input_argv[i]).find("error") != std::string::npos ||
+          strcmp(input_argv[i], "xye_file:1") == 0)
+        {
+          fprintf(stderr, "Animation is only possible for single plots. Multiplots may get added later!\n");
+          return;
+        }
+    }
+
+  // append as well as repeat
+  QString directory, path;
+  QFileDialog *fd = new QFileDialog;
+  bool update_status = false;
+  grm_get_render()->getAutoUpdate(&update_status);
+
+  QDialog dialog(this);
+  dialog.setWindowTitle("Animate");
+  auto form = new QFormLayout;
+
+  auto fps_label = new QLabel(QString("FPS:"));
+  auto fps_line_edit = new QLineEdit("1");
+  fps_line_edit->setValidator(new QIntValidator(valid_fps_range.first, valid_fps_range.second, fps_line_edit));
+  form->addRow(fps_label, fps_line_edit);
+
+  auto width_label = new QLabel(QString("Width:"));
+  auto width_line_edit = new QLineEdit(QString::number(initial_width));
+  width_line_edit->setValidator(
+      new QIntValidator(valid_resolution_range.first, valid_resolution_range.second, width_line_edit));
+  form->addRow(width_label, width_line_edit);
+
+  auto height_label = new QLabel(QString("Height:"));
+  auto height_line_edit = new QLineEdit(QString::number(initial_width / figure_aspect_ratio));
+  height_line_edit->setValidator(
+      new QIntValidator(valid_resolution_range.first, valid_resolution_range.second, height_line_edit));
+  form->addRow(height_label, height_line_edit);
+
+  // Automatically update the other size input with the figure aspect ratio
+  auto width_changed_signal_timer = new QTimer(width_line_edit);
+  width_changed_signal_timer->setSingleShot(true);
+  connect(width_line_edit, &QLineEdit::textEdited,
+          [width_changed_signal_timer, size_update_delay]() { width_changed_signal_timer->start(size_update_delay); });
+  connect(width_changed_signal_timer, &QTimer::timeout, [width_line_edit, height_line_edit, figure_aspect_ratio]() {
+    if (!width_line_edit->hasAcceptableInput()) return;
+    height_line_edit->setText(QString::number(std::round(width_line_edit->text().toDouble() / figure_aspect_ratio)));
+  });
+  auto height_changed_signal_timer = new QTimer(height_line_edit);
+  height_changed_signal_timer->setSingleShot(true);
+  connect(height_line_edit, &QLineEdit::textEdited, [height_changed_signal_timer, size_update_delay]() {
+    height_changed_signal_timer->start(size_update_delay);
+  });
+  connect(height_changed_signal_timer, &QTimer::timeout, [width_line_edit, height_line_edit, figure_aspect_ratio]() {
+    if (!height_line_edit->hasAcceptableInput()) return;
+    width_line_edit->setText(QString::number(std::round(height_line_edit->text().toDouble() * figure_aspect_ratio)));
+  });
+
+  auto format_label = new QLabel(QString("Format:"));
+  auto format_combo_box = new QComboBox(this);
+  for (const auto &item : video_formats) format_combo_box->addItem("." + item);
+  form->addRow(format_label, format_combo_box);
+
+  fd->setFileMode(QFileDialog::Directory);
+  fd->setOption(QFileDialog::ShowDirsOnly);
+  fd->setViewMode(QFileDialog::Detail);
+
+  // label feld dann button
+  auto working_dir_label = new QLabel("Input Directory");
+  auto working_dir_button = new QPushButton();
+  auto working_dir_line_edit = new QLineEdit("");
+  auto working_dir_widget = new QWidget(this);
+  auto working_dir_grid_layout = new QGridLayout();
+  working_dir_grid_layout->addWidget(working_dir_line_edit, 0, 0);
+  working_dir_button->setFixedWidth(30);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  working_dir_button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen));
+#endif
+  working_dir_grid_layout->addWidget(working_dir_button, 0, 1);
+  working_dir_grid_layout->setContentsMargins(0, 0, 0, 0);
+  working_dir_grid_layout->setSpacing(0);
+  working_dir_widget->setLayout(working_dir_grid_layout);
+  working_dir_widget->setContentsMargins(0, 0, 0, 0);
+  working_dir_widget->setFixedHeight(30);
+  working_dir_label->setToolTip("Leave blank if the current plot is to be built up data point by data point, only "
+                                "supported for molecule series.");
+  working_dir_widget->setToolTip("Leave blank if the current plot is to be built up data point by data point, only "
+                                 "supported for molecule series.");
+  form->addRow(working_dir_label, working_dir_widget);
+  connect(working_dir_button, &QPushButton::clicked, &dialog, [fd, &directory, working_dir_line_edit] {
+    if (fd->exec()) directory = fd->selectedFiles()[0];
+    working_dir_line_edit->setText(directory);
+  });
+
+  auto save_dir_label = new QLabel("Output File");
+  auto save_dir_button = new QPushButton();
+  auto save_dir_line_edit = new QLineEdit("");
+  auto save_dir_widget = new QWidget(this);
+  auto save_dir_grid_layout = new QGridLayout();
+  save_dir_grid_layout->addWidget(save_dir_line_edit, 0, 0);
+  save_dir_button->setFixedWidth(30);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  save_dir_button->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen));
+#endif
+  save_dir_grid_layout->addWidget(save_dir_button, 0, 1);
+  save_dir_grid_layout->setContentsMargins(0, 0, 0, 0);
+  save_dir_grid_layout->setSpacing(0);
+  save_dir_widget->setLayout(save_dir_grid_layout);
+  save_dir_widget->setContentsMargins(0, 0, 0, 0);
+  save_dir_widget->setFixedHeight(30);
+  form->addRow(save_dir_label, save_dir_widget);
+  connect(save_dir_button, &QPushButton::clicked, &dialog,
+          [this, &path, save_dir_line_edit, format_combo_box, &video_formats] {
+            path = QFileDialog::getSaveFileName(this, "Save Video as", QDir::currentPath(),
+                                                QString("Videos (%1)").arg([&video_formats]() {
+                                                  QString formats;
+                                                  for (const auto &format : video_formats)
+                                                    {
+                                                      if (!formats.isEmpty()) formats += " ";
+                                                      formats += "*.";
+                                                      formats += format;
+                                                    }
+                                                  return formats;
+                                                }()));
+            save_dir_line_edit->setText(path);
+            int i = 0;
+            for (const auto &format : video_formats)
+              {
+                if (path.endsWith("." + format))
+                  {
+                    format_combo_box->setCurrentIndex(i);
+                    break;
+                  }
+                ++i;
+              }
+          });
+
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  form->addRow(&button_box);
+  form->addRow(&button_box);
+  QObject::connect(&button_box, &QDialogButtonBox::accepted,
+                   [this, &dialog, &path, fps_line_edit, width_line_edit, height_line_edit, format_combo_box,
+                    save_dir_line_edit, &valid_fps_range, &valid_resolution_range, figure_aspect_ratio]() {
+                     if (path.isEmpty())
+                       {
+                         if (save_dir_line_edit->text().isEmpty())
+                           {
+                             QMessageBox::information(&dialog, "No output directory given",
+                                                      "Please provide a save location for the animation video.");
+                             return;
+                           }
+                         path = save_dir_line_edit->text();
+                       }
+                     auto fps = fps_line_edit->text();
+                     auto width = width_line_edit->text();
+                     auto height = height_line_edit->text();
+                     auto format = format_combo_box->currentText();
+
+                     if (!fps_line_edit->hasAcceptableInput())
+                       {
+                         QMessageBox::information(this, "Invalid FPS",
+                                                  QString("\"%1\" is not a whole-numbered value between %2 and %3.")
+                                                      .arg(fps)
+                                                      .arg(valid_fps_range.first)
+                                                      .arg(valid_fps_range.second));
+                         return;
+                       }
+                     if (!width_line_edit->hasAcceptableInput())
+                       {
+                         QMessageBox::information(this, "Invalid width",
+                                                  QString("\"%1\" is not a whole-numbered value between %2 and %3.")
+                                                      .arg(width)
+                                                      .arg(valid_resolution_range.first)
+                                                      .arg(valid_resolution_range.second));
+                         return;
+                       }
+                     if (!height_line_edit->hasAcceptableInput())
+                       {
+                         QMessageBox::information(this, "Invalid height",
+                                                  QString("\"%1\" is not a whole-numbered value between %2 and %3.")
+                                                      .arg(height)
+                                                      .arg(valid_resolution_range.first)
+                                                      .arg(valid_resolution_range.second));
+                         return;
+                       }
+                     if (std::abs(width.toDouble() - height.toDouble() * figure_aspect_ratio) > 1)
+                       {
+                         QMessageBox::information(this, "width and height do not match the figure aspect ratio",
+                                                  QString("%1/%2 does not match the figure aspect ratio %3.")
+                                                      .arg(width)
+                                                      .arg(height)
+                                                      .arg(figure_aspect_ratio));
+                         return;
+                       }
+                     dialog.accept();
+                   });
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  dialog.setLayout(form);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      if (path.isEmpty()) return;
+      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+      auto fps = fps_line_edit->text();
+      auto width = width_line_edit->text();
+      auto height = height_line_edit->text();
+      auto format = format_combo_box->currentText();
+
+#ifdef _WIN32
+      auto video_opts = ("GKS_VIDEO_OPTS=" + width + "x" + height + "@" + fps).toStdString().c_str();
+      putenv(("GKS_VIDEO_OPTS=" + width + "x" + height + "@" + fps).toStdString().c_str());
+#else
+      auto video_opts = width + "x" + height + "@" + fps;
+      setenv("GKS_VIDEO_OPTS", video_opts.toUtf8(), 1);
+#endif
+
+      if (path.endsWith(format))
+        animation_file = path.toStdString();
+      else
+        animation_file = (path + format).toStdString();
+      timer = new QTimer(this);
+      timer->setSingleShot(true);
+
+      progress_bar_widget->setFixedWidth(this->width());
+      if (directory.isEmpty())
+        {
+          // Todo: if needed support more than just molecule
+          if (!grm_get_document_root()->querySelectors("series_molecule"))
+            {
+              QMessageBox::information(this, "Unsupported animation setup",
+                                       "Animating one series by adding one data point each frame is only supported by "
+                                       "molecule series at the moment. If this type of animation is needed for other "
+                                       "series, please send a message to the GRPlot developers.");
+              return;
+            }
+          int max_child_id = 0;
+          for (const auto &central_region : grm_get_document_root()->querySelectorsAll("central_region"))
+            {
+              for (const auto child : central_region->children())
+                {
+                  if (!util::startsWith(child->localName(), "series_")) continue;
+                  max_child_id = std::max(max_child_id, static_cast<int>(child->children().size()) - 1);
+                }
+            }
+
+          first_timer_call = true;
+          progress_bar_widget->setMaximum(max_child_id);
+          progress_bar_value = 0;
+
+          connect(timer, &QTimer::timeout, [max_child_id, this]() {
+            // convert file to data
+            auto root = grm_get_document_root();
+            progress_bar_widget->setValue(progress_bar_value++);
+            if (first_timer_call)
+              {
+                show_progress_bar_act->trigger();
+                progress_bar_widget->show();
+                first_timer_call = false;
+                root->setAttribute("_animation_step", 0);
+              }
+            else
+              {
+                root->setAttribute("_animation_step", static_cast<int>(root->getAttribute("_animation_step")) + 1);
+              }
+            csr->setShape(Qt::BusyCursor);
+            setCursor(*csr);
+            redraw();
+            if (static_cast<int>(root->getAttribute("_animation_step")) <= max_child_id)
+              timer->start(1);
+            else
+              {
+                animation_file.clear();
+                progress_bar_widget->hide();
+                hide_progress_bar_act->trigger();
+                root->removeAttribute("_animation_step");
+              }
+          });
+        }
+      else
+        {
+          auto cmp = [](std::string a, std::string b) { return compareNat(a, b); };
+          std::set<std::string, decltype(cmp)> sorted_by_name(cmp);
+          for (auto &entry : std::filesystem::directory_iterator(directory.toStdString()))
+            {
+#ifndef _WIN32
+              if (entry.is_directory() || util::isHidden(entry) ||
+                  util::endsWithAny(utf8(entry.path().filename()), ".c", ".cpp", ".cxx", ".exe", ".h", ".hpp", ".hxx",
+                                    ".jl", ".py", ".sh", ".f", ".f90", ".F", ".F90"))
+#else
+              if (entry.is_directory() || util::isHidden(entry) ||
+                  util::endsWithAny(util::utf8(entry.path().filename()), ".c", ".cpp", ".cxx", ".exe", ".h", ".hpp",
+                                    ".hxx", ".jl", ".py", ".sh", ".f", ".f90", ".F", ".F90"))
+#endif
+                continue;
+              sorted_by_name.insert(util::utf8path(entry.path()));
+            }
+          first_timer_call = true;
+          progress_bar_widget->setMaximum(sorted_by_name.size() - 1);
+          progress_bar_value = 0;
+
+          animiation_stop_shortcut = new QShortcut(QKeySequence("Ctrl+C"), this);
+          connect(animiation_stop_shortcut, &QShortcut::activated, this, [this]() {
+            if (timer->isActive())
+              {
+                progress_bar_widget->hide();
+                hide_progress_bar_act->trigger();
+                cleanup_animation_act->trigger();
+              }
+          });
+
+          connect(timer, &QTimer::timeout, [sorted_by_name, this, update_status]() {
+            // convert file to data
+            progress_bar_widget->setValue(progress_bar_value++);
+            if (first_timer_call)
+              {
+                show_progress_bar_act->trigger();
+                progress_bar_widget->show();
+                set_iter = sorted_by_name.begin();
+                first_timer_call = false;
+              }
+            csr->setShape(Qt::BusyCursor);
+            setCursor(*csr);
+            auto entry = (*set_iter);
+            grm_get_render()->setAutoUpdate(true);
+            auto context = grm_get_render()->getContext();
+            if (!grm_create_animation_step(input_argc, input_argv, context, util::utf8path(entry),
+                                           grm_get_document_root()))
+              {
+                QMessageBox::critical(this, "Unsupported input file",
+                                      QString("The file \"%1\" cannot be interpreted as context data")
+                                          .arg(QString::fromStdString(entry)));
+                return;
+              }
+            grm_get_render()->setAutoUpdate(update_status);
+            grm_get_render()->setFirstCall(false);
+            redraw();
+            ++(set_iter);
+            if (set_iter != sorted_by_name.end())
+              timer->start(1);
+            else
+              {
+                animation_file.clear();
+                progress_bar_widget->hide();
+                hide_progress_bar_act->trigger();
+                cleanup_animation_act->trigger();
+              }
+          });
+        }
+      timer->start(1);
+    }
+}
+
+void GRPlotWidget::showHelpDialogSlot()
+{
+  if (QDesktopServices::openUrl(QUrl("https://gr-framework.org/grplot/editor.html", QUrl::TolerantMode))) return;
+
+  auto help_dialog = new GRPlotHelpDialog(this);
+  help_dialog->exec();
+}
+
+void GRPlotWidget::cleanupAnimationSlot()
+{
+  if (timer != nullptr)
+    {
+      timer->stop();
+      delete timer;
+      timer = nullptr;
+    }
+  if (animiation_stop_shortcut != nullptr)
+    {
+      disconnect(animiation_stop_shortcut, &QShortcut::activated, nullptr, nullptr);
+      delete animiation_stop_shortcut;
+      animiation_stop_shortcut = nullptr;
+    }
+}
+
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -7565,6 +8025,11 @@ QAction *GRPlotWidget::getShowAddElementAct()
   return show_add_element_act;
 }
 
+QAction *GRPlotWidget::getShowProgressBarAct()
+{
+  return show_progress_bar_act;
+}
+
 QAction *GRPlotWidget::getHideEditElementAct()
 {
   return hide_edit_element_act;
@@ -7598,6 +8063,11 @@ QAction *GRPlotWidget::getHideIconBarAct()
 QAction *GRPlotWidget::getHideAddElementAct()
 {
   return hide_add_element_act;
+}
+
+QAction *GRPlotWidget::getHideProgressBarAct()
+{
+  return hide_progress_bar_act;
 }
 
 QAction *GRPlotWidget::getXLimAct()
@@ -7650,6 +8120,16 @@ QAction *GRPlotWidget::getTextScaleAct()
   return text_scale_act;
 }
 
+QAction *GRPlotWidget::getAnimateAct()
+{
+  return animation_act;
+}
+
+QAction *GRPlotWidget::getShowHelpAct()
+{
+  return show_help_act;
+}
+
 QWidget *GRPlotWidget::getEditElementWidget()
 {
   return edit_element_widget;
@@ -7683,6 +8163,11 @@ QWidget *GRPlotWidget::getIconBarWidget()
 QWidget *GRPlotWidget::getAddElementWidget()
 {
   return add_element_widget;
+}
+
+QWidget *GRPlotWidget::getProgressBarWidget()
+{
+  return progress_bar_widget;
 }
 
 void GRPlotWidget::cursorHandler(int x, int y)

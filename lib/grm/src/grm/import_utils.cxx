@@ -65,6 +65,7 @@ static std::map<std::string, const char *> key_to_types{
     {"rotation", "d"},
     {"scale", "i"},
     {"scatter_z", "i"},
+    {"skip_lines", "i"},
     {"spin_style", "i"},
     {"stairs", "i"},
     {"step_where", "s"},
@@ -690,6 +691,10 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                         {
                           // needed since test.dat and a simple molecule dataset are the same parse wise
                           input_flags.xyz_molecule_file = std::stoi(value);
+                        }
+                      else if (strcmp(search->first.c_str(), "skip_lines") == 0)
+                        {
+                          input_flags.skip_lines = std::stoi(value);
                         }
                       else
                         {

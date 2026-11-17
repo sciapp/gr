@@ -168,6 +168,7 @@ grm_error_t plotDrawPolarAxes(grm_args_t *args);
 grm_error_t plotDrawLegend(grm_args_t *args);
 grm_error_t plotDrawColorbar(grm_args_t *args, double off, unsigned int colors);
 grm_error_t plotDrawErrorBars(grm_args_t *series_args, unsigned int x_length);
+grm_error_t plotDrawAnnotations(grm_args_t *args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
