@@ -1069,7 +1069,6 @@ static void init_context(void)
   p->stroke = 0;
   p->lastx = p->lasty = -1;
 
-  p->alpha = 0xff;
   p->font = 1;
   p->size = 24;
   p->angle = 0;
@@ -1090,6 +1089,7 @@ static void open_ws(int fd, int wstype)
   p->nominal_size = min(p->width, p->height) / 500.0;
   if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
 
+  p->alpha = 0xff;
   p->empty = 1;
 
   init_context();
