@@ -1612,7 +1612,9 @@ static int get_default_ws_type(void)
 
   if (default_wstype == 0)
     {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && defined(GR_QT_WASM)
+      default_wstype = 381;
+#elif defined(__EMSCRIPTEN__)
       default_wstype = 100;
 #else
 #ifndef _WIN32

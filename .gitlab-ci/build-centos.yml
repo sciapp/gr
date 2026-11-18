@@ -27,7 +27,7 @@ centos7-system-dependencies:
   - yum install -y libjpeg-turbo-devel libtiff-devel bzip2-devel # TODO: Put these into the build images
   script:
   - source /opt/rh/devtoolset-8/enable
-  - make -C 3rdparty default TARGETS="qhull"
+  - make -C 3rdparty default TARGETS="libqhull_r"
   - cmake
       -S .
       -B build
@@ -67,7 +67,7 @@ centos7-32bit-system-dependencies:
   - yum install -y libtiff-devel bzip2-devel
   script:
   - source /opt/gcc-8.5.0/enable
-  - make -C 3rdparty default TARGETS="qhull"
+  - make -C 3rdparty default TARGETS="libqhull_r"
   - LDFLAGS="-static-libstdc++ -static-libgcc"
     cmake
       -S .
