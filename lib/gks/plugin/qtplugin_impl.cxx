@@ -3543,6 +3543,11 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 static void dl_render_function(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
                                int lc, char *chars, void **ptr)
 {
+#ifdef GR_QT_WASM
+  // This build embeds the Qt painter backend only; no dynamic cairo/agg plugins.
+  p->memory_plugin_wstype = 0;
+  qt_dl_render(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
+#else
   if (fctid == 2)
     {
       if (ia[2] == 412)
@@ -3568,6 +3573,7 @@ static void dl_render_function(int fctid, int dx, int dy, int dimx, int *ia, int
     {
       qt_dl_render(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
     }
+#endif
 }
 
 static bool dl_contains_only_background_fctid(const char *s)
@@ -3720,6 +3726,13 @@ static void update_metrics(const QPaintDevice *device)
 {
   p->width = device->width();
   p->height = device->height();
+  // QImage stores physical dimensions, unlike QWidget. GKS coordinates and
+  // QPainter drawing here use logical dimensions; keep DPR for raster output.
+  if (device->devType() == QInternal::Image)
+    {
+      p->width = qRound(p->width / p->device_pixel_ratio);
+      p->height = qRound(p->height / p->device_pixel_ratio);
+    }
   if (p->has_user_defined_device_pixel_ratio)
     {
       /* This case was introduced to work around broken HiDPI support in `QQuickPaintedItem`. QML uses phyiscal instead

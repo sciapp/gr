@@ -331,6 +331,11 @@ DLLEXPORT int gks_dl_has_one_of_item(char *dl, int n, ...);
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
 int gks_debug(void);
 
+#if defined(__EMSCRIPTEN__) && defined(GR_QT_WASM)
+void gks_qt6plugin(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
+void gks_drv_wiss(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
+#endif
+
 #ifndef __EMSCRIPTEN__
 
 void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
