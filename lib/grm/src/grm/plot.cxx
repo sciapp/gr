@@ -192,6 +192,13 @@ static int error_code = GRM_ERROR_NONE;
 EventQueue *event_queue = nullptr;
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind aliases ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static const char *alias_to_kind[][2] = {
+    {"hist", "histogram"},
+    {"plot3", "line3"},
+};
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static PlotFuncMapEntry kind_to_func[] = {{"line", plotLine},
@@ -278,7 +285,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "annotations",
                                     "aspect_ratio",
                                     "axes_mod",
-                                    "background_color",
+                                    "background_color", // TODO: Is this used at all?
                                     "bar_color",
                                     "bar_width",
                                     "col",
@@ -344,7 +351,7 @@ const char *valid_series_keys[] = {"algorithm",
                                    "bin_edges",
                                    "bin_counts",
                                    "border_width",
-                                   "border_color_ind",
+                                   "border_color",
                                    "c",
                                    "c_dims",
                                    "c_range",
@@ -362,7 +369,7 @@ const char *valid_series_keys[] = {"algorithm",
                                    "face_color",
                                    "fill_int_style",
                                    "fill_style",
-                                   "foreground_color",
+                                   "foreground_color", // TODO: Is this used at all?
                                    "indices",
                                    "inner_series",
                                    "int_limits_high",
@@ -370,11 +377,11 @@ const char *valid_series_keys[] = {"algorithm",
                                    "isovalue",
                                    "label",
                                    "labels",
-                                   "line_color_ind",
+                                   "line_color",
                                    "line_spec",
                                    "line_type",
                                    "line_width",
-                                   "marker_color_ind",
+                                   "marker_color",
                                    "marker_size",
                                    "marker_type",
                                    "molecule_symbols",
@@ -427,9 +434,9 @@ static StringMapEntry key_to_formats[] = {{"abs_height", "d"},
                                           {"aspect_ratio", "d"},
                                           {"append_plots", "i"},
                                           {"axes_mod", "a"},
-                                          {"background_color", "i"},
+                                          {"background_color", "D|i"},
                                           {"bar_color", "D|i"},
-                                          {"border_color_ind", "i"},
+                                          {"border_color", "D|i"},
                                           {"border_width", "d"},
                                           {"c", "D|I"},
                                           {"c_dims", "I"},
@@ -452,7 +459,7 @@ static StringMapEntry key_to_formats[] = {{"abs_height", "d"},
                                           {"fit_parents_width", "i"},
                                           {"font", "i"},
                                           {"font_precision", "i"},
-                                          {"foreground_color", "D"},
+                                          {"foreground_color", "D|i"},
                                           {"hold_plots", "i"},
                                           {"int_limits_high", "D"},
                                           {"int_limits_low", "D"},
@@ -462,13 +469,13 @@ static StringMapEntry key_to_formats[] = {{"abs_height", "d"},
                                           {"label", "s"},
                                           {"labels", "S"},
                                           {"levels", "i"},
-                                          {"line_color_ind", "i"},
+                                          {"line_color", "D|i"},
                                           {"line_spec", "s"},
                                           {"line_type", "i"},
                                           {"line_width", "d"},
                                           {"location", "i"},
                                           {"marginal_heatmap_kind", "s"},
-                                          {"marker_color_ind", "i"},
+                                          {"marker_color", "D|i"},
                                           {"marker_size", "d"},
                                           {"marker_type", "i|D"},
                                           {"molecule_symbols", "S"},
@@ -1116,16 +1123,6 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
   logger((stderr, "Pre subplot processing\n"));
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  if (strcmp(kind, "hist") == 0)
-    {
-      kind = "histogram";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
-  else if (strcmp(kind, "plot3") == 0)
-    {
-      kind = "line3";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (!strEqualsAny(kind, "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
                     "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "barplot",
@@ -1627,7 +1624,9 @@ grm_error_t plotLine(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max;
       const char *x_axis_ref, *y_axis_ref;
       double line_width, border_width, marker_size;
-      int line_color_ind, line_type, border_color_ind, marker_color_ind;
+      int line_type, color_ind;
+      double *color_rgb = nullptr;
+      unsigned int color_rgb_length;
       std::string prefix = "";
       auto sub_group = global_creator->createSeries("line");
       group->append(sub_group);
@@ -1679,16 +1678,31 @@ grm_error_t plotLine(grm_args_t *subplot_args)
         sub_group->setAttribute("line_width", line_width);
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
-      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color", line_color_ind);
+      if (grm_args_values(*current_series, "line_color", "i", &color_ind))
+        sub_group->setAttribute("line_color", color_ind);
+      else if (grm_args_first_value(*current_series, "line_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["line_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("line_color", "line_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
-      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color", marker_color_ind);
-      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color", border_color_ind);
+      if (grm_args_values(*current_series, "marker_color", "i", &color_ind))
+        sub_group->setAttribute("marker_color", color_ind);
+      else if (grm_args_first_value(*current_series, "marker_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["marker_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("marker_color", "marker_color_rgb" + str);
+        }
+      if (grm_args_values(*current_series, "border_color", "i", &color_ind))
+        sub_group->setAttribute("border_color", color_ind);
+      else if (grm_args_first_value(*current_series, "border_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["border_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("border_color", "border_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -1766,6 +1780,8 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       double line_width;
       int line_color_ind, line_type;
+      double *line_color_rgb = nullptr;
+      unsigned int line_color_rgb_length;
       std::string prefix = "";
       auto sub_group = global_creator->createSeries("stairs");
       group->append(sub_group);
@@ -1816,8 +1832,14 @@ grm_error_t plotStairs(grm_args_t *subplot_args)
         sub_group->setAttribute("line_width", line_width);
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
-      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+      if (grm_args_values(*current_series, "line_color", "i", &line_color_ind))
         sub_group->setAttribute("line_color", line_color_ind);
+      else if (grm_args_first_value(*current_series, "line_color", "D", &line_color_rgb, &line_color_rgb_length))
+        {
+          (*context)["line_color_rgb" + str] =
+              std::vector<double>(line_color_rgb, line_color_rgb + line_color_rgb_length);
+          sub_group->setAttribute("line_color", "line_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "step_where", "s", &where)) sub_group->setAttribute("step_where", where);
 
       global_root->setAttribute("_id", ++id);
@@ -1858,7 +1880,9 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       char *label;
       double marker_size, border_width;
-      int marker_color_ind, border_color_ind;
+      int color_ind;
+      double *color_rgb = nullptr;
+      unsigned int color_rgb_length;
       std::string prefix = "";
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -1893,10 +1917,20 @@ grm_error_t plotScatter(grm_args_t *subplot_args)
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
-      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color", marker_color_ind);
-      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color", border_color_ind);
+      if (grm_args_values(*current_series, "marker_color", "i", &color_ind))
+        sub_group->setAttribute("marker_color", color_ind);
+      else if (grm_args_first_value(*current_series, "marker_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["marker_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("marker_color", "marker_color_rgb" + str);
+        }
+      if (grm_args_values(*current_series, "border_color", "i", &color_ind))
+        sub_group->setAttribute("border_color", color_ind);
+      else if (grm_args_first_value(*current_series, "border_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["border_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("border_color", "border_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -2026,6 +2060,8 @@ grm_error_t plotStem(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       double line_width;
       int line_type, line_color_ind;
+      double *line_color_rgb = nullptr;
+      unsigned int line_color_rgb_length;
       std::string prefix;
 
       auto sub_group = global_creator->createSeries("stem");
@@ -2072,8 +2108,14 @@ grm_error_t plotStem(grm_args_t *subplot_args)
         sub_group->setAttribute("line_width", line_width);
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
-      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
+      if (grm_args_values(*current_series, "line_color", "i", &line_color_ind))
         sub_group->setAttribute("line_color", line_color_ind);
+      else if (grm_args_first_value(*current_series, "line_color", "D", &line_color_rgb, &line_color_rgb_length))
+        {
+          (*context)["line_color_rgb" + str] =
+              std::vector<double>(line_color_rgb, line_color_rgb + line_color_rgb_length);
+          sub_group->setAttribute("line_color", "line_color_rgb" + str);
+        }
 
       global_root->setAttribute("_id", ++id);
       if (series_args != nullptr) break;
@@ -3553,7 +3595,9 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
       auto sub_group = global_creator->createSeries("polar_line");
       int clip_negative = 0, marker_type;
       double line_width, border_width, marker_size;
-      int line_type, line_color_ind, border_color_ind, marker_color_ind;
+      int line_type, color_ind;
+      double *color_rgb = nullptr;
+      unsigned int color_rgb_length;
       std::string prefix = "";
       group->append(sub_group);
 
@@ -3599,16 +3643,31 @@ grm_error_t plotPolarLine(grm_args_t *subplot_args)
         sub_group->setAttribute("line_width", line_width);
       if (grm_args_values(*current_series, "line_type", "i", &line_type))
         sub_group->setAttribute("line_type", line_type);
-      if (grm_args_values(*current_series, "line_color_ind", "i", &line_color_ind))
-        sub_group->setAttribute("line_color", line_color_ind);
+      if (grm_args_values(*current_series, "line_color", "i", &color_ind))
+        sub_group->setAttribute("line_color", color_ind);
+      else if (grm_args_first_value(*current_series, "line_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["line_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("line_color", "line_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         sub_group->setAttribute("marker_type", marker_type);
       if (grm_args_values(*current_series, "marker_size", "d", &marker_size))
         sub_group->setAttribute("marker_size", marker_size);
-      if (grm_args_values(*current_series, "marker_color_ind", "i", &marker_color_ind))
-        sub_group->setAttribute("marker_color", marker_color_ind);
-      if (grm_args_values(*current_series, "border_color_ind", "i", &border_color_ind))
-        sub_group->setAttribute("border_color", border_color_ind);
+      if (grm_args_values(*current_series, "marker_color", "i", &color_ind))
+        sub_group->setAttribute("marker_color", color_ind);
+      else if (grm_args_first_value(*current_series, "marker_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["marker_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("marker_color", "marker_color_rgb" + str);
+        }
+      if (grm_args_values(*current_series, "border_color", "i", &color_ind))
+        sub_group->setAttribute("border_color", color_ind);
+      else if (grm_args_first_value(*current_series, "border_color", "D", &color_rgb, &color_rgb_length))
+        {
+          (*context)["border_color_rgb" + str] = std::vector<double>(color_rgb, color_rgb + color_rgb_length);
+          sub_group->setAttribute("border_color", "border_color_rgb" + str);
+        }
       if (grm_args_values(*current_series, "border_width", "d", &border_width))
         sub_group->setAttribute("border_width", border_width);
 
@@ -6801,11 +6860,38 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
   return grm_merge_extended(args, 0, identificator);
 }
 
+void normalizeKinds(grm_args_t *subplot_args)
+{
+  char **kinds;
+  unsigned int kinds_len;
+
+  grm_args_first_value(subplot_args, "kind", "S", &kinds, &kinds_len);
+  std::vector<const char *> normalized_kinds;
+  normalized_kinds.reserve(kinds_len);
+  while (*kinds != nullptr)
+    {
+      int i;
+      for (i = 0; i < arraySize(alias_to_kind); ++i)
+        {
+          if (strcmp(*kinds, alias_to_kind[i][0]) == 0)
+            {
+              normalized_kinds.push_back(alias_to_kind[i][1]);
+              break;
+            }
+        }
+      if (i == arraySize(alias_to_kind)) normalized_kinds.push_back(*kinds);
+      ++kinds;
+    }
+  grm_args_push(subplot_args, "kind", "nS", kinds_len, normalized_kinds.data());
+}
+
 int plotProcessSubplotArgs(grm_args_t *subplot_args)
 {
   PlotFunc plot_func;
   char *kind;
   char **kinds;
+  char **normalized_kinds;
+  char **kind_ptr;
   unsigned int kinds_len = 0;
   int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_square_aspect_ratio;
   double *subplot;
@@ -6814,19 +6900,11 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   int use_grplot_changes = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
-  grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_first_value(subplot_args, "kind", "nS", &kinds, &kinds_len);
 
-  if (strcmp(kind, "hist") == 0)
-    {
-      kind = (char *)"histogram";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
-  else if (strcmp(kind, "plot3") == 0)
-    {
-      kind = (char *)"line3";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
+  normalizeKinds(subplot_args);
+
+  grm_args_first_value(subplot_args, "kind", "S", &kinds, &kinds_len);
+  kind = kinds[0];
   group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
@@ -6912,7 +6990,11 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       while (*current_series != nullptr)
         {
           if (!grm_args_values(*current_series, "series_kind", "s", &kind))
-            grm_args_values(subplot_args, "kind", "s", &kind);
+            {
+              unsigned int series_id;
+              grm_args_values(*current_series, "array_index", "i", &series_id);
+              kind = (kinds_len > series_id) ? kinds[series_id] : kinds[0];
+            }
           if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
           series_args = *current_series;
           if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;
