@@ -192,6 +192,13 @@ static int error_code = GRM_ERROR_NONE;
 EventQueue *event_queue = nullptr;
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind aliases ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static const char *alias_to_kind[][2] = {
+    {"hist", "histogram"},
+    {"plot3", "line3"},
+};
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static PlotFuncMapEntry kind_to_func[] = {{"line", plotLine},
@@ -1116,16 +1123,6 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
   logger((stderr, "Pre subplot processing\n"));
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  if (strcmp(kind, "hist") == 0)
-    {
-      kind = "histogram";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
-  else if (strcmp(kind, "plot3") == 0)
-    {
-      kind = "line3";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (!strEqualsAny(kind, "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
                     "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface", "barplot",
@@ -6863,11 +6860,38 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
   return grm_merge_extended(args, 0, identificator);
 }
 
+void normalizeKinds(grm_args_t *subplot_args)
+{
+  char **kinds;
+  unsigned int kinds_len;
+
+  grm_args_first_value(subplot_args, "kind", "S", &kinds, &kinds_len);
+  std::vector<const char *> normalized_kinds;
+  normalized_kinds.reserve(kinds_len);
+  while (*kinds != nullptr)
+    {
+      int i;
+      for (i = 0; i < arraySize(alias_to_kind); ++i)
+        {
+          if (strcmp(*kinds, alias_to_kind[i][0]) == 0)
+            {
+              normalized_kinds.push_back(alias_to_kind[i][1]);
+              break;
+            }
+        }
+      if (i == arraySize(alias_to_kind)) normalized_kinds.push_back(*kinds);
+      ++kinds;
+    }
+  grm_args_push(subplot_args, "kind", "nS", kinds_len, normalized_kinds.data());
+}
+
 int plotProcessSubplotArgs(grm_args_t *subplot_args)
 {
   PlotFunc plot_func;
   char *kind;
   char **kinds;
+  char **normalized_kinds;
+  char **kind_ptr;
   unsigned int kinds_len = 0;
   int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_square_aspect_ratio;
   double *subplot;
@@ -6876,19 +6900,11 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
   int use_grplot_changes = 0;
 
   auto group = (!current_dom_element.expired()) ? current_dom_element.lock() : edit_figure->lastChildElement();
-  grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_first_value(subplot_args, "kind", "nS", &kinds, &kinds_len);
 
-  if (strcmp(kind, "hist") == 0)
-    {
-      kind = (char *)"histogram";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
-  else if (strcmp(kind, "plot3") == 0)
-    {
-      kind = (char *)"line3";
-      grm_args_push(subplot_args, "kind", "s", kind);
-    }
+  normalizeKinds(subplot_args);
+
+  grm_args_first_value(subplot_args, "kind", "S", &kinds, &kinds_len);
+  kind = kinds[0];
   group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
@@ -6974,7 +6990,11 @@ int plotProcessSubplotArgs(grm_args_t *subplot_args)
       while (*current_series != nullptr)
         {
           if (!grm_args_values(*current_series, "series_kind", "s", &kind))
-            grm_args_values(subplot_args, "kind", "s", &kind);
+            {
+              unsigned int series_id;
+              grm_args_values(*current_series, "array_index", "i", &series_id);
+              kind = (kinds_len > series_id) ? kinds[series_id] : kinds[0];
+            }
           if (!plotFuncMapAt(plot_func_map, kind, &plot_func)) return 0;
           series_args = *current_series;
           if ((error_code = plot_func(subplot_args)) != GRM_ERROR_NONE) return 0;
